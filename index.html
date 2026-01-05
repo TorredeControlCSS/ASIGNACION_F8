@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <link rel="icon" href="./favicon.ico"/>
-  <link rel="shortcut icon" href="./favicon.ico"/>
+  <link rel="icon" href="./favicon.ico?v=1"/>
+  <link rel="shortcut icon" href="./favicon.ico?v=1"/>
   <title>SIGUELO - Asignación F8 (Corte diario)</title>
   <style>
     body{font-family:Arial, sans-serif; margin:0; background:#fff;}
@@ -89,7 +89,8 @@
         <input id="q" placeholder="Ej: 101000201 o metformina"/>
         
       <label>Documento (Doc)</label>
-      <input id="doc" class="input" placeholder="Ej: CDCH-2025-1-417"/>
+      <input id="doc" class="input" placeholder="Ej: CDCH-2025-1-417" list="docList" autocomplete="off"/>
+        <datalist id="docList"></datalist>
 
       <div class="row2">
         <div>
@@ -257,6 +258,26 @@
 
 <script>
 
+  // --- helpers (hoisted) ---
+  function norm(s){
+    if(s===null||s===undefined) return "";
+    return String(s)
+      .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+      .toUpperCase().trim().replace(/\s+/g," ");
+  }
+  function fmtIntish(x){
+    if(x===null||x===undefined||x==="") return "";
+    const n = Number(x);
+    if(!isFinite(n)) return String(x);
+    const r = Math.round(n);
+    if(Math.abs(n - r) < 1e-9) return String(r);
+    return (Math.round(n*100)/100).toString();
+  }
+  function fmtBultosPart(t,s,p){
+    return `${fmtIntish(t)}/${fmtIntish(s)}/${fmtIntish(p)}`;
+  }
+
+
 // --- Helpers: format bultos (T/S/P) without trailing .00 ---
 function fmtBultosPart(n){
   const x = Number(n);
@@ -312,6 +333,7 @@ function populateFilters(){
   const catSel = document.getElementById('cat');
   const ueSel = document.getElementById('ue');
   const tipoSel = document.getElementById('tipo');
+  const docList = document.getElementById('docList');
 
   const cats = ["ALL", ...uniq(DATA.map(r => r.Categoria)).sort()];
   catSel.innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join("");
@@ -321,6 +343,12 @@ function populateFilters(){
 
   const tipos = ["ALL", ...uniq(DATA.map(r => r.Tipo)).sort()];
   tipoSel.innerHTML = tipos.map(t => `<option value="${t}">${t}</option>`).join("");
+
+  // Sugerencias para Documento (Doc)
+  if(docList){
+    const docs = uniq(DATA.map(r => r.Doc)).sort();
+    docList.innerHTML = docs.map(d => `<option value="${d}"></option>`).join("");
+  }
 }
 
 function applyFilters(){
