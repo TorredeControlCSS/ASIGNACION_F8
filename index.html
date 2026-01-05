@@ -388,6 +388,14 @@ function lastKeyFrom(punto, codigo){
   return `${String(punto||"").trim()}|${String(codigo||"").trim()}`;
 }
 
+function norm(x){
+  return String(x||"").normalize('NFD')
+    .replace(/[\u0300-\u036f]/g,'')
+    .replace(/\s+/g,' ')
+    .trim()
+    .toUpperCase();
+}
+
 function buildUeAliasMaps(){
   UE_SALMI_TO_STD.clear(); UE_PER_TO_STD.clear(); STD_TO_CAT.clear(); STD_TO_PER_RAW.clear();
   (UE_ALIAS||[]).forEach(a=>{
