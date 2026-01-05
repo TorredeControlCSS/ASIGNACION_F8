@@ -85,7 +85,21 @@
         <h2>Filtros</h2>
         <label>Buscar (Código o texto de suministro)</label>
         <input id="q" placeholder="Ej: 101000201 o metformina"/>
-        <label>Categoría UE</label>
+        
+      <label>Documento (Doc)</label>
+      <input id="doc" class="input" placeholder="Ej: CDCH-2025-1-417"/>
+
+      <div class="row2">
+        <div>
+          <label>Fecha (desde)</label>
+          <input id="dateFrom" class="input" type="date"/>
+        </div>
+        <div>
+          <label>Fecha (hasta)</label>
+          <input id="dateTo" class="input" type="date"/>
+        </div>
+      </div>
+<label>Categoría UE</label>
         <select id="cat"></select>
         <label>Punto de Información (UE)</label>
         <select id="ue"></select>
@@ -108,7 +122,10 @@
         <div class="row" style="margin-top:10px;">
           <button id="btnExportPdf">Exportar PDF — Hoja de Asignación</button>
           <button id="btnExportXlsx">Exportar Excel — Hoja de Asignación</button>
-        </div>
+        
+      <button id="btnLoadLocal" class="btn-secondary">Cargar datos (local)</button>
+      <input id="fileLoad" type="file" multiple accept=".json" style="display:none"/>
+</div>
         <div class="muted" style="margin-top:10px;">
           Nota: solicitado original se mantiene. Solicitado redondeado es el operable (redondeo hacia abajo por empaque, con fallback si falta empaque). Último despacho real proviene de PERIODO DE DISTRIBUCIÓN (Fecha SALIDA + DESPACHO).
         </div>
@@ -295,6 +312,14 @@ function applyFilters(){
   const estado = document.getElementById('estado').value;
 
   let rows = DATA;
+
+  const docQ = (document.getElementById('doc')?.value || '').trim().toLowerCase();
+  const dateFrom = document.getElementById('dateFrom')?.value || '';
+  const dateTo = document.getElementById('dateTo')?.value || '';
+
+  if (docQ) rows = rows.filter(r => String(r.N_Doc || '').toLowerCase().includes(docQ));
+  if (dateFrom) rows = rows.filter(r => String(r.Fecha || '') >= dateFrom);
+  if (dateTo) rows = rows.filter(r => String(r.Fecha || '') <= dateTo);
   if (q) rows = rows.filter(r => String(r.Codigo).includes(q) || String(r.Suministro || "").toLowerCase().includes(q));
   if (cat !== "ALL") rows = rows.filter(r => r.Categoria === cat);
   if (ue !== "ALL") rows = rows.filter(r => r.Punto === ue);
@@ -773,19 +798,63 @@ async function init(){
   document.getElementById('btnApply').addEventListener('click', applyFilters);
   document.getElementById('btnReset').addEventListener('click', () => {
     document.getElementById('q').value = "";
+    document.getElementById('doc').value = "";
+    document.getElementById('dateFrom').value = "";
+    document.getElementById('dateTo').value = "";
     document.getElementById('cat').value = "ALL";
     document.getElementById('ue').value = "ALL";
     document.getElementById('tipo').value = "ALL";
     document.getElementById('estado').value = "ALL";
-    LAST_FILTERED = DATA;
-    renderKPIs(DATA);
-    renderActiveTab(DATA);
+    applyFilters();
   });
   document.getElementById('btnExportCsv').addEventListener('click', exportCsv);
   document.getElementById('btnExportPdf').addEventListener('click', exportPdfAsignacion);
   document.getElementById('btnExportXlsx').addEventListener('click', exportXlsxAsignacion);
   document.querySelectorAll('.tab').forEach(el => el.addEventListener('click', () => showTab(el.dataset.tab)));
 }
+
+  // Carga local (sin commitear al repo): selecciona allocation.json + last_dispatch.json (+ params.json opcional)
+  const btnLoad = document.getElementById('btnLoadLocal');
+  const fileLoad = document.getElementById('fileLoad');
+  if (btnLoad && fileLoad){
+    btnLoad.addEventListener('click', ()=> fileLoad.click());
+    fileLoad.addEventListener('change', async (ev)=>{
+      const files = Array.from(ev.target.files || []);
+      if (!files.length) return;
+
+      const byName = Object.fromEntries(files.map(f=>[f.name.toLowerCase(), f]));
+      async function readJson(file){
+        const txt = await file.text();
+        return JSON.parse(txt);
+      }
+
+      try{
+        if (byName['allocation.json']) DATA = await readJson(byName['allocation.json']);
+        if (byName['last_dispatch.json']) LAST = await readJson(byName['last_dispatch.json']);
+        if (byName['params.json']) PARAMS = await readJson(byName['params.json']);
+
+        // reset filtros y repintar
+        document.getElementById('q').value = "";
+        document.getElementById('doc').value = "";
+        document.getElementById('dateFrom').value = "";
+        document.getElementById('dateTo').value = "";
+        document.getElementById('cat').value = "ALL";
+        document.getElementById('ue').value = "ALL";
+        document.getElementById('tipo').value = "ALL";
+        document.getElementById('estado').value = "ALL";
+
+        buildDropdowns(DATA);
+        applyFilters();
+        alert('Datos locales cargados. Ya puedes filtrar y exportar PDF/Excel.');
+      }catch(e){
+        console.error(e);
+        alert('No se pudo cargar uno de los JSON. Verifica que sean JSON válidos (strict) y vuelve a intentar.');
+      }finally{
+        fileLoad.value = '';
+      }
+    });
+  }
+
 init();
 </script>
 </body>
