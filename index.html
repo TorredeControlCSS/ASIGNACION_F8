@@ -88,21 +88,22 @@
         <label>Buscar (Código o texto de suministro)</label>
         <input id="q" placeholder="Ej: 101000201 o metformina"/>
         
-      <label>Documento (Doc)</label>
-      <input id="doc" class="input" placeholder="Ej: CDCH-2025-1-417" list="docList" autocomplete="off"/>
+        <label>Documento (Doc)</label>
+        <input id="doc" class="input" placeholder="Ej: CDCH-2025-1-417" list="docList" autocomplete="off"/>
         <datalist id="docList"></datalist>
 
-      <div class="row2">
-        <div>
-          <label>Fecha (desde)</label>
-          <input id="dateFrom" class="input" type="date"/>
+        <div class="row2">
+          <div>
+            <label>Fecha (desde)</label>
+            <input id="dateFrom" class="input" type="date"/>
+          </div>
+          <div>
+            <label>Fecha (hasta)</label>
+            <input id="dateTo" class="input" type="date"/>
+          </div>
         </div>
-        <div>
-          <label>Fecha (hasta)</label>
-          <input id="dateTo" class="input" type="date"/>
-        </div>
-      </div>
-<label>Categoría UE</label>
+
+        <label>Categoría UE</label>
         <select id="cat"></select>
         <label>Punto de Información (UE)</label>
         <select id="ue"></select>
@@ -126,11 +127,11 @@
           <button id="btnExportPdf">Exportar PDF — Hoja de Asignación</button>
           <button id="btnExportXlsx">Exportar Excel — Hoja de Asignación</button>
         
-      <button id="btnLoadLocal" class="btn-secondary">Cargar datos (local)</button>
-      <input id="fileLoad" type="file" multiple accept=".json" style="display:none"/>
-</div>
+          <button id="btnLoadLocal" class="btn-secondary">Cargar datos (local)</button>
+          <input id="fileLoad" type="file" multiple accept=".json" style="display:none"/>
+        </div>
         <div class="muted" style="margin-top:10px;">
-          Nota: solicitado original se mantiene. Solicitado redondeado es el operable (redondeo hacia abajo por empaque, con fallback si falta empaque). Último despacho real proviene de PERIODO DE DISTRIBUCIÓN (Fecha SALIDA + DESPACHO).
+          Nota: solicitado original se mantiene. Solicitado redondeado es el operable (redondeo hacia abajo por empaque, con fallback si falta empaque). Último despacho real proviene de PERIODO DE DISTRIBUCIÓN.
         </div>
       </div>
 
@@ -257,8 +258,7 @@
   </div>
 
 <script>
-
-  // --- helpers (hoisted) ---
+  // --- helpers ---
   function norm(s){
     if(s===null||s===undefined) return "";
     return String(s)
@@ -273,679 +273,669 @@
     if(Math.abs(n - r) < 1e-9) return String(r);
     return (Math.round(n*100)/100).toString();
   }
-  function fmtBultosPart(t,s,p){
-    return `${fmtIntish(t)}/${fmtIntish(s)}/${fmtIntish(p)}`;
+  function fmtBultosPart(n){
+    const x = Number(n);
+    if(!Number.isFinite(x)) return "0";
+    const r = Math.round(x);
+    if(Math.abs(x - r) < 1e-9) return String(r);
+    return String(parseFloat(x.toFixed(3)));
   }
-
-
-// --- Helpers: format bultos (T/S/P) without trailing .00 ---
-function fmtBultosPart(n){
-  const x = Number(n);
-  if(!Number.isFinite(x)) return "0";
-  const r = Math.round(x);
-  if(Math.abs(x - r) < 1e-9) return String(r);
-  return String(parseFloat(x.toFixed(3)));
-}
-// Backward-compat alias used by some export routines
-const fmtBultosPartX = fmtBultosPart;
-
-const fmt = (n) => {
-  if (n === null || n === undefined || isNaN(n)) return "-";
-  return new Intl.NumberFormat('es-PA', {maximumFractionDigits: 0}).format(n);
-};
-
-function tickDateTime(){
-  const el = document.getElementById('currentDateTime');
-  if(!el) return;
-  const now = new Date();
-  const opts = { weekday:'long', year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit' };
-  el.textContent = now.toLocaleString('es-PA', opts);
-}
-
-let DATA = [];
-let PARAMS = {};
-let LAST = {};
-let UE_ALIAS = [];
-const UE_SALMI_TO_STD = new Map();
-const UE_PER_TO_STD = new Map();
-const STD_TO_CAT = new Map();
-const STD_TO_PER_RAW = new Map();
-let ACTIVE_TAB = "asignacion";
-let LAST_FILTERED = [];
-
-function uniq(arr){ return [...new Set(arr)].filter(x => x !== null && x !== undefined); }
-function parseISODate(s){
-  if(!s) return null;
-  const m = String(s).match(/(\d{4})-(\d{2})-(\d{2})/);
-  if(!m) return null;
-  return new Date(`${m[1]}-${m[2]}-${m[3]}T00:00:00`);
-}
-
-function coverage(r){
-  const req = Number(r.Solicitado_redondeado || 0);
-  const asg = Number(r.Asignado || 0);
-  if (asg <= 0) return "SIN";
-  if (asg >= req && req > 0) return "COMPLETO";
-  return "PARCIAL";
-}
-
-function populateFilters(){
-  const catSel = document.getElementById('cat');
-  const ueSel = document.getElementById('ue');
-  const tipoSel = document.getElementById('tipo');
-  const docList = document.getElementById('docList');
-
-  const cats = ["ALL", ...uniq(DATA.map(r => r.Categoria)).sort()];
-  catSel.innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join("");
-
-  const ues = ["ALL", ...uniq(DATA.map(r => r.Punto)).sort()];
-  ueSel.innerHTML = ues.map(u => `<option value="${u}">${u}</option>`).join("");
-
-  const tipos = ["ALL", ...uniq(DATA.map(r => r.Tipo)).sort()];
-  tipoSel.innerHTML = tipos.map(t => `<option value="${t}">${t}</option>`).join("");
-
-  // Sugerencias para Documento (Doc)
-  if(docList){
-    const docs = uniq(DATA.map(r => r.Doc)).sort();
-    docList.innerHTML = docs.map(d => `<option value="${d}"></option>`).join("");
+  function fmtBultosTriple(t,s,p){
+    return `${fmtBultosPart(t)}/${fmtBultosPart(s)}/${fmtBultosPart(p)}`;
   }
-}
-
-function applyFilters(){
-  const q = (document.getElementById('q').value || "").trim().toLowerCase();
-  const cat = document.getElementById('cat').value;
-  const ue = document.getElementById('ue').value;
-  const tipo = document.getElementById('tipo').value;
-  const estado = document.getElementById('estado').value;
-
-  let rows = DATA;
-
-  const docQ = (document.getElementById('doc')?.value || '').trim().toLowerCase();
-  const dateFrom = document.getElementById('dateFrom')?.value || '';
-  const dateTo = document.getElementById('dateTo')?.value || '';
-
-  if (docQ) rows = rows.filter(r => String(r.N_Doc || '').toLowerCase().includes(docQ));
-  if (dateFrom) rows = rows.filter(r => String(r.Fecha || '') >= dateFrom);
-  if (dateTo) rows = rows.filter(r => String(r.Fecha || '') <= dateTo);
-  if (q) rows = rows.filter(r => String(r.Codigo).includes(q) || String(r.Suministro || "").toLowerCase().includes(q));
-  if (cat !== "ALL") rows = rows.filter(r => r.Categoria === cat);
-  if (ue !== "ALL") rows = rows.filter(r => r.Punto === ue);
-  if (tipo !== "ALL") rows = rows.filter(r => r.Tipo === tipo);
-  if (estado !== "ALL") rows = rows.filter(r => coverage(r) === estado);
-
-  LAST_FILTERED = rows;
-  renderKPIs(rows);
-  renderActiveTab(rows);
-}
-
-function renderKPIs(rows){
-  const req = rows.reduce((a,r)=>a + Number(r.Solicitado||0), 0);
-  const reqR = rows.reduce((a,r)=>a + Number(r.Solicitado_redondeado||0), 0);
-  const asg = rows.reduce((a,r)=>a + Number(r.Asignado||0), 0);
-  const fill = reqR > 0 ? (asg/reqR)*100 : 0;
-
-  document.getElementById('k_lines').textContent = fmt(rows.length);
-  document.getElementById('k_req').textContent = fmt(req);
-  document.getElementById('k_req_r').textContent = fmt(reqR);
-  document.getElementById('k_assigned').textContent = fmt(asg);
-  document.getElementById('k_fill').textContent = `${fill.toFixed(1)}%`;
-}
-
-function showTab(tab){
-  ACTIVE_TAB = tab;
-  document.querySelectorAll('.tab').forEach(el => el.classList.toggle('active', el.dataset.tab === tab));
-  document.querySelectorAll('.view').forEach(v => v.style.display = "none");
-  document.getElementById(`view_${tab}`).style.display = "block";
-
-  const title = document.getElementById('viewTitle');
-  const hint = document.getElementById('viewHint');
-  const meta = {
-    asignacion: ["Asignación (líneas SALMI)", "Hoja operativa para reemplazar el empirismo. Incluye solicitado original, redondeado, asignación FEFO, lotes y último despacho (fecha + cantidad)."],
-    ue_sin: ["UEs sin cobertura (Top 20)", "UEs con asignación 0 y solicitado redondeado > 0. Útil para justificar faltantes y priorizar atención por jerarquía."],
-    sku_sin: ["SKUs críticos sin stock (Top 20)", "Productos con asignación 0 y demanda operable > 0. Útil para compras/abastecimiento."],
-    invalidos: ["Pedidos inválidos por empaque", "Demanda no operable (por empaque) que fuerza empirismo. Útil para corregir solicitudes."],
-    fill_cat: ["Fill rate por categoría UE", "Cobertura (Asignado / Solicitado redondeado) agrupada por categoría UE."]
-  };
-  title.textContent = meta[tab][0];
-  hint.textContent = meta[tab][1];
-
-  renderActiveTab(LAST_FILTERED.length ? LAST_FILTERED : DATA);
-}
-
-function lastKeyFrom(punto, codigo){
-  return `${String(punto||"").trim()}|${String(codigo||"").trim()}`;
-}
-
-function norm(x){
-  return String(x||"").normalize('NFD')
-    .replace(/[\u0300-\u036f]/g,'')
-    .replace(/\s+/g,' ')
-    .trim()
-    .toUpperCase();
-}
-
-function buildUeAliasMaps(){
-  UE_SALMI_TO_STD.clear(); UE_PER_TO_STD.clear(); STD_TO_CAT.clear(); STD_TO_PER_RAW.clear();
-  (UE_ALIAS||[]).forEach(a=>{
-    const raw = norm(a.ue_raw);
-    const std = String(a.ue_std||"").trim();
-    const cat = String(a.categoria||"").trim() || "SIN_CATEGORIA";
-    if(!std) return;
-    if(a.fuente === "SALMI") UE_SALMI_TO_STD.set(raw, std);
-    if(a.fuente === "PERIODO") UE_PER_TO_STD.set(raw, std);
-    if(!STD_TO_CAT.has(std) || STD_TO_CAT.get(std)==="SIN_CATEGORIA") STD_TO_CAT.set(std, cat);
-    if(a.fuente === "PERIODO"){
-      const arr = STD_TO_PER_RAW.get(std) || [];
-      if(!arr.includes(String(a.ue_raw).trim())) arr.push(String(a.ue_raw).trim());
-      STD_TO_PER_RAW.set(std, arr);
-    }
-  });
-}
-
-function ueStdFromSalmi(punto){
-  const k = norm(punto);
-  return UE_SALMI_TO_STD.get(k) || UE_PER_TO_STD.get(k) || String(punto||"").trim();
-}
-
-function getLastDispatch(r){
-  const code = String(r.Codigo||"").trim();
-  const std = ueStdFromSalmi(r.Punto);
-  const perList = STD_TO_PER_RAW.get(std) || [String(r.Punto||"").trim()];
-  let best = null;
-  for(const pRaw of perList){
-    const hit = LAST[lastKeyFrom(pRaw, code)];
-    if(hit && hit.fecha){
-      if(!best || String(hit.fecha) > String(best.fecha)) best = hit;
-    }
-  }
-  if(!best) return {fecha:"-", qty:null};
-  return {fecha: (best.fecha || "-"), qty: best.qty};
-}
-
-function renderAsignacion(rows){
-  const tb = document.querySelector("#tbl_asignacion tbody");
-  tb.innerHTML = rows.slice(0, 2000).map(r => {
-    const b = `${fmtBultosPart(r.Bultos_Ter||0)}/${fmtBultosPart(r.Bultos_Sec||0)}/${fmtBultosPart(r.Bultos_Prim||0)}`;
-    const lots = r.Lotes_Usados ? r.Lotes_Usados : "";
-    const ld = getLastDispatch(r);
-    return `<tr>
-      <td>${r.Fecha||""}</td>
-      <td>${r.N_Doc||""}</td>
-      <td>${r.Tipo||""}</td>
-      <td>${r.Punto||""}</td>
-      <td>${r.Categoria||""}</td>
-      <td>${r.Codigo||""}</td>
-      <td>${r.Suministro||""}</td>
-      <td class="right">${fmt(r.Solicitado)}</td>
-      <td class="right">${fmt(r.Solicitado_redondeado)}</td>
-      <td class="right">${fmt(r.Asignado)}</td>
-      <td class="right">${fmt(r.Pendiente)}</td>
-      <td class="center">${b}</td>
-      <td>${lots}</td>
-      <td>${ld.fecha || "-"}</td>
-      <td class="right">${ld.qty === null || ld.qty === undefined ? "-" : fmt(ld.qty)}</td>
-    </tr>`;
-  }).join("");
-  window.__exportRows = rows;
-  window.__exportName = "asignacion";
-}
-
-function renderUESin(rows){
-  const filtered = rows.filter(r => Number(r.Asignado||0) === 0 && Number(r.Solicitado_redondeado||0) > 0);
-  const map = new Map();
-  for(const r of filtered){
-    const key = `${r.Punto||""}||${r.Categoria||""}`;
-    if(!map.has(key)) map.set(key, {UE:r.Punto||"", Categoria:r.Categoria||"", lineas:0, sol:0, solr:0, fechaMax:null});
-    const o = map.get(key);
-    o.lineas += 1;
-    o.sol += Number(r.Solicitado||0);
-    o.solr += Number(r.Solicitado_redondeado||0);
-    const d = parseISODate(r.Fecha);
-    if(d && (!o.fechaMax || d > o.fechaMax)) o.fechaMax = d;
-  }
-  const out = [...map.values()].map(o => ({
-    UE:o.UE, Categoria:o.Categoria, Lineas_sin_cobertura:o.lineas,
-    Solicitado_original:o.sol, Solicitado_redondeado:o.solr,
-    Pedido_mas_reciente:o.fechaMax ? o.fechaMax.toISOString().slice(0,10) : ""
-  })).sort((a,b)=> (b.Solicitado_redondeado - a.Solicitado_redondeado) || (b.Lineas_sin_cobertura - a.Lineas_sin_cobertura))
-    .slice(0,20);
-
-  const tb = document.querySelector("#tbl_ue_sin tbody");
-  tb.innerHTML = out.map(r => `<tr>
-    <td>${r.UE}</td>
-    <td>${r.Categoria}</td>
-    <td class="right">${fmt(r.Lineas_sin_cobertura)}</td>
-    <td class="right">${fmt(r.Solicitado_original)}</td>
-    <td class="right">${fmt(r.Solicitado_redondeado)}</td>
-    <td>${r.Pedido_mas_reciente}</td>
-  </tr>`).join("");
-
-  window.__exportRows = out;
-  window.__exportName = "ue_sin_cobertura_top20";
-}
-
-function renderSKUSin(rows){
-  const filtered = rows.filter(r => Number(r.Asignado||0) === 0 && Number(r.Solicitado_redondeado||0) > 0);
-  const map = new Map();
-  for(const r of filtered){
-    const code = String(r.Codigo||"");
-    const key = `${code}||${String(r.Suministro||"")}`;
-    if(!map.has(key)) map.set(key, {Codigo:code, Suministro:String(r.Suministro||""), sol:0, solr:0, ues:new Set(), cats:new Set(), last:null});
-    const o = map.get(key);
-    o.sol += Number(r.Solicitado||0);
-    o.solr += Number(r.Solicitado_redondeado||0);
-    o.ues.add(String(r.Punto||""));
-    o.cats.add(String(r.Categoria||""));
-    const ld = getLastDispatch(r);
-    if(ld && ld.fecha && ld.fecha !== "-"){
-      const d = parseISODate(ld.fecha);
-      if(d && (!o.last || d > o.last)) o.last = d;
-    }
-  }
-  const out = [...map.values()].map(o => ({
-    Codigo:o.Codigo,
-    Suministro:o.Suministro,
-    Solicitado_original:o.sol,
-    Solicitado_redondeado:o.solr,
-    Num_UEs:o.ues.size,
-    Categorias_afectadas:[...o.cats].filter(x=>x).sort().join(", "),
-    Ultimo_despacho_real:o.last ? o.last.toISOString().slice(0,10) : ""
-  })).sort((a,b)=> (b.Solicitado_redondeado - a.Solicitado_redondeado) || (b.Num_UEs - a.Num_UEs))
-    .slice(0,20);
-
-  const tb = document.querySelector("#tbl_sku_sin tbody");
-  tb.innerHTML = out.map(r => `<tr>
-    <td>${r.Codigo}</td>
-    <td>${r.Suministro}</td>
-    <td class="right">${fmt(r.Solicitado_original)}</td>
-    <td class="right">${fmt(r.Solicitado_redondeado)}</td>
-    <td class="right">${fmt(r.Num_UEs)}</td>
-    <td>${r.Categorias_afectadas}</td>
-    <td>${r.Ultimo_despacho_real || "-"}</td>
-  </tr>`).join("");
-
-  window.__exportRows = out;
-  window.__exportName = "skus_criticos_sin_stock_top20";
-}
-
-function renderInvalidos(rows){
-  const filtered = rows.filter(r => Number(r.Solicitado||0) > 0 && Number(r.Solicitado_redondeado||0) === 0);
-  const out = filtered.slice().sort((a,b)=>{
-    const da = parseISODate(a.Fecha); const db = parseISODate(b.Fecha);
-    return (db - da);
-  }).slice(0,2000).map(r => {
-    const sol = Number(r.Solicitado||0);
-    const empT = (r.Emp_Ter === null || r.Emp_Ter === undefined || r.Emp_Ter === "") ? null : Number(r.Emp_Ter);
-    let motivo = "Solicitado redondeado = 0";
-    if(empT && sol < empT) motivo = "Solicitado menor a empaque terciario";
-    else if(empT && (sol % empT) !== 0) motivo = "Solicitado no es múltiplo del empaque terciario";
-    else if(!empT) motivo = "Sin empaque terciario definido (fallback aplicado)";
-    return {
-      Fecha:r.Fecha||"",
-      UE:r.Punto||"",
-      Categoria:r.Categoria||"",
-      Codigo:r.Codigo||"",
-      Suministro:r.Suministro||"",
-      Solicitado_original:sol,
-      Empaque_terciario:empT,
-      Solicitado_redondeado:Number(r.Solicitado_redondeado||0),
-      Motivo:motivo
-    };
-  });
-
-  const tb = document.querySelector("#tbl_invalidos tbody");
-  tb.innerHTML = out.map(r => `<tr>
-    <td>${r.Fecha}</td>
-    <td>${r.UE}</td>
-    <td>${r.Categoria}</td>
-    <td>${r.Codigo}</td>
-    <td>${r.Suministro}</td>
-    <td class="right">${fmt(r.Solicitado_original)}</td>
-    <td class="right">${r.Empaque_terciario === null ? "-" : fmt(r.Empaque_terciario)}</td>
-    <td class="right">${fmt(r.Solicitado_redondeado)}</td>
-    <td class="${r.Motivo.includes("menor") ? "danger" : ""}">${r.Motivo}</td>
-  </tr>`).join("");
-
-  window.__exportRows = out;
-  window.__exportName = "pedidos_invalidos_por_empaque";
-}
-
-function renderFillCat(rows){
-  const map = new Map();
-  for(const r of rows){
-    const cat = String(r.Categoria||"");
-    if(!map.has(cat)) map.set(cat, {Categoria:cat, lineas:0, sol:0, solr:0, asg:0});
-    const o = map.get(cat);
-    o.lineas += 1;
-    o.sol += Number(r.Solicitado||0);
-    o.solr += Number(r.Solicitado_redondeado||0);
-    o.asg += Number(r.Asignado||0);
-  }
-  const out = [...map.values()].map(o => ({
-    Categoria:o.Categoria,
-    Lineas:o.lineas,
-    Solicitado_original:o.sol,
-    Solicitado_redondeado:o.solr,
-    Asignado:o.asg,
-    Fill_rate: o.solr > 0 ? (o.asg/o.solr) : 0
-  })).sort((a,b)=> (a.Categoria||"").localeCompare(b.Categoria||""));
-
-  const tb = document.querySelector("#tbl_fill_cat tbody");
-  tb.innerHTML = out.map(r => `<tr>
-    <td>${r.Categoria}</td>
-    <td class="right">${fmt(r.Lineas)}</td>
-    <td class="right">${fmt(r.Solicitado_original)}</td>
-    <td class="right">${fmt(r.Solicitado_redondeado)}</td>
-    <td class="right">${fmt(r.Asignado)}</td>
-    <td class="right">${(r.Fill_rate*100).toFixed(1)}%</td>
-  </tr>`).join("");
-
-  window.__exportRows = out;
-  window.__exportName = "fill_rate_por_categoria";
-}
-
-function renderActiveTab(rows){
-  if(ACTIVE_TAB === "asignacion") return renderAsignacion(rows);
-  if(ACTIVE_TAB === "ue_sin") return renderUESin(rows);
-  if(ACTIVE_TAB === "sku_sin") return renderSKUSin(rows);
-  if(ACTIVE_TAB === "invalidos") return renderInvalidos(rows);
-  if(ACTIVE_TAB === "fill_cat") return renderFillCat(rows);
-}
-
-function exportCsv(){
-  const rows = window.__exportRows || [];
-  const cols = Object.keys(rows[0] || {});
-  if (!cols.length) return;
-
-  const esc = (v) => {
-    const s = (v === null || v === undefined) ? "" : String(v);
-    if (s.includes('"') || s.includes(",") || s.includes("\n")) return '"' + s.replaceAll('"','""') + '"';
-    return s;
-  };
-  const csv = [cols.join(",")].concat(rows.map(r => cols.map(c => esc(r[c])).join(","))).join("\n");
-  const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${window.__exportName || "export"}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
-
-
-function _pickingRows(){
-  const rows = LAST_FILTERED || [];
-  // Solo líneas operables: asignación > 0
-  return rows.filter(r => Number(r.Asignado||0) > 0);
-}
-
-function exportPdfAsignacion(){
-  const rows = _pickingRows();
-  if(!rows.length){
-    alert("No hay líneas con Asignado > 0 en la vista actual. Ajusta filtros o genera asignación antes de exportar.");
-    return;
-  }
-
-  // Agrupar por UE (Punto) + Documento (pedido) => un paquete imprimible por pedido
-  const groups = new Map();
-  for(const r of rows){
-    const ue = r.Punto || "SIN_UE";
-    const doc = r.N_Doc || "SIN_DOC";
-    const key = ue + "||" + doc;
-
-    const pr = Number.isFinite(+r.Prioridad) ? +r.Prioridad : 999;
-    const f  = (r.Fecha||"");
-    if(!groups.has(key)){
-      groups.set(key, {ue, doc, tipo: r.Tipo||"", prioridad: pr, maxFecha: f, items: []});
-    }
-    const g = groups.get(key);
-    g.items.push(r);
-    if(String(f) > String(g.maxFecha)) g.maxFecha = f;
-    if(pr < g.prioridad) g.prioridad = pr;
-  }
-
-  // Orden de impresión: prioridad UE (asc) y luego fecha (reciente->antiguo)
-  const groupsArr = Array.from(groups.values()).sort((a,b)=>{
-    if(a.prioridad !== b.prioridad) return a.prioridad - b.prioridad;
-    if(a.maxFecha !== b.maxFecha) return String(b.maxFecha).localeCompare(String(a.maxFecha));
-    return String(a.doc).localeCompare(String(b.doc));
-  });
-
-  const now = new Date();
-  const fechaGen = now.toLocaleString("es-PA");
-  const corte = (PARAMS && PARAMS.corte) ? PARAMS.corte : "";
-
-  const esc = (s) => (s===null||s===undefined) ? "" : String(s)
-    .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
+  const fmtBultosPartX = fmtBultosPart; // alias para exportes
 
   const fmt = (n) => {
-    const x = Number(n);
-    if(!Number.isFinite(x)) return "";
-    return x.toLocaleString("en-US", {maximumFractionDigits: 0});
+    if (n === null || n === undefined || isNaN(n)) return "-";
+    return new Intl.NumberFormat('es-PA', {maximumFractionDigits: 0}).format(n);
   };
 
-  const fmtBultosPart = (n) => {
-    const x = Number(n);
-    if(!Number.isFinite(x)) return "0";
-    const r = Math.round(x);
-    if(Math.abs(x-r) < 1e-9) return String(r);
-    return String(parseFloat(x.toFixed(3)));
-  };
+  function tickDateTime(){
+    const el = document.getElementById('currentDateTime');
+    if(!el) return;
+    const now = new Date();
+    const opts = { weekday:'long', year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit' };
+    el.textContent = now.toLocaleString('es-PA', opts);
+  }
 
-  const makeRow = (r) => {
-    const b = `${(r.Bultos_Ter||0).toFixed(2)}/${(r.Bultos_Sec||0).toFixed(2)}/${(r.Bultos_Prim||0).toFixed(2)}`;
-    const lotes = r.Lotes_Usados ? String(r.Lotes_Usados) : "";
-    return `
-    <tr>
-      <td>${esc(r.Codigo)}</td>
-      <td>${esc(r.Suministro||"")}</td>
-      <td class="num">${fmt(r.Solicitado)}</td>
-      <td class="num">${fmt(r.Solic_red)}</td>
-      <td class="num">${fmt(r.Asignado)}</td>
-      <td class="num">${fmt(r.Pendiente)}</td>
-      <td class="center">${esc(b)}</td>
-      <td>${esc(lotes)}</td>
-    </tr>`;
-  };
+  let DATA = [];
+  let PARAMS = {};
+  let LAST = {};
+  let UE_ALIAS = [];
+  const UE_SALMI_TO_STD = new Map();
+  const UE_PER_TO_STD = new Map();
+  const STD_TO_CAT = new Map();
+  const STD_TO_PER_RAW = new Map();
+  let ACTIVE_TAB = "asignacion";
+  let LAST_FILTERED = [];
 
-  const sections = groupsArr.map(g => {
-    // ordenar por código para picking
-    g.items.sort((a,b)=> String(a.Codigo||"").localeCompare(String(b.Codigo||"")));
-    const rowsHtml = g.items.map(makeRow).join("");
-    return `
-      <div class="section">
-        <div class="sectionHeader">
-          <div><b>UE:</b> ${esc(g.ue)}</div>
-          <div><b>Documento:</b> ${esc(g.doc)}</div>
-          <div><b>Tipo:</b> ${esc(g.tipo)}</div>
-          <div><b>Fecha:</b> ${esc(g.maxFecha||"")}</div>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th style="width:110px;">Código</th>
-              <th>Suministro</th>
-              <th style="width:90px;" class="num">Asignado</th>
-              <th style="width:110px;" class="center">Bultos T/S/P</th>
-              <th style="width:240px;">Lotes</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rowsHtml}
-          </tbody>
-        </table>
-        <div class="sign">
-          <div>Preparado por: _______________________</div>
-          <div>Verificado por: _______________________</div>
-          <div>Fecha/Hora: _______________________</div>
-        </div>
-      </div>`;
-  }).join("");
+  function uniq(arr){ return [...new Set(arr)].filter(x => x !== null && x !== undefined); }
+  function parseISODate(s){
+    if(!s) return null;
+    const m = String(s).match(/(\d{4})-(\d{2})-(\d{2})/);
+    if(!m) return null;
+    return new Date(`${m[1]}-${m[2]}-${m[3]}T00:00:00`);
+  }
 
-  const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"/>
-  <title>Hoja de Asignación F8</title>
-  <style>
-    body{font-family:Arial, sans-serif; color:#111;}
-    .topbar{display:flex; gap:12px; align-items:center; border-bottom:2px solid #0b1f3a; padding-bottom:10px;}
-    .logo{width:42px; height:42px; object-fit:contain;}
-    .titleWrap{flex:1;}
-    .title{font-size:14px; font-weight:700; letter-spacing:.2px;}
-    .meta{font-size:11px; color:#333; margin-top:2px;}
-    .rules{font-size:11px; color:#333; margin-top:2px;}
-    table{width:100%; border-collapse:collapse; margin-top:10px;}
-    th,td{border:1px solid #cfd6df; padding:6px 8px; font-size:11px; vertical-align:top;}
-    th{background:#f3f5f8;}
-    .num{text-align:right;}
-    .center{text-align:center;}
-    .section{page-break-after:always; margin-top:10px;}
-    .section:last-child{page-break-after:auto;}
-    .sectionHeader{display:flex; flex-wrap:wrap; justify-content:space-between; gap:10px; font-size:12px; margin-top:8px;}
-    .sign{display:flex; justify-content:space-between; gap:12px; margin-top:14px; font-size:11px;}
-    @media print{
-      body{margin:10mm;}
-      .sectionHeader{page-break-inside:avoid;}
-      tr{page-break-inside:avoid; page-break-after:auto;}
+  function coverage(r){
+    const req = Number(r.Solicitado_redondeado || 0);
+    const asg = Number(r.Asignado || 0);
+    if (asg <= 0) return "SIN";
+    if (asg >= req && req > 0) return "COMPLETO";
+    return "PARCIAL";
+  }
+
+  function populateFilters(){
+    const catSel = document.getElementById('cat');
+    const ueSel = document.getElementById('ue');
+    const tipoSel = document.getElementById('tipo');
+    const docList = document.getElementById('docList');
+
+    const cats = ["ALL", ...uniq(DATA.map(r => r.Categoria)).sort()];
+    catSel.innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join("");
+
+    const ues = ["ALL", ...uniq(DATA.map(r => r.Punto)).sort()];
+    ueSel.innerHTML = ues.map(u => `<option value="${u}">${u}</option>`).join("");
+
+    const tipos = ["ALL", ...uniq(DATA.map(r => r.Tipo)).sort()];
+    tipoSel.innerHTML = tipos.map(t => `<option value="${t}">${t}</option>`).join("");
+
+    // Sugerencias para Documento (Doc) usando N_Doc
+    if(docList){
+      const docs = uniq(DATA.map(r => r.N_Doc)).sort();
+      docList.innerHTML = docs.map(d => `<option value="${d}"></option>`).join("");
     }
-  </style></head><body>
-    <div class="topbar">
-      <img class="logo" src="./icons/icon-512.png" alt="logo"/>
-      <div class="titleWrap">
-        <div class="title">HOJA DE ASIGNACIÓN F8 — CORTE DIARIO</div>
-        <div class="meta">Generado: ${esc(fechaGen)} | Corte: ${esc(corte)}</div>
-        <div class="rules">Reglas: FEFO | Vto ≥ 30 días | Excluye TRANSFERENCIA</div>
-      </div>
-    </div>
-    ${sections}
-  </body></html>`;
-
-  const w = window.open("", "_blank");
-  w.document.open();
-  w.document.write(html);
-  w.document.close();
-  w.focus();
-  setTimeout(()=>{ w.print(); }, 400);
-}
-
-function exportXlsxAsignacion(){
-  const rows = _pickingRows();
-  if(!rows.length){
-    alert("No hay líneas con Asignado > 0 en la vista actual. Ajusta filtros o genera asignación antes de exportar.");
-    return;
-  }
-  if(typeof XLSX === "undefined"){
-    alert("No se pudo cargar la librería XLSX. Revisa conexión o bloqueadores de contenido.");
-    return;
   }
 
-  // Agrupar por UE y Documento
-  const groups = new Map();
-  for(const r of rows){
-    const ue = r.Punto || "SIN_UE";
-    const doc = r.N_Doc || "SIN_DOC";
-    const key = ue + "||" + doc;
-    if(!groups.has(key)) groups.set(key, {ue, doc, tipo: r.Tipo||"", items: []});
-    groups.get(key).items.push(r);
+  function applyFilters(){
+    const q = (document.getElementById('q').value || "").trim().toLowerCase();
+    const cat = document.getElementById('cat').value;
+    const ue = document.getElementById('ue').value;
+    const tipo = document.getElementById('tipo').value;
+    const estado = document.getElementById('estado').value;
+
+    let rows = DATA;
+
+    const docQ = (document.getElementById('doc')?.value || '').trim().toLowerCase();
+    const dateFrom = document.getElementById('dateFrom')?.value || '';
+    const dateTo = document.getElementById('dateTo')?.value || '';
+
+    if (docQ) rows = rows.filter(r => String(r.N_Doc || '').toLowerCase().includes(docQ));
+    if (dateFrom) rows = rows.filter(r => String(r.Fecha || '') >= dateFrom);
+    if (dateTo) rows = rows.filter(r => String(r.Fecha || '') <= dateTo);
+    if (q) rows = rows.filter(r => String(r.Codigo).includes(q) || String(r.Suministro || "").toLowerCase().includes(q));
+    if (cat !== "ALL") rows = rows.filter(r => r.Categoria === cat);
+    if (ue !== "ALL") rows = rows.filter(r => r.Punto === ue);
+    if (tipo !== "ALL") rows = rows.filter(r => r.Tipo === tipo);
+    if (estado !== "ALL") rows = rows.filter(r => coverage(r) === estado);
+
+    LAST_FILTERED = rows;
+    renderKPIs(rows);
+    renderActiveTab(rows);
   }
 
-  const corte = (PARAMS && PARAMS.corte) ? PARAMS.corte : "";
-  const now = new Date().toLocaleString("es-PA");
+  function renderKPIs(rows){
+    const req = rows.reduce((a,r)=>a + Number(r.Solicitado||0), 0);
+    const reqR = rows.reduce((a,r)=>a + Number(r.Solicitado_redondeado||0), 0);
+    const asg = rows.reduce((a,r)=>a + Number(r.Asignado||0), 0);
+    const fill = reqR > 0 ? (asg/reqR)*100 : 0;
 
-  const aoa = [];
-  const fmtBultosPartX = (n) => {
-    const x = Number(n);
-    if(!Number.isFinite(x)) return "0";
-    const r = Math.round(x);
-    if(Math.abs(x-r) < 1e-9) return String(r);
-    return String(parseFloat(x.toFixed(3)));
-  };
-  aoa.push(["HOJA DE ASIGNACIÓN F8 — CORTE DIARIO"]);
-  aoa.push([`Generado: ${now}`, `Corte: ${corte}`, "Reglas: FEFO | Vto ≥ 30 días | Excluye TRANSFERENCIA"]);
-  aoa.push([]);
+    document.getElementById('k_lines').textContent = fmt(rows.length);
+    document.getElementById('k_req').textContent = fmt(req);
+    document.getElementById('k_req_r').textContent = fmt(reqR);
+    document.getElementById('k_assigned').textContent = fmt(asg);
+    document.getElementById('k_fill').textContent = `${fill.toFixed(1)}%`;
+  }
 
-  const header = ["UE", "Documento", "Tipo", "Código", "Suministro", "Solicitado", "Solic. red.", "Asignado", "Pendiente", "Bultos T/S/P", "Lotes usados", "Último despacho (real)", "Qty último"];
-  aoa.push(header);
+  function showTab(tab){
+    ACTIVE_TAB = tab;
+    document.querySelectorAll('.tab').forEach(el => el.classList.toggle('active', el.dataset.tab === tab));
+    document.querySelectorAll('.view').forEach(v => v.style.display = "none");
+    document.getElementById(`view_${tab}`).style.display = "block";
 
-  for(const g of Array.from(groups.values()).sort((a,b)=> (a.ue+a.doc).localeCompare(b.ue+b.doc))){
-    g.items.sort((a,b)=> String(a.Codigo||"").localeCompare(String(b.Codigo||"")));
-    for(const r of g.items){
-      const bults = `${fmtBultosPartX(r.Bultos_Ter||0)}/${fmtBultosPartX(r.Bultos_Sec||0)}/${fmtBultosPartX(r.Bultos_Prim||0)}`;
+    const title = document.getElementById('viewTitle');
+    const hint = document.getElementById('viewHint');
+    const meta = {
+      asignacion: ["Asignación (líneas SALMI)", "Hoja operativa para reemplazar el empirismo. Incluye solicitado original, redondeado, asignación FEFO, lotes y último despacho (fecha + cantidad)."],
+      ue_sin: ["UEs sin cobertura (Top 20)", "UEs con asignación 0 y solicitado redondeado > 0. Útil para justificar faltantes y priorizar atención por jerarquía."],
+      sku_sin: ["SKUs críticos sin stock (Top 20)", "Productos con asignación 0 y demanda operable > 0. Útil para compras/abastecimiento."],
+      invalidos: ["Pedidos inválidos por empaque", "Demanda no operable (por empaque) que fuerza empirismo. Útil para corregir solicitudes."],
+      fill_cat: ["Fill rate por categoría UE", "Cobertura (Asignado / Solicitado redondeado) agrupada por categoría UE."]
+    };
+    title.textContent = meta[tab][0];
+    hint.textContent = meta[tab][1];
+
+    renderActiveTab(LAST_FILTERED.length ? LAST_FILTERED : DATA);
+  }
+
+  function lastKeyFrom(punto, codigo){
+    return `${String(punto||"").trim()}|${String(codigo||"").trim()}`;
+  }
+
+  function buildUeAliasMaps(){
+    UE_SALMI_TO_STD.clear(); UE_PER_TO_STD.clear(); STD_TO_CAT.clear(); STD_TO_PER_RAW.clear();
+    (UE_ALIAS||[]).forEach(a=>{
+      const raw = norm(a.ue_raw);
+      const std = String(a.ue_std||"").trim();
+      const cat = String(a.categoria||"").trim() || "SIN_CATEGORIA";
+      if(!std) return;
+      if(a.fuente === "SALMI") UE_SALMI_TO_STD.set(raw, std);
+      if(a.fuente === "PERIODO") UE_PER_TO_STD.set(raw, std);
+      if(!STD_TO_CAT.has(std) || STD_TO_CAT.get(std)==="SIN_CATEGORIA") STD_TO_CAT.set(std, cat);
+      if(a.fuente === "PERIODO"){
+        const arr = STD_TO_PER_RAW.get(std) || [];
+        if(!arr.includes(String(a.ue_raw).trim())) arr.push(String(a.ue_raw).trim());
+        STD_TO_PER_RAW.set(std, arr);
+      }
+    });
+  }
+
+  function ueStdFromSalmi(punto){
+    const k = norm(punto);
+    return UE_SALMI_TO_STD.get(k) || UE_PER_TO_STD.get(k) || String(punto||"").trim();
+  }
+
+  function remapDataWithAliases(){
+    DATA = (DATA||[]).map(r=>{
+      const std = ueStdFromSalmi(r.Punto);
+      const cat = STD_TO_CAT.get(std) || r.Categoria || "SIN_CATEGORIA";
+      return {...r, Punto: std, Categoria: cat};
+    });
+  }
+
+  function getLastDispatch(r){
+    const code = String(r.Codigo||"").trim();
+    const std = ueStdFromSalmi(r.Punto);
+    const perList = STD_TO_PER_RAW.get(std) || [String(r.Punto||"").trim()];
+    let best = null;
+    for(const pRaw of perList){
+      const hit = LAST[lastKeyFrom(pRaw, code)];
+      if(hit && hit.fecha){
+        if(!best || String(hit.fecha) > String(best.fecha)) best = hit;
+      }
+    }
+    if(!best) return {fecha:"-", qty:null};
+    return {fecha: (best.fecha || "-"), qty: best.qty};
+  }
+
+  function renderAsignacion(rows){
+    const tb = document.querySelector("#tbl_asignacion tbody");
+    tb.innerHTML = rows.slice(0, 2000).map(r => {
+      const b = fmtBultosTriple(r.Bultos_Ter||0, r.Bultos_Sec||0, r.Bultos_Prim||0);
+      const lots = r.Lotes_Usados ? r.Lotes_Usados : "";
       const ld = getLastDispatch(r);
-      aoa.push([
-        g.ue,
-        g.doc,
-        g.tipo,
-        r.Codigo||"",
-        r.Suministro||"",
-        Number(r.Solicitado||0),
-        Number(r.Solic_red||0),
-        Number(r.Asignado||0),
-        Number(r.Pendiente||0),
-        bults,
-        r.Lotes_Usados||"",
-        ld.fecha || "",
-        (ld.qty===null||ld.qty===undefined) ? "" : Number(ld.qty)
-      ]);
-    }
-    aoa.push([]);
+      return `<tr>
+        <td>${r.Fecha||""}</td>
+        <td>${r.N_Doc||""}</td>
+        <td>${r.Tipo||""}</td>
+        <td>${r.Punto||""}</td>
+        <td>${r.Categoria||""}</td>
+        <td>${r.Codigo||""}</td>
+        <td>${r.Suministro||""}</td>
+        <td class="right">${fmt(r.Solicitado)}</td>
+        <td class="right">${fmt(r.Solicitado_redondeado)}</td>
+        <td class="right">${fmt(r.Asignado)}</td>
+        <td class="right">${fmt(r.Pendiente)}</td>
+        <td class="center">${b}</td>
+        <td>${lots}</td>
+        <td>${ld.fecha || "-"}</td>
+        <td class="right">${ld.qty === null || ld.qty === undefined ? "-" : fmt(ld.qty)}</td>
+      </tr>`;
+    }).join("");
+    window.__exportRows = rows;
+    window.__exportName = "asignacion";
   }
 
-  const ws = XLSX.utils.aoa_to_sheet(aoa);
-  // Ajustes de ancho
-  ws["!cols"] = [
-    {wch:22},{wch:18},{wch:12},{wch:12},{wch:60},{wch:12},{wch:12},{wch:12},{wch:12},{wch:14},{wch:40},{wch:18},{wch:12}
-  ];
-  // Congelar encabezado (aprox) -> SheetJS: !freeze
-  ws["!freeze"] = { xSplit: 0, ySplit: 4 };
+  function renderUESin(rows){
+    const filtered = rows.filter(r => Number(r.Asignado||0) === 0 && Number(r.Solicitado_redondeado||0) > 0);
+    const map = new Map();
+    for(const r of filtered){
+      const key = `${r.Punto||""}||${r.Categoria||""}`;
+      if(!map.has(key)) map.set(key, {UE:r.Punto||"", Categoria:r.Categoria||"", lineas:0, sol:0, solr:0, fechaMax:null});
+      const o = map.get(key);
+      o.lineas += 1;
+      o.sol += Number(r.Solicitado||0);
+      o.solr += Number(r.Solicitado_redondeado||0);
+      const d = parseISODate(r.Fecha);
+      if(d && (!o.fechaMax || d > o.fechaMax)) o.fechaMax = d;
+    }
+    const out = [...map.values()].map(o => ({
+      UE:o.UE, Categoria:o.Categoria, Lineas_sin_cobertura:o.lineas,
+      Solicitado_original:o.sol, Solicitado_redondeado:o.solr,
+      Pedido_mas_reciente:o.fechaMax ? o.fechaMax.toISOString().slice(0,10) : ""
+    })).sort((a,b)=> (b.Solicitado_redondeado - a.Solicitado_redondeado) || (b.Lineas_sin_cobertura - a.Lineas_sin_cobertura))
+      .slice(0,20);
 
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Asignacion_F8");
-  const fname = `Hoja_Asignacion_F8_${corte || "corte"}.xlsx`;
-  XLSX.writeFile(wb, fname);
-}
+    const tb = document.querySelector("#tbl_ue_sin tbody");
+    tb.innerHTML = out.map(r => `<tr>
+      <td>${r.UE}</td>
+      <td>${r.Categoria}</td>
+      <td class="right">${fmt(r.Lineas_sin_cobertura)}</td>
+      <td class="right">${fmt(r.Solicitado_original)}</td>
+      <td class="right">${fmt(r.Solicitado_redondeado)}</td>
+      <td>${r.Pedido_mas_reciente}</td>
+    </tr>`).join("");
 
+    window.__exportRows = out;
+    window.__exportName = "ue_sin_cobertura_top20";
+  }
 
-async function init(){
-  tickDateTime();
-  setInterval(tickDateTime, 60000);
+  function renderSKUSin(rows){
+    const filtered = rows.filter(r => Number(r.Asignado||0) === 0 && Number(r.Solicitado_redondeado||0) > 0);
+    const map = new Map();
+    for(const r of filtered){
+      const code = String(r.Codigo||"");
+      const key = `${code}||${String(r.Suministro||"")}`;
+      if(!map.has(key)) map.set(key, {Codigo:code, Suministro:String(r.Suministro||""), sol:0, solr:0, ues:new Set(), cats:new Set(), last:null});
+      const o = map.get(key);
+      o.sol += Number(r.Solicitado||0);
+      o.solr += Number(r.Solicitado_redondeado||0);
+      o.ues.add(String(r.Punto||""));
+      o.cats.add(String(r.Categoria||""));
+      const ld = getLastDispatch(r);
+      if(ld && ld.fecha && ld.fecha !== "-"){
+        const d = parseISODate(ld.fecha);
+        if(d && (!o.last || d > o.last)) o.last = d;
+      }
+    }
+    const out = [...map.values()].map(o => ({
+      Codigo:o.Codigo,
+      Suministro:o.Suministro,
+      Solicitado_original:o.sol,
+      Solicitado_redondeado:o.solr,
+      Num_UEs:o.ues.size,
+      Categorias_afectadas:[...o.cats].filter(x=>x).sort().join(", "),
+      Ultimo_despacho_real:o.last ? o.last.toISOString().slice(0,10) : ""
+    })).sort((a,b)=> (b.Solicitado_redondeado - a.Solicitado_redondeado) || (b.Num_UEs - a.Num_UEs))
+      .slice(0,20);
 
-  const [dataRes, paramsRes, lastRes] = await Promise.all([
-    fetch("./allocation.json"),
-    fetch("./params.json"),
-    fetch("./last_dispatch.json")
-  ]);
-  DATA = await dataRes.json();
-  PARAMS = await paramsRes.json();
-  LAST = await lastRes.json();
+    const tb = document.querySelector("#tbl_sku_sin tbody");
+    tb.innerHTML = out.map(r => `<tr>
+      <td>${r.Codigo}</td>
+      <td>${r.Suministro}</td>
+      <td class="right">${fmt(r.Solicitado_original)}</td>
+      <td class="right">${fmt(r.Solicitado_redondeado)}</td>
+      <td class="right">${fmt(r.Num_UEs)}</td>
+      <td>${r.Categorias_afectadas}</td>
+      <td>${r.Ultimo_despacho_real || "-"}</td>
+    </tr>`).join("");
 
-  document.getElementById('cutDate').textContent = PARAMS.cut_date || "-";
-  document.getElementById('minVto').textContent = PARAMS.min_vto || "-";
+    window.__exportRows = out;
+    window.__exportName = "skus_criticos_sin_stock_top20";
+  }
 
-  populateFilters();
-  LAST_FILTERED = DATA;
-  renderKPIs(DATA);
-  showTab("asignacion");
+  function renderInvalidos(rows){
+    const filtered = rows.filter(r => Number(r.Solicitado||0) > 0 && Number(r.Solicitado_redondeado||0) === 0);
+    const out = filtered.slice().sort((a,b)=>{
+      const da = parseISODate(a.Fecha); const db = parseISODate(b.Fecha);
+      return (db - da);
+    }).slice(0,2000).map(r => {
+      const sol = Number(r.Solicitado||0);
+      const empT = (r.Emp_Ter === null || r.Emp_Ter === undefined || r.Emp_Ter === "") ? null : Number(r.Emp_Ter);
+      let motivo = "Solicitado redondeado = 0";
+      if(empT && sol < empT) motivo = "Solicitado menor a empaque terciario";
+      else if(empT && (sol % empT) !== 0) motivo = "Solicitado no es múltiplo del empaque terciario";
+      else if(!empT) motivo = "Sin empaque terciario definido (fallback aplicado)";
+      return {
+        Fecha:r.Fecha||"",
+        UE:r.Punto||"",
+        Categoria:r.Categoria||"",
+        Codigo:r.Codigo||"",
+        Suministro:r.Suministro||"",
+        Solicitado_original:sol,
+        Empaque_terciario:empT,
+        Solicitado_redondeado:Number(r.Solicitado_redondeado||0),
+        Motivo:motivo
+      };
+    });
 
-  document.getElementById('btnApply').addEventListener('click', applyFilters);
-  document.getElementById('btnReset').addEventListener('click', () => {
-    document.getElementById('q').value = "";
-    document.getElementById('doc').value = "";
-    document.getElementById('dateFrom').value = "";
-    document.getElementById('dateTo').value = "";
-    document.getElementById('cat').value = "ALL";
-    document.getElementById('ue').value = "ALL";
-    document.getElementById('tipo').value = "ALL";
-    document.getElementById('estado').value = "ALL";
-    applyFilters();
-  });
-  document.getElementById('btnExportCsv').addEventListener('click', exportCsv);
-  document.getElementById('btnExportPdf').addEventListener('click', exportPdfAsignacion);
-  document.getElementById('btnExportXlsx').addEventListener('click', exportXlsxAsignacion);
-  document.querySelectorAll('.tab').forEach(el => el.addEventListener('click', () => showTab(el.dataset.tab)));
-}
+    const tb = document.querySelector("#tbl_invalidos tbody");
+    tb.innerHTML = out.map(r => `<tr>
+      <td>${r.Fecha}</td>
+      <td>${r.UE}</td>
+      <td>${r.Categoria}</td>
+      <td>${r.Codigo}</td>
+      <td>${r.Suministro}</td>
+      <td class="right">${fmt(r.Solicitado_original)}</td>
+      <td class="right">${r.Empaque_terciario === null ? "-" : fmt(r.Empaque_terciario)}</td>
+      <td class="right">${fmt(r.Solicitado_redondeado)}</td>
+      <td class="${r.Motivo.includes("menor") ? "danger" : ""}">${r.Motivo}</td>
+    </tr>`).join("");
 
-  // Carga local (sin commitear al repo): selecciona allocation.json + last_dispatch.json (+ params.json opcional)
+    window.__exportRows = out;
+    window.__exportName = "pedidos_invalidos_por_empaque";
+  }
+
+  function renderFillCat(rows){
+    const map = new Map();
+    for(const r of rows){
+      const cat = String(r.Categoria||"");
+      if(!map.has(cat)) map.set(cat, {Categoria:cat, lineas:0, sol:0, solr:0, asg:0});
+      const o = map.get(cat);
+      o.lineas += 1;
+      o.sol += Number(r.Solicitado||0);
+      o.solr += Number(r.Solicitado_redondeado||0);
+      o.asg += Number(r.Asignado||0);
+    }
+    const out = [...map.values()].map(o => ({
+      Categoria:o.Categoria,
+      Lineas:o.lineas,
+      Solicitado_original:o.sol,
+      Solicitado_redondeado:o.solr,
+      Asignado:o.asg,
+      Fill_rate: o.solr > 0 ? (o.asg/o.solr) : 0
+    })).sort((a,b)=> (a.Categoria||"").localeCompare(b.Categoria||""));
+
+    const tb = document.querySelector("#tbl_fill_cat tbody");
+    tb.innerHTML = out.map(r => `<tr>
+      <td>${r.Categoria}</td>
+      <td class="right">${fmt(r.Lineas)}</td>
+      <td class="right">${fmt(r.Solicitado_original)}</td>
+      <td class="right">${fmt(r.Solicitado_redondeado)}</td>
+      <td class="right">${fmt(r.Asignado)}</td>
+      <td class="right">${(r.Fill_rate*100).toFixed(1)}%</td>
+    </tr>`).join("");
+
+    window.__exportRows = out;
+    window.__exportName = "fill_rate_por_categoria";
+  }
+
+  function renderActiveTab(rows){
+    if(ACTIVE_TAB === "asignacion") return renderAsignacion(rows);
+    if(ACTIVE_TAB === "ue_sin") return renderUESin(rows);
+    if(ACTIVE_TAB === "sku_sin") return renderSKUSin(rows);
+    if(ACTIVE_TAB === "invalidos") return renderInvalidos(rows);
+    if(ACTIVE_TAB === "fill_cat") return renderFillCat(rows);
+  }
+
+  function exportCsv(){
+    const rows = window.__exportRows || [];
+    const cols = Object.keys(rows[0] || {});
+    if (!cols.length) return;
+
+    const esc = (v) => {
+      const s = (v === null || v === undefined) ? "" : String(v);
+      if (s.includes('"') || s.includes(",") || s.includes("\n")) return '"' + s.replaceAll('"','""') + '"';
+      return s;
+    };
+    const csv = [cols.join(",")].concat(rows.map(r => cols.map(c => esc(r[c])).join(","))).join("\n");
+    const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${window.__exportName || "export"}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function _pickingRows(){
+    const rows = LAST_FILTERED || [];
+    return rows.filter(r => Number(r.Asignado||0) > 0);
+  }
+
+  function exportPdfAsignacion(){
+    const rows = _pickingRows();
+    if(!rows.length){
+      alert("No hay líneas con Asignado > 0 en la vista actual. Ajusta filtros o genera asignación antes de exportar.");
+      return;
+    }
+
+    const groups = new Map();
+    for(const r of rows){
+      const ue = r.Punto || "SIN_UE";
+      const doc = r.N_Doc || "SIN_DOC";
+      const key = ue + "||" + doc;
+
+      const pr = Number.isFinite(+r.Prioridad) ? +r.Prioridad : 999;
+      const f  = (r.Fecha||"");
+      if(!groups.has(key)){
+        groups.set(key, {ue, doc, tipo: r.Tipo||"", prioridad: pr, maxFecha: f, items: []});
+      }
+      const g = groups.get(key);
+      g.items.push(r);
+      if(String(f) > String(g.maxFecha)) g.maxFecha = f;
+      if(pr < g.prioridad) g.prioridad = pr;
+    }
+
+    const groupsArr = Array.from(groups.values()).sort((a,b)=>{
+      if(a.prioridad !== b.prioridad) return a.prioridad - b.prioridad;
+      if(a.maxFecha !== b.maxFecha) return String(b.maxFecha).localeCompare(String(a.maxFecha));
+      return String(a.doc).localeCompare(String(b.doc));
+    });
+
+    const now = new Date();
+    const fechaGen = now.toLocaleString("es-PA");
+    const corte = (PARAMS && PARAMS.corte) ? PARAMS.corte : "";
+
+    const esc = (s) => (s===null||s===undefined) ? "" : String(s)
+      .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
+    const fmt0 = (n) => {
+      const x = Number(n);
+      if(!Number.isFinite(x)) return "";
+      return x.toLocaleString("en-US", {maximumFractionDigits: 0});
+    };
+
+    const makeRow = (r) => {
+      const b = fmtBultosTriple(r.Bultos_Ter||0, r.Bultos_Sec||0, r.Bultos_Prim||0);
+      const lotes = r.Lotes_Usados ? String(r.Lotes_Usados) : "";
+      const ld = getLastDispatch(r);
+      return `
+      <tr>
+        <td>${esc(r.Codigo)}</td>
+        <td>${esc(r.Suministro||"")}</td>
+        <td class="num">${fmt0(r.Solicitado)}</td>
+        <td class="num">${fmt0(r.Solicitado_redondeado)}</td>
+        <td class="num">${fmt0(r.Asignado)}</td>
+        <td class="num">${fmt0(r.Pendiente)}</td>
+        <td class="center">${esc(b)}</td>
+        <td>${esc(lotes)}</td>
+        <td>${esc(ld.fecha||"-")}</td>
+        <td class="num">${(ld.qty===null||ld.qty===undefined) ? "" : fmt0(ld.qty)}</td>
+      </tr>`;
+    };
+
+    const sections = groupsArr.map(g => {
+      g.items.sort((a,b)=> String(a.Codigo||"").localeCompare(String(b.Codigo||"")));
+      const rowsHtml = g.items.map(makeRow).join("");
+      return `
+        <div class="section">
+          <div class="sectionHeader">
+            <div><b>UE:</b> ${esc(g.ue)}</div>
+            <div><b>Documento:</b> ${esc(g.doc)}</div>
+            <div><b>Tipo:</b> ${esc(g.tipo)}</div>
+            <div><b>Fecha:</b> ${esc(g.maxFecha||"")}</div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th style="width:110px;">Código</th>
+                <th>Suministro</th>
+                <th style="width:90px;" class="num">Solicitado</th>
+                <th style="width:90px;" class="num">Solic. red.</th>
+                <th style="width:90px;" class="num">Asignado</th>
+                <th style="width:90px;" class="num">Pendiente</th>
+                <th style="width:120px;" class="center">Bultos T/S/P</th>
+                <th style="width:240px;">Lotes</th>
+                <th style="width:110px;">Últ. desp.</th>
+                <th style="width:90px;" class="num">Qty últ.</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+          <div class="sign">
+            <div>Preparado por: _______________________</div>
+            <div>Verificado por: _______________________</div>
+            <div>Fecha/Hora: _______________________</div>
+          </div>
+        </div>`;
+    }).join("");
+
+    const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"/>
+    <title>Hoja de Asignación F8</title>
+    <style>
+      body{font-family:Arial, sans-serif; color:#111;}
+      .topbar{display:flex; gap:12px; align-items:center; border-bottom:2px solid #0b1f3a; padding-bottom:10px;}
+      .logo{width:42px; height:42px; object-fit:contain;}
+      .titleWrap{flex:1;}
+      .title{font-size:14px; font-weight:700; letter-spacing:.2px;}
+      .meta{font-size:11px; color:#333; margin-top:2px;}
+      .rules{font-size:11px; color:#333; margin-top:2px;}
+      table{width:100%; border-collapse:collapse; margin-top:10px;}
+      th,td{border:1px solid #cfd6df; padding:6px 8px; font-size:11px; vertical-align:top;}
+      th{background:#f3f5f8;}
+      .num{text-align:right;}
+      .center{text-align:center;}
+      .section{page-break-after:always; margin-top:10px;}
+      .section:last-child{page-break-after:auto;}
+      .sectionHeader{display:flex; flex-wrap:wrap; justify-content:space-between; gap:10px; font-size:12px; margin-top:8px;}
+      .sign{display:flex; justify-content:space-between; gap:12px; margin-top:14px; font-size:11px;}
+      @media print{
+        body{margin:10mm;}
+        .sectionHeader{page-break-inside:avoid;}
+        tr{page-break-inside:avoid; page-break-after:auto;}
+      }
+    </style></head><body>
+      <div class="topbar">
+        <img class="logo" src="./icons/icon-512.png" alt="logo"/>
+        <div class="titleWrap">
+          <div class="title">HOJA DE ASIGNACIÓN F8 — CORTE DIARIO</div>
+          <div class="meta">Generado: ${esc(fechaGen)} | Corte: ${esc(corte)}</div>
+          <div class="rules">Reglas: FEFO | Vto ≥ 30 días | Excluye TRANSFERENCIA</div>
+        </div>
+      </div>
+      ${sections}
+    </body></html>`;
+
+    const w = window.open("", "_blank");
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    setTimeout(()=>{ w.print(); }, 400);
+  }
+
+  function exportXlsxAsignacion(){
+    const rows = _pickingRows();
+    if(!rows.length){
+      alert("No hay líneas con Asignado > 0 en la vista actual. Ajusta filtros o genera asignación antes de exportar.");
+      return;
+    }
+    if(typeof XLSX === "undefined"){
+      alert("No se pudo cargar la librería XLSX. Revisa conexión o bloqueadores de contenido.");
+      return;
+    }
+
+    const groups = new Map();
+    for(const r of rows){
+      const ue = r.Punto || "SIN_UE";
+      const doc = r.N_Doc || "SIN_DOC";
+      const key = ue + "||" + doc;
+      if(!groups.has(key)) groups.set(key, {ue, doc, tipo: r.Tipo||"", items: []});
+      groups.get(key).items.push(r);
+    }
+
+    const corte = (PARAMS && PARAMS.corte) ? PARAMS.corte : "";
+    const now = new Date().toLocaleString("es-PA");
+
+    const aoa = [];
+    aoa.push(["HOJA DE ASIGNACIÓN F8 — CORTE DIARIO"]);
+    aoa.push([`Generado: ${now}`, `Corte: ${corte}`, "Reglas: FEFO | Vto ≥ 30 días | Excluye TRANSFERENCIA"]);
+    aoa.push([]);
+
+    const header = ["UE", "Documento", "Tipo", "Código", "Suministro", "Solicitado", "Solic. red.", "Asignado", "Pendiente", "Bultos T/S/P", "Lotes usados", "Último despacho (real)", "Qty último"];
+    aoa.push(header);
+
+    for(const g of Array.from(groups.values()).sort((a,b)=> (a.ue+a.doc).localeCompare(b.ue+b.doc))){
+      g.items.sort((a,b)=> String(a.Codigo||"").localeCompare(String(b.Codigo||"")));
+      for(const r of g.items){
+        const bults = `${fmtBultosPartX(r.Bultos_Ter||0)}/${fmtBultosPartX(r.Bultos_Sec||0)}/${fmtBultosPartX(r.Bultos_Prim||0)}`;
+        const ld = getLastDispatch(r);
+        aoa.push([
+          g.ue,
+          g.doc,
+          g.tipo,
+          r.Codigo||"",
+          r.Suministro||"",
+          Number(r.Solicitado||0),
+          Number(r.Solicitado_redondeado||0),
+          Number(r.Asignado||0),
+          Number(r.Pendiente||0),
+          bults,
+          r.Lotes_Usados||"",
+          ld.fecha || "",
+          (ld.qty===null||ld.qty===undefined) ? "" : Number(ld.qty)
+        ]);
+      }
+      aoa.push([]);
+    }
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws["!cols"] = [
+      {wch:22},{wch:18},{wch:12},{wch:12},{wch:60},{wch:12},{wch:12},{wch:12},{wch:12},{wch:14},{wch:40},{wch:18},{wch:12}
+    ];
+    ws["!freeze"] = { xSplit: 0, ySplit: 4 };
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Asignacion_F8");
+    const fname = `Hoja_Asignacion_F8_${corte || "corte"}.xlsx`;
+    XLSX.writeFile(wb, fname);
+  }
+
+  async function init(){
+    tickDateTime();
+    setInterval(tickDateTime, 60000);
+
+    try{
+      const [dataRes, paramsRes, lastRes, aliasRes] = await Promise.all([
+        fetch("./allocation.json"),
+        fetch("./params.json"),
+        fetch("./last_dispatch.json"),
+        fetch("./ue_alias.json")
+      ]);
+      DATA = await dataRes.json();
+      PARAMS = await paramsRes.json();
+      LAST = await lastRes.json();
+      UE_ALIAS = await aliasRes.json();
+    }catch(e){
+      console.error(e);
+      alert("No se pudieron cargar los JSON principales (allocation/params/last_dispatch/ue_alias). Revisa conexión o nombres de archivo.");
+      return;
+    }
+
+    buildUeAliasMaps();
+    remapDataWithAliases();
+
+    document.getElementById('cutDate').textContent = PARAMS.cut_date || PARAMS.corte || "-";
+    document.getElementById('minVto').textContent = PARAMS.min_vto || "-";
+
+    populateFilters();
+    LAST_FILTERED = DATA;
+    renderKPIs(DATA);
+    showTab("asignacion");
+
+    document.getElementById('btnApply').addEventListener('click', applyFilters);
+    document.getElementById('btnReset').addEventListener('click', () => {
+      document.getElementById('q').value = "";
+      document.getElementById('doc').value = "";
+      document.getElementById('dateFrom').value = "";
+      document.getElementById('dateTo').value = "";
+      document.getElementById('cat').value = "ALL";
+      document.getElementById('ue').value = "ALL";
+      document.getElementById('tipo').value = "ALL";
+      document.getElementById('estado').value = "ALL";
+      applyFilters();
+    });
+    document.getElementById('btnExportCsv').addEventListener('click', exportCsv);
+    document.getElementById('btnExportPdf').addEventListener('click', exportPdfAsignacion);
+    document.getElementById('btnExportXlsx').addEventListener('click', exportXlsxAsignacion);
+    document.querySelectorAll('.tab').forEach(el => el.addEventListener('click', () => showTab(el.dataset.tab)));
+  }
+
+  // Carga local (sin commitear al repo)
   const btnLoad = document.getElementById('btnLoadLocal');
   const fileLoad = document.getElementById('fileLoad');
   if (btnLoad && fileLoad){
@@ -964,8 +954,11 @@ async function init(){
         if (byName['allocation.json']) DATA = await readJson(byName['allocation.json']);
         if (byName['last_dispatch.json']) LAST = await readJson(byName['last_dispatch.json']);
         if (byName['params.json']) PARAMS = await readJson(byName['params.json']);
+        if (byName['ue_alias.json']) UE_ALIAS = await readJson(byName['ue_alias.json']);
 
-        // reset filtros y repintar
+        buildUeAliasMaps();
+        remapDataWithAliases();
+
         document.getElementById('q').value = "";
         document.getElementById('doc').value = "";
         document.getElementById('dateFrom').value = "";
@@ -975,7 +968,7 @@ async function init(){
         document.getElementById('tipo').value = "ALL";
         document.getElementById('estado').value = "ALL";
 
-        buildDropdowns(DATA);
+        populateFilters();
         applyFilters();
         alert('Datos locales cargados. Ya puedes filtrar y exportar PDF/Excel.');
       }catch(e){
@@ -987,7 +980,7 @@ async function init(){
     });
   }
 
-init();
+  init();
 </script>
 </body>
 </html>
