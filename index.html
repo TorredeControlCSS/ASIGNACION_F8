@@ -306,6 +306,7 @@
   const UE_PER_TO_STD = new Map();
   const STD_TO_CAT = new Map();
   const STD_TO_PER_RAW = new Map();
+  const CANON_STD = new Map(); // norm(std) -> std canónico
   let ACTIVE_TAB = "asignacion";
   let LAST_FILTERED = [];
 
@@ -340,7 +341,6 @@
     const tipos = ["ALL", ...uniq(DATA.map(r => r.Tipo)).sort()];
     tipoSel.innerHTML = tipos.map(t => `<option value="${t}">${t}</option>`).join("");
 
-    // Sugerencias para Documento (Doc) usando N_Doc
     if(docList){
       const docs = uniq(DATA.map(r => r.N_Doc)).sort();
       docList.innerHTML = docs.map(d => `<option value="${d}"></option>`).join("");
@@ -412,19 +412,28 @@
     return `${String(punto||"").trim()}|${String(codigo||"").trim()}`;
   }
 
+  function canonStd(std){
+    const k = norm(std);
+    if(CANON_STD.has(k)) return CANON_STD.get(k);
+    CANON_STD.set(k, std);
+    return std;
+  }
+
   function buildUeAliasMaps(){
-    UE_SALMI_TO_STD.clear(); UE_PER_TO_STD.clear(); STD_TO_CAT.clear(); STD_TO_PER_RAW.clear();
+    UE_SALMI_TO_STD.clear(); UE_PER_TO_STD.clear(); STD_TO_CAT.clear(); STD_TO_PER_RAW.clear(); CANON_STD.clear();
     (UE_ALIAS||[]).forEach(a=>{
       const raw = norm(a.ue_raw);
-      const std = String(a.ue_std||"").trim();
+      const stdOriginal = String(a.ue_std||"").trim();
+      if(!stdOriginal) return;
+      const std = canonStd(stdOriginal); // unifica SALMI y PERIODO
       const cat = String(a.categoria||"").trim() || "SIN_CATEGORIA";
-      if(!std) return;
       if(a.fuente === "SALMI") UE_SALMI_TO_STD.set(raw, std);
       if(a.fuente === "PERIODO") UE_PER_TO_STD.set(raw, std);
       if(!STD_TO_CAT.has(std) || STD_TO_CAT.get(std)==="SIN_CATEGORIA") STD_TO_CAT.set(std, cat);
       if(a.fuente === "PERIODO"){
         const arr = STD_TO_PER_RAW.get(std) || [];
-        if(!arr.includes(String(a.ue_raw).trim())) arr.push(String(a.ue_raw).trim());
+        const rawStr = String(a.ue_raw).trim();
+        if(!arr.includes(rawStr)) arr.push(rawStr);
         STD_TO_PER_RAW.set(std, arr);
       }
     });
@@ -432,7 +441,7 @@
 
   function ueStdFromSalmi(punto){
     const k = norm(punto);
-    return UE_SALMI_TO_STD.get(k) || UE_PER_TO_STD.get(k) || String(punto||"").trim();
+    return UE_SALMI_TO_STD.get(k) || UE_PER_TO_STD.get(k) || canonStd(String(punto||"").trim());
   }
 
   function remapDataWithAliases(){
@@ -935,7 +944,6 @@
     document.querySelectorAll('.tab').forEach(el => el.addEventListener('click', () => showTab(el.dataset.tab)));
   }
 
-  // Carga local (sin commitear al repo)
   const btnLoad = document.getElementById('btnLoadLocal');
   const fileLoad = document.getElementById('fileLoad');
   if (btnLoad && fileLoad){
