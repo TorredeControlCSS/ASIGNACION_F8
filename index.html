@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>SIGUELO - Asignación F8 (v1)</title>
+  <title>SIGUELO - Asignación F8 (v1.1)</title>
   <style>
     body{font-family: Arial, sans-serif; margin: 18px;}
-    .grid{display:grid; grid-template-columns: 1fr 1fr 1fr; gap:12px;}
-    .card{border:1px solid #ddd; border-radius:10px; padding:12px; box-shadow: 0 1px 2px rgba(0,0,0,.04);}
+    .grid{display:grid; grid-template-columns: 420px 1fr; gap:12px; align-items:start;}
+    .card{border:1px solid #ddd; border-radius:10px; padding:12px; box-shadow: 0 1px 2px rgba(0,0,0,.04); background:#fff;}
     h1{font-size:18px; margin:0 0 8px 0;}
     h2{font-size:14px; margin:0 0 8px 0;}
     label{display:block; font-size:12px; margin-top:6px;}
@@ -18,6 +18,9 @@
     .kpi .box{border:1px solid #e5e5e5; border-radius:10px; padding:10px;}
     .kpi .value{font-size:16px; font-weight:700; margin-top:6px;}
     .muted{color:#666; font-size:12px;}
+    .tabs{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;}
+    .tab{border:1px solid #ddd; border-radius:999px; padding:7px 10px; font-size:12px; cursor:pointer; user-select:none; background:#fff;}
+    .tab.active{border-color:#333; font-weight:700;}
     table{border-collapse: collapse; width:100%; font-size:12px;}
     th, td{border:1px solid #ddd; padding:6px; vertical-align:top;}
     th{background:#f7f7f7; position:sticky; top:0; z-index:1;}
@@ -25,11 +28,17 @@
     .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
     .row > *{flex: 1 1 auto;}
     .pill{display:inline-block; border:1px solid #ddd; border-radius:999px; padding:2px 8px; font-size:12px;}
+    .right{text-align:right;}
+    .center{text-align:center;}
+    .danger{color:#b00020;}
   </style>
 </head>
 <body>
-  <h1>SIGUELO - Asignación de pedidos F8 (v1)</h1>
-  <div class="muted">Corte: <span id="cutDate"></span> · Lotes elegibles: vencimiento ≥ <span id="minVto"></span> · Orden: prioridad UE → fecha (reciente a antiguo)</div>
+  <h1>SIGUELO - Asignación de pedidos F8 (v1.1)</h1>
+  <div class="muted">
+    Corte: <span id="cutDate"></span> · Lotes elegibles: vencimiento ≥ <span id="minVto"></span> ·
+    Orden: prioridad UE → fecha (reciente a antiguo)
+  </div>
 
   <div class="grid" style="margin-top:12px;">
     <div class="card">
@@ -54,55 +63,134 @@
         <button id="btnReset">Reset</button>
       </div>
       <div class="row" style="margin-top:10px;">
-        <button id="btnExport">Exportar CSV (vista)</button>
+        <button id="btnExport">Exportar (pestaña actual)</button>
       </div>
       <div class="muted" style="margin-top:10px;">
-        Nota: Solicitado se redondea hacia abajo por empaque terciario (o secundario/primario si falta). Pedidos menores a 1 terciario quedan en 0.
+        Reglas: Solicitado en unidades sueltas · Se muestra siempre Solicitado (original) y Solicitado (redondeado operable) ·
+        Redondeo hacia abajo por empaque terciario (fallback secundario/primario/1) · FEFO · Vto ≥ 30 días · Parciales permitidos.
       </div>
     </div>
 
-    <div class="card" style="grid-column: span 2;">
+    <div class="card">
       <h2>KPIs (vista filtrada)</h2>
       <div class="kpi">
         <div class="box"><div class="muted">Líneas</div><div class="value" id="k_lines">-</div></div>
-        <div class="box"><div class="muted">Solicitado</div><div class="value" id="k_req">-</div></div>
-        <div class="box"><div class="muted">Solicitado redondeado</div><div class="value" id="k_req_r">-</div></div>
+        <div class="box"><div class="muted">Solicitado (original)</div><div class="value" id="k_req">-</div></div>
+        <div class="box"><div class="muted">Solicitado (redondeado)</div><div class="value" id="k_req_r">-</div></div>
         <div class="box"><div class="muted">Asignado</div><div class="value" id="k_assigned">-</div></div>
         <div class="box"><div class="muted">Fill rate</div><div class="value" id="k_fill">-</div></div>
       </div>
-      <div style="margin-top:10px;" class="muted">
-        Cobertura: <span class="pill">Completo</span> = Asignado = Solicitado redondeado ·
-        <span class="pill">Parcial</span> = 0 &lt; Asignado &lt; Solicitado redondeado ·
-        <span class="pill">Sin stock</span> = Asignado = 0
+
+      <div class="tabs" role="tablist" aria-label="Pestañas">
+        <div class="tab active" data-tab="asignacion">Asignación</div>
+        <div class="tab" data-tab="ue_sin">UEs sin cobertura</div>
+        <div class="tab" data-tab="sku_sin">SKUs críticos sin stock</div>
+        <div class="tab" data-tab="invalidos">Pedidos inválidos</div>
+        <div class="tab" data-tab="fill_cat">Fill rate por categoría</div>
       </div>
 
-      <h2 style="margin-top:14px;">Asignación (líneas SALMI)</h2>
-      <div class="scroll">
-        <table id="tbl">
-          <thead>
-            <tr>
-              <th>Fecha</th>
-              <th>Doc</th>
-              <th>Tipo</th>
-              <th>UE</th>
-              <th>Categoría</th>
-              <th>Código</th>
-              <th>Suministro</th>
-              <th>Solicitado</th>
-              <th>Solic. red.</th>
-              <th>Asignado</th>
-              <th>Pendiente</th>
-              <th>Bultos (T/S/P)</th>
-              <th>Lotes usados</th>
-              <th>Último despacho</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+      <div id="viewTitle" style="margin-top:10px; font-weight:700;">Asignación (líneas SALMI)</div>
+      <div class="muted" id="viewHint" style="margin-top:4px;">
+        Hoja operativa para reemplazar el empirismo. Muestra solicitado original, solicitado redondeado (operable), asignado FEFO y lotes.
+      </div>
+
+      <!-- PESTAÑA 1 -->
+      <div id="view_asignacion" class="view" style="margin-top:10px;">
+        <div class="scroll">
+          <table id="tbl_asignacion">
+            <thead>
+              <tr>
+                <th>Fecha</th><th>Doc</th><th>Tipo</th><th>UE</th><th>Categoría</th>
+                <th>Código</th><th>Suministro</th>
+                <th class="right">Solicitado</th><th class="right">Solic. red.</th>
+                <th class="right">Asignado</th><th class="right">Pendiente</th>
+                <th class="center">Bultos (T/S/P)</th><th>Lotes usados</th><th>Último despacho</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- PESTAÑA 2 -->
+      <div id="view_ue_sin" class="view" style="display:none; margin-top:10px;">
+        <div class="scroll">
+          <table id="tbl_ue_sin">
+            <thead>
+              <tr>
+                <th>UE</th><th>Categoría</th>
+                <th class="right">Líneas sin cobertura</th>
+                <th class="right">Solicitado (original)</th>
+                <th class="right">Solicitado (red.)</th>
+                <th>Pedido más reciente</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- PESTAÑA 3 -->
+      <div id="view_sku_sin" class="view" style="display:none; margin-top:10px;">
+        <div class="scroll">
+          <table id="tbl_sku_sin">
+            <thead>
+              <tr>
+                <th>Código</th><th>Suministro</th>
+                <th class="right">Solicitado (original)</th>
+                <th class="right">Solicitado (red.)</th>
+                <th class="right">Nº UEs</th>
+                <th>Categorías afectadas</th>
+                <th>Último despacho</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- PESTAÑA 4 -->
+      <div id="view_invalidos" class="view" style="display:none; margin-top:10px;">
+        <div class="scroll">
+          <table id="tbl_invalidos">
+            <thead>
+              <tr>
+                <th>Fecha</th><th>UE</th><th>Categoría</th><th>Código</th><th>Suministro</th>
+                <th class="right">Solicitado (original)</th>
+                <th class="right">Empaque terciario</th>
+                <th class="right">Solicitado (red.)</th>
+                <th>Motivo</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="muted" style="margin-top:8px;">
+          Nota: estos registros explican demanda no operable (por empaque) y deben usarse para corrección del proceso de solicitud en UEs.
+        </div>
+      </div>
+
+      <!-- PESTAÑA 5 -->
+      <div id="view_fill_cat" class="view" style="display:none; margin-top:10px;">
+        <div class="scroll">
+          <table id="tbl_fill_cat">
+            <thead>
+              <tr>
+                <th>Categoría</th>
+                <th class="right">Líneas</th>
+                <th class="right">Solicitado (original)</th>
+                <th class="right">Solicitado (red.)</th>
+                <th class="right">Asignado</th>
+                <th class="right">Fill rate</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </div>
 
       <div class="muted" style="margin-top:10px;">
-        Si la UE aparece como SIN_CATEGORIA, revisa el archivo de categorías y completa la tabla.
+        Si la UE aparece como <span class="pill">SIN_CATEGORIA</span>, revisa el archivo de categorías y completa la tabla.
       </div>
     </div>
   </div>
@@ -113,11 +201,28 @@
       return new Intl.NumberFormat('es-PA', {maximumFractionDigits: 0}).format(n);
     };
 
+    function parseISODate(s){
+      if(!s) return null;
+      const m = String(s).match(/(\d{4})-(\d{2})-(\d{2})/);
+      if(!m) return null;
+      return new Date(`${m[1]}-${m[2]}-${m[3]}T00:00:00`);
+    }
+
     let DATA = [];
     let PARAMS = {};
+    let ACTIVE_TAB = "asignacion";
+    let LAST_FILTERED = [];
 
     function uniq(arr) {
       return [...new Set(arr)].filter(x => x !== null && x !== undefined);
+    }
+
+    function coverage(r) {
+      const req = Number(r.Solicitado_redondeado || 0);
+      const asg = Number(r.Asignado || 0);
+      if (asg <= 0) return "SIN";
+      if (asg >= req && req > 0) return "COMPLETO";
+      return "PARCIAL";
     }
 
     function populateFilters() {
@@ -135,14 +240,6 @@
       tipoSel.innerHTML = tipos.map(t => `<option value="${t}">${t}</option>`).join("");
     }
 
-    function coverage(r) {
-      const req = Number(r.Solicitado_redondeado || 0);
-      const asg = Number(r.Asignado || 0);
-      if (asg <= 0) return "SIN";
-      if (asg >= req && req > 0) return "COMPLETO";
-      return "PARCIAL";
-    }
-
     function applyFilters() {
       const q = (document.getElementById('q').value || "").trim().toLowerCase();
       const cat = document.getElementById('cat').value;
@@ -152,19 +249,18 @@
 
       let rows = DATA;
 
-      if (q) {
-        rows = rows.filter(r => String(r.Codigo).includes(q) || String(r.Suministro).toLowerCase().includes(q));
-      }
+      if (q) rows = rows.filter(r => String(r.Codigo).includes(q) || String(r.Suministro || "").toLowerCase().includes(q));
       if (cat !== "ALL") rows = rows.filter(r => r.Categoria === cat);
       if (ue !== "ALL") rows = rows.filter(r => r.Punto === ue);
       if (tipo !== "ALL") rows = rows.filter(r => r.Tipo === tipo);
       if (estado !== "ALL") rows = rows.filter(r => coverage(r) === estado);
 
-      render(rows);
+      LAST_FILTERED = rows;
+      renderKPIs(rows);
+      renderActiveTab(rows);
     }
 
-    function render(rows) {
-      // KPIs
+    function renderKPIs(rows){
       const req = rows.reduce((a,r)=>a + Number(r.Solicitado||0), 0);
       const reqR = rows.reduce((a,r)=>a + Number(r.Solicitado_redondeado||0), 0);
       const asg = rows.reduce((a,r)=>a + Number(r.Asignado||0), 0);
@@ -175,55 +271,234 @@
       document.getElementById('k_req_r').textContent = fmt(reqR);
       document.getElementById('k_assigned').textContent = fmt(asg);
       document.getElementById('k_fill').textContent = `${fill.toFixed(1)}%`;
+    }
 
-      // table
-      const tb = document.querySelector("#tbl tbody");
+    function showTab(tab){
+      ACTIVE_TAB = tab;
+      document.querySelectorAll('.tab').forEach(el => el.classList.toggle('active', el.dataset.tab === tab));
+      document.querySelectorAll('.view').forEach(v => v.style.display = "none");
+      document.getElementById(`view_${tab}`).style.display = "block";
+
+      const title = document.getElementById('viewTitle');
+      const hint = document.getElementById('viewHint');
+
+      const meta = {
+        asignacion: ["Asignación (líneas SALMI)", "Hoja operativa para reemplazar el empirismo. Muestra solicitado original, solicitado redondeado (operable), asignado FEFO y lotes."],
+        ue_sin: ["UEs sin cobertura (Top 20)", "UEs con asignación 0 y solicitado redondeado > 0. Útil para justificar faltantes y priorizar atención por jerarquía."],
+        sku_sin: ["SKUs críticos sin stock (Top 20)", "Productos con asignación 0 y demanda operable > 0. Útil para compras/abastecimiento y gestión de crisis."],
+        invalidos: ["Pedidos inválidos por empaque", "Demanda no operable (por empaque) que fuerza empirismo. Útil para corregir solicitudes y estandarizar."],
+        fill_cat: ["Fill rate por categoría UE", "Cobertura (Asignado / Solicitado redondeado) agrupada por categoría UE. Útil para política pública y trazabilidad."]
+      };
+      title.textContent = meta[tab][0];
+      hint.textContent = meta[tab][1];
+
+      renderActiveTab(LAST_FILTERED.length ? LAST_FILTERED : DATA);
+    }
+
+    function renderActiveTab(rows){
+      if(ACTIVE_TAB === "asignacion") return renderAsignacion(rows);
+      if(ACTIVE_TAB === "ue_sin") return renderUESin(rows);
+      if(ACTIVE_TAB === "sku_sin") return renderSKUSin(rows);
+      if(ACTIVE_TAB === "invalidos") return renderInvalidos(rows);
+      if(ACTIVE_TAB === "fill_cat") return renderFillCat(rows);
+    }
+
+    function renderAsignacion(rows){
+      const tb = document.querySelector("#tbl_asignacion tbody");
       tb.innerHTML = rows.slice(0, 2000).map(r => {
-        const lots = r.Lotes_Usados ? r.Lotes_Usados : "";
         const b = `${r.Bultos_Ter||0}/${r.Bultos_Sec||0}/${r.Bultos_Prim||0}`;
         const last = r.Ultima_fecha_despacho ? r.Ultima_fecha_despacho : "-";
+        const lots = r.Lotes_Usados ? r.Lotes_Usados : "";
         return `<tr>
-          <td>${r.Fecha}</td>
-          <td>${r.N_Doc}</td>
-          <td>${r.Tipo}</td>
-          <td>${r.Punto}</td>
-          <td>${r.Categoria}</td>
-          <td>${r.Codigo}</td>
-          <td>${r.Suministro}</td>
-          <td style="text-align:right">${fmt(r.Solicitado)}</td>
-          <td style="text-align:right">${fmt(r.Solicitado_redondeado)}</td>
-          <td style="text-align:right">${fmt(r.Asignado)}</td>
-          <td style="text-align:right">${fmt(r.Pendiente)}</td>
-          <td style="text-align:center">${b}</td>
+          <td>${r.Fecha||""}</td>
+          <td>${r.N_Doc||""}</td>
+          <td>${r.Tipo||""}</td>
+          <td>${r.Punto||""}</td>
+          <td>${r.Categoria||""}</td>
+          <td>${r.Codigo||""}</td>
+          <td>${r.Suministro||""}</td>
+          <td class="right">${fmt(r.Solicitado)}</td>
+          <td class="right">${fmt(r.Solicitado_redondeado)}</td>
+          <td class="right">${fmt(r.Asignado)}</td>
+          <td class="right">${fmt(r.Pendiente)}</td>
+          <td class="center">${b}</td>
           <td>${lots}</td>
           <td>${last}</td>
         </tr>`;
       }).join("");
-      window.__lastRows = rows; // for export
+      window.__exportRows = rows;
+      window.__exportName = "asignacion";
+    }
+
+    function renderUESin(rows){
+      const filtered = rows.filter(r => Number(r.Asignado||0) === 0 && Number(r.Solicitado_redondeado||0) > 0);
+      const map = new Map();
+      for(const r of filtered){
+        const key = `${r.Punto||""}||${r.Categoria||""}`;
+        if(!map.has(key)) map.set(key, {UE:r.Punto||"", Categoria:r.Categoria||"", lineas:0, sol:0, solr:0, fechaMax:null});
+        const o = map.get(key);
+        o.lineas += 1;
+        o.sol += Number(r.Solicitado||0);
+        o.solr += Number(r.Solicitado_redondeado||0);
+        const d = parseISODate(r.Fecha);
+        if(d && (!o.fechaMax || d > o.fechaMax)) o.fechaMax = d;
+      }
+      const out = [...map.values()].map(o => ({
+        UE:o.UE, Categoria:o.Categoria, Lineas_sin_cobertura:o.lineas,
+        Solicitado_original:o.sol, Solicitado_redondeado:o.solr,
+        Pedido_mas_reciente:o.fechaMax ? o.fechaMax.toISOString().slice(0,10) : ""
+      })).sort((a,b)=> (b.Solicitado_redondeado - a.Solicitado_redondeado) || (b.Lineas_sin_cobertura - a.Lineas_sin_cobertura))
+        .slice(0,20);
+
+      const tb = document.querySelector("#tbl_ue_sin tbody");
+      tb.innerHTML = out.map(r => `<tr>
+        <td>${r.UE}</td>
+        <td>${r.Categoria}</td>
+        <td class="right">${fmt(r.Lineas_sin_cobertura)}</td>
+        <td class="right">${fmt(r.Solicitado_original)}</td>
+        <td class="right">${fmt(r.Solicitado_redondeado)}</td>
+        <td>${r.Pedido_mas_reciente}</td>
+      </tr>`).join("");
+
+      window.__exportRows = out;
+      window.__exportName = "ue_sin_cobertura_top20";
+    }
+
+    function renderSKUSin(rows){
+      const filtered = rows.filter(r => Number(r.Asignado||0) === 0 && Number(r.Solicitado_redondeado||0) > 0);
+      const map = new Map();
+      for(const r of filtered){
+        const code = String(r.Codigo||"");
+        const key = `${code}||${String(r.Suministro||"")}`;
+        if(!map.has(key)) map.set(key, {Codigo:code, Suministro:String(r.Suministro||""), sol:0, solr:0, ues:new Set(), cats:new Set(), last:null});
+        const o = map.get(key);
+        o.sol += Number(r.Solicitado||0);
+        o.solr += Number(r.Solicitado_redondeado||0);
+        o.ues.add(String(r.Punto||""));
+        o.cats.add(String(r.Categoria||""));
+        const d = parseISODate(r.Ultima_fecha_despacho);
+        if(d && (!o.last || d > o.last)) o.last = d;
+      }
+      const out = [...map.values()].map(o => ({
+        Codigo:o.Codigo,
+        Suministro:o.Suministro,
+        Solicitado_original:o.sol,
+        Solicitado_redondeado:o.solr,
+        Num_UEs:o.ues.size,
+        Categorias_afectadas:[...o.cats].filter(x=>x).sort().join(", "),
+        Ultimo_despacho:o.last ? o.last.toISOString().slice(0,10) : ""
+      })).sort((a,b)=> (b.Solicitado_redondeado - a.Solicitado_redondeado) || (b.Num_UEs - a.Num_UEs))
+        .slice(0,20);
+
+      const tb = document.querySelector("#tbl_sku_sin tbody");
+      tb.innerHTML = out.map(r => `<tr>
+        <td>${r.Codigo}</td>
+        <td>${r.Suministro}</td>
+        <td class="right">${fmt(r.Solicitado_original)}</td>
+        <td class="right">${fmt(r.Solicitado_redondeado)}</td>
+        <td class="right">${fmt(r.Num_UEs)}</td>
+        <td>${r.Categorias_afectadas}</td>
+        <td>${r.Ultimo_despacho || "-"}</td>
+      </tr>`).join("");
+
+      window.__exportRows = out;
+      window.__exportName = "skus_criticos_sin_stock_top20";
+    }
+
+    function renderInvalidos(rows){
+      const filtered = rows.filter(r => Number(r.Solicitado||0) > 0 && Number(r.Solicitado_redondeado||0) === 0);
+      const out = filtered.slice().sort((a,b)=>{
+        const da = parseISODate(a.Fecha); const db = parseISODate(b.Fecha);
+        return (db - da);
+      }).slice(0,2000).map(r => {
+        const sol = Number(r.Solicitado||0);
+        const empT = (r.Emp_Ter === null || r.Emp_Ter === undefined || r.Emp_Ter === "") ? null : Number(r.Emp_Ter);
+        let motivo = "Solicitado redondeado = 0";
+        if(empT && sol < empT) motivo = "Solicitado menor a empaque terciario";
+        else if(empT && (sol % empT) !== 0) motivo = "Solicitado no es múltiplo del empaque terciario";
+        else if(!empT) motivo = "Sin empaque terciario definido (fallback aplicado)";
+        return {
+          Fecha:r.Fecha||"",
+          UE:r.Punto||"",
+          Categoria:r.Categoria||"",
+          Codigo:r.Codigo||"",
+          Suministro:r.Suministro||"",
+          Solicitado_original:sol,
+          Empaque_terciario:empT,
+          Solicitado_redondeado:Number(r.Solicitado_redondeado||0),
+          Motivo:motivo
+        };
+      });
+
+      const tb = document.querySelector("#tbl_invalidos tbody");
+      tb.innerHTML = out.map(r => `<tr>
+        <td>${r.Fecha}</td>
+        <td>${r.UE}</td>
+        <td>${r.Categoria}</td>
+        <td>${r.Codigo}</td>
+        <td>${r.Suministro}</td>
+        <td class="right">${fmt(r.Solicitado_original)}</td>
+        <td class="right">${r.Empaque_terciario === null ? "-" : fmt(r.Empaque_terciario)}</td>
+        <td class="right">${fmt(r.Solicitado_redondeado)}</td>
+        <td class="${r.Motivo.includes("menor") ? "danger" : ""}">${r.Motivo}</td>
+      </tr>`).join("");
+
+      window.__exportRows = out;
+      window.__exportName = "pedidos_invalidos_por_empaque";
+    }
+
+    function renderFillCat(rows){
+      const map = new Map();
+      for(const r of rows){
+        const cat = String(r.Categoria||"");
+        if(!map.has(cat)) map.set(cat, {Categoria:cat, lineas:0, sol:0, solr:0, asg:0});
+        const o = map.get(cat);
+        o.lineas += 1;
+        o.sol += Number(r.Solicitado||0);
+        o.solr += Number(r.Solicitado_redondeado||0);
+        o.asg += Number(r.Asignado||0);
+      }
+      const out = [...map.values()].map(o => ({
+        Categoria:o.Categoria,
+        Lineas:o.lineas,
+        Solicitado_original:o.sol,
+        Solicitado_redondeado:o.solr,
+        Asignado:o.asg,
+        Fill_rate: o.solr > 0 ? (o.asg/o.solr) : 0
+      })).sort((a,b)=> (a.Categoria||"").localeCompare(b.Categoria||""));
+
+      const tb = document.querySelector("#tbl_fill_cat tbody");
+      tb.innerHTML = out.map(r => `<tr>
+        <td>${r.Categoria}</td>
+        <td class="right">${fmt(r.Lineas)}</td>
+        <td class="right">${fmt(r.Solicitado_original)}</td>
+        <td class="right">${fmt(r.Solicitado_redondeado)}</td>
+        <td class="right">${fmt(r.Asignado)}</td>
+        <td class="right">${(r.Fill_rate*100).toFixed(1)}%</td>
+      </tr>`).join("");
+
+      window.__exportRows = out;
+      window.__exportName = "fill_rate_por_categoria";
     }
 
     function exportCsv() {
-      const rows = window.__lastRows || [];
+      const rows = window.__exportRows || [];
       const cols = Object.keys(rows[0] || {});
       if (!cols.length) return;
 
       const esc = (v) => {
         const s = (v === null || v === undefined) ? "" : String(v);
-        if (s.includes('"') || s.includes(",") || s.includes("\n")) {
-          return '"' + s.replaceAll('"','""') + '"';
-        }
+        if (s.includes('"') || s.includes(",") || s.includes("\n")) return '"' + s.replaceAll('"','""') + '"';
         return s;
       };
 
-      const csv = [cols.join(",")].concat(
-        rows.map(r => cols.map(c => esc(r[c])).join(","))
-      ).join("\n");
+      const csv = [cols.join(",")].concat(rows.map(r => cols.map(c => esc(r[c])).join(","))).join("\n");
 
       const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "asignacion_vista.csv";
+      a.download = `${window.__exportName || "export"}.csv`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -231,10 +506,7 @@
     }
 
     async function init() {
-      const [dataRes, paramsRes] = await Promise.all([
-        fetch("./allocation.json"),
-        fetch("./params.json")
-      ]);
+      const [dataRes, paramsRes] = await Promise.all([fetch("./allocation.json"), fetch("./params.json")]);
       DATA = await dataRes.json();
       PARAMS = await paramsRes.json();
 
@@ -242,7 +514,9 @@
       document.getElementById('minVto').textContent = PARAMS.min_vto || "-";
 
       populateFilters();
-      render(DATA);
+      LAST_FILTERED = DATA;
+      renderKPIs(DATA);
+      showTab("asignacion"); // Asignación por defecto
 
       document.getElementById('btnApply').addEventListener('click', applyFilters);
       document.getElementById('btnReset').addEventListener('click', () => {
@@ -251,9 +525,13 @@
         document.getElementById('ue').value = "ALL";
         document.getElementById('tipo').value = "ALL";
         document.getElementById('estado').value = "ALL";
-        render(DATA);
+        LAST_FILTERED = DATA;
+        renderKPIs(DATA);
+        renderActiveTab(DATA);
       });
       document.getElementById('btnExport').addEventListener('click', exportCsv);
+
+      document.querySelectorAll('.tab').forEach(el => el.addEventListener('click', () => showTab(el.dataset.tab)));
     }
 
     init();
