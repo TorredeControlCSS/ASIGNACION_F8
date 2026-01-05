@@ -1,0 +1,12 @@
+{
+  "cut_date": "2026-01-02",
+  "min_vto": "2026-02-01",
+  "sorting": "PRIORIDAD asc, FECHA desc (reciente a antiguo dentro de cada prioridad)",
+  "notes": [
+    "Solicitado viene en unidades sueltas.",
+    "Redondeo hacia abajo usando Empaque Terciario (o Secundario, o Primario, o 1 si falta).",
+    "Asignación por prioridad de UE y luego por fecha (más reciente primero).",
+    "FEFO por lote con restricción de vencimiento >= corte+30 días.",
+    "Se permite asignación parcial y split en múltiples lotes."
+  ]
+}

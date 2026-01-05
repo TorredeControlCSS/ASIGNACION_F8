@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>SIGUELO - Asignación F8 (v1)</title>
+  <style>
+    body{font-family: Arial, sans-serif; margin: 18px;}
+    .grid{display:grid; grid-template-columns: 1fr 1fr 1fr; gap:12px;}
+    .card{border:1px solid #ddd; border-radius:10px; padding:12px; box-shadow: 0 1px 2px rgba(0,0,0,.04);}
+    h1{font-size:18px; margin:0 0 8px 0;}
+    h2{font-size:14px; margin:0 0 8px 0;}
+    label{display:block; font-size:12px; margin-top:6px;}
+    select,input{width:100%; padding:8px; border:1px solid #ccc; border-radius:8px;}
+    button{padding:9px 12px; border:1px solid #333; border-radius:10px; background:#fff; cursor:pointer;}
+    button:disabled{opacity:.5; cursor:not-allowed;}
+    .kpi{display:grid; grid-template-columns: repeat(5, 1fr); gap:10px;}
+    .kpi .box{border:1px solid #e5e5e5; border-radius:10px; padding:10px;}
+    .kpi .value{font-size:16px; font-weight:700; margin-top:6px;}
+    .muted{color:#666; font-size:12px;}
+    table{border-collapse: collapse; width:100%; font-size:12px;}
+    th, td{border:1px solid #ddd; padding:6px; vertical-align:top;}
+    th{background:#f7f7f7; position:sticky; top:0; z-index:1;}
+    .scroll{max-height: 62vh; overflow:auto; border:1px solid #ddd; border-radius:10px;}
+    .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+    .row > *{flex: 1 1 auto;}
+    .pill{display:inline-block; border:1px solid #ddd; border-radius:999px; padding:2px 8px; font-size:12px;}
+  </style>
+</head>
+<body>
+  <h1>SIGUELO - Asignación de pedidos F8 (v1)</h1>
+  <div class="muted">Corte: <span id="cutDate"></span> · Lotes elegibles: vencimiento ≥ <span id="minVto"></span> · Orden: prioridad UE → fecha (reciente a antiguo)</div>
+
+  <div class="grid" style="margin-top:12px;">
+    <div class="card">
+      <h2>Filtros</h2>
+      <label>Buscar (Código o texto de suministro)</label>
+      <input id="q" placeholder="Ej: 101000201 o rosuvastatina"/>
+      <label>Categoría UE</label>
+      <select id="cat"></select>
+      <label>Punto de Información (UE)</label>
+      <select id="ue"></select>
+      <label>Tipo</label>
+      <select id="tipo"></select>
+      <label>Estado de cobertura</label>
+      <select id="estado">
+        <option value="ALL">Todos</option>
+        <option value="COMPLETO">Completo</option>
+        <option value="PARCIAL">Parcial</option>
+        <option value="SIN">Sin stock</option>
+      </select>
+      <div class="row" style="margin-top:10px;">
+        <button id="btnApply">Aplicar</button>
+        <button id="btnReset">Reset</button>
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <button id="btnExport">Exportar CSV (vista)</button>
+      </div>
+      <div class="muted" style="margin-top:10px;">
+        Nota: Solicitado se redondea hacia abajo por empaque terciario (o secundario/primario si falta). Pedidos menores a 1 terciario quedan en 0.
+      </div>
+    </div>
+
+    <div class="card" style="grid-column: span 2;">
+      <h2>KPIs (vista filtrada)</h2>
+      <div class="kpi">
+        <div class="box"><div class="muted">Líneas</div><div class="value" id="k_lines">-</div></div>
+        <div class="box"><div class="muted">Solicitado</div><div class="value" id="k_req">-</div></div>
+        <div class="box"><div class="muted">Solicitado redondeado</div><div class="value" id="k_req_r">-</div></div>
+        <div class="box"><div class="muted">Asignado</div><div class="value" id="k_assigned">-</div></div>
+        <div class="box"><div class="muted">Fill rate</div><div class="value" id="k_fill">-</div></div>
+      </div>
+      <div style="margin-top:10px;" class="muted">
+        Cobertura: <span class="pill">Completo</span> = Asignado = Solicitado redondeado ·
+        <span class="pill">Parcial</span> = 0 &lt; Asignado &lt; Solicitado redondeado ·
+        <span class="pill">Sin stock</span> = Asignado = 0
+      </div>
+
+      <h2 style="margin-top:14px;">Asignación (líneas SALMI)</h2>
+      <div class="scroll">
+        <table id="tbl">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Doc</th>
+              <th>Tipo</th>
+              <th>UE</th>
+              <th>Categoría</th>
+              <th>Código</th>
+              <th>Suministro</th>
+              <th>Solicitado</th>
+              <th>Solic. red.</th>
+              <th>Asignado</th>
+              <th>Pendiente</th>
+              <th>Bultos (T/S/P)</th>
+              <th>Lotes usados</th>
+              <th>Último despacho</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="muted" style="margin-top:10px;">
+        Si la UE aparece como SIN_CATEGORIA, revisa el archivo de categorías y completa la tabla.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const fmt = (n) => {
+      if (n === null || n === undefined || isNaN(n)) return "-";
+      return new Intl.NumberFormat('es-PA', {maximumFractionDigits: 0}).format(n);
+    };
+
+    let DATA = [];
+    let PARAMS = {};
+
+    function uniq(arr) {
+      return [...new Set(arr)].filter(x => x !== null && x !== undefined);
+    }
+
+    function populateFilters() {
+      const catSel = document.getElementById('cat');
+      const ueSel = document.getElementById('ue');
+      const tipoSel = document.getElementById('tipo');
+
+      const cats = ["ALL", ...uniq(DATA.map(r => r.Categoria)).sort()];
+      catSel.innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join("");
+
+      const ues = ["ALL", ...uniq(DATA.map(r => r.Punto)).sort()];
+      ueSel.innerHTML = ues.map(u => `<option value="${u}">${u}</option>`).join("");
+
+      const tipos = ["ALL", ...uniq(DATA.map(r => r.Tipo)).sort()];
+      tipoSel.innerHTML = tipos.map(t => `<option value="${t}">${t}</option>`).join("");
+    }
+
+    function coverage(r) {
+      const req = Number(r.Solicitado_redondeado || 0);
+      const asg = Number(r.Asignado || 0);
+      if (asg <= 0) return "SIN";
+      if (asg >= req && req > 0) return "COMPLETO";
+      return "PARCIAL";
+    }
+
+    function applyFilters() {
+      const q = (document.getElementById('q').value || "").trim().toLowerCase();
+      const cat = document.getElementById('cat').value;
+      const ue = document.getElementById('ue').value;
+      const tipo = document.getElementById('tipo').value;
+      const estado = document.getElementById('estado').value;
+
+      let rows = DATA;
+
+      if (q) {
+        rows = rows.filter(r => String(r.Codigo).includes(q) || String(r.Suministro).toLowerCase().includes(q));
+      }
+      if (cat !== "ALL") rows = rows.filter(r => r.Categoria === cat);
+      if (ue !== "ALL") rows = rows.filter(r => r.Punto === ue);
+      if (tipo !== "ALL") rows = rows.filter(r => r.Tipo === tipo);
+      if (estado !== "ALL") rows = rows.filter(r => coverage(r) === estado);
+
+      render(rows);
+    }
+
+    function render(rows) {
+      // KPIs
+      const req = rows.reduce((a,r)=>a + Number(r.Solicitado||0), 0);
+      const reqR = rows.reduce((a,r)=>a + Number(r.Solicitado_redondeado||0), 0);
+      const asg = rows.reduce((a,r)=>a + Number(r.Asignado||0), 0);
+      const fill = reqR > 0 ? (asg/reqR)*100 : 0;
+
+      document.getElementById('k_lines').textContent = fmt(rows.length);
+      document.getElementById('k_req').textContent = fmt(req);
+      document.getElementById('k_req_r').textContent = fmt(reqR);
+      document.getElementById('k_assigned').textContent = fmt(asg);
+      document.getElementById('k_fill').textContent = `${fill.toFixed(1)}%`;
+
+      // table
+      const tb = document.querySelector("#tbl tbody");
+      tb.innerHTML = rows.slice(0, 2000).map(r => {
+        const lots = r.Lotes_Usados ? r.Lotes_Usados : "";
+        const b = `${r.Bultos_Ter||0}/${r.Bultos_Sec||0}/${r.Bultos_Prim||0}`;
+        const last = r.Ultima_fecha_despacho ? r.Ultima_fecha_despacho : "-";
+        return `<tr>
+          <td>${r.Fecha}</td>
+          <td>${r.N_Doc}</td>
+          <td>${r.Tipo}</td>
+          <td>${r.Punto}</td>
+          <td>${r.Categoria}</td>
+          <td>${r.Codigo}</td>
+          <td>${r.Suministro}</td>
+          <td style="text-align:right">${fmt(r.Solicitado)}</td>
+          <td style="text-align:right">${fmt(r.Solicitado_redondeado)}</td>
+          <td style="text-align:right">${fmt(r.Asignado)}</td>
+          <td style="text-align:right">${fmt(r.Pendiente)}</td>
+          <td style="text-align:center">${b}</td>
+          <td>${lots}</td>
+          <td>${last}</td>
+        </tr>`;
+      }).join("");
+      window.__lastRows = rows; // for export
+    }
+
+    function exportCsv() {
+      const rows = window.__lastRows || [];
+      const cols = Object.keys(rows[0] || {});
+      if (!cols.length) return;
+
+      const esc = (v) => {
+        const s = (v === null || v === undefined) ? "" : String(v);
+        if (s.includes('"') || s.includes(",") || s.includes("\n")) {
+          return '"' + s.replaceAll('"','""') + '"';
+        }
+        return s;
+      };
+
+      const csv = [cols.join(",")].concat(
+        rows.map(r => cols.map(c => esc(r[c])).join(","))
+      ).join("\n");
+
+      const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "asignacion_vista.csv";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    async function init() {
+      const [dataRes, paramsRes] = await Promise.all([
+        fetch("./allocation.json"),
+        fetch("./params.json")
+      ]);
+      DATA = await dataRes.json();
+      PARAMS = await paramsRes.json();
+
+      document.getElementById('cutDate').textContent = PARAMS.cut_date || "-";
+      document.getElementById('minVto').textContent = PARAMS.min_vto || "-";
+
+      populateFilters();
+      render(DATA);
+
+      document.getElementById('btnApply').addEventListener('click', applyFilters);
+      document.getElementById('btnReset').addEventListener('click', () => {
+        document.getElementById('q').value = "";
+        document.getElementById('cat').value = "ALL";
+        document.getElementById('ue').value = "ALL";
+        document.getElementById('tipo').value = "ALL";
+        document.getElementById('estado').value = "ALL";
+        render(DATA);
+      });
+      document.getElementById('btnExport').addEventListener('click', exportCsv);
+    }
+
+    init();
+  </script>
+</body>
+</html>
