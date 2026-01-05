@@ -52,6 +52,7 @@
     .danger{color:#b00020;}
     .ok{color:#0a7a2f;}
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
   <div class="topbar">
@@ -102,7 +103,11 @@
           <button id="btnReset">Reset</button>
         </div>
         <div class="row" style="margin-top:10px;">
-          <button id="btnExport">Exportar (pestaña actual)</button>
+          <button id="btnExportCsv">Exportar CSV (pestaña actual)</button>
+        </div>
+        <div class="row" style="margin-top:10px;">
+          <button id="btnExportPdf">Exportar PDF — Hoja de Asignación</button>
+          <button id="btnExportXlsx">Exportar Excel — Hoja de Asignación</button>
         </div>
         <div class="muted" style="margin-top:10px;">
           Nota: solicitado original se mantiene. Solicitado redondeado es el operable (redondeo hacia abajo por empaque, con fallback si falta empaque). Último despacho real proviene de PERIODO DE DISTRIBUCIÓN (Fecha SALIDA + DESPACHO).
@@ -556,6 +561,194 @@ function exportCsv(){
   URL.revokeObjectURL(url);
 }
 
+
+function _pickingRows(){
+  const rows = LAST_FILTERED || [];
+  // Solo líneas operables: asignación > 0
+  return rows.filter(r => Number(r.Asignado||0) > 0);
+}
+
+function exportPdfAsignacion(){
+  const rows = _pickingRows();
+  if(!rows.length){
+    alert("No hay líneas con Asignado > 0 en la vista actual. Ajusta filtros o genera asignación antes de exportar.");
+    return;
+  }
+
+  // Agrupar por UE (Punto) y Documento
+  const groups = new Map();
+  for(const r of rows){
+    const ue = r.Punto || "SIN_UE";
+    const doc = r.N_Doc || "SIN_DOC";
+    const key = ue + "||" + doc;
+    if(!groups.has(key)) groups.set(key, {ue, doc, tipo: r.Tipo||"", items: []});
+    groups.get(key).items.push(r);
+  }
+
+  const now = new Date();
+  const fechaGen = now.toLocaleString("es-PA");
+  const corte = (PARAMS && PARAMS.corte) ? PARAMS.corte : "";
+
+  const esc = (s) => (s===null||s===undefined) ? "" : String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
+
+  const makeRow = (r) => {
+    const b = `${(r.Bultos_Ter||0).toFixed(2)}/${(r.Bultos_Sec||0).toFixed(2)}/${(r.Bultos_Prim||0).toFixed(2)}`;
+    const lots = r.Lotes_Usados ? r.Lotes_Usados : "";
+    return `<tr>
+      <td class="code">${esc(r.Codigo||"")}</td>
+      <td>${esc(r.Suministro||"")}</td>
+      <td class="num">${fmt(r.Asignado)}</td>
+      <td class="center">${esc(b)}</td>
+      <td>${esc(lots)}</td>
+    </tr>`;
+  };
+
+  const sections = Array.from(groups.values()).map(g => {
+    // ordenar por código para picking
+    g.items.sort((a,b)=> String(a.Codigo||"").localeCompare(String(b.Codigo||"")));
+    const rowsHtml = g.items.map(makeRow).join("");
+    return `
+      <div class="section">
+        <div class="sectionHeader">
+          <div><b>UE:</b> ${esc(g.ue)}</div>
+          <div><b>Documento:</b> ${esc(g.doc)}</div>
+          <div><b>Tipo:</b> ${esc(g.tipo)}</div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width:110px;">Código</th>
+              <th>Suministro</th>
+              <th style="width:90px;" class="num">Asignado</th>
+              <th style="width:90px;" class="center">Bultos T/S/P</th>
+              <th style="width:240px;">Lotes</th>
+            </tr>
+          </thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+
+        <div class="sign">
+          <div><b>Preparado por:</b> _______________________</div>
+          <div><b>Verificado por:</b> _______________________</div>
+          <div><b>Fecha / Hora:</b> _______________________</div>
+        </div>
+      </div>`;
+  }).join("");
+
+  const html = `<!doctype html>
+  <html lang="es"><head><meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Hoja de Asignación F8</title>
+  <style>
+    body{font-family:Arial, sans-serif; margin:16px; color:#111;}
+    .topbar{display:flex; align-items:center; gap:12px; border-bottom:2px solid #0b1f3b; padding-bottom:10px; margin-bottom:12px;}
+    .logo{width:44px; height:44px; border-radius:10px; object-fit:cover;}
+    .title{font-size:18px; font-weight:700;}
+    .meta{font-size:12px; color:#333; margin-top:2px;}
+    .rules{font-size:11px; color:#333; margin-top:6px;}
+    table{width:100%; border-collapse:collapse; margin-top:10px;}
+    th,td{border:1px solid #ccc; padding:6px 8px; font-size:11px; vertical-align:top;}
+    th{background:#f3f5f8;}
+    .num{text-align:right;}
+    .center{text-align:center;}
+    .section{page-break-after:always;}
+    .section:last-child{page-break-after:auto;}
+    .sectionHeader{display:flex; justify-content:space-between; gap:12px; font-size:12px; margin-top:8px;}
+    .sign{display:flex; justify-content:space-between; gap:12px; margin-top:14px; font-size:11px;}
+    @media print{
+      body{margin:10mm;}
+      .sectionHeader{page-break-inside:avoid;}
+      table{page-break-inside:auto;}
+      tr{page-break-inside:avoid; page-break-after:auto;}
+    }
+  </style></head><body>
+    <div class="topbar">
+      <img class="logo" src="./icons/icon-512.png" alt="SIGUELO"/>
+      <div>
+        <div class="title">HOJA DE ASIGNACIÓN F8 — CORTE DIARIO</div>
+        <div class="meta">Generado: ${esc(fechaGen)} | Corte: ${esc(corte)}</div>
+        <div class="rules">Reglas: FEFO | Vto ≥ 30 días | Excluye TRANSFERENCIA</div>
+      </div>
+    </div>
+    ${sections}
+  </body></html>`;
+
+  const w = window.open("", "_blank");
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  setTimeout(()=>{ w.print(); }, 400);
+}
+
+function exportXlsxAsignacion(){
+  const rows = _pickingRows();
+  if(!rows.length){
+    alert("No hay líneas con Asignado > 0 en la vista actual. Ajusta filtros o genera asignación antes de exportar.");
+    return;
+  }
+  if(typeof XLSX === "undefined"){
+    alert("No se pudo cargar la librería XLSX. Revisa conexión o bloqueadores de contenido.");
+    return;
+  }
+
+  // Agrupar por UE y Documento
+  const groups = new Map();
+  for(const r of rows){
+    const ue = r.Punto || "SIN_UE";
+    const doc = r.N_Doc || "SIN_DOC";
+    const key = ue + "||" + doc;
+    if(!groups.has(key)) groups.set(key, {ue, doc, tipo: r.Tipo||"", items: []});
+    groups.get(key).items.push(r);
+  }
+
+  const corte = (PARAMS && PARAMS.corte) ? PARAMS.corte : "";
+  const now = new Date().toLocaleString("es-PA");
+
+  const aoa = [];
+  aoa.push(["HOJA DE ASIGNACIÓN F8 — CORTE DIARIO"]);
+  aoa.push([`Generado: ${now}`, `Corte: ${corte}`, "Reglas: FEFO | Vto ≥ 30 días | Excluye TRANSFERENCIA"]);
+  aoa.push([]);
+
+  const header = ["UE", "Documento", "Tipo", "Código", "Suministro", "Asignado", "Bultos T/S/P", "Lotes usados", "Último despacho (real)", "Qty último"];
+  aoa.push(header);
+
+  for(const g of Array.from(groups.values()).sort((a,b)=> (a.ue+a.doc).localeCompare(b.ue+b.doc))){
+    g.items.sort((a,b)=> String(a.Codigo||"").localeCompare(String(b.Codigo||"")));
+    for(const r of g.items){
+      const bults = `${(r.Bultos_Ter||0).toFixed(2)}/${(r.Bultos_Sec||0).toFixed(2)}/${(r.Bultos_Prim||0).toFixed(2)}`;
+      const ld = getLastDispatch(r);
+      aoa.push([
+        g.ue,
+        g.doc,
+        g.tipo,
+        r.Codigo||"",
+        r.Suministro||"",
+        Number(r.Asignado||0),
+        bults,
+        r.Lotes_Usados||"",
+        ld.fecha || "",
+        (ld.qty===null||ld.qty===undefined) ? "" : Number(ld.qty)
+      ]);
+    }
+    aoa.push([]);
+  }
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  // Ajustes de ancho
+  ws["!cols"] = [
+    {wch:22},{wch:18},{wch:12},{wch:12},{wch:60},{wch:12},{wch:14},{wch:40},{wch:18},{wch:12}
+  ];
+  // Congelar encabezado (aprox) -> SheetJS: !freeze
+  ws["!freeze"] = { xSplit: 0, ySplit: 4 };
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Asignacion_F8");
+  const fname = `Hoja_Asignacion_F8_${corte || "corte"}.xlsx`;
+  XLSX.writeFile(wb, fname);
+}
+
+
 async function init(){
   tickDateTime();
   setInterval(tickDateTime, 60000);
@@ -588,7 +781,9 @@ async function init(){
     renderKPIs(DATA);
     renderActiveTab(DATA);
   });
-  document.getElementById('btnExport').addEventListener('click', exportCsv);
+  document.getElementById('btnExportCsv').addEventListener('click', exportCsv);
+  document.getElementById('btnExportPdf').addEventListener('click', exportPdfAsignacion);
+  document.getElementById('btnExportXlsx').addEventListener('click', exportXlsxAsignacion);
   document.querySelectorAll('.tab').forEach(el => el.addEventListener('click', () => showTab(el.dataset.tab)));
 }
 init();
