@@ -1,794 +1,926 @@
 [
   {
     "ue_raw": "ALEJANDRO DE LA GUARDIA (BETHANIA)",
-    "ue_std": "ALEJANDRO DE LA GUARDIA (BETHANIA)",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "ue_std": "POL. ALEJANDRO DE LA GUARDIA (BETHANIA)",
+    "categoria": "POLICLINICA DE ALTO VOL.",
+    "fuente": "SALMI",
+    "metodo": "excel"
   },
   {
     "ue_raw": "ALMIRANTE",
     "ue_std": "ALMIRANTE",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "fuente": "SALMI",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "BLAS CHETRO GLOMEZ (ARRAIJAN)",
-    "ue_std": "BLAS CHETRO GLOMEZ (ARRAIJAN)",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "ue_std": "POL. DR. BLAS D. GOMEZ CHETRO",
+    "categoria": "POLICLINICA DE ALTO VOL.",
+    "fuente": "SALMI",
+    "metodo": "excel"
   },
   {
     "ue_raw": "BUGABA",
     "ue_std": "BUGABA",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "fuente": "SALMI",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "CAPIRA",
-    "ue_std": "CAPIRA",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "ue_std": "CAPPS DE CAPIRA",
+    "categoria": "POLICLINICA DE BAJO VOL.",
+    "fuente": "SALMI",
+    "metodo": "excel"
   },
   {
     "ue_raw": "CARLOS N. BRIN (SAN FRANCISCO)",
-    "ue_std": "CARLOS N. BRIN (SAN FRANCISCO)",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "ue_std": "POL. CARLOS N. BRIN (SAN FRANCISCO)",
+    "categoria": "POLICLINICA DE ALTO VOL.",
+    "fuente": "SALMI",
+    "metodo": "excel"
   },
   {
     "ue_raw": "CARLOS VELARDE (SAN CRISTOBAL)",
-    "ue_std": "CARLOS VELARDE (SAN CRISTOBAL)",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "ue_std": "ULAPS - SAN CRISTOBAL (PROF. CARLOS VELARDE)",
+    "categoria": "ULAPS",
+    "fuente": "SALMI",
+    "metodo": "excel"
   },
   {
     "ue_raw": "CAÑITA",
-    "ue_std": "CAÑITA",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "ue_std": "POL. DE CAÑITA",
+    "categoria": "POLICLINICA DE BAJO VOL.",
+    "fuente": "SALMI",
+    "metodo": "excel"
   },
   {
     "ue_raw": "CEDIS CHIRIQUI",
     "ue_std": "CEDIS CHIRIQUÍ",
     "categoria": "CEDIS",
-    "fuente": "SALMI"
+    "fuente": "SALMI",
+    "metodo": "excel"
   },
   {
     "ue_raw": "CEDIS DIVISA",
     "ue_std": "CEDIS DIVISA",
     "categoria": "CEDIS",
-    "fuente": "SALMI"
+    "fuente": "SALMI",
+    "metodo": "excel"
   },
   {
     "ue_raw": "CHANGUINOLA",
     "ue_std": "CHANGUINOLA",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "fuente": "SALMI",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "CHIRIQUI GRANDE",
     "ue_std": "CHIRIQUI GRANDE",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "fuente": "SALMI",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "COMPLEJO HOSPITALARIO DR. ARNUFO ARIAS MADRID",
-    "ue_std": "COMPLEJO HOSPITALARIO DR. ARNUFO ARIAS MADRID",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "ue_std": "C. H. M. DR. ARNULFO ARIAS MADRID",
+    "categoria": "POLICLINICA DE ALTO VOL.",
+    "fuente": "SALMI",
+    "metodo": "excel"
   },
   {
     "ue_raw": "COORDINACION LOS SANTOS",
     "ue_std": "COORDINACION LOS SANTOS",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "fuente": "SALMI",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "DIONIO ARROCHA",
     "ue_std": "DIONIO ARROCHA",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "fuente": "SALMI",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "DIVALA",
     "ue_std": "DIVALA",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "fuente": "SALMI",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "DR EZEQUIEL ABADIA",
     "ue_std": "DR EZEQUIEL ABADIA",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "fuente": "SALMI",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "DR. EDILBERTO CULIOLIS (LAS CUMBRES)",
-    "ue_std": "DR. EDILBERTO CULIOLIS (LAS CUMBRES)",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "ue_std": "ULAPS - LAS CUMBRES (DR. EDILBERTO CULIOLIS)",
+    "categoria": "ULAPS",
+    "fuente": "SALMI",
+    "metodo": "excel"
   },
   {
     "ue_raw": "DR. ERNESTO PEREZ BALLADARES (BOQUETE)",
     "ue_std": "DR. ERNESTO PEREZ BALLADARES (BOQUETE)",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "fuente": "SALMI",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "DR. GENEROSO GUARDIA",
-    "ue_std": "DR. GENEROSO GUARDIA",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "ue_std": "POL. GENEROSO GUARDIA (STA. LIBRADA)",
+    "categoria": "POLICLINICA DE ALTO VOL.",
+    "fuente": "SALMI",
+    "metodo": "excel"
   },
   {
     "ue_raw": "DR. GUSTAVO N. COLLADO",
     "ue_std": "DR. GUSTAVO N. COLLADO",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "fuente": "SALMI",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "DR. HUGO SPADAFORA",
-    "ue_std": "DR. HUGO SPADAFORA",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "ue_std": "POL. HUGO SPADAFORA",
+    "categoria": "POLICLINICA DE ALTO VOL.",
+    "fuente": "SALMI",
+    "metodo": "excel"
   },
   {
     "ue_raw": "DR. JUAN VEGA MENDEZ - SAN CARLOS",
-    "ue_std": "DR. JUAN VEGA MENDEZ - SAN CARLOS",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "ue_std": "POL. JUAN VEGA M. (SAN CARLOS)",
+    "categoria": "POLICLINICA DE BAJO VOL.",
+    "fuente": "SALMI",
+    "metodo": "excel"
   },
   {
     "ue_raw": "EL TECAL",
-    "ue_std": "EL TECAL",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "ue_std": "CAPPS EL TECAL",
+    "categoria": "ULAPS",
+    "fuente": "SALMI",
+    "metodo": "excel"
   },
   {
     "ue_raw": "GUABITO",
     "ue_std": "GUABITO",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "fuente": "SALMI",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "GUADALUPE (LA CHORRERA)",
-    "ue_std": "GUADALUPE (LA CHORRERA)",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "ue_std": "ULAPS- GUADALUPE",
+    "categoria": "ULAPS",
+    "fuente": "SALMI",
+    "metodo": "excel"
   },
   {
     "ue_raw": "GUARARE",
     "ue_std": "GUARARE",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "fuente": "SALMI",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "GUSTAVO A. ROSS",
     "ue_std": "GUSTAVO A. ROSS",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "fuente": "SALMI",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "HOGAR DE LA ESPERANZA",
     "ue_std": "HOGAR DE LA ESPERANZA",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "fuente": "SALMI",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "HORACIO DIAZ GOMEZ",
     "ue_std": "HORACIO DIAZ GOMEZ",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "fuente": "SALMI",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "IRMA LOURDES TZANETATOS",
-    "ue_std": "IRMA LOURDES TZANETATOS",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "ue_std": "HOSP. IRMA DE LOURDES TZANETATOS",
+    "categoria": "HOSPITAL",
+    "fuente": "SALMI",
+    "metodo": "excel"
   },
   {
     "ue_raw": "J.J. VALLARINO",
-    "ue_std": "J.J. VALLARINO",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "ue_std": "POL. JOAQUIN J. VALLARINO (JUAN DIAZ)",
+    "categoria": "POLICLINICA DE ALTO VOL.",
+    "fuente": "SALMI",
+    "metodo": "excel"
   },
   {
     "ue_raw": "LA PINTADA",
     "ue_std": "LA PINTADA",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "fuente": "SALMI",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "LAS TABLAS",
     "ue_std": "LAS TABLAS",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "fuente": "SALMI",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "LOS NOGALES",
-    "ue_std": "LOS NOGALES",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "ue_std": "CAPPS MAÑANITAS (LOS NOGALES)",
+    "categoria": "CAPPS",
+    "fuente": "SALMI",
+    "metodo": "excel"
   },
   {
     "ue_raw": "LOS POZOS",
     "ue_std": "LOS POZOS",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "fuente": "SALMI",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "MACARACAS",
     "ue_std": "MACARACAS",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "fuente": "SALMI",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "MANUEL AMADOR GUERRERO",
-    "ue_std": "MANUEL AMADOR GUERRERO",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "ue_std": "HOSP. MANUEL AMADOR G.",
+    "categoria": "HOSPITAL",
+    "fuente": "SALMI",
+    "metodo": "excel"
   },
   {
     "ue_raw": "MANUEL FERRER VALDES",
-    "ue_std": "MANUEL FERRER VALDES",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "ue_std": "POL. MANUEL FERRER VALDES (PEDIATRICA)",
+    "categoria": "POLICLINICA DE ALTO VOL.",
+    "fuente": "SALMI",
+    "metodo": "excel"
   },
   {
     "ue_raw": "MANUEL MARIA VALDES (SAN MIGUELITO)",
-    "ue_std": "MANUEL MARIA VALDES (SAN MIGUELITO)",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "ue_std": "POL. MANUEL MARIA VALDES (SAN MIGUELITO)",
+    "categoria": "POLICLINICA DE BAJO VOL.",
+    "fuente": "SALMI",
+    "metodo": "excel"
   },
   {
     "ue_raw": "MANUEL ROJAS (AGUADULCE)",
     "ue_std": "MANUEL ROJAS (AGUADULCE)",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "fuente": "SALMI",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "MAXIMO HERRERA",
-    "ue_std": "MAXIMO HERRERA",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "ue_std": "ULAPS MAXIMO HERRERA (HIPODROMO)",
+    "categoria": "ULAPS",
+    "fuente": "SALMI",
+    "metodo": "excel"
   },
   {
     "ue_raw": "MIGUEL CARDENAS",
     "ue_std": "MIGUEL CARDENAS",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "fuente": "SALMI",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "NUEVO SAN JUAN",
-    "ue_std": "NUEVO SAN JUAN",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "ue_std": "POL. DE NUEVO SAN JUAN",
+    "categoria": "POLICLINICA DE BAJO VOL.",
+    "fuente": "SALMI",
+    "metodo": "excel"
   },
   {
     "ue_raw": "NUEVO VEDADO",
     "ue_std": "NUEVO VEDADO",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "fuente": "SALMI",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "OCU",
     "ue_std": "OCU",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "fuente": "SALMI",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "PEDASI",
     "ue_std": "PEDASI",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "fuente": "SALMI",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "PEDREGAL",
-    "ue_std": "PEDREGAL",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "ue_std": "CAPPS PEDREGAL",
+    "categoria": "CAPPS",
+    "fuente": "SALMI",
+    "metodo": "excel"
   },
   {
     "ue_raw": "PENONOME (MANUEL PAULINO OCAÑA)",
     "ue_std": "PENONOME (MANUEL PAULINO OCAÑA)",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "fuente": "SALMI",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "PESE",
     "ue_std": "PESE",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "fuente": "SALMI",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "PLAZA TOCUMEN",
-    "ue_std": "PLAZA TOCUMEN",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "ue_std": "CAPPS LAS ACACIAS (PLAZA TOCUMEN)",
+    "categoria": "CAPPS",
+    "fuente": "SALMI",
+    "metodo": "excel"
   },
   {
     "ue_raw": "PORTOBELO",
-    "ue_std": "PORTOBELO",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "ue_std": "ULAPS PORTOBELO",
+    "categoria": "ULAPS",
+    "fuente": "SALMI",
+    "metodo": "excel"
   },
   {
     "ue_raw": "PRESIDENTE REMON",
-    "ue_std": "PRESIDENTE REMON",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "ue_std": "POL. PRESIDENTE REMON (CALLE 17)",
+    "categoria": "POLICLINICA DE ALTO VOL.",
+    "fuente": "SALMI",
+    "metodo": "excel"
   },
   {
     "ue_raw": "RAFAEL ESTEVEZ",
     "ue_std": "RAFAEL ESTEVEZ",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "categoria": "HOSPITAL",
+    "fuente": "SALMI",
+    "metodo": "excel"
   },
   {
     "ue_raw": "RAFAEL HERNANDEZ",
     "ue_std": "RAFAEL HERNANDEZ",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "fuente": "SALMI",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "REGIONAL DE CHEPO",
-    "ue_std": "REGIONAL DE CHEPO",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "ue_std": "HOSP. DE CHEPO",
+    "categoria": "HOSPITAL",
+    "fuente": "SALMI",
+    "metodo": "excel"
   },
   {
     "ue_raw": "ROBERTO RAMIRES DE DIEGO (CHITRE)",
     "ue_std": "ROBERTO RAMIRES DE DIEGO (CHITRE)",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "fuente": "SALMI",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "SABANITAS",
-    "ue_std": "SABANITAS",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "ue_std": "POL. DE SABANITAS",
+    "categoria": "POLICLINICA DE BAJO VOL.",
+    "fuente": "SALMI",
+    "metodo": "excel"
   },
   {
     "ue_raw": "SAN ANTONIO",
-    "ue_std": "SAN ANTONIO",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "ue_std": "POLICLINICA DE SAN ANTONIO",
+    "categoria": "POLICLINICA DE ALTO VOL.",
+    "fuente": "SALMI",
+    "metodo": "excel"
   },
   {
     "ue_raw": "SAN JOSE",
-    "ue_std": "SAN JOSE",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "ue_std": "ULAPS SAN JOSE",
+    "categoria": "ULAPS",
+    "fuente": "SALMI",
+    "metodo": "excel"
   },
   {
     "ue_raw": "SAN JUAN DE DIOS ( VILLA DE LOS SANTOS)",
     "ue_std": "SAN JUAN DE DIOS ( VILLA DE LOS SANTOS)",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "fuente": "SALMI",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "SAN JUAN DE DIOS (NATA)",
     "ue_std": "SAN JUAN DE DIOS (NATA)",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "fuente": "SALMI",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "SANTA MARIA",
     "ue_std": "SANTA MARIA",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "fuente": "SALMI",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "SANTIAGO BARRAZA",
-    "ue_std": "SANTIAGO BARRAZA",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "ue_std": "POL. SANTIAGO BARRAZA (CHORRERA)",
+    "categoria": "POLICLINICA DE ALTO VOL.",
+    "fuente": "SALMI",
+    "metodo": "excel"
   },
   {
     "ue_raw": "SUSANA JONES CANO",
-    "ue_std": "SUSANA JONES CANO",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "ue_std": "HOSP. DRA. SUSANA JONES CANO",
+    "categoria": "HOSPITAL",
+    "fuente": "SALMI",
+    "metodo": "excel"
   },
   {
     "ue_raw": "TONOSI",
     "ue_std": "TONOSI",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "fuente": "SALMI",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "TORRIJOS CARTER",
-    "ue_std": "TORRIJOS CARTER",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "ue_std": "CAPPS TORRIJOS CARTER",
+    "categoria": "CAPPS",
+    "fuente": "SALMI",
+    "metodo": "excel"
   },
   {
     "ue_raw": "VACAMONTE",
-    "ue_std": "VACAMONTE",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "ue_std": "CAPPS VACAMONTE",
+    "categoria": "CAPPS",
+    "fuente": "SALMI",
+    "metodo": "excel"
   },
   {
     "ue_raw": "VISTA ALEGRE",
-    "ue_std": "VISTA ALEGRE",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "ue_std": "ULAPS VISTA ALEGRE (ARRAIJAN)",
+    "categoria": "ULAPS",
+    "fuente": "SALMI",
+    "metodo": "excel"
   },
   {
     "ue_raw": "VOLCAN",
     "ue_std": "VOLCAN",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "fuente": "SALMI",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "ZAPOTILLO",
     "ue_std": "ZAPOTILLO",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "SALMI"
+    "fuente": "SALMI",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "ALEJANDRO DE LA GUARDIA (BETHANIA)",
-    "ue_std": "ALEJANDRO DE LA GUARDIA (BETHANIA)",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "ue_std": "POL. ALEJANDRO DE LA GUARDIA (BETHANIA)",
+    "categoria": "POLICLINICA DE ALTO VOL.",
+    "fuente": "PERIODO",
+    "metodo": "excel"
   },
   {
     "ue_raw": "BLAS DANIEL GOMEZ (ARRAIJAN)",
-    "ue_std": "BLAS DANIEL GOMEZ (ARRAIJAN)",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "ue_std": "POL. DR. BLAS D. GOMEZ CHETRO",
+    "categoria": "POLICLINICA DE ALTO VOL.",
+    "fuente": "PERIODO",
+    "metodo": "excel"
   },
   {
     "ue_raw": "C.H.M. DR. ARNULFO ARIAS MADRID",
     "ue_std": "C. H. M. DR. ARNULFO ARIAS MADRID",
     "categoria": "POLICLINICA DE ALTO VOL.",
-    "fuente": "PERIODO"
+    "fuente": "PERIODO",
+    "metodo": "excel"
   },
   {
     "ue_raw": "CAPPS DE CAPIRA",
     "ue_std": "CAPPS DE CAPIRA",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "categoria": "POLICLINICA DE BAJO VOL.",
+    "fuente": "PERIODO",
+    "metodo": "excel"
   },
   {
     "ue_raw": "CAPPS DE GUARARE",
     "ue_std": "CAPPS DE GUARARE",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "categoria": "CAPPS",
+    "fuente": "PERIODO",
+    "metodo": "heuristica"
   },
   {
     "ue_raw": "CAPPS DE VACAMONTE",
-    "ue_std": "CAPPS DE VACAMONTE",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "ue_std": "CAPPS VACAMONTE",
+    "categoria": "CAPPS",
+    "fuente": "PERIODO",
+    "metodo": "excel"
   },
   {
     "ue_raw": "CAPPS LOS NOGALES (MAÑANITAS)",
-    "ue_std": "CAPPS LOS NOGALES (MAÑANITAS)",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "ue_std": "CAPPS MAÑANITAS (LOS NOGALES)",
+    "categoria": "CAPPS",
+    "fuente": "PERIODO",
+    "metodo": "excel"
   },
   {
     "ue_raw": "CAPPS PEDREGAL",
     "ue_std": "CAPPS PEDREGAL",
     "categoria": "CAPPS",
-    "fuente": "PERIODO"
+    "fuente": "PERIODO",
+    "metodo": "excel"
   },
   {
     "ue_raw": "CAPPS PLAZA TOCUMEN",
-    "ue_std": "CAPPS PLAZA TOCUMEN",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "ue_std": "CAPPS LAS ACACIAS (PLAZA TOCUMEN)",
+    "categoria": "CAPPS",
+    "fuente": "PERIODO",
+    "metodo": "excel"
   },
   {
     "ue_raw": "CAPPS TORRIJOS CARTER",
     "ue_std": "CAPPS TORRIJOS CARTER",
     "categoria": "CAPPS",
-    "fuente": "PERIODO"
+    "fuente": "PERIODO",
+    "metodo": "excel"
   },
   {
     "ue_raw": "CEDIS CHIRIQUI",
     "ue_std": "CEDIS CHIRIQUÍ",
     "categoria": "CEDIS",
-    "fuente": "PERIODO"
+    "fuente": "PERIODO",
+    "metodo": "excel"
   },
   {
     "ue_raw": "CEDIS DIVISA",
     "ue_std": "CEDIS DIVISA",
     "categoria": "CEDIS",
-    "fuente": "PERIODO"
+    "fuente": "PERIODO",
+    "metodo": "excel"
   },
   {
     "ue_raw": "CHIRIQUI GRANDE",
-    "ue_std": "CHIRIQUI GRANDE",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "ue_std": "HOSP. CHIRIQUI GRANDE",
+    "categoria": "HOSPITAL",
+    "fuente": "PERIODO",
+    "metodo": "excel"
   },
   {
     "ue_raw": "CIUDAD DE LA SALUD",
     "ue_std": "CIUDAD DE LA SALUD",
     "categoria": "HOSPITAL",
-    "fuente": "PERIODO"
+    "fuente": "PERIODO",
+    "metodo": "excel"
   },
   {
     "ue_raw": "DE AGUADUCE (DR. RAFAEL ESTEVEZ)",
     "ue_std": "DE AGUADUCE (DR. RAFAEL ESTEVEZ)",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "categoria": "HOSPITAL",
+    "fuente": "PERIODO",
+    "metodo": "excel"
   },
   {
     "ue_raw": "DENGEDTP",
     "ue_std": "DENGEDTP",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "fuente": "PERIODO",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "DIONIO ARROCHA",
     "ue_std": "DIONIO ARROCHA",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "fuente": "PERIODO",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "DOLEGA",
     "ue_std": "DOLEGA",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "fuente": "PERIODO",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "DR. ERNESTO PEREZ BALLADARES (BOQUETE)",
     "ue_std": "DR. ERNESTO PEREZ BALLADARES (BOQUETE)",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "fuente": "PERIODO",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "EL TECAL",
-    "ue_std": "EL TECAL",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "ue_std": "CAPPS EL TECAL",
+    "categoria": "ULAPS",
+    "fuente": "PERIODO",
+    "metodo": "excel"
   },
   {
     "ue_raw": "ESP. PEDIATRICAS O.T.H.",
-    "ue_std": "ESP. PEDIATRICAS O.T.H.",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "ue_std": "HOSP. DE ESPECIALIDADES PEDIÁTRICAS O.T.H.",
+    "categoria": "HOSPITAL",
+    "fuente": "PERIODO",
+    "metodo": "excel"
   },
   {
     "ue_raw": "EZEQUIEL ABADIA (SONA)",
     "ue_std": "EZEQUIEL ABADIA (SONA)",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "fuente": "PERIODO",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "GENEROSO GUARDIA (SANTA LIBRADA)",
-    "ue_std": "GENEROSO GUARDIA (SANTA LIBRADA)",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "ue_std": "POL. GENEROSO GUARDIA (STA. LIBRADA)",
+    "categoria": "POLICLINICA DE ALTO VOL.",
+    "fuente": "PERIODO",
+    "metodo": "excel"
   },
   {
     "ue_raw": "GUSTAVO A. ROSS",
     "ue_std": "GUSTAVO A. ROSS",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "fuente": "PERIODO",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "GUSTAVO NELSON COLLADO (CHITRE)",
     "ue_std": "GUSTAVO NELSON COLLADO (CHITRE)",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "fuente": "PERIODO",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "HOGAR DE LA ESPERANZA",
     "ue_std": "HOGAR DE LA ESPERANZA",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "fuente": "PERIODO",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "HOSPITAL DE ALMIRANTE",
     "ue_std": "HOSPITAL DE ALMIRANTE",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "categoria": "HOSPITAL",
+    "fuente": "PERIODO",
+    "metodo": "heuristica"
   },
   {
     "ue_raw": "HOSPITAL DE CHANGUINOLA (RAUL DAVILA MENA)",
     "ue_std": "HOSPITAL DE CHANGUINOLA (RAUL DAVILA MENA)",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "categoria": "HOSPITAL",
+    "fuente": "PERIODO",
+    "metodo": "heuristica"
   },
   {
     "ue_raw": "HOSPITAL RAFAEL HERNANDEZ",
     "ue_std": "HOSPITAL RAFAEL HERNANDEZ",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "categoria": "HOSPITAL",
+    "fuente": "PERIODO",
+    "metodo": "heuristica"
   },
   {
     "ue_raw": "HOSPITAL SUSANA JONES CANO",
-    "ue_std": "HOSPITAL SUSANA JONES CANO",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "ue_std": "HOSP. DRA. SUSANA JONES CANO",
+    "categoria": "HOSPITAL",
+    "fuente": "PERIODO",
+    "metodo": "excel"
   },
   {
     "ue_raw": "HUGO SPADAFORA",
-    "ue_std": "HUGO SPADAFORA",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "ue_std": "POL. HUGO SPADAFORA",
+    "categoria": "POLICLINICA DE ALTO VOL.",
+    "fuente": "PERIODO",
+    "metodo": "excel"
   },
   {
     "ue_raw": "IRMA LOURDES DE TZANETATOS",
-    "ue_std": "IRMA LOURDES DE TZANETATOS",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "ue_std": "HOSP. IRMA DE LOURDES TZANETATOS",
+    "categoria": "HOSPITAL",
+    "fuente": "PERIODO",
+    "metodo": "excel"
   },
   {
     "ue_raw": "MANUEL AMADOR GUERRERO",
-    "ue_std": "MANUEL AMADOR GUERRERO",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "ue_std": "HOSP. MANUEL AMADOR G.",
+    "categoria": "HOSPITAL",
+    "fuente": "PERIODO",
+    "metodo": "excel"
   },
   {
     "ue_raw": "MANUEL MARIA VALDES (SAN MIGUELITO)",
-    "ue_std": "MANUEL MARIA VALDES (SAN MIGUELITO)",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "ue_std": "POL. MANUEL MARIA VALDES (SAN MIGUELITO)",
+    "categoria": "POLICLINICA DE BAJO VOL.",
+    "fuente": "PERIODO",
+    "metodo": "excel"
   },
   {
     "ue_raw": "MAXIMO HERRERA (HIPODROMO)",
-    "ue_std": "MAXIMO HERRERA (HIPODROMO)",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "ue_std": "ULAPS MAXIMO HERRERA (HIPODROMO)",
+    "categoria": "ULAPS",
+    "fuente": "PERIODO",
+    "metodo": "excel"
   },
   {
     "ue_raw": "NUEVO SAN JUAN",
-    "ue_std": "NUEVO SAN JUAN",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "ue_std": "POL. DE NUEVO SAN JUAN",
+    "categoria": "POLICLINICA DE BAJO VOL.",
+    "fuente": "PERIODO",
+    "metodo": "excel"
   },
   {
     "ue_raw": "PABLO ESPINOSA (BUGABA)",
     "ue_std": "PABLO ESPINOSA (BUGABA)",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "fuente": "PERIODO",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "PESE",
     "ue_std": "PESE",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "fuente": "PERIODO",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "POL. CARLOS N. BRIN ( SAN FRANCISCO)",
     "ue_std": "POL. CARLOS N. BRIN (SAN FRANCISCO)",
     "categoria": "POLICLINICA DE ALTO VOL.",
-    "fuente": "PERIODO"
+    "fuente": "PERIODO",
+    "metodo": "excel"
   },
   {
     "ue_raw": "POL. HORACIO DIAZ GOMEZ (SANTIAGO)",
     "ue_std": "POL. HORACIO DIAZ GOMEZ (SANTIAGO)",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "fuente": "PERIODO",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "POL. JOAQUIN VALLARINO (JUAN DIAZ)",
-    "ue_std": "POL. JOAQUIN VALLARINO (JUAN DIAZ)",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "ue_std": "POL. JOAQUIN J. VALLARINO (JUAN DIAZ)",
+    "categoria": "POLICLINICA DE ALTO VOL.",
+    "fuente": "PERIODO",
+    "metodo": "excel"
   },
   {
     "ue_raw": "POL. JUAN VEGA M (SAN CARLOS)",
     "ue_std": "POL. JUAN VEGA M. (SAN CARLOS)",
     "categoria": "POLICLINICA DE BAJO VOL.",
-    "fuente": "PERIODO"
+    "fuente": "PERIODO",
+    "metodo": "excel"
   },
   {
     "ue_raw": "POL. MANUEL FERRER VALDES (PEDIATRICA)",
     "ue_std": "POL. MANUEL FERRER VALDES (PEDIATRICA)",
     "categoria": "POLICLINICA DE ALTO VOL.",
-    "fuente": "PERIODO"
+    "fuente": "PERIODO",
+    "metodo": "excel"
   },
   {
     "ue_raw": "POL. PRESIDENTE REMON (CALLE17)",
-    "ue_std": "POL. PRESIDENTE REMON (CALLE17)",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "ue_std": "POL. PRESIDENTE REMON (CALLE 17)",
+    "categoria": "POLICLINICA DE ALTO VOL.",
+    "fuente": "PERIODO",
+    "metodo": "excel"
   },
   {
     "ue_raw": "POLICLINICA DE CAÑITA",
-    "ue_std": "POLICLINICA DE CAÑITA",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "ue_std": "POL. DE CAÑITA",
+    "categoria": "POLICLINICA DE BAJO VOL.",
+    "fuente": "PERIODO",
+    "metodo": "excel"
   },
   {
     "ue_raw": "POLICLINICA DE SAN ANTONIO",
     "ue_std": "POLICLINICA DE SAN ANTONIO",
     "categoria": "POLICLINICA DE ALTO VOL.",
-    "fuente": "PERIODO"
+    "fuente": "PERIODO",
+    "metodo": "excel"
   },
   {
     "ue_raw": "POLICLINICA MANUEL J. ROJAS",
     "ue_std": "POLICLINICA MANUEL J. ROJAS",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "fuente": "PERIODO",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "POLICLINICA MANUEL P. OCAÑA-PENONOME",
     "ue_std": "POLICLINICA MANUEL P. OCAÑA-PENONOME",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "fuente": "PERIODO",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "POLICLINICA MIGUEL CARDENAS",
     "ue_std": "POLICLINICA MIGUEL CARDENAS",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "fuente": "PERIODO",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "REGIONAL DE CHEPO",
-    "ue_std": "REGIONAL DE CHEPO",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "ue_std": "HOSP. DE CHEPO",
+    "categoria": "HOSPITAL",
+    "fuente": "PERIODO",
+    "metodo": "excel"
   },
   {
     "ue_raw": "ROBERTO RAMIRES DE DIEGO (CHITRE)",
     "ue_std": "ROBERTO RAMIRES DE DIEGO (CHITRE)",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "fuente": "PERIODO",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "SABANITAS",
-    "ue_std": "SABANITAS",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "ue_std": "POL. DE SABANITAS",
+    "categoria": "POLICLINICA DE BAJO VOL.",
+    "fuente": "PERIODO",
+    "metodo": "excel"
   },
   {
     "ue_raw": "SAN JUAN DE DIOS (NATA)",
     "ue_std": "SAN JUAN DE DIOS (NATA)",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "fuente": "PERIODO",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "SANTIGO BARRAZA (CHORRERA)",
-    "ue_std": "SANTIGO BARRAZA (CHORRERA)",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "ue_std": "POL. SANTIAGO BARRAZA (CHORRERA)",
+    "categoria": "POLICLINICA DE ALTO VOL.",
+    "fuente": "PERIODO",
+    "metodo": "excel"
   },
   {
     "ue_raw": "TONOSI",
     "ue_std": "TONOSI",
     "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "fuente": "PERIODO",
+    "metodo": "pendiente"
   },
   {
     "ue_raw": "ULAPS - SAN CRISTOBAL CARLOS VELARDE",
-    "ue_std": "ULAPS - SAN CRISTOBAL CARLOS VELARDE",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "ue_std": "ULAPS - SAN CRISTOBAL (PROF. CARLOS VELARDE)",
+    "categoria": "ULAPS",
+    "fuente": "PERIODO",
+    "metodo": "excel"
   },
   {
     "ue_raw": "ULAPS D. EDILBERTO CULIOLIS (LAS CUMBRES)",
-    "ue_std": "ULAPS D. EDILBERTO CULIOLIS (LAS CUMBRES)",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "ue_std": "ULAPS - LAS CUMBRES (DR. EDILBERTO CULIOLIS)",
+    "categoria": "ULAPS",
+    "fuente": "PERIODO",
+    "metodo": "excel"
   },
   {
     "ue_raw": "ULAPS GUADALUPE",
     "ue_std": "ULAPS- GUADALUPE",
     "categoria": "ULAPS",
-    "fuente": "PERIODO"
+    "fuente": "PERIODO",
+    "metodo": "excel"
   },
   {
     "ue_raw": "ULAPS PORTOBELO",
     "ue_std": "ULAPS PORTOBELO",
     "categoria": "ULAPS",
-    "fuente": "PERIODO"
+    "fuente": "PERIODO",
+    "metodo": "excel"
   },
   {
     "ue_raw": "ULAPS SAN JOSE (SAN CARLOS)",
     "ue_std": "ULAPS SAN JOSE",
     "categoria": "ULAPS",
-    "fuente": "PERIODO"
+    "fuente": "PERIODO",
+    "metodo": "excel"
   },
   {
     "ue_raw": "ULAPS VISTA ALEGRE",
-    "ue_std": "ULAPS VISTA ALEGRE",
-    "categoria": "SIN_CATEGORIA",
-    "fuente": "PERIODO"
+    "ue_std": "ULAPS VISTA ALEGRE (ARRAIJAN)",
+    "categoria": "ULAPS",
+    "fuente": "PERIODO",
+    "metodo": "excel"
   }
 ]
