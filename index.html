@@ -3,6 +3,8 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <link rel="icon" href="./favicon.ico"/>
+  <link rel="shortcut icon" href="./favicon.ico"/>
   <title>SIGUELO - Asignación F8 (Corte diario)</title>
   <style>
     body{font-family:Arial, sans-serif; margin:0; background:#fff;}
@@ -270,6 +272,11 @@ function tickDateTime(){
 let DATA = [];
 let PARAMS = {};
 let LAST = {};
+let UE_ALIAS = [];
+const UE_SALMI_TO_STD = new Map();
+const UE_PER_TO_STD = new Map();
+const STD_TO_CAT = new Map();
+const STD_TO_PER_RAW = new Map();
 let ACTIVE_TAB = "asignacion";
 let LAST_FILTERED = [];
 
@@ -365,19 +372,52 @@ function showTab(tab){
   renderActiveTab(LAST_FILTERED.length ? LAST_FILTERED : DATA);
 }
 
-function lastKey(r){
-  return `${String(r.Punto||"").trim()}|${String(r.Codigo||"").trim()}`;
+function lastKeyFrom(punto, codigo){
+  return `${String(punto||"").trim()}|${String(codigo||"").trim()}`;
 }
+
+function buildUeAliasMaps(){
+  UE_SALMI_TO_STD.clear(); UE_PER_TO_STD.clear(); STD_TO_CAT.clear(); STD_TO_PER_RAW.clear();
+  (UE_ALIAS||[]).forEach(a=>{
+    const raw = norm(a.ue_raw);
+    const std = String(a.ue_std||"").trim();
+    const cat = String(a.categoria||"").trim() || "SIN_CATEGORIA";
+    if(!std) return;
+    if(a.fuente === "SALMI") UE_SALMI_TO_STD.set(raw, std);
+    if(a.fuente === "PERIODO") UE_PER_TO_STD.set(raw, std);
+    if(!STD_TO_CAT.has(std) || STD_TO_CAT.get(std)==="SIN_CATEGORIA") STD_TO_CAT.set(std, cat);
+    if(a.fuente === "PERIODO"){
+      const arr = STD_TO_PER_RAW.get(std) || [];
+      if(!arr.includes(String(a.ue_raw).trim())) arr.push(String(a.ue_raw).trim());
+      STD_TO_PER_RAW.set(std, arr);
+    }
+  });
+}
+
+function ueStdFromSalmi(punto){
+  const k = norm(punto);
+  return UE_SALMI_TO_STD.get(k) || UE_PER_TO_STD.get(k) || String(punto||"").trim();
+}
+
 function getLastDispatch(r){
-  const hit = LAST[lastKey(r)];
-  if(!hit) return {fecha:"-", qty:null};
-  return {fecha: (hit.fecha || "-"), qty: hit.qty};
+  const code = String(r.Codigo||"").trim();
+  const std = ueStdFromSalmi(r.Punto);
+  const perList = STD_TO_PER_RAW.get(std) || [String(r.Punto||"").trim()];
+  let best = null;
+  for(const pRaw of perList){
+    const hit = LAST[lastKeyFrom(pRaw, code)];
+    if(hit && hit.fecha){
+      if(!best || String(hit.fecha) > String(best.fecha)) best = hit;
+    }
+  }
+  if(!best) return {fecha:"-", qty:null};
+  return {fecha: (best.fecha || "-"), qty: best.qty};
 }
 
 function renderAsignacion(rows){
   const tb = document.querySelector("#tbl_asignacion tbody");
   tb.innerHTML = rows.slice(0, 2000).map(r => {
-    const b = `${(r.Bultos_Ter||0).toFixed(2)}/${(r.Bultos_Sec||0).toFixed(2)}/${(r.Bultos_Prim||0).toFixed(2)}`;
+    const b = `${fmtBultosPart(r.Bultos_Ter||0)}/${fmtBultosPart(r.Bultos_Sec||0)}/${fmtBultosPart(r.Bultos_Prim||0)}`;
     const lots = r.Lotes_Usados ? r.Lotes_Usados : "";
     const ld = getLastDispatch(r);
     return `<tr>
@@ -600,35 +640,69 @@ function exportPdfAsignacion(){
     return;
   }
 
-  // Agrupar por UE (Punto) y Documento
+  // Agrupar por UE (Punto) + Documento (pedido) => un paquete imprimible por pedido
   const groups = new Map();
   for(const r of rows){
     const ue = r.Punto || "SIN_UE";
     const doc = r.N_Doc || "SIN_DOC";
     const key = ue + "||" + doc;
-    if(!groups.has(key)) groups.set(key, {ue, doc, tipo: r.Tipo||"", items: []});
-    groups.get(key).items.push(r);
+
+    const pr = Number.isFinite(+r.Prioridad) ? +r.Prioridad : 999;
+    const f  = (r.Fecha||"");
+    if(!groups.has(key)){
+      groups.set(key, {ue, doc, tipo: r.Tipo||"", prioridad: pr, maxFecha: f, items: []});
+    }
+    const g = groups.get(key);
+    g.items.push(r);
+    if(String(f) > String(g.maxFecha)) g.maxFecha = f;
+    if(pr < g.prioridad) g.prioridad = pr;
   }
+
+  // Orden de impresión: prioridad UE (asc) y luego fecha (reciente->antiguo)
+  const groupsArr = Array.from(groups.values()).sort((a,b)=>{
+    if(a.prioridad !== b.prioridad) return a.prioridad - b.prioridad;
+    if(a.maxFecha !== b.maxFecha) return String(b.maxFecha).localeCompare(String(a.maxFecha));
+    return String(a.doc).localeCompare(String(b.doc));
+  });
 
   const now = new Date();
   const fechaGen = now.toLocaleString("es-PA");
   const corte = (PARAMS && PARAMS.corte) ? PARAMS.corte : "";
 
-  const esc = (s) => (s===null||s===undefined) ? "" : String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
+  const esc = (s) => (s===null||s===undefined) ? "" : String(s)
+    .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
+
+  const fmt = (n) => {
+    const x = Number(n);
+    if(!Number.isFinite(x)) return "";
+    return x.toLocaleString("en-US", {maximumFractionDigits: 0});
+  };
+
+  const fmtBultosPart = (n) => {
+    const x = Number(n);
+    if(!Number.isFinite(x)) return "0";
+    const r = Math.round(x);
+    if(Math.abs(x-r) < 1e-9) return String(r);
+    return String(parseFloat(x.toFixed(3)));
+  };
 
   const makeRow = (r) => {
     const b = `${(r.Bultos_Ter||0).toFixed(2)}/${(r.Bultos_Sec||0).toFixed(2)}/${(r.Bultos_Prim||0).toFixed(2)}`;
-    const lots = r.Lotes_Usados ? r.Lotes_Usados : "";
-    return `<tr>
-      <td class="code">${esc(r.Codigo||"")}</td>
+    const lotes = r.Lotes_Usados ? String(r.Lotes_Usados) : "";
+    return `
+    <tr>
+      <td>${esc(r.Codigo)}</td>
       <td>${esc(r.Suministro||"")}</td>
+      <td class="num">${fmt(r.Solicitado)}</td>
+      <td class="num">${fmt(r.Solic_red)}</td>
       <td class="num">${fmt(r.Asignado)}</td>
+      <td class="num">${fmt(r.Pendiente)}</td>
       <td class="center">${esc(b)}</td>
-      <td>${esc(lots)}</td>
+      <td>${esc(lotes)}</td>
     </tr>`;
   };
 
-  const sections = Array.from(groups.values()).map(g => {
+  const sections = groupsArr.map(g => {
     // ordenar por código para picking
     g.items.sort((a,b)=> String(a.Codigo||"").localeCompare(String(b.Codigo||"")));
     const rowsHtml = g.items.map(makeRow).join("");
@@ -638,6 +712,7 @@ function exportPdfAsignacion(){
           <div><b>UE:</b> ${esc(g.ue)}</div>
           <div><b>Documento:</b> ${esc(g.doc)}</div>
           <div><b>Tipo:</b> ${esc(g.tipo)}</div>
+          <div><b>Fecha:</b> ${esc(g.maxFecha||"")}</div>
         </div>
         <table>
           <thead>
@@ -645,51 +720,50 @@ function exportPdfAsignacion(){
               <th style="width:110px;">Código</th>
               <th>Suministro</th>
               <th style="width:90px;" class="num">Asignado</th>
-              <th style="width:90px;" class="center">Bultos T/S/P</th>
+              <th style="width:110px;" class="center">Bultos T/S/P</th>
               <th style="width:240px;">Lotes</th>
             </tr>
           </thead>
-          <tbody>${rowsHtml}</tbody>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
         </table>
-
         <div class="sign">
-          <div><b>Preparado por:</b> _______________________</div>
-          <div><b>Verificado por:</b> _______________________</div>
-          <div><b>Fecha / Hora:</b> _______________________</div>
+          <div>Preparado por: _______________________</div>
+          <div>Verificado por: _______________________</div>
+          <div>Fecha/Hora: _______________________</div>
         </div>
       </div>`;
   }).join("");
 
-  const html = `<!doctype html>
-  <html lang="es"><head><meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"/>
   <title>Hoja de Asignación F8</title>
   <style>
-    body{font-family:Arial, sans-serif; margin:16px; color:#111;}
-    .topbar{display:flex; align-items:center; gap:12px; border-bottom:2px solid #0b1f3b; padding-bottom:10px; margin-bottom:12px;}
-    .logo{width:44px; height:44px; border-radius:10px; object-fit:cover;}
-    .title{font-size:18px; font-weight:700;}
-    .meta{font-size:12px; color:#333; margin-top:2px;}
-    .rules{font-size:11px; color:#333; margin-top:6px;}
+    body{font-family:Arial, sans-serif; color:#111;}
+    .topbar{display:flex; gap:12px; align-items:center; border-bottom:2px solid #0b1f3a; padding-bottom:10px;}
+    .logo{width:42px; height:42px; object-fit:contain;}
+    .titleWrap{flex:1;}
+    .title{font-size:14px; font-weight:700; letter-spacing:.2px;}
+    .meta{font-size:11px; color:#333; margin-top:2px;}
+    .rules{font-size:11px; color:#333; margin-top:2px;}
     table{width:100%; border-collapse:collapse; margin-top:10px;}
-    th,td{border:1px solid #ccc; padding:6px 8px; font-size:11px; vertical-align:top;}
+    th,td{border:1px solid #cfd6df; padding:6px 8px; font-size:11px; vertical-align:top;}
     th{background:#f3f5f8;}
     .num{text-align:right;}
     .center{text-align:center;}
-    .section{page-break-after:always;}
+    .section{page-break-after:always; margin-top:10px;}
     .section:last-child{page-break-after:auto;}
-    .sectionHeader{display:flex; justify-content:space-between; gap:12px; font-size:12px; margin-top:8px;}
+    .sectionHeader{display:flex; flex-wrap:wrap; justify-content:space-between; gap:10px; font-size:12px; margin-top:8px;}
     .sign{display:flex; justify-content:space-between; gap:12px; margin-top:14px; font-size:11px;}
     @media print{
       body{margin:10mm;}
       .sectionHeader{page-break-inside:avoid;}
-      table{page-break-inside:auto;}
       tr{page-break-inside:avoid; page-break-after:auto;}
     }
   </style></head><body>
     <div class="topbar">
-      <img class="logo" src="./icons/icon-512.png" alt="SIGUELO"/>
-      <div>
+      <img class="logo" src="./icons/icon-512.png" alt="logo"/>
+      <div class="titleWrap">
         <div class="title">HOJA DE ASIGNACIÓN F8 — CORTE DIARIO</div>
         <div class="meta">Generado: ${esc(fechaGen)} | Corte: ${esc(corte)}</div>
         <div class="rules">Reglas: FEFO | Vto ≥ 30 días | Excluye TRANSFERENCIA</div>
@@ -731,17 +805,24 @@ function exportXlsxAsignacion(){
   const now = new Date().toLocaleString("es-PA");
 
   const aoa = [];
+  const fmtBultosPartX = (n) => {
+    const x = Number(n);
+    if(!Number.isFinite(x)) return "0";
+    const r = Math.round(x);
+    if(Math.abs(x-r) < 1e-9) return String(r);
+    return String(parseFloat(x.toFixed(3)));
+  };
   aoa.push(["HOJA DE ASIGNACIÓN F8 — CORTE DIARIO"]);
   aoa.push([`Generado: ${now}`, `Corte: ${corte}`, "Reglas: FEFO | Vto ≥ 30 días | Excluye TRANSFERENCIA"]);
   aoa.push([]);
 
-  const header = ["UE", "Documento", "Tipo", "Código", "Suministro", "Asignado", "Bultos T/S/P", "Lotes usados", "Último despacho (real)", "Qty último"];
+  const header = ["UE", "Documento", "Tipo", "Código", "Suministro", "Solicitado", "Solic. red.", "Asignado", "Pendiente", "Bultos T/S/P", "Lotes usados", "Último despacho (real)", "Qty último"];
   aoa.push(header);
 
   for(const g of Array.from(groups.values()).sort((a,b)=> (a.ue+a.doc).localeCompare(b.ue+b.doc))){
     g.items.sort((a,b)=> String(a.Codigo||"").localeCompare(String(b.Codigo||"")));
     for(const r of g.items){
-      const bults = `${(r.Bultos_Ter||0).toFixed(2)}/${(r.Bultos_Sec||0).toFixed(2)}/${(r.Bultos_Prim||0).toFixed(2)}`;
+      const bults = `${fmtBultosPartX(r.Bultos_Ter||0)}/${fmtBultosPartX(r.Bultos_Sec||0)}/${fmtBultosPartX(r.Bultos_Prim||0)}`;
       const ld = getLastDispatch(r);
       aoa.push([
         g.ue,
@@ -749,7 +830,10 @@ function exportXlsxAsignacion(){
         g.tipo,
         r.Codigo||"",
         r.Suministro||"",
+        Number(r.Solicitado||0),
+        Number(r.Solic_red||0),
         Number(r.Asignado||0),
+        Number(r.Pendiente||0),
         bults,
         r.Lotes_Usados||"",
         ld.fecha || "",
@@ -762,7 +846,7 @@ function exportXlsxAsignacion(){
   const ws = XLSX.utils.aoa_to_sheet(aoa);
   // Ajustes de ancho
   ws["!cols"] = [
-    {wch:22},{wch:18},{wch:12},{wch:12},{wch:60},{wch:12},{wch:14},{wch:40},{wch:18},{wch:12}
+    {wch:22},{wch:18},{wch:12},{wch:12},{wch:60},{wch:12},{wch:12},{wch:12},{wch:12},{wch:14},{wch:40},{wch:18},{wch:12}
   ];
   // Congelar encabezado (aprox) -> SheetJS: !freeze
   ws["!freeze"] = { xSplit: 0, ySplit: 4 };
