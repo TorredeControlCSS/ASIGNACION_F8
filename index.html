@@ -256,6 +256,18 @@
   </div>
 
 <script>
+
+// --- Helpers: format bultos (T/S/P) without trailing .00 ---
+function fmtBultosPart(n){
+  const x = Number(n);
+  if(!Number.isFinite(x)) return "0";
+  const r = Math.round(x);
+  if(Math.abs(x - r) < 1e-9) return String(r);
+  return String(parseFloat(x.toFixed(3)));
+}
+// Backward-compat alias used by some export routines
+const fmtBultosPartX = fmtBultosPart;
+
 const fmt = (n) => {
   if (n === null || n === undefined || isNaN(n)) return "-";
   return new Intl.NumberFormat('es-PA', {maximumFractionDigits: 0}).format(n);
