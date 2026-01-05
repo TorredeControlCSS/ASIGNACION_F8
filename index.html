@@ -265,6 +265,11 @@
       .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
       .toUpperCase().trim().replace(/\s+/g," ");
   }
+  function canonKey(s){
+    const base = norm(s).replace(/[.,]/g," ");
+    const stop = /\b(COMPLEJO|HOSPITALARIO|HOSPITAL|HOSP|POLICLINICA|POL|CLINICA|ULAPS|CAPPS|CEDIS|C H M|CHM|C\.H\.M|C\.H\.|CH\.M)\b/g;
+    return base.replace(stop,"").replace(/\s+/g," ").trim();
+  }
   function fmtIntish(x){
     if(x===null||x===undefined||x==="") return "";
     const n = Number(x);
@@ -283,7 +288,7 @@
   function fmtBultosTriple(t,s,p){
     return `${fmtBultosPart(t)}/${fmtBultosPart(s)}/${fmtBultosPart(p)}`;
   }
-  const fmtBultosPartX = fmtBultosPart; // alias para exportes
+  const fmtBultosPartX = fmtBultosPart;
 
   const fmt = (n) => {
     if (n === null || n === undefined || isNaN(n)) return "-";
@@ -306,7 +311,8 @@
   const UE_PER_TO_STD = new Map();
   const STD_TO_CAT = new Map();
   const STD_TO_PER_RAW = new Map();
-  const CANON_STD = new Map(); // norm(std) -> std canónico
+  const CANON_KEY_TO_STD = new Map();
+  const STD_TO_CANON = new Map();
   let ACTIVE_TAB = "asignacion";
   let LAST_FILTERED = [];
 
@@ -412,36 +418,43 @@
     return `${String(punto||"").trim()}|${String(codigo||"").trim()}`;
   }
 
-  function canonStd(std){
-    const k = norm(std);
-    if(CANON_STD.has(k)) return CANON_STD.get(k);
-    CANON_STD.set(k, std);
-    return std;
-  }
-
   function buildUeAliasMaps(){
-    UE_SALMI_TO_STD.clear(); UE_PER_TO_STD.clear(); STD_TO_CAT.clear(); STD_TO_PER_RAW.clear(); CANON_STD.clear();
+    UE_SALMI_TO_STD.clear(); UE_PER_TO_STD.clear(); STD_TO_CAT.clear(); STD_TO_PER_RAW.clear();
+    CANON_KEY_TO_STD.clear(); STD_TO_CANON.clear();
     (UE_ALIAS||[]).forEach(a=>{
       const raw = norm(a.ue_raw);
-      const stdOriginal = String(a.ue_std||"").trim();
+      const stdOriginal = String(a.ue_std||"").trim() || String(a.ue_raw||"").trim();
       if(!stdOriginal) return;
-      const std = canonStd(stdOriginal); // unifica SALMI y PERIODO
+      const keyRaw = canonKey(a.ue_raw||"");
+      const keyStd = canonKey(stdOriginal);
+      const canonK = keyStd || keyRaw;
+
+      // elegir std canónico: el primero que llegue para la clave canónica
+      const chosenStd = CANON_KEY_TO_STD.get(canonK) || stdOriginal;
+      if(!CANON_KEY_TO_STD.has(canonK)) CANON_KEY_TO_STD.set(canonK, chosenStd);
+      STD_TO_CANON.set(chosenStd, canonK);
+
       const cat = String(a.categoria||"").trim() || "SIN_CATEGORIA";
-      if(a.fuente === "SALMI") UE_SALMI_TO_STD.set(raw, std);
-      if(a.fuente === "PERIODO") UE_PER_TO_STD.set(raw, std);
-      if(!STD_TO_CAT.has(std) || STD_TO_CAT.get(std)==="SIN_CATEGORIA") STD_TO_CAT.set(std, cat);
+
+      if(a.fuente === "SALMI") UE_SALMI_TO_STD.set(raw, chosenStd);
+      if(a.fuente === "PERIODO") UE_PER_TO_STD.set(raw, chosenStd);
+
+      if(!STD_TO_CAT.has(chosenStd) || STD_TO_CAT.get(chosenStd)==="SIN_CATEGORIA") STD_TO_CAT.set(chosenStd, cat);
+
       if(a.fuente === "PERIODO"){
-        const arr = STD_TO_PER_RAW.get(std) || [];
+        const arr = STD_TO_PER_RAW.get(chosenStd) || [];
         const rawStr = String(a.ue_raw).trim();
         if(!arr.includes(rawStr)) arr.push(rawStr);
-        STD_TO_PER_RAW.set(std, arr);
+        STD_TO_PER_RAW.set(chosenStd, arr);
       }
     });
   }
 
   function ueStdFromSalmi(punto){
     const k = norm(punto);
-    return UE_SALMI_TO_STD.get(k) || UE_PER_TO_STD.get(k) || canonStd(String(punto||"").trim());
+    const keyCanon = canonKey(punto);
+    const stdFromKey = CANON_KEY_TO_STD.get(keyCanon);
+    return UE_SALMI_TO_STD.get(k) || UE_PER_TO_STD.get(k) || stdFromKey || String(punto||"").trim();
   }
 
   function remapDataWithAliases(){
