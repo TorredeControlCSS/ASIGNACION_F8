@@ -911,12 +911,15 @@
     tickDateTime();
     setInterval(tickDateTime, 60000);
 
+    // PON AQUÍ LA URL DE TU WEBAPP (la que termina en /exec)
+    const WEBAPP_BASE = "PON_AQUI_TU_URL_DE_WEBAPP";
+
     try{
       const [dataRes, paramsRes, lastRes, aliasRes] = await Promise.all([
-        fetch("./allocation.json"),
-        fetch("./params.json"),
-        fetch("./last_dispatch.json"),
-        fetch("./ue_alias.json")
+        fetch(`${WEBAPP_BASE}?file=allocation`),
+        fetch(`${WEBAPP_BASE}?file=params`),
+        fetch(`${WEBAPP_BASE}?file=last_dispatch`),
+        fetch(`${WEBAPP_BASE}?file=ue_alias`)
       ]);
       DATA = await dataRes.json();
       PARAMS = await paramsRes.json();
@@ -924,7 +927,7 @@
       UE_ALIAS = await aliasRes.json();
     }catch(e){
       console.error(e);
-      alert("No se pudieron cargar los JSON principales (allocation/params/last_dispatch/ue_alias). Revisa conexión o nombres de archivo.");
+      alert("No se pudieron cargar los JSON principales (allocation/params/last_dispatch/ue_alias). Revisa conexión o la URL del WebApp.");
       return;
     }
 
