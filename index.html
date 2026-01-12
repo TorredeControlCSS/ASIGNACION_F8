@@ -270,14 +270,6 @@
     const stop = /\b(COMPLEJO|HOSPITALARIO|HOSPITAL|HOSP|POLICLINICA|POL|CLINICA|ULAPS|CAPPS|CEDIS|C H M|CHM|C\.H\.M|C\.H\.|CH\.M)\b/g;
     return base.replace(stop,"").replace(/\s+/g," ").trim();
   }
-  function fmtIntish(x){
-    if(x===null||x===undefined||x==="") return "";
-    const n = Number(x);
-    if(!isFinite(n)) return String(x);
-    const r = Math.round(n);
-    if(Math.abs(n - r) < 1e-9) return String(r);
-    return (Math.round(n*100)/100).toString();
-  }
   function fmtBultosPart(n){
     const x = Number(n);
     if(!Number.isFinite(x)) return "0";
@@ -285,16 +277,11 @@
     if(Math.abs(x - r) < 1e-9) return String(r);
     return String(parseFloat(x.toFixed(3)));
   }
-  function fmtBultosTriple(t,s,p){
-    return `${fmtBultosPart(t)}/${fmtBultosPart(s)}/${fmtBultosPart(p)}`;
-  }
-  const fmtBultosPartX = fmtBultosPart;
-
+  function fmtBultosTriple(t,s,p){ return `${fmtBultosPart(t)}/${fmtBultosPart(s)}/${fmtBultosPart(p)}`; }
   const fmt = (n) => {
     if (n === null || n === undefined || isNaN(n)) return "-";
     return new Intl.NumberFormat('es-PA', {maximumFractionDigits: 0}).format(n);
   };
-
   function tickDateTime(){
     const el = document.getElementById('currentDateTime');
     if(!el) return;
@@ -317,13 +304,7 @@
   let LAST_FILTERED = [];
 
   function uniq(arr){ return [...new Set(arr)].filter(x => x !== null && x !== undefined); }
-  function parseISODate(s){
-    if(!s) return null;
-    const m = String(s).match(/(\d{4})-(\d{2})-(\d{2})/);
-    if(!m) return null;
-    return new Date(`${m[1]}-${m[2]}-${m[3]}T00:00:00`);
-  }
-
+  function parseISODate(s){ if(!s) return null; const m = String(s).match(/(\d{4})-(\d{2})-(\d{2})/); if(!m) return null; return new Date(`${m[1]}-${m[2]}-${m[3]}T00:00:00`); }
   function coverage(r){
     const req = Number(r.Solicitado_redondeado || 0);
     const asg = Number(r.Asignado || 0);
@@ -337,16 +318,12 @@
     const ueSel = document.getElementById('ue');
     const tipoSel = document.getElementById('tipo');
     const docList = document.getElementById('docList');
-
     const cats = ["ALL", ...uniq(DATA.map(r => r.Categoria)).sort()];
     catSel.innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join("");
-
     const ues = ["ALL", ...uniq(DATA.map(r => r.Punto)).sort()];
     ueSel.innerHTML = ues.map(u => `<option value="${u}">${u}</option>`).join("");
-
     const tipos = ["ALL", ...uniq(DATA.map(r => r.Tipo)).sort()];
     tipoSel.innerHTML = tipos.map(t => `<option value="${t}">${t}</option>`).join("");
-
     if(docList){
       const docs = uniq(DATA.map(r => r.N_Doc)).sort();
       docList.innerHTML = docs.map(d => `<option value="${d}"></option>`).join("");
@@ -359,13 +336,10 @@
     const ue = document.getElementById('ue').value;
     const tipo = document.getElementById('tipo').value;
     const estado = document.getElementById('estado').value;
-
     let rows = DATA;
-
     const docQ = (document.getElementById('doc')?.value || '').trim().toLowerCase();
     const dateFrom = document.getElementById('dateFrom')?.value || '';
     const dateTo = document.getElementById('dateTo')?.value || '';
-
     if (docQ) rows = rows.filter(r => String(r.N_Doc || '').toLowerCase().includes(docQ));
     if (dateFrom) rows = rows.filter(r => String(r.Fecha || '') >= dateFrom);
     if (dateTo) rows = rows.filter(r => String(r.Fecha || '') <= dateTo);
@@ -374,7 +348,6 @@
     if (ue !== "ALL") rows = rows.filter(r => r.Punto === ue);
     if (tipo !== "ALL") rows = rows.filter(r => r.Tipo === tipo);
     if (estado !== "ALL") rows = rows.filter(r => coverage(r) === estado);
-
     LAST_FILTERED = rows;
     renderKPIs(rows);
     renderActiveTab(rows);
@@ -385,7 +358,6 @@
     const reqR = rows.reduce((a,r)=>a + Number(r.Solicitado_redondeado||0), 0);
     const asg = rows.reduce((a,r)=>a + Number(r.Asignado||0), 0);
     const fill = reqR > 0 ? (asg/reqR)*100 : 0;
-
     document.getElementById('k_lines').textContent = fmt(rows.length);
     document.getElementById('k_req').textContent = fmt(req);
     document.getElementById('k_req_r').textContent = fmt(reqR);
@@ -398,7 +370,6 @@
     document.querySelectorAll('.tab').forEach(el => el.classList.toggle('active', el.dataset.tab === tab));
     document.querySelectorAll('.view').forEach(v => v.style.display = "none");
     document.getElementById(`view_${tab}`).style.display = "block";
-
     const title = document.getElementById('viewTitle');
     const hint = document.getElementById('viewHint');
     const meta = {
@@ -410,13 +381,10 @@
     };
     title.textContent = meta[tab][0];
     hint.textContent = meta[tab][1];
-
     renderActiveTab(LAST_FILTERED.length ? LAST_FILTERED : DATA);
   }
 
-  function lastKeyFrom(punto, codigo){
-    return `${String(punto||"").trim()}|${String(codigo||"").trim()}`;
-  }
+  function lastKeyFrom(punto, codigo){ return `${String(punto||"").trim()}|${String(codigo||"").trim()}`; }
 
   function buildUeAliasMaps(){
     UE_SALMI_TO_STD.clear(); UE_PER_TO_STD.clear(); STD_TO_CAT.clear(); STD_TO_PER_RAW.clear();
@@ -428,19 +396,13 @@
       const keyRaw = canonKey(a.ue_raw||"");
       const keyStd = canonKey(stdOriginal);
       const canonK = keyStd || keyRaw;
-
-      // elegir std canónico: el primero que llegue para la clave canónica
       const chosenStd = CANON_KEY_TO_STD.get(canonK) || stdOriginal;
       if(!CANON_KEY_TO_STD.has(canonK)) CANON_KEY_TO_STD.set(canonK, chosenStd);
       STD_TO_CANON.set(chosenStd, canonK);
-
       const cat = String(a.categoria||"").trim() || "SIN_CATEGORIA";
-
       if(a.fuente === "SALMI") UE_SALMI_TO_STD.set(raw, chosenStd);
       if(a.fuente === "PERIODO") UE_PER_TO_STD.set(raw, chosenStd);
-
       if(!STD_TO_CAT.has(chosenStd) || STD_TO_CAT.get(chosenStd)==="SIN_CATEGORIA") STD_TO_CAT.set(chosenStd, cat);
-
       if(a.fuente === "PERIODO"){
         const arr = STD_TO_PER_RAW.get(chosenStd) || [];
         const rawStr = String(a.ue_raw).trim();
@@ -527,7 +489,6 @@
       Pedido_mas_reciente:o.fechaMax ? o.fechaMax.toISOString().slice(0,10) : ""
     })).sort((a,b)=> (b.Solicitado_redondeado - a.Solicitado_redondeado) || (b.Lineas_sin_cobertura - a.Lineas_sin_cobertura))
       .slice(0,20);
-
     const tb = document.querySelector("#tbl_ue_sin tbody");
     tb.innerHTML = out.map(r => `<tr>
       <td>${r.UE}</td>
@@ -537,7 +498,6 @@
       <td class="right">${fmt(r.Solicitado_redondeado)}</td>
       <td>${r.Pedido_mas_reciente}</td>
     </tr>`).join("");
-
     window.__exportRows = out;
     window.__exportName = "ue_sin_cobertura_top20";
   }
@@ -570,7 +530,6 @@
       Ultimo_despacho_real:o.last ? o.last.toISOString().slice(0,10) : ""
     })).sort((a,b)=> (b.Solicitado_redondeado - a.Solicitado_redondeado) || (b.Num_UEs - a.Num_UEs))
       .slice(0,20);
-
     const tb = document.querySelector("#tbl_sku_sin tbody");
     tb.innerHTML = out.map(r => `<tr>
       <td>${r.Codigo}</td>
@@ -581,7 +540,6 @@
       <td>${r.Categorias_afectadas}</td>
       <td>${r.Ultimo_despacho_real || "-"}</td>
     </tr>`).join("");
-
     window.__exportRows = out;
     window.__exportName = "skus_criticos_sin_stock_top20";
   }
@@ -610,7 +568,6 @@
         Motivo:motivo
       };
     });
-
     const tb = document.querySelector("#tbl_invalidos tbody");
     tb.innerHTML = out.map(r => `<tr>
       <td>${r.Fecha}</td>
@@ -623,7 +580,6 @@
       <td class="right">${fmt(r.Solicitado_redondeado)}</td>
       <td class="${r.Motivo.includes("menor") ? "danger" : ""}">${r.Motivo}</td>
     </tr>`).join("");
-
     window.__exportRows = out;
     window.__exportName = "pedidos_invalidos_por_empaque";
   }
@@ -647,7 +603,6 @@
       Asignado:o.asg,
       Fill_rate: o.solr > 0 ? (o.asg/o.solr) : 0
     })).sort((a,b)=> (a.Categoria||"").localeCompare(b.Categoria||""));
-
     const tb = document.querySelector("#tbl_fill_cat tbody");
     tb.innerHTML = out.map(r => `<tr>
       <td>${r.Categoria}</td>
@@ -657,7 +612,6 @@
       <td class="right">${fmt(r.Asignado)}</td>
       <td class="right">${(r.Fill_rate*100).toFixed(1)}%</td>
     </tr>`).join("");
-
     window.__exportRows = out;
     window.__exportName = "fill_rate_por_categoria";
   }
@@ -674,7 +628,6 @@
     const rows = window.__exportRows || [];
     const cols = Object.keys(rows[0] || {});
     if (!cols.length) return;
-
     const esc = (v) => {
       const s = (v === null || v === undefined) ? "" : String(v);
       if (s.includes('"') || s.includes(",") || s.includes("\n")) return '"' + s.replaceAll('"','""') + '"';
@@ -692,24 +645,16 @@
     URL.revokeObjectURL(url);
   }
 
-  function _pickingRows(){
-    const rows = LAST_FILTERED || [];
-    return rows.filter(r => Number(r.Asignado||0) > 0);
-  }
+  function _pickingRows(){ const rows = LAST_FILTERED || []; return rows.filter(r => Number(r.Asignado||0) > 0); }
 
   function exportPdfAsignacion(){
     const rows = _pickingRows();
-    if(!rows.length){
-      alert("No hay líneas con Asignado > 0 en la vista actual. Ajusta filtros o genera asignación antes de exportar.");
-      return;
-    }
-
+    if(!rows.length){ alert("No hay líneas con Asignado > 0 en la vista actual. Ajusta filtros o genera asignación antes de exportar."); return; }
     const groups = new Map();
     for(const r of rows){
       const ue = r.Punto || "SIN_UE";
       const doc = r.N_Doc || "SIN_DOC";
       const key = ue + "||" + doc;
-
       const pr = Number.isFinite(+r.Prioridad) ? +r.Prioridad : 999;
       const f  = (r.Fecha||"");
       if(!groups.has(key)){
@@ -720,25 +665,16 @@
       if(String(f) > String(g.maxFecha)) g.maxFecha = f;
       if(pr < g.prioridad) g.prioridad = pr;
     }
-
     const groupsArr = Array.from(groups.values()).sort((a,b)=>{
       if(a.prioridad !== b.prioridad) return a.prioridad - b.prioridad;
       if(a.maxFecha !== b.maxFecha) return String(b.maxFecha).localeCompare(String(a.maxFecha));
       return String(a.doc).localeCompare(String(b.doc));
     });
-
     const now = new Date();
     const fechaGen = now.toLocaleString("es-PA");
     const corte = (PARAMS && PARAMS.corte) ? PARAMS.corte : "";
-
-    const esc = (s) => (s===null||s===undefined) ? "" : String(s)
-      .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
-    const fmt0 = (n) => {
-      const x = Number(n);
-      if(!Number.isFinite(x)) return "";
-      return x.toLocaleString("en-US", {maximumFractionDigits: 0});
-    };
-
+    const esc = (s) => (s===null||s===undefined) ? "" : String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
+    const fmt0 = (n) => { const x = Number(n); if(!Number.isFinite(x)) return ""; return x.toLocaleString("en-US", {maximumFractionDigits: 0}); };
     const makeRow = (r) => {
       const b = fmtBultosTriple(r.Bultos_Ter||0, r.Bultos_Sec||0, r.Bultos_Prim||0);
       const lotes = r.Lotes_Usados ? String(r.Lotes_Usados) : "";
@@ -757,7 +693,6 @@
         <td class="num">${(ld.qty===null||ld.qty===undefined) ? "" : fmt0(ld.qty)}</td>
       </tr>`;
     };
-
     const sections = groupsArr.map(g => {
       g.items.sort((a,b)=> String(a.Codigo||"").localeCompare(String(b.Codigo||"")));
       const rowsHtml = g.items.map(makeRow).join("");
@@ -795,7 +730,6 @@
           </div>
         </div>`;
     }).join("");
-
     const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"/>
     <title>Hoja de Asignación F8</title>
     <style>
@@ -831,7 +765,6 @@
       </div>
       ${sections}
     </body></html>`;
-
     const w = window.open("", "_blank");
     w.document.open();
     w.document.write(html);
@@ -842,15 +775,8 @@
 
   function exportXlsxAsignacion(){
     const rows = _pickingRows();
-    if(!rows.length){
-      alert("No hay líneas con Asignado > 0 en la vista actual. Ajusta filtros o genera asignación antes de exportar.");
-      return;
-    }
-    if(typeof XLSX === "undefined"){
-      alert("No se pudo cargar la librería XLSX. Revisa conexión o bloqueadores de contenido.");
-      return;
-    }
-
+    if(!rows.length){ alert("No hay líneas con Asignado > 0 en la vista actual. Ajusta filtros o genera asignación antes de exportar."); return; }
+    if(typeof XLSX === "undefined"){ alert("No se pudo cargar la librería XLSX. Revisa conexión o bloqueadores de contenido."); return; }
     const groups = new Map();
     for(const r of rows){
       const ue = r.Punto || "SIN_UE";
@@ -859,22 +785,18 @@
       if(!groups.has(key)) groups.set(key, {ue, doc, tipo: r.Tipo||"", items: []});
       groups.get(key).items.push(r);
     }
-
     const corte = (PARAMS && PARAMS.corte) ? PARAMS.corte : "";
     const now = new Date().toLocaleString("es-PA");
-
     const aoa = [];
     aoa.push(["HOJA DE ASIGNACIÓN F8 — CORTE DIARIO"]);
     aoa.push([`Generado: ${now}`, `Corte: ${corte}`, "Reglas: FEFO | Vto ≥ 30 días | Excluye TRANSFERENCIA"]);
     aoa.push([]);
-
     const header = ["UE", "Documento", "Tipo", "Código", "Suministro", "Solicitado", "Solic. red.", "Asignado", "Pendiente", "Bultos T/S/P", "Lotes usados", "Último despacho (real)", "Qty último"];
     aoa.push(header);
-
     for(const g of Array.from(groups.values()).sort((a,b)=> (a.ue+a.doc).localeCompare(b.ue+b.doc))){
       g.items.sort((a,b)=> String(a.Codigo||"").localeCompare(String(b.Codigo||"")));
       for(const r of g.items){
-        const bults = `${fmtBultosPartX(r.Bultos_Ter||0)}/${fmtBultosPartX(r.Bultos_Sec||0)}/${fmtBultosPartX(r.Bultos_Prim||0)}`;
+        const bults = `${fmtBultosPart(r.Bultos_Ter||0)}/${fmtBultosPart(r.Bultos_Sec||0)}/${fmtBultosPart(r.Bultos_Prim||0)}`;
         const ld = getLastDispatch(r);
         aoa.push([
           g.ue,
@@ -894,71 +816,83 @@
       }
       aoa.push([]);
     }
-
     const ws = XLSX.utils.aoa_to_sheet(aoa);
     ws["!cols"] = [
       {wch:22},{wch:18},{wch:12},{wch:12},{wch:60},{wch:12},{wch:12},{wch:12},{wch:12},{wch:14},{wch:40},{wch:18},{wch:12}
     ];
     ws["!freeze"] = { xSplit: 0, ySplit: 4 };
-
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Asignacion_F8");
     const fname = `Hoja_Asignacion_F8_${corte || "corte"}.xlsx`;
     XLSX.writeFile(wb, fname);
   }
 
-async function init(){
-  tickDateTime();
-  setInterval(tickDateTime, 60000);
+  async function init(){
+    tickDateTime();
+    setInterval(tickDateTime, 60000);
 
-  const WEBAPP_BASE = "https://script.google.com/macros/s/AKfycbww7grjdLns_b74Yp9HgUNxnpxqm9oVSBSb_Qtfi2rTj3SDhaIWwITM8YW9Jwyf9NJ02A/exec";
-  const proxy = (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+    const WEBAPP_BASE = "https://script.google.com/macros/s/AKfycbww7grjdLns_b74Yp9HgUNxnpxqm9oVSBSb_Qtfi2rTj3SDhaIWwITM8YW9Jwyf9NJ02A/exec";
 
-  try {
-    const [dataRes, paramsRes, lastRes, aliasRes] = await Promise.all([
-      fetch(proxy(`${WEBAPP_BASE}?file=allocation`)),
-      fetch(proxy(`${WEBAPP_BASE}?file=params`)),
-      fetch(proxy(`${WEBAPP_BASE}?file=last_dispatch`)),
-      fetch(proxy(`${WEBAPP_BASE}?file=ue_alias`))
-    ]);
-    DATA = await dataRes.json();
-    PARAMS = await paramsRes.json();
-    LAST = await lastRes.json();
-    UE_ALIAS = await aliasRes.json();
-  } catch (e) {
-    console.error(e);
-    alert("No se pudieron cargar los JSON principales (allocation/params/last_dispatch/ue_alias). Revisa conexión o la URL del WebApp.");
-    return;
+    function loadJsonp(url){
+      return new Promise((resolve, reject)=>{
+        const cb = 'cb_' + Math.random().toString(36).slice(2);
+        const script = document.createElement('script');
+        script.src = `${url}&callback=${cb}&_ts=${Date.now()}`;
+        script.onerror = () => reject(new Error('Script error'));
+        window[cb] = (data) => {
+          resolve(data);
+          delete window[cb];
+          script.remove();
+        };
+        document.body.appendChild(script);
+      });
+    }
+
+    try{
+      const [alloc, params, lastd, alias] = await Promise.all([
+        loadJsonp(`${WEBAPP_BASE}?file=allocation`),
+        loadJsonp(`${WEBAPP_BASE}?file=params`),
+        loadJsonp(`${WEBAPP_BASE}?file=last_dispatch`),
+        loadJsonp(`${WEBAPP_BASE}?file=ue_alias`)
+      ]);
+      DATA = alloc;
+      PARAMS = params;
+      LAST = lastd;
+      UE_ALIAS = alias;
+    }catch(e){
+      console.error(e);
+      alert("No se pudieron cargar los JSON principales (allocation/params/last_dispatch/ue_alias).");
+      return;
+    }
+
+    buildUeAliasMaps();
+    remapDataWithAliases();
+
+    document.getElementById('cutDate').textContent = PARAMS.cut_date || PARAMS.corte || "-";
+    document.getElementById('minVto').textContent = PARAMS.min_vto || "-";
+
+    populateFilters();
+    LAST_FILTERED = DATA;
+    renderKPIs(DATA);
+    showTab("asignacion");
+
+    document.getElementById('btnApply').addEventListener('click', applyFilters);
+    document.getElementById('btnReset').addEventListener('click', () => {
+      document.getElementById('q').value = "";
+      document.getElementById('doc').value = "";
+      document.getElementById('dateFrom').value = "";
+      document.getElementById('dateTo').value = "";
+      document.getElementById('cat').value = "ALL";
+      document.getElementById('ue').value = "ALL";
+      document.getElementById('tipo').value = "ALL";
+      document.getElementById('estado').value = "ALL";
+      applyFilters();
+    });
+    document.getElementById('btnExportCsv').addEventListener('click', exportCsv);
+    document.getElementById('btnExportPdf').addEventListener('click', exportPdfAsignacion);
+    document.getElementById('btnExportXlsx').addEventListener('click', exportXlsxAsignacion);
+    document.querySelectorAll('.tab').forEach(el => el.addEventListener('click', () => showTab(el.dataset.tab)));
   }
-
-  buildUeAliasMaps();
-  remapDataWithAliases();
-
-  document.getElementById('cutDate').textContent = PARAMS.cut_date || PARAMS.corte || "-";
-  document.getElementById('minVto').textContent = PARAMS.min_vto || "-";
-
-  populateFilters();
-  LAST_FILTERED = DATA;
-  renderKPIs(DATA);
-  showTab("asignacion");
-
-  document.getElementById('btnApply').addEventListener('click', applyFilters);
-  document.getElementById('btnReset').addEventListener('click', () => {
-    document.getElementById('q').value = "";
-    document.getElementById('doc').value = "";
-    document.getElementById('dateFrom').value = "";
-    document.getElementById('dateTo').value = "";
-    document.getElementById('cat').value = "ALL";
-    document.getElementById('ue').value = "ALL";
-    document.getElementById('tipo').value = "ALL";
-    document.getElementById('estado').value = "ALL";
-    applyFilters();
-  });
-  document.getElementById('btnExportCsv').addEventListener('click', exportCsv);
-  document.getElementById('btnExportPdf').addEventListener('click', exportPdfAsignacion);
-  document.getElementById('btnExportXlsx').addEventListener('click', exportXlsxAsignacion);
-  document.querySelectorAll('.tab').forEach(el => el.addEventListener('click', () => showTab(el.dataset.tab)));
-}
 
   const btnLoad = document.getElementById('btnLoadLocal');
   const fileLoad = document.getElementById('fileLoad');
@@ -967,22 +901,18 @@ async function init(){
     fileLoad.addEventListener('change', async (ev)=>{
       const files = Array.from(ev.target.files || []);
       if (!files.length) return;
-
       const byName = Object.fromEntries(files.map(f=>[f.name.toLowerCase(), f]));
       async function readJson(file){
         const txt = await file.text();
         return JSON.parse(txt);
       }
-
       try{
         if (byName['allocation.json']) DATA = await readJson(byName['allocation.json']);
         if (byName['last_dispatch.json']) LAST = await readJson(byName['last_dispatch.json']);
         if (byName['params.json']) PARAMS = await readJson(byName['params.json']);
         if (byName['ue_alias.json']) UE_ALIAS = await readJson(byName['ue_alias.json']);
-
         buildUeAliasMaps();
         remapDataWithAliases();
-
         document.getElementById('q').value = "";
         document.getElementById('doc').value = "";
         document.getElementById('dateFrom').value = "";
@@ -991,7 +921,6 @@ async function init(){
         document.getElementById('ue').value = "ALL";
         document.getElementById('tipo').value = "ALL";
         document.getElementById('estado').value = "ALL";
-
         populateFilters();
         applyFilters();
         alert('Datos locales cargados. Ya puedes filtrar y exportar PDF/Excel.');
