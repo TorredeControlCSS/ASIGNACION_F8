@@ -827,72 +827,70 @@
     XLSX.writeFile(wb, fname);
   }
 
-  async function init(){
-    tickDateTime();
-    setInterval(tickDateTime, 60000);
+async function init(){
+  tickDateTime();
+  setInterval(tickDateTime, 60000);
 
-    const WEBAPP_BASE = "https://script.google.com/macros/s/AKfycbww7grjdLns_b74Yp9HgUNxnpxqm9oVSBSb_Qtfi2rTj3SDhaIWwITM8YW9Jwyf9NJ02A/exec";
+  const WEBAPP_BASE = "https://script.google.com/macros/s/AKfycbww7grjdLns_b74Yp9HgUNxnpxqm9oVSBSb_Qtfi2rTj3SDhaIWwITM8YW9Jwyf9NJ02A/exec";
 
-    function loadJsonp(url){
-      return new Promise((resolve, reject)=>{
-        const cb = 'cb_' + Math.random().toString(36).slice(2);
-        const script = document.createElement('script');
-        script.src = `${url}&callback=${cb}&_ts=${Date.now()}`;
-        script.onerror = () => reject(new Error('Script error'));
-        window[cb] = (data) => {
-          resolve(data);
-          delete window[cb];
-          script.remove();
-        };
-        document.body.appendChild(script);
-      });
-    }
-
-    try{
-      const [alloc, params, lastd, alias] = await Promise.all([
-        loadJsonp(`${WEBAPP_BASE}?file=allocation`),
-        loadJsonp(`${WEBAPP_BASE}?file=params`),
-        loadJsonp(`${WEBAPP_BASE}?file=last_dispatch`),
-        loadJsonp(`${WEBAPP_BASE}?file=ue_alias`)
-      ]);
-      DATA = alloc;
-      PARAMS = params;
-      LAST = lastd;
-      UE_ALIAS = alias;
-    }catch(e){
-      console.error(e);
-      alert("No se pudieron cargar los JSON principales (allocation/params/last_dispatch/ue_alias).");
-      return;
-    }
-
-    buildUeAliasMaps();
-    remapDataWithAliases();
-
-    document.getElementById('cutDate').textContent = PARAMS.cut_date || PARAMS.corte || "-";
-    document.getElementById('minVto').textContent = PARAMS.min_vto || "-";
-
-    populateFilters();
-    LAST_FILTERED = DATA;
-    renderKPIs(DATA);
-    showTab("asignacion");
-
-    document.getElementById('btnApply').addEventListener('click', applyFilters);
-    document.getElementById('btnReset').addEventListener('click', () => {
-      document.getElementById('q').value = "";
-      document.getElementById('doc').value = "";
-      document.getElementById('dateFrom').value = "";
-      document.getElementById('dateTo').value = "";
-      document.getElementById('cat').value = "ALL";
-      document.getElementById('ue').value = "ALL";
-      document.getElementById('tipo').value = "ALL";
-      document.getElementById('estado').value = "ALL";
-      applyFilters();
+  function loadJsonp(url){
+    return new Promise((resolve, reject)=>{
+      const cb = 'cb_' + Math.random().toString(36).slice(2);
+      const script = document.createElement('script');
+      script.src = `${url}&callback=${cb}&_ts=${Date.now()}`;
+      script.onerror = () => reject(new Error('Script error'));
+      window[cb] = (data) => {
+        resolve(data);
+        delete window[cb];
+        script.remove();
+      };
+      document.body.appendChild(script);
     });
-    document.getElementById('btnExportCsv').addEventListener('click', exportCsv);
-    document.getElementById('btnExportPdf').addEventListener('click', exportPdfAsignacion);
-    document.getElementById('btnExportXlsx').addEventListener('click', exportXlsxAsignacion);
-    document.querySelectorAll('.tab').forEach(el => el.addEventListener('click', () => showTab(el.dataset.tab)));
   }
+
+  try{
+    const [alloc, params, lastd, alias] = await Promise.all([
+      loadJsonp(`${WEBAPP_BASE}?file=allocation`),
+      loadJsonp(`${WEBAPP_BASE}?file=params`),
+      loadJsonp(`${WEBAPP_BASE}?file=last_dispatch`),
+      loadJsonp(`${WEBAPP_BASE}?file=ue_alias`)
+    ]);
+    DATA = alloc;
+    PARAMS = params;
+    LAST = lastd;
+    UE_ALIAS = alias;
+  }catch(e){
+    console.error(e);
+    alert("No se pudieron cargar los JSON principales (allocation/params/last_dispatch/ue_alias).");
+    return;
+  }
+
+  buildUeAliasMaps();
+  remapDataWithAliases();
+  document.getElementById('cutDate').textContent = PARAMS.cut_date || PARAMS.corte || "-";
+  document.getElementById('minVto').textContent = PARAMS.min_vto || "-";
+  populateFilters();
+  LAST_FILTERED = DATA;
+  renderKPIs(DATA);
+  showTab("asignacion");
+
+  document.getElementById('btnApply').addEventListener('click', applyFilters);
+  document.getElementById('btnReset').addEventListener('click', () => {
+    document.getElementById('q').value = "";
+    document.getElementById('doc').value = "";
+    document.getElementById('dateFrom').value = "";
+    document.getElementById('dateTo').value = "";
+    document.getElementById('cat').value = "ALL";
+    document.getElementById('ue').value = "ALL";
+    document.getElementById('tipo').value = "ALL";
+    document.getElementById('estado').value = "ALL";
+    applyFilters();
+  });
+  document.getElementById('btnExportCsv').addEventListener('click', exportCsv);
+  document.getElementById('btnExportPdf').addEventListener('click', exportPdfAsignacion);
+  document.getElementById('btnExportXlsx').addEventListener('click', exportXlsxAsignacion);
+  document.querySelectorAll('.tab').forEach(el => el.addEventListener('click', () => showTab(el.dataset.tab)));
+}
 
   const btnLoad = document.getElementById('btnLoadLocal');
   const fileLoad = document.getElementById('fileLoad');
