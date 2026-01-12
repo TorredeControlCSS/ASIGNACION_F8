@@ -912,14 +912,14 @@
     setInterval(tickDateTime, 60000);
 
     // PON AQUÍ LA URL DE TU WEBAPP (la que termina en /exec)
-    const WEBAPP_BASE = "https://script.google.com/macros/s/AKfycbww7grjdLns_b74Yp9HgUNxnpxqm9oVSBSb_Qtfi2rTj3SDhaIWwITM8YW9Jwyf9NJ02A/exec";
-
-    try{
+      const WEBAPP_BASE = "https://script.google.com/macros/s/AKfycbww7grjdLns_b74Yp9HgUNxnpxqm9oVSBSb_Qtfi2rTj3SDhaIWwITM8YW9Jwyf9NJ02A/exec";
+      const proxy = (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+      
       const [dataRes, paramsRes, lastRes, aliasRes] = await Promise.all([
-        fetch(`${WEBAPP_BASE}?file=allocation`),
-        fetch(`${WEBAPP_BASE}?file=params`),
-        fetch(`${WEBAPP_BASE}?file=last_dispatch`),
-        fetch(`${WEBAPP_BASE}?file=ue_alias`)
+        fetch(proxy(`${WEBAPP_BASE}?file=allocation`)),
+        fetch(proxy(`${WEBAPP_BASE}?file=params`)),
+        fetch(proxy(`${WEBAPP_BASE}?file=last_dispatch`)),
+        fetch(proxy(`${WEBAPP_BASE}?file=ue_alias`))
       ]);
       DATA = await dataRes.json();
       PARAMS = await paramsRes.json();
