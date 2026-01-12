@@ -907,58 +907,58 @@
     XLSX.writeFile(wb, fname);
   }
 
-  async function init(){
-    tickDateTime();
-    setInterval(tickDateTime, 60000);
+async function init(){
+  tickDateTime();
+  setInterval(tickDateTime, 60000);
 
-    // PON AQUÍ LA URL DE TU WEBAPP (la que termina en /exec)
-      const WEBAPP_BASE = "https://script.google.com/macros/s/AKfycbww7grjdLns_b74Yp9HgUNxnpxqm9oVSBSb_Qtfi2rTj3SDhaIWwITM8YW9Jwyf9NJ02A/exec";
-      const proxy = (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-      
-      const [dataRes, paramsRes, lastRes, aliasRes] = await Promise.all([
-        fetch(proxy(`${WEBAPP_BASE}?file=allocation`)),
-        fetch(proxy(`${WEBAPP_BASE}?file=params`)),
-        fetch(proxy(`${WEBAPP_BASE}?file=last_dispatch`)),
-        fetch(proxy(`${WEBAPP_BASE}?file=ue_alias`))
-      ]);
-      DATA = await dataRes.json();
-      PARAMS = await paramsRes.json();
-      LAST = await lastRes.json();
-      UE_ALIAS = await aliasRes.json();
-    }catch(e){
-      console.error(e);
-      alert("No se pudieron cargar los JSON principales (allocation/params/last_dispatch/ue_alias). Revisa conexión o la URL del WebApp.");
-      return;
-    }
+  const WEBAPP_BASE = "https://script.google.com/macros/s/AKfycbww7grjdLns_b74Yp9HgUNxnpxqm9oVSBSb_Qtfi2rTj3SDhaIWwITM8YW9Jwyf9NJ02A/exec";
+  const proxy = (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
 
-    buildUeAliasMaps();
-    remapDataWithAliases();
-
-    document.getElementById('cutDate').textContent = PARAMS.cut_date || PARAMS.corte || "-";
-    document.getElementById('minVto').textContent = PARAMS.min_vto || "-";
-
-    populateFilters();
-    LAST_FILTERED = DATA;
-    renderKPIs(DATA);
-    showTab("asignacion");
-
-    document.getElementById('btnApply').addEventListener('click', applyFilters);
-    document.getElementById('btnReset').addEventListener('click', () => {
-      document.getElementById('q').value = "";
-      document.getElementById('doc').value = "";
-      document.getElementById('dateFrom').value = "";
-      document.getElementById('dateTo').value = "";
-      document.getElementById('cat').value = "ALL";
-      document.getElementById('ue').value = "ALL";
-      document.getElementById('tipo').value = "ALL";
-      document.getElementById('estado').value = "ALL";
-      applyFilters();
-    });
-    document.getElementById('btnExportCsv').addEventListener('click', exportCsv);
-    document.getElementById('btnExportPdf').addEventListener('click', exportPdfAsignacion);
-    document.getElementById('btnExportXlsx').addEventListener('click', exportXlsxAsignacion);
-    document.querySelectorAll('.tab').forEach(el => el.addEventListener('click', () => showTab(el.dataset.tab)));
+  try {
+    const [dataRes, paramsRes, lastRes, aliasRes] = await Promise.all([
+      fetch(proxy(`${WEBAPP_BASE}?file=allocation`)),
+      fetch(proxy(`${WEBAPP_BASE}?file=params`)),
+      fetch(proxy(`${WEBAPP_BASE}?file=last_dispatch`)),
+      fetch(proxy(`${WEBAPP_BASE}?file=ue_alias`))
+    ]);
+    DATA = await dataRes.json();
+    PARAMS = await paramsRes.json();
+    LAST = await lastRes.json();
+    UE_ALIAS = await aliasRes.json();
+  } catch (e) {
+    console.error(e);
+    alert("No se pudieron cargar los JSON principales (allocation/params/last_dispatch/ue_alias). Revisa conexión o la URL del WebApp.");
+    return;
   }
+
+  buildUeAliasMaps();
+  remapDataWithAliases();
+
+  document.getElementById('cutDate').textContent = PARAMS.cut_date || PARAMS.corte || "-";
+  document.getElementById('minVto').textContent = PARAMS.min_vto || "-";
+
+  populateFilters();
+  LAST_FILTERED = DATA;
+  renderKPIs(DATA);
+  showTab("asignacion");
+
+  document.getElementById('btnApply').addEventListener('click', applyFilters);
+  document.getElementById('btnReset').addEventListener('click', () => {
+    document.getElementById('q').value = "";
+    document.getElementById('doc').value = "";
+    document.getElementById('dateFrom').value = "";
+    document.getElementById('dateTo').value = "";
+    document.getElementById('cat').value = "ALL";
+    document.getElementById('ue').value = "ALL";
+    document.getElementById('tipo').value = "ALL";
+    document.getElementById('estado').value = "ALL";
+    applyFilters();
+  });
+  document.getElementById('btnExportCsv').addEventListener('click', exportCsv);
+  document.getElementById('btnExportPdf').addEventListener('click', exportPdfAsignacion);
+  document.getElementById('btnExportXlsx').addEventListener('click', exportXlsxAsignacion);
+  document.querySelectorAll('.tab').forEach(el => el.addEventListener('click', () => showTab(el.dataset.tab)));
+}
 
   const btnLoad = document.getElementById('btnLoadLocal');
   const fileLoad = document.getElementById('fileLoad');
