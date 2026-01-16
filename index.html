@@ -63,7 +63,7 @@
       <div class="title-main">SIGUELO — Asignación de pedidos F8</div>
       <div class="title-sub">
         <span id="currentDateTime">Cargando fecha...</span>
-        <span style="opacity:.8;margin-left:8px;"> | C1 Corte diario · v2.8 Final PDF</span>
+        <span style="opacity:.8;margin-left:8px;"> | C1 Corte diario · v3.0 Header Nativo</span>
       </div>
     </div>
     <div class="top-actions">
@@ -179,7 +179,7 @@
 
         <!-- PESTAÑAS OCULTAS -->
         <div id="view_ue_sin" class="view" style="display:none;margin-top:10px;">
-          <div class="scroll"><table id="tbl_ue_sin"><thead><tr><th>UE</th><th>Categor��a</th><th class="right">Líneas sin cobertura</th><th class="right">Solicitado (original)</th><th class="right">Solicitado (red.)</th><th>Pedido más reciente</th></tr></thead><tbody></tbody></table></div>
+          <div class="scroll"><table id="tbl_ue_sin"><thead><tr><th>UE</th><th>Categoría</th><th class="right">Líneas sin cobertura</th><th class="right">Solicitado (original)</th><th class="right">Solicitado (red.)</th><th>Pedido más reciente</th></tr></thead><tbody></tbody></table></div>
         </div>
         <div id="view_sku_sin" class="view" style="display:none;margin-top:10px;">
           <div class="scroll"><table id="tbl_sku_sin"><thead><tr><th>Código</th><th>Suministro</th><th class="right">Solicitado (original)</th><th class="right">Solicitado (red.)</th><th class="right">Nº UEs</th><th>Categorías afectadas</th><th>Último despacho (real)</th></tr></thead><tbody></tbody></table></div>
@@ -589,7 +589,7 @@
     return LAST_FILTERED || []; 
   }
 
-  // --- EXPORTACIÓN PDF FINAL (TABLA FANTASMA + CORRECCIÓN DE CORTE) ---
+  // --- EXPORTACIÓN PDF FINAL (SOLUCIÓN TABLE-HEADER-GROUP REAL) ---
   function exportPdfAsignacion(){
     const rows = _pickingRows();
     if(!rows.length){ alert("No hay datos visibles para exportar."); return; }
@@ -667,15 +667,31 @@
       const escasezLabel = escasezDetectada ? "⚠️ SÍ (Fair Share aplicado)" : "✅ NO (Stock suficiente)";
       const escasezClass = escasezDetectada ? "color:#b00020;" : "color:#0a7a2f;";
 
+      // --- HEADER UNIFICADO: AHORA VIAJA DENTRO DE LA TABLA ---
       return `
         <div class="section">
           <table>
             <thead>
-              <!-- HEADER FANTASMA MEJORADO -->
-              <tr><td colspan="11" class="header-space">&nbsp;</td></tr>
-              
+              <!-- 1. ENCABEZADO GLOBAL (LOGO + TITULO) REPETIDO -->
+              <tr>
+                <td colspan="11" style="background:#fff; border-bottom:2px solid #0b1f3a; padding: 10px 0;">
+                  <div style="display:flex; gap:15px; align-items:center;">
+                    <img src="./icons/icon-512.png" style="width:50px; height:50px; object-fit:contain;" alt="logo"/>
+                    <div style="flex:1;">
+                      <div style="font-size:18px; font-weight:700; color:#0b1f3a;">HOJA DE ASIGNACIÓN F8 — CORTE DIARIO</div>
+                      <div style="font-size:11px; color:#444; margin-top:4px;">Generado: ${esc(fechaGen)} | Corte: ${esc(corte)}</div>
+                      <div style="font-size:10px; color:#666; margin-top:2px; font-style:italic;">
+                         Reglas de Asignación: <b>Fair Share (Reparto Proporcional en Escasez)</b>, FEFO, Lotes Elegibles: Vto ≥ 30 días.
+                         <br>Prioridad por Tipo de Unidad Ejecutora: <b>CEDIS > HOSPITAL > POL. ALTO VOL > POL. BAJO VOL > ULAPS > CAPPS</b>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- 2. DATOS DEL DOCUMENTO -->
               <tr class="meta-row">
-                <th colspan="11" style="background:#f4f6f8; color:#0b1f3a; padding:10px; border-bottom:2px solid #0b1f3a;">
+                <th colspan="11" style="background:#f4f6f8; color:#0b1f3a; padding:10px; border-bottom:2px solid #0b1f3a; border-top:none;">
                   <div style="display:flex; justify-content:space-between; align-items:center;">
                     <div style="font-size:14px; font-weight:900;">${esc(g.ue)}</div>
                     <div style="font-size:11px;">Líneas: <b>${totalItems}</b></div>
@@ -697,6 +713,8 @@
                   </div>
                 </th>
               </tr>
+
+              <!-- 3. TITULOS DE COLUMNAS -->
               <tr class="col-header">
                 <th style="width:70px;">Código</th>
                 <th>Suministro</th>
@@ -713,6 +731,7 @@
             </thead>
             <tbody>${rowsHtml}</tbody>
           </table>
+          
           <div class="sign">
              <div>Preparado por: __________________</div>
              <div>Recibido por: __________________</div>
@@ -728,37 +747,17 @@
     <style>
       body{font-family:'Segoe UI', Arial, sans-serif; color:#111; margin:0;}
       
-      /* HEADER PRINCIPAL FIJO */
-      .header-fixed {
-        position: fixed; top: 0; left: 0; right: 0;
-        height: 100px; /* Altura Fija exacta */
-        border-bottom: 2px solid #0b1f3a;
-        background: #fff;
-        display: flex; gap: 15px; align-items: center;
-        z-index: 1000;
-        padding: 0 10mm;
-      }
-      
-      /* ESPACIO RESERVADO PARA NO TAPAR */
-      .header-space {
-        height: 105px; /* Un pelín más que el fixed */
-        border: none !important;
-        background: transparent;
-      }
-
-      .logo { width: 50px; height: 50px; object-fit: contain; }
-      .title-main { font-size: 18px; font-weight: 700; color: #0b1f3a; letter-spacing: 0.5px; }
-      .meta { font-size: 11px; color: #444; margin-top: 4px; }
-      .rules { font-size: 10px; color: #666; margin-top: 2px; font-style: italic; }
-
       table { width: 100%; border-collapse: collapse; margin-bottom: 0; }
       
-      /* REPETIR CABECERAS EN CADA HOJA */
+      /* CLAVE: REPETIR HEADER NATURALMENTE */
       thead { display: table-header-group; } 
-      /* PERMITIR PARTIR FILAS SI ES NECESARIO PARA QUE NO DESAPAREZCAN */
       tr { page-break-inside: auto; } 
       
       th, td { border: 1px solid #ccc; padding: 4px 5px; font-size: 10px; vertical-align: top; }
+      
+      /* QUITAR BORDES DEL HEADER PRINCIPAL PARA QUE SE VEA LIMPIO */
+      thead tr:first-child td { border: none; }
+
       .col-header th { background: #f3f5f8; font-weight: bold; color: #333; text-transform: uppercase; }
       
       .num { text-align: right; } 
@@ -770,24 +769,9 @@
       .sign { display: flex; justify-content: space-between; gap: 20px; margin-top: 30px; font-size: 11px; page-break-inside: avoid; }
       
       @media print { 
-        body { margin: 0 10mm 10mm 10mm; } 
-        .header-fixed { position: fixed; top: 0; background-color: white; }
+        body { margin: 10mm; } 
       }
     </style></head><body>
-      
-      <!-- HEADER FIJO -->
-      <div class="header-fixed">
-        <img class="logo" src="./icons/icon-512.png" alt="logo"/>
-        <div style="flex:1;">
-          <div class="title-main">HOJA DE ASIGNACIÓN F8 — CORTE DIARIO</div>
-          <div class="meta">Generado: ${esc(fechaGen)} | Corte: ${esc(corte)}</div>
-          <div class="rules">
-             Reglas de Asignación: <b>Fair Share (Reparto Proporcional en Escasez)</b>, FEFO, Lotes Elegibles: Vto ≥ 30 días.
-             <br>Prioridad por Tipo de Unidad Ejecutora: <b>CEDIS > HOSPITAL > POL. ALTO VOL > POL. BAJO VOL. > ULAPS > CAPPS</b>
-          </div>
-        </div>
-      </div>
-
       ${sections}
     </body></html>`;
     
