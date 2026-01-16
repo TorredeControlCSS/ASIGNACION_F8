@@ -63,7 +63,7 @@
       <div class="title-main">SIGUELO — Asignación de pedidos F8</div>
       <div class="title-sub">
         <span id="currentDateTime">Cargando fecha...</span>
-        <span style="opacity:.8;margin-left:8px;"> | C1 Corte diario · v1.3</span>
+        <span style="opacity:.8;margin-left:8px;"> | C1 Corte diario · v2.2 Fair Share + Promedios</span>
       </div>
     </div>
     <div class="top-actions">
@@ -79,7 +79,7 @@
     <h1>Asignación F8 (Corte diario)</h1>
     <div class="muted">
       Corte: <span id="cutDate"></span> · Lotes elegibles: vencimiento ≥ <span id="minVto"></span> ·
-      Excluye Tipo = <b>TRANSFERENCIA</b> · Orden: prioridad UE → fecha (reciente a antiguo)
+      Excluye Tipo = <b>TRANSFERENCIA</b> · Prioridad: 1.Mensual, 2.Antigüedad, 3.Jerarquía.
     </div>
 
     <div class="grid" style="margin-top:12px;">
@@ -131,7 +131,7 @@
           <input id="fileLoad" type="file" multiple accept=".json" style="display:none"/>
         </div>
         <div class="muted" style="margin-top:10px;">
-          Nota: solicitado original se mantiene. Solicitado redondeado es el operable (redondeo hacia abajo por empaque, con fallback si falta empaque). Último despacho real proviene de PERIODO DE DISTRIBUCIÓN.
+          Nota: "Solicitado redondeado" es el operable. En escasez, se aplica recorte proporcional (Fair Share).
         </div>
       </div>
 
@@ -155,7 +155,7 @@
 
         <div id="viewTitle" style="margin-top:10px;font-weight:700;">Asignación (líneas SALMI)</div>
         <div class="muted" id="viewHint" style="margin-top:4px;">
-          Hoja operativa para reemplazar el empirismo. Incluye solicitado original, redondeado, asignación FEFO, lotes y último despacho (fecha + cantidad).
+          Hoja operativa para reemplazar el empirismo. Incluye lotes, datos históricos y promedio.
         </div>
 
         <div id="view_asignacion" class="view" style="margin-top:10px;">
@@ -168,7 +168,8 @@
                   <th class="right">Solicitado</th><th class="right">Solic. red.</th>
                   <th class="right">Asignado</th><th class="right">Pendiente</th>
                   <th class="center">Bultos (T/S/P)</th><th>Lotes usados</th>
-                  <th>Último despacho (real)</th><th class="right">Qty último</th>
+                  <th>Último despacho</th><th class="right">Qty último</th>
+                  <th class="right">Promedio Hist.</th>
                 </tr>
               </thead>
               <tbody></tbody>
@@ -379,8 +380,10 @@
       invalidos: ["Pedidos inválidos por empaque", "Demanda no operable (por empaque) que fuerza empirismo. Útil para corregir solicitudes."],
       fill_cat: ["Fill rate por categoría UE", "Cobertura (Asignado / Solicitado redondeado) agrupada por categoría UE."]
     };
-    title.textContent = meta[tab][0];
-    hint.textContent = meta[tab][1];
+    if(title && meta[tab]){
+        title.textContent = meta[tab][0];
+        hint.textContent = meta[tab][1];
+    }
     renderActiveTab(LAST_FILTERED.length ? LAST_FILTERED : DATA);
   }
 
@@ -448,6 +451,7 @@
       const b = fmtBultosTriple(r.Bultos_Ter||0, r.Bultos_Sec||0, r.Bultos_Prim||0);
       const lots = r.Lotes_Usados ? r.Lotes_Usados : "";
       const ld = getLastDispatch(r);
+      const prom = r.Promedio_Hist ? fmt(r.Promedio_Hist) : "-";
       return `<tr>
         <td>${r.Fecha||""}</td>
         <td>${r.N_Doc||""}</td>
@@ -464,6 +468,7 @@
         <td>${lots}</td>
         <td>${ld.fecha || "-"}</td>
         <td class="right">${ld.qty === null || ld.qty === undefined ? "-" : fmt(ld.qty)}</td>
+        <td class="right" style="background:#f0f8ff;">${prom}</td>
       </tr>`;
     }).join("");
     window.__exportRows = rows;
@@ -645,11 +650,16 @@
     URL.revokeObjectURL(url);
   }
 
-  function _pickingRows(){ const rows = LAST_FILTERED || []; return rows.filter(r => Number(r.Asignado||0) > 0); }
+  // MODIFICACIÓN: Mostrar todo para trazabilidad (incluso ceros)
+  function _pickingRows(){ 
+    return LAST_FILTERED || []; 
+  }
 
+  // MODIFICACIÓN: PDF con Header Repetido y Salto de Página
   function exportPdfAsignacion(){
     const rows = _pickingRows();
-    if(!rows.length){ alert("No hay líneas con Asignado > 0 en la vista actual. Ajusta filtros o genera asignación antes de exportar."); return; }
+    if(!rows.length){ alert("No hay datos visibles para exportar."); return; }
+    
     const groups = new Map();
     for(const r of rows){
       const ue = r.Punto || "SIN_UE";
@@ -657,9 +667,7 @@
       const key = ue + "||" + doc;
       const pr = Number.isFinite(+r.Prioridad) ? +r.Prioridad : 999;
       const f  = (r.Fecha||"");
-      if(!groups.has(key)){
-        groups.set(key, {ue, doc, tipo: r.Tipo||"", prioridad: pr, maxFecha: f, items: []});
-      }
+      if(!groups.has(key)){ groups.set(key, {ue, doc, tipo: r.Tipo||"", prioridad: pr, maxFecha: f, items: []}); }
       const g = groups.get(key);
       g.items.push(r);
       if(String(f) > String(g.maxFecha)) g.maxFecha = f;
@@ -670,15 +678,18 @@
       if(a.maxFecha !== b.maxFecha) return String(b.maxFecha).localeCompare(String(a.maxFecha));
       return String(a.doc).localeCompare(String(b.doc));
     });
+
     const now = new Date();
     const fechaGen = now.toLocaleString("es-PA");
     const corte = (PARAMS && PARAMS.corte) ? PARAMS.corte : "";
     const esc = (s) => (s===null||s===undefined) ? "" : String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
     const fmt0 = (n) => { const x = Number(n); if(!Number.isFinite(x)) return ""; return x.toLocaleString("en-US", {maximumFractionDigits: 0}); };
+
     const makeRow = (r) => {
       const b = fmtBultosTriple(r.Bultos_Ter||0, r.Bultos_Sec||0, r.Bultos_Prim||0);
       const lotes = r.Lotes_Usados ? String(r.Lotes_Usados) : "";
       const ld = getLastDispatch(r);
+      const prom = r.Promedio_Hist ? fmt0(r.Promedio_Hist) : "";
       return `
       <tr>
         <td>${esc(r.Codigo)}</td>
@@ -691,97 +702,87 @@
         <td>${esc(lotes)}</td>
         <td>${esc(ld.fecha||"-")}</td>
         <td class="num">${(ld.qty===null||ld.qty===undefined) ? "" : fmt0(ld.qty)}</td>
+        <td class="num" style="background:#f0f8ff;">${prom}</td>
       </tr>`;
     };
-    const sections = groupsArr.map(g => {
+
+    const sections = groupsArr.map((g, idx) => {
       g.items.sort((a,b)=> String(a.Codigo||"").localeCompare(String(b.Codigo||"")));
       const rowsHtml = g.items.map(makeRow).join("");
+      const totalItems = g.items.length;
       return `
         <div class="section">
-          <div class="sectionHeader">
-            <div><b>UE:</b> ${esc(g.ue)}</div>
-            <div><b>Documento:</b> ${esc(g.doc)}</div>
-            <div><b>Tipo:</b> ${esc(g.tipo)}</div>
-            <div><b>Fecha:</b> ${esc(g.maxFecha||"")}</div>
-          </div>
           <table>
             <thead>
-              <tr>
-                <th style="width:110px;">Código</th>
+              <tr class="meta-row">
+                <th colspan="11" style="background:#eef2f7; color:#0b1f3a; text-align:left; padding:8px; border-bottom:2px solid #0b1f3a;">
+                  <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px;">
+                    <div><span style="font-weight:900; font-size:13px;">${esc(g.ue)}</span><br>Doc: <b>${esc(g.doc)}</b> &nbsp;|&nbsp; Tipo: <b>${esc(g.tipo)}</b> &nbsp;|&nbsp; Fecha: ${esc(g.maxFecha||"")}</div>
+                    <div style="text-align:right;">Líneas: ${totalItems}</div>
+                  </div>
+                </th>
+              </tr>
+              <tr class="col-header">
+                <th style="width:80px;">Código</th>
                 <th>Suministro</th>
-                <th style="width:90px;" class="num">Solicitado</th>
-                <th style="width:90px;" class="num">Solic. red.</th>
-                <th style="width:90px;" class="num">Asignado</th>
-                <th style="width:90px;" class="num">Pendiente</th>
-                <th style="width:120px;" class="center">Bultos T/S/P</th>
-                <th style="width:240px;">Lotes</th>
-                <th style="width:110px;">Últ. desp.</th>
-                <th style="width:90px;" class="num">Qty últ.</th>
+                <th style="width:50px;" class="num">Solic.</th>
+                <th style="width:50px;" class="num">Sol.red</th>
+                <th style="width:50px;" class="num">Asig.</th>
+                <th style="width:50px;" class="num">Pend.</th>
+                <th style="width:70px;" class="center">Bultos</th>
+                <th style="width:140px;">Lotes</th>
+                <th style="width:65px;">Últ.desp</th>
+                <th style="width:40px;" class="num">Qty</th>
+                <th style="width:40px;" class="num">Prom</th>
               </tr>
             </thead>
-            <tbody>
-              ${rowsHtml}
-            </tbody>
+            <tbody>${rowsHtml}</tbody>
           </table>
-          <div class="sign">
-            <div>Preparado por: _______________________</div>
-            <div>Verificado por: _______________________</div>
-            <div>Fecha/Hora: _______________________</div>
-          </div>
+          <div class="sign"><div>Preparado por: __________________</div><div>Recibido por: __________________</div><div>Fecha: __________________</div></div>
+          <div style="text-align:center; font-size:9px; color:#999; margin-top:5px; border-top:1px dashed #ccc; padding-top:2px;">Fin del Documento ${esc(g.doc)}</div>
         </div>`;
     }).join("");
-    const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"/>
-    <title>Hoja de Asignación F8</title>
+
+    const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"/><title>Hoja de Asignación F8</title>
     <style>
-      body{font-family:Arial, sans-serif; color:#111;}
-      .topbar{display:flex; gap:12px; align-items:center; border-bottom:2px solid #0b1f3a; padding-bottom:10px;}
+      body{font-family:'Segoe UI', Arial, sans-serif; color:#111; margin:0;}
+      .topbar{display:flex; gap:12px; align-items:center; border-bottom:1px solid #ccc; padding-bottom:10px; margin-bottom:15px;}
       .logo{width:42px; height:42px; object-fit:contain;}
       .titleWrap{flex:1;}
-      .title{font-size:14px; font-weight:700; letter-spacing:.2px;}
-      .meta{font-size:11px; color:#333; margin-top:2px;}
-      .rules{font-size:11px; color:#333; margin-top:2px;}
-      table{width:100%; border-collapse:collapse; margin-top:10px;}
-      th,td{border:1px solid #cfd6df; padding:6px 8px; font-size:11px; vertical-align:top;}
-      th{background:#f3f5f8;}
-      .num{text-align:right;}
-      .center{text-align:center;}
-      .section{page-break-after:always; margin-top:10px;}
+      .title{font-size:16px; font-weight:700; color:#0b1f3a;}
+      .meta{font-size:11px; color:#444;}
+      table{width:100%; border-collapse:collapse; margin-bottom:0;}
+      thead { display: table-header-group; } 
+      tr { page-break-inside: avoid; }
+      th,td{border:1px solid #ccc; padding:4px 5px; font-size:10px; vertical-align:top;}
+      .col-header th { background:#f3f5f8; font-weight:bold; }
+      .num{text-align:right;} .center{text-align:center;}
+      .section{ margin-bottom:20px; page-break-after: always; }
       .section:last-child{page-break-after:auto;}
-      .sectionHeader{display:flex; flex-wrap:wrap; justify-content:space-between; gap:10px; font-size:12px; margin-top:8px;}
-      .sign{display:flex; justify-content:space-between; gap:12px; margin-top:14px; font-size:11px;}
-      @media print{
-        body{margin:10mm;}
-        .sectionHeader{page-break-inside:avoid;}
-        tr{page-break-inside:avoid; page-break-after:auto;}
-      }
+      .sign{display:flex; justify-content:space-between; gap:20px; margin-top:20px; font-size:11px; page-break-inside: avoid;}
+      @media print{ body{margin:10mm;} }
     </style></head><body>
       <div class="topbar">
         <img class="logo" src="./icons/icon-512.png" alt="logo"/>
         <div class="titleWrap">
-          <div class="title">HOJA DE ASIGNACIÓN F8 — CORTE DIARIO</div>
+          <div class="title">REPORTE DETALLADO DE ASIGNACIÓN F8</div>
           <div class="meta">Generado: ${esc(fechaGen)} | Corte: ${esc(corte)}</div>
-          <div class="rules">Reglas: FEFO | Vto ≥ 30 días | Excluye TRANSFERENCIA</div>
         </div>
       </div>
       ${sections}
     </body></html>`;
-    const w = window.open("", "_blank");
-    w.document.open();
-    w.document.write(html);
-    w.document.close();
-    w.focus();
-    setTimeout(()=>{ w.print(); }, 400);
+    const w = window.open("", "_blank"); w.document.open(); w.document.write(html); w.document.close(); w.focus(); setTimeout(()=>{ w.print(); }, 500);
   }
 
+  // MODIFICACIÓN: Excel con Promedio
   function exportXlsxAsignacion(){
-    const rows = _pickingRows();
-    if(!rows.length){ alert("No hay líneas con Asignado > 0 en la vista actual. Ajusta filtros o genera asignación antes de exportar."); return; }
-    if(typeof XLSX === "undefined"){ alert("No se pudo cargar la librería XLSX. Revisa conexión o bloqueadores de contenido."); return; }
+    const rows = _pickingRows(); 
+    if(!rows.length){ alert("No hay datos visibles para exportar."); return; }
+    if(typeof XLSX === "undefined"){ alert("No se pudo cargar XLSX."); return; }
+    
     const groups = new Map();
     for(const r of rows){
-      const ue = r.Punto || "SIN_UE";
-      const doc = r.N_Doc || "SIN_DOC";
-      const key = ue + "||" + doc;
+      const ue = r.Punto || "SIN_UE"; const doc = r.N_Doc || "SIN_DOC"; const key = ue + "||" + doc;
       if(!groups.has(key)) groups.set(key, {ue, doc, tipo: r.Tipo||"", items: []});
       groups.get(key).items.push(r);
     }
@@ -789,9 +790,9 @@
     const now = new Date().toLocaleString("es-PA");
     const aoa = [];
     aoa.push(["HOJA DE ASIGNACIÓN F8 — CORTE DIARIO"]);
-    aoa.push([`Generado: ${now}`, `Corte: ${corte}`, "Reglas: FEFO | Vto ≥ 30 días | Excluye TRANSFERENCIA"]);
+    aoa.push([`Generado: ${now}`, `Corte: ${corte}`, "Reglas: Fair Share | Prioridad: Mensual > Fecha > UE"]);
     aoa.push([]);
-    const header = ["UE", "Documento", "Tipo", "Código", "Suministro", "Solicitado", "Solic. red.", "Asignado", "Pendiente", "Bultos T/S/P", "Lotes usados", "Último despacho (real)", "Qty último"];
+    const header = ["UE", "Documento", "Tipo", "Código", "Suministro", "Solicitado", "Solic. red.", "Asignado", "Pendiente", "Bultos T/S/P", "Lotes usados", "Último despacho (real)", "Qty último", "Promedio Hist."];
     aoa.push(header);
     for(const g of Array.from(groups.values()).sort((a,b)=> (a.ue+a.doc).localeCompare(b.ue+b.doc))){
       g.items.sort((a,b)=> String(a.Codigo||"").localeCompare(String(b.Codigo||"")));
@@ -799,98 +800,66 @@
         const bults = `${fmtBultosPart(r.Bultos_Ter||0)}/${fmtBultosPart(r.Bultos_Sec||0)}/${fmtBultosPart(r.Bultos_Prim||0)}`;
         const ld = getLastDispatch(r);
         aoa.push([
-          g.ue,
-          g.doc,
-          g.tipo,
-          r.Codigo||"",
-          r.Suministro||"",
-          Number(r.Solicitado||0),
-          Number(r.Solicitado_redondeado||0),
-          Number(r.Asignado||0),
-          Number(r.Pendiente||0),
-          bults,
-          r.Lotes_Usados||"",
-          ld.fecha || "",
-          (ld.qty===null||ld.qty===undefined) ? "" : Number(ld.qty)
+          g.ue, g.doc, g.tipo, r.Codigo||"", r.Suministro||"", Number(r.Solicitado||0), Number(r.Solicitado_redondeado||0),
+          Number(r.Asignado||0), Number(r.Pendiente||0), bults, r.Lotes_Usados||"", ld.fecha || "",
+          (ld.qty===null||ld.qty===undefined) ? "" : Number(ld.qty),
+          r.Promedio_Hist ? Number(r.Promedio_Hist) : ""
         ]);
       }
       aoa.push([]);
     }
     const ws = XLSX.utils.aoa_to_sheet(aoa);
-    ws["!cols"] = [
-      {wch:22},{wch:18},{wch:12},{wch:12},{wch:60},{wch:12},{wch:12},{wch:12},{wch:12},{wch:14},{wch:40},{wch:18},{wch:12}
-    ];
+    ws["!cols"] = [{wch:22},{wch:18},{wch:12},{wch:12},{wch:60},{wch:12},{wch:12},{wch:12},{wch:12},{wch:14},{wch:40},{wch:18},{wch:12},{wch:12}];
     ws["!freeze"] = { xSplit: 0, ySplit: 4 };
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Asignacion_F8");
-    const fname = `Hoja_Asignacion_F8_${corte || "corte"}.xlsx`;
-    XLSX.writeFile(wb, fname);
+    XLSX.writeFile(wb, `Hoja_Asignacion_F8_${corte || "corte"}.xlsx`);
   }
 
-async function init(){
-  tickDateTime();
-  setInterval(tickDateTime, 60000);
+  async function init(){
+    tickDateTime(); setInterval(tickDateTime, 60000);
+    const WEBAPP_BASE = "https://script.google.com/macros/s/AKfycbyVHDQ8IuVHibz259AiEvZ-jUfVC7fxvSSqC-wfaiiq1_13C9_TK4dVtPK0SMW4sZoJ/exec";
+    function loadJsonp(url){
+      return new Promise((resolve, reject)=>{
+        const cb = 'cb_' + Math.random().toString(36).slice(2);
+        const script = document.createElement('script');
+        script.src = `${url}&callback=${cb}&_ts=${Date.now()}`;
+        script.onerror = () => reject(new Error('Script error'));
+        window[cb] = (data) => { resolve(data); delete window[cb]; script.remove(); };
+        document.body.appendChild(script);
+      });
+    }
+    try{
+      const [alloc, params, lastd, alias] = await Promise.all([
+        loadJsonp(`${WEBAPP_BASE}?file=allocation`),
+        loadJsonp(`${WEBAPP_BASE}?file=params`),
+        loadJsonp(`${WEBAPP_BASE}?file=last_dispatch`),
+        loadJsonp(`${WEBAPP_BASE}?file=ue_alias`)
+      ]);
+      DATA = alloc; PARAMS = params; LAST = lastd; UE_ALIAS = alias;
+    }catch(e){
+      console.error(e);
+      alert("No se pudieron cargar los JSON principales (allocation/params/last_dispatch/ue_alias).");
+      return;
+    }
+    buildUeAliasMaps(); remapDataWithAliases();
+    document.getElementById('cutDate').textContent = PARAMS.cut_date || PARAMS.corte || "-";
+    document.getElementById('minVto').textContent = PARAMS.min_vto || "-";
+    populateFilters();
+    LAST_FILTERED = DATA;
+    renderKPIs(DATA);
+    showTab("asignacion");
 
-  const WEBAPP_BASE = "https://script.google.com/macros/s/AKfycbyVHDQ8IuVHibz259AiEvZ-jUfVC7fxvSSqC-wfaiiq1_13C9_TK4dVtPK0SMW4sZoJ/exec";
-
-  function loadJsonp(url){
-    return new Promise((resolve, reject)=>{
-      const cb = 'cb_' + Math.random().toString(36).slice(2);
-      const script = document.createElement('script');
-      script.src = `${url}&callback=${cb}&_ts=${Date.now()}`;
-      script.onerror = () => reject(new Error('Script error'));
-      window[cb] = (data) => {
-        resolve(data);
-        delete window[cb];
-        script.remove();
-      };
-      document.body.appendChild(script);
+    document.getElementById('btnApply').addEventListener('click', applyFilters);
+    document.getElementById('btnReset').addEventListener('click', () => {
+      document.getElementById('q').value = ""; document.getElementById('doc').value = ""; document.getElementById('dateFrom').value = ""; document.getElementById('dateTo').value = ""; document.getElementById('cat').value = "ALL"; document.getElementById('ue').value = "ALL"; document.getElementById('tipo').value = "ALL"; document.getElementById('estado').value = "ALL";
+      applyFilters();
     });
+    document.getElementById('btnExportCsv').addEventListener('click', exportCsv);
+    document.getElementById('btnExportPdf').addEventListener('click', exportPdfAsignacion);
+    document.getElementById('btnExportXlsx').addEventListener('click', exportXlsxAsignacion);
+    document.querySelectorAll('.tab').forEach(el => el.addEventListener('click', () => showTab(el.dataset.tab)));
   }
-
-  try{
-    const [alloc, params, lastd, alias] = await Promise.all([
-      loadJsonp(`${WEBAPP_BASE}?file=allocation`),
-      loadJsonp(`${WEBAPP_BASE}?file=params`),
-      loadJsonp(`${WEBAPP_BASE}?file=last_dispatch`),
-      loadJsonp(`${WEBAPP_BASE}?file=ue_alias`)
-    ]);
-    DATA = alloc;
-    PARAMS = params;
-    LAST = lastd;
-    UE_ALIAS = alias;
-  }catch(e){
-    console.error(e);
-    alert("No se pudieron cargar los JSON principales (allocation/params/last_dispatch/ue_alias).");
-    return;
-  }
-
-  buildUeAliasMaps();
-  remapDataWithAliases();
-  document.getElementById('cutDate').textContent = PARAMS.cut_date || PARAMS.corte || "-";
-  document.getElementById('minVto').textContent = PARAMS.min_vto || "-";
-  populateFilters();
-  LAST_FILTERED = DATA;
-  renderKPIs(DATA);
-  showTab("asignacion");
-
-  document.getElementById('btnApply').addEventListener('click', applyFilters);
-  document.getElementById('btnReset').addEventListener('click', () => {
-    document.getElementById('q').value = "";
-    document.getElementById('doc').value = "";
-    document.getElementById('dateFrom').value = "";
-    document.getElementById('dateTo').value = "";
-    document.getElementById('cat').value = "ALL";
-    document.getElementById('ue').value = "ALL";
-    document.getElementById('tipo').value = "ALL";
-    document.getElementById('estado').value = "ALL";
-    applyFilters();
-  });
-  document.getElementById('btnExportCsv').addEventListener('click', exportCsv);
-  document.getElementById('btnExportPdf').addEventListener('click', exportPdfAsignacion);
-  document.getElementById('btnExportXlsx').addEventListener('click', exportXlsxAsignacion);
-  document.querySelectorAll('.tab').forEach(el => el.addEventListener('click', () => showTab(el.dataset.tab)));
-}
 
   const btnLoad = document.getElementById('btnLoadLocal');
   const fileLoad = document.getElementById('fileLoad');
@@ -900,37 +869,18 @@ async function init(){
       const files = Array.from(ev.target.files || []);
       if (!files.length) return;
       const byName = Object.fromEntries(files.map(f=>[f.name.toLowerCase(), f]));
-      async function readJson(file){
-        const txt = await file.text();
-        return JSON.parse(txt);
-      }
+      async function readJson(file){ const txt = await file.text(); return JSON.parse(txt); }
       try{
         if (byName['allocation.json']) DATA = await readJson(byName['allocation.json']);
         if (byName['last_dispatch.json']) LAST = await readJson(byName['last_dispatch.json']);
         if (byName['params.json']) PARAMS = await readJson(byName['params.json']);
         if (byName['ue_alias.json']) UE_ALIAS = await readJson(byName['ue_alias.json']);
-        buildUeAliasMaps();
-        remapDataWithAliases();
-        document.getElementById('q').value = "";
-        document.getElementById('doc').value = "";
-        document.getElementById('dateFrom').value = "";
-        document.getElementById('dateTo').value = "";
-        document.getElementById('cat').value = "ALL";
-        document.getElementById('ue').value = "ALL";
-        document.getElementById('tipo').value = "ALL";
-        document.getElementById('estado').value = "ALL";
-        populateFilters();
-        applyFilters();
-        alert('Datos locales cargados. Ya puedes filtrar y exportar PDF/Excel.');
-      }catch(e){
-        console.error(e);
-        alert('No se pudo cargar uno de los JSON. Verifica que sean JSON válidos (strict) y vuelve a intentar.');
-      }finally{
-        fileLoad.value = '';
-      }
+        buildUeAliasMaps(); remapDataWithAliases();
+        document.getElementById('q').value = ""; document.getElementById('doc').value = ""; document.getElementById('dateFrom').value = ""; document.getElementById('dateTo').value = ""; document.getElementById('cat').value = "ALL"; document.getElementById('ue').value = "ALL"; document.getElementById('tipo').value = "ALL"; document.getElementById('estado').value = "ALL";
+        populateFilters(); applyFilters(); alert('Datos locales cargados. Ya puedes filtrar y exportar PDF/Excel.');
+      }catch(e){ console.error(e); alert('No se pudo cargar uno de los JSON.'); }finally{ fileLoad.value = ''; }
     });
   }
-
   init();
 </script>
 </body>
