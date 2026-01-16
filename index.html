@@ -63,7 +63,7 @@
       <div class="title-main">SIGUELO — Asignación de pedidos F8</div>
       <div class="title-sub">
         <span id="currentDateTime">Cargando fecha...</span>
-        <span style="opacity:.8;margin-left:8px;"> | C1 Corte diario · v2.7 Fix Header Print</span>
+        <span style="opacity:.8;margin-left:8px;"> | C1 Corte diario · v2.8 Final PDF</span>
       </div>
     </div>
     <div class="top-actions">
@@ -179,7 +179,7 @@
 
         <!-- PESTAÑAS OCULTAS -->
         <div id="view_ue_sin" class="view" style="display:none;margin-top:10px;">
-          <div class="scroll"><table id="tbl_ue_sin"><thead><tr><th>UE</th><th>Categoría</th><th class="right">Líneas sin cobertura</th><th class="right">Solicitado (original)</th><th class="right">Solicitado (red.)</th><th>Pedido más reciente</th></tr></thead><tbody></tbody></table></div>
+          <div class="scroll"><table id="tbl_ue_sin"><thead><tr><th>UE</th><th>Categor��a</th><th class="right">Líneas sin cobertura</th><th class="right">Solicitado (original)</th><th class="right">Solicitado (red.)</th><th>Pedido más reciente</th></tr></thead><tbody></tbody></table></div>
         </div>
         <div id="view_sku_sin" class="view" style="display:none;margin-top:10px;">
           <div class="scroll"><table id="tbl_sku_sin"><thead><tr><th>Código</th><th>Suministro</th><th class="right">Solicitado (original)</th><th class="right">Solicitado (red.)</th><th class="right">Nº UEs</th><th>Categorías afectadas</th><th>Último despacho (real)</th></tr></thead><tbody></tbody></table></div>
@@ -202,11 +202,7 @@
   // --- HELPERS (CORREGIDOS PARA MATCH EXACTO) ---
   function norm(s){
     if(s===null||s===undefined) return "";
-    return String(s)
-      .trim()
-      .toUpperCase()
-      .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
-      .replace(/\s+/g," "); 
+    return String(s).trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," "); 
   }
   
   function canonKey(s){
@@ -593,7 +589,7 @@
     return LAST_FILTERED || []; 
   }
 
-  // --- EXPORTACIÓN PDF FINAL (TABLA FANTASMA) ---
+  // --- EXPORTACIÓN PDF FINAL (TABLA FANTASMA + CORRECCIÓN DE CORTE) ---
   function exportPdfAsignacion(){
     const rows = _pickingRows();
     if(!rows.length){ alert("No hay datos visibles para exportar."); return; }
@@ -675,7 +671,7 @@
         <div class="section">
           <table>
             <thead>
-              <!-- HEADER FANTASMA: RESERVA ESPACIO PARA EL HEADER FIJO EN CADA PAGINA -->
+              <!-- HEADER FANTASMA MEJORADO -->
               <tr><td colspan="11" class="header-space">&nbsp;</td></tr>
               
               <tr class="meta-row">
@@ -735,7 +731,7 @@
       /* HEADER PRINCIPAL FIJO */
       .header-fixed {
         position: fixed; top: 0; left: 0; right: 0;
-        height: 100px; /* Altura Fija */
+        height: 100px; /* Altura Fija exacta */
         border-bottom: 2px solid #0b1f3a;
         background: #fff;
         display: flex; gap: 15px; align-items: center;
@@ -743,10 +739,11 @@
         padding: 0 10mm;
       }
       
-      /* ESPACIO RESERVADO EN CADA TABLA PARA EL HEADER */
+      /* ESPACIO RESERVADO PARA NO TAPAR */
       .header-space {
-        height: 110px; /* Un poco más que el header fijo */
+        height: 105px; /* Un pelín más que el fixed */
         border: none !important;
+        background: transparent;
       }
 
       .logo { width: 50px; height: 50px; object-fit: contain; }
@@ -756,9 +753,10 @@
 
       table { width: 100%; border-collapse: collapse; margin-bottom: 0; }
       
-      /* CLAVE: REPETIR THEAD EN CADA PAGINA */
+      /* REPETIR CABECERAS EN CADA HOJA */
       thead { display: table-header-group; } 
-      tr { page-break-inside: avoid; }
+      /* PERMITIR PARTIR FILAS SI ES NECESARIO PARA QUE NO DESAPAREZCAN */
+      tr { page-break-inside: auto; } 
       
       th, td { border: 1px solid #ccc; padding: 4px 5px; font-size: 10px; vertical-align: top; }
       .col-header th { background: #f3f5f8; font-weight: bold; color: #333; text-transform: uppercase; }
@@ -784,8 +782,8 @@
           <div class="title-main">HOJA DE ASIGNACIÓN F8 — CORTE DIARIO</div>
           <div class="meta">Generado: ${esc(fechaGen)} | Corte: ${esc(corte)}</div>
           <div class="rules">
-             Reglas de Asignación: <b>Fair Share (Reparto Proporcional en Escasez)</b>, FEFO, Lotes Elegibles: Vto ≥ 30 días.
-             <br>Prioridad por Tipo de Unidad Ejecutora: <b>CEDIS > HOSPITAL > POL. ALTO VOL. > POL. BAJO VOL, > ULAPS > CAPPS</b>
+             Reglas de Asignación: <b>Fair Share (Reparto Proporcional en Escasez)</b>, FEFO, Vto ≥ 30 días.
+             <br>Prioridad por Tipo de Unidad Ejecutora: <b>CEDIS > HOSPITAL > POLICLINICA > ULAPS > CAPPS</b>
           </div>
         </div>
       </div>
