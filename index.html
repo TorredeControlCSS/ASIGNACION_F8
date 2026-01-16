@@ -53,6 +53,11 @@
     .center{text-align:center;}
     .danger{color:#b00020;}
     .ok{color:#0a7a2f;}
+    
+    /* Botones especiales */
+    .btn-daily { background: #0a7a2f; color: white; border: none; }
+    .btn-history { background: #0b1f3a; color: white; border: none; }
+    .btn-secondary { background: #f0f0f0; color: #333; border: 1px solid #ccc; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
@@ -63,7 +68,7 @@
       <div class="title-main">SIGUELO — Asignación de pedidos F8</div>
       <div class="title-sub">
         <span id="currentDateTime">Cargando fecha...</span>
-        <span style="opacity:.8;margin-left:8px;"> | C1 Corte diario · v3.0 Header Nativo</span>
+        <span style="opacity:.8;margin-left:8px;"> | C1 Corte diario · v3.6 Final</span>
       </div>
     </div>
     <div class="top-actions">
@@ -76,7 +81,7 @@
   </div>
 
   <div class="page">
-    <h1>Asignación F8 (Corte diario)</h1>
+    <h1><span id="mainHeader">Asignación F8 (Corte diario)</span></h1>
     <div class="muted">
       Corte: <span id="cutDate"></span> · Lotes elegibles: vencimiento ≥ <span id="minVto"></span> ·
       Prioridad UE: <b>CEDIS > Hospital > Policlínica > ULAPS > CAPPS</b>
@@ -123,13 +128,20 @@
         <div class="row" style="margin-top:10px;">
           <button id="btnExportCsv">Exportar CSV (pestaña actual)</button>
         </div>
-        <div class="row" style="margin-top:10px;">
-          <button id="btnExportPdf">Exportar PDF — Hoja de Asignación</button>
-          <button id="btnExportXlsx">Exportar Excel — Hoja de Asignación</button>
         
-          <button id="btnLoadLocal" class="btn-secondary">Cargar datos (local)</button>
+        <!-- BOTONES DE EXPORTACIÓN Y NAVEGACIÓN -->
+        <div class="row" style="margin-top:10px;">
+          <button id="btnExportPdf">Exportar PDF</button>
+          <button id="btnExportXlsx">Exportar Excel</button>
+        </div>
+        <div class="row" style="margin-top:10px;">
+          <button id="btnLoadDaily" class="btn-daily">🔄 Ver Corte Diario</button>
+          <button id="btnLoadHistory" class="btn-history">📂 Ver Histórico</button>
+          
+          <button id="btnLoadLocal" class="btn-secondary">Cargar local</button>
           <input id="fileLoad" type="file" multiple accept=".json" style="display:none"/>
         </div>
+
         <div class="muted" style="margin-top:10px;">
           Nota: "Solicitado redondeado" es el operable. En escasez, se aplica recorte proporcional (Fair Share).
         </div>
@@ -199,7 +211,7 @@
   </div>
 
 <script>
-  // --- HELPERS (CORREGIDOS PARA MATCH EXACTO) ---
+  // --- HELPERS BÁSICOS ---
   function norm(s){
     if(s===null||s===undefined) return "";
     return String(s).trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," "); 
@@ -232,12 +244,12 @@
     el.textContent = now.toLocaleString('es-PA', { weekday:'long', year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit' });
   }
 
+  // --- VARIABLES DE ESTADO ---
   let DATA = [];
   let PARAMS = {};
   let LAST = {};
   let UE_ALIAS = [];
   
-  // MAPAS
   const UE_SALMI_TO_STD = new Map();
   const UE_PER_TO_STD = new Map();
   const STD_TO_CAT = new Map();
@@ -248,8 +260,10 @@
   let ACTIVE_TAB = "asignacion";
   let LAST_FILTERED = [];
 
+  // --- LÓGICA DE DATOS ---
   function uniq(arr){ return [...new Set(arr)].filter(x => x !== null && x !== undefined); }
   function parseISODate(s){ if(!s) return null; const m = String(s).match(/(\d{4})-(\d{2})-(\d{2})/); if(!m) return null; return new Date(`${m[1]}-${m[2]}-${m[3]}T00:00:00`); }
+  
   function coverage(r){
     const req = Number(r.Solicitado_redondeado || 0);
     const asg = Number(r.Asignado || 0);
@@ -589,7 +603,7 @@
     return LAST_FILTERED || []; 
   }
 
-  // --- EXPORTACIÓN PDF FINAL (SOLUCIÓN TABLE-HEADER-GROUP REAL) ---
+  // --- EXPORTACIÓN PDF FINAL (SOLUCIÓN TABLE-HEADER-GROUP REAL + AVISO EMPAQUE) ---
   function exportPdfAsignacion(){
     const rows = _pickingRows();
     if(!rows.length){ alert("No hay datos visibles para exportar."); return; }
@@ -664,10 +678,15 @@
       
       const escasezDetectada = g.totalRed > g.totalAsig;
       const fillRate = g.totalRed > 0 ? ((g.totalAsig / g.totalRed) * 100).toFixed(1) + "%" : "0%";
-      const escasezLabel = escasezDetectada ? "⚠️ SÍ (Fair Share aplicado)" : "✅ NO (Stock suficiente)";
-      const escasezClass = escasezDetectada ? "color:#b00020;" : "color:#0a7a2f;";
+      let escasezLabel = escasezDetectada ? "⚠️ SÍ (Fair Share aplicado)" : "✅ NO (Stock suficiente)";
+      let escasezClass = escasezDetectada ? "color:#b00020;" : "color:#0a7a2f;";
 
-      // --- HEADER UNIFICADO: AHORA VIAJA DENTRO DE LA TABLA ---
+      // --- AVISO DE EMPAQUE FALTANTE ---
+      // Verificamos si alguno de los items del grupo tiene la bandera Pack_Missing
+      if (g.items.some(i => i.Pack_Missing)) {
+         escasezLabel += ` <span style="color:#b00020; font-size:10px;">(Nota: No existe empaque definido, se asume unidad mínima 1)</span>`;
+      }
+
       return `
         <div class="section">
           <table>
@@ -681,8 +700,8 @@
                       <div style="font-size:18px; font-weight:700; color:#0b1f3a;">HOJA DE ASIGNACIÓN F8 — CORTE DIARIO</div>
                       <div style="font-size:11px; color:#444; margin-top:4px;">Generado: ${esc(fechaGen)} | Corte: ${esc(corte)}</div>
                       <div style="font-size:10px; color:#666; margin-top:2px; font-style:italic;">
-                         Reglas de Asignación: <b>Fair Share (Reparto Proporcional en Escasez)</b>, FEFO, Lotes Elegibles: Vto ≥ 30 días.
-                         <br>Prioridad por Tipo de Unidad Ejecutora: <b>CEDIS > HOSPITAL > POL. ALTO VOL > POL. BAJO VOL > ULAPS > CAPPS</b>
+                         Reglas de Asignación: <b>Fair Share (Reparto Proporcional en Escasez)</b>, FEFO, Vto ≥ 30 días.
+                         <br>Prioridad por Tipo de Unidad Ejecutora: <b>CEDIS > HOSPITAL > POLICLINICA > ULAPS > CAPPS</b>
                       </div>
                     </div>
                   </div>
@@ -820,44 +839,99 @@
     XLSX.writeFile(wb, `Hoja_Asignacion_F8_${corte || "corte"}.xlsx`);
   }
 
+  // --- LÓGICA DE CARGA DE DATOS ---
+  const WEBAPP_BASE = "https://script.google.com/macros/s/AKfycbyVHDQ8IuVHibz259AiEvZ-jUfVC7fxvSSqC-wfaiiq1_13C9_TK4dVtPK0SMW4sZoJ/exec";
+
+  function loadJsonp(url){
+    return new Promise((resolve, reject)=>{
+      const cb = 'cb_' + Math.random().toString(36).slice(2);
+      const script = document.createElement('script');
+      script.src = `${url}&callback=${cb}&_ts=${Date.now()}`;
+      script.onerror = () => reject(new Error('Script error'));
+      window[cb] = (data) => { resolve(data); delete window[cb]; script.remove(); };
+      document.body.appendChild(script);
+    });
+  }
+
+  async function fetchAndLoad(type) {
+    const isHistory = type === 'history';
+    const btn = isHistory ? document.getElementById('btnLoadHistory') : document.getElementById('btnLoadDaily');
+    const otherBtn = isHistory ? document.getElementById('btnLoadDaily') : document.getElementById('btnLoadHistory');
+    const originalText = btn.textContent;
+    
+    // UI Feedback
+    btn.disabled = true;
+    otherBtn.disabled = false;
+    btn.textContent = "Cargando...";
+    document.body.style.cursor = 'wait';
+
+    try {
+      let newData;
+      if (type === 'allocation') {
+          // Carga paralela para el día (Datos + Params + LastDispatch)
+          const [alloc, params, lastd] = await Promise.all([
+              loadJsonp(`${WEBAPP_BASE}?file=allocation`),
+              loadJsonp(`${WEBAPP_BASE}?file=params`),
+              loadJsonp(`${WEBAPP_BASE}?file=last_dispatch`)
+          ]);
+          newData = alloc;
+          PARAMS = params; 
+          LAST = lastd;    
+          
+          document.getElementById('mainHeader').textContent = "Asignación F8 (Corte diario)";
+          document.getElementById('viewHint').textContent = "Hoja operativa para reemplazar el empirismo. Incluye lotes, datos históricos y promedio.";
+          document.getElementById('cutDate').textContent = PARAMS.cut_date || "Hoy";
+          
+      } else {
+          // Carga Historial
+          newData = await loadJsonp(`${WEBAPP_BASE}?file=history`);
+          
+          document.getElementById('mainHeader').textContent = "HISTORIAL ACUMULADO";
+          document.getElementById('viewHint').textContent = "Base de datos histórica. (Ordenado por Fecha de Proceso Descendente)";
+          document.getElementById('cutDate').textContent = "Histórico Completo";
+      }
+
+      if (!newData || newData.length === 0) {
+          alert("No se encontraron datos.");
+      } else {
+          DATA = newData;
+          buildUeAliasMaps(); 
+          remapDataWithAliases();
+          populateFilters(); 
+          applyFilters();    
+      }
+
+    } catch (e) {
+      console.error(e);
+      alert("Error de conexión. Intente nuevamente.");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = originalText;
+      document.body.style.cursor = 'default';
+    }
+  }
+
+  // --- INICIALIZACIÓN ---
   async function init(){
     tickDateTime(); setInterval(tickDateTime, 60000);
-    const WEBAPP_BASE = "https://script.google.com/macros/s/AKfycbyVHDQ8IuVHibz259AiEvZ-jUfVC7fxvSSqC-wfaiiq1_13C9_TK4dVtPK0SMW4sZoJ/exec";
-    function loadJsonp(url){
-      return new Promise((resolve, reject)=>{
-        const cb = 'cb_' + Math.random().toString(36).slice(2);
-        const script = document.createElement('script');
-        script.src = `${url}&callback=${cb}&_ts=${Date.now()}`;
-        script.onerror = () => reject(new Error('Script error'));
-        window[cb] = (data) => { resolve(data); delete window[cb]; script.remove(); };
-        document.body.appendChild(script);
-      });
-    }
-    try{
-      const [alloc, params, lastd, alias] = await Promise.all([
-        loadJsonp(`${WEBAPP_BASE}?file=allocation`),
-        loadJsonp(`${WEBAPP_BASE}?file=params`),
-        loadJsonp(`${WEBAPP_BASE}?file=last_dispatch`),
-        loadJsonp(`${WEBAPP_BASE}?file=ue_alias`)
-      ]);
-      DATA = alloc; PARAMS = params; LAST = lastd; UE_ALIAS = alias;
-    }catch(e){
-      console.error(e);
-      alert("No se pudieron cargar los JSON principales.");
-      return;
-    }
-    buildUeAliasMaps(); remapDataWithAliases();
-    document.getElementById('cutDate').textContent = PARAMS.cut_date || PARAMS.corte || "-";
-    document.getElementById('minVto').textContent = PARAMS.min_vto || "-";
-    populateFilters();
-    LAST_FILTERED = DATA;
-    renderKPIs(DATA);
-    showTab("asignacion");
+    
+    // Cargar Alias primero (una sola vez)
+    try {
+      UE_ALIAS = await loadJsonp(`${WEBAPP_BASE}?file=ue_alias`);
+      buildUeAliasMaps(); 
+    } catch(e) { console.error("Error cargando alias", e); }
 
+    // Cargar datos del día por defecto
+    fetchAndLoad('allocation');
+
+    // Listeners
+    document.getElementById('btnLoadDaily').addEventListener('click', () => fetchAndLoad('allocation'));
+    document.getElementById('btnLoadHistory').addEventListener('click', () => fetchAndLoad('history'));
+    
     document.getElementById('btnApply').addEventListener('click', applyFilters);
     document.getElementById('btnReset').addEventListener('click', () => {
-      document.getElementById('q').value = ""; document.getElementById('doc').value = ""; document.getElementById('dateFrom').value = ""; document.getElementById('dateTo').value = ""; document.getElementById('cat').value = "ALL"; document.getElementById('ue').value = "ALL"; document.getElementById('tipo').value = "ALL"; document.getElementById('estado').value = "ALL";
-      applyFilters();
+        document.getElementById('q').value = ""; document.getElementById('doc').value = ""; document.getElementById('dateFrom').value = ""; document.getElementById('dateTo').value = ""; document.getElementById('cat').value = "ALL"; document.getElementById('ue').value = "ALL"; document.getElementById('tipo').value = "ALL"; document.getElementById('estado').value = "ALL";
+        applyFilters();
     });
     document.getElementById('btnExportCsv').addEventListener('click', exportCsv);
     document.getElementById('btnExportPdf').addEventListener('click', exportPdfAsignacion);
