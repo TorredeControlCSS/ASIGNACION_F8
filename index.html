@@ -567,44 +567,45 @@
     return name;
   }
 
-  // --- EXPORTACIÓN PDF (FINAL: TEXTOS CORRECTOS Y FECHA VALIDADA) ---
+  // --- EXPORTACIÓN PDF (CORRECCIÓN FINAL: RESTA DE DÍA INFALIBLE) ---
   function exportPdfAsignacion(){
     const rows = _pickingRows();
     if(!rows.length){ alert("No hay datos visibles para exportar."); return; }
     
     const baseName = getDynamicFilename("Hoja_Asignacion");
     
-    // 1. DETECTAR FECHA DE ASIGNACIÓN REAL (Validando formato YYYY-MM-DD del backend)
-    let fechaAsignacionObj = new Date(); // Fallback: Hoy
+    // 1. DETECTAR FECHA DE ASIGNACIÓN REAL
+    // Buscamos la fecha más reciente en los datos filtrados
+    let fechaAsignacionObj = new Date(); // Por defecto hoy
     let fechaEncontrada = false;
 
     if (rows.length > 0) {
-        // El backend V5.2 ahora envía fechas en formato ISO YYYY-MM-DD gracias al fix.
-        // Buscamos la fecha más reciente (alfabéticamente YYYY-MM-DD funciona perfecto).
+        // Filtramos solo fechas válidas en formato YYYY-MM-DD
         const todasLasFechas = rows
-            .map(r => r.Fecha_Proceso || r.Fecha_Asignacion || "") // Prioridad Histórico
-            .filter(f => f.match(/^\d{4}-\d{2}-\d{2}$/)); // Solo formato ISO válido
+            .map(r => r.Fecha_Proceso || r.Fecha_Asignacion || "")
+            .filter(f => f.match(/^\d{4}-\d{2}-\d{2}$/));
 
         if (todasLasFechas.length > 0) {
             todasLasFechas.sort();
-            const ultimaFechaIso = todasLasFechas[todasLasFechas.length - 1];
-            // "T12:00:00" evita problemas de zona horaria (UTC vs Local)
+            const ultimaFechaIso = todasLasFechas[todasLasFechas.length - 1]; // La mayor
+            // IMPORTANTE: Usamos T12:00:00 para evitar que la zona horaria nos cambie el día al parsear
             fechaAsignacionObj = new Date(ultimaFechaIso + "T12:00:00");
             fechaEncontrada = true;
         }
     }
 
-    // 2. CALCULAR FECHA DE CORTE
-    // Regla: Día anterior a la fecha de asignación detectada.
+    // 2. CALCULAR FECHA DE CORTE (RESTA DE 1 DÍA)
+    // Creamos una copia de la fecha para no modificar la original
     const fechaCorteObj = new Date(fechaAsignacionObj);
-    fechaCorteObj.setDate(fechaCorteObj.getDate() - 1); 
+    
+    // RESTA INFALIBLE: Restamos 1 día al día del mes
+    fechaCorteObj.setDate(fechaCorteObj.getDate() - 1);
 
     const fechaGen = new Date().toLocaleString("es-PA");
     
-    // Formato visual para el PDF (DD/MM/YYYY o según local)
+    // Formateamos la fecha de corte (dd/mm/yyyy)
     const fechaCorteTexto = fechaCorteObj.toLocaleDateString("es-PA") + " 11:59 PM";
     
-    // Sufijo para aclarar si es dato histórico real o fecha del sistema
     const sufijoCorte = fechaEncontrada ? " (Registro histórico)" : "";
 
     const groups = new Map();
@@ -613,7 +614,7 @@
       const doc = r.N_Doc || "SIN_DOC";
       const key = ue + "||" + doc;
       const pr = Number.isFinite(+r.Prioridad) ? +r.Prioridad : 999;
-      const f  = (r.Fecha||""); // Esta es la Fecha F8
+      const f  = (r.Fecha||"");
       
       if(!groups.has(key)){ 
         groups.set(key, {
@@ -630,7 +631,6 @@
       g.totalAsig += Number(r.Asignado||0);
       g.totalPend += Number(r.Pendiente||0);
 
-      // Buscamos la fecha F8 más reciente dentro del grupo para el encabezado del grupo
       if(String(f) > String(g.maxFecha)) g.maxFecha = f;
       if(pr < g.prioridad) g.prioridad = pr;
     }
@@ -674,7 +674,6 @@
       
       const escasezDetectada = g.totalRed > g.totalAsig;
       const fillRate = g.totalSol > 0 ? ((g.totalAsig / g.totalSol) * 100).toFixed(1) + "%" : "0%";
-      
       let escasezLabel = escasezDetectada ? "⚠️ SÍ (Fair Share aplicado)" : "✅ NO (Stock suficiente)";
       let escasezClass = escasezDetectada ? "color:#b00020;" : "color:#0a7a2f;";
 
@@ -686,7 +685,6 @@
         <div class="section">
           <table>
             <thead>
-              <!-- HEADER PRINCIPAL -->
               <tr>
                 <td colspan="11" style="background:#fff; border-bottom:2px solid #0b1f3a; padding: 10px 0;">
                   <div style="display:flex; gap:15px; align-items:center;">
@@ -702,7 +700,6 @@
                   </div>
                 </td>
               </tr>
-              <!-- SUB-HEADER DE GRUPO (UE) -->
               <tr class="meta-row">
                 <th colspan="11" style="background:#f4f6f8; color:#0b1f3a; padding:10px; border-bottom:2px solid #0b1f3a; border-top:none;">
                   <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -712,7 +709,6 @@
                   <div style="margin-top:4px; font-size:11px; display:flex; gap:15px; color:#444;">
                     <span>Doc: <b>${esc(g.doc)}</b></span>
                     <span>Tipo: <b>${esc(g.tipo)}</b></span>
-                    <!-- CORREGIDO: Fecha F8 -->
                     <span>Fecha F8: <b>${esc(g.maxFecha||"")}</b></span>
                   </div>
                   <div style="margin-top:6px; padding-top:6px; border-top:1px solid #ccc; font-size:10px; display:flex; justify-content:space-between; align-items:center;">
