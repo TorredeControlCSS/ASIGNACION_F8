@@ -567,46 +567,75 @@
     return name;
   }
 
-  // --- EXPORTACIÓN PDF (CORRECCIÓN FINAL: RESTA DE DÍA INFALIBLE) ---
+    // --- EXPORTACIÓN PDF (LÓGICA MANUAL DE TEXTO - SIN FECHAS DE NAVEGADOR) ---
   function exportPdfAsignacion(){
     const rows = _pickingRows();
     if(!rows.length){ alert("No hay datos visibles para exportar."); return; }
     
     const baseName = getDynamicFilename("Hoja_Asignacion");
     
-    // 1. DETECTAR FECHA DE ASIGNACIÓN REAL
-    // Buscamos la fecha más reciente en los datos filtrados
-    let fechaAsignacionObj = new Date(); // Por defecto hoy
-    let fechaEncontrada = false;
-
+    // 1. OBTENER LA FECHA DE ASIGNACIÓN (TEXTO PURO YYYY-MM-DD)
+    // El backend ahora nos manda "YYYY-MM-DD", así que confiamos en eso.
+    let fechaAsignacionStr = "";
+    
     if (rows.length > 0) {
-        // Filtramos solo fechas válidas en formato YYYY-MM-DD
-        const todasLasFechas = rows
+        // Buscamos la cadena YYYY-MM-DD más alta alfabéticamente
+        const fechas = rows
             .map(r => r.Fecha_Proceso || r.Fecha_Asignacion || "")
-            .filter(f => f.match(/^\d{4}-\d{2}-\d{2}$/));
-
-        if (todasLasFechas.length > 0) {
-            todasLasFechas.sort();
-            const ultimaFechaIso = todasLasFechas[todasLasFechas.length - 1]; // La mayor
-            // IMPORTANTE: Usamos T12:00:00 para evitar que la zona horaria nos cambie el día al parsear
-            fechaAsignacionObj = new Date(ultimaFechaIso + "T12:00:00");
-            fechaEncontrada = true;
+            .filter(f => /^\d{4}-\d{2}-\d{2}$/.test(f)) // Solo formato exacto
+            .sort();
+            
+        if (fechas.length > 0) {
+            fechaAsignacionStr = fechas[fechas.length - 1]; // La última
         }
     }
 
-    // 2. CALCULAR FECHA DE CORTE (RESTA DE 1 DÍA)
-    // Creamos una copia de la fecha para no modificar la original
-    const fechaCorteObj = new Date(fechaAsignacionObj);
-    
-    // RESTA INFALIBLE: Restamos 1 día al día del mes
-    fechaCorteObj.setDate(fechaCorteObj.getDate() - 1);
+    // 2. CALCULAR FECHA CORTE (MANIPULACIÓN DE CADENA)
+    let fechaCorteTexto = "";
+    let sufijoCorte = "";
 
-    const fechaGen = new Date().toLocaleString("es-PA");
-    
-    // Formateamos la fecha de corte (dd/mm/yyyy)
-    const fechaCorteTexto = fechaCorteObj.toLocaleDateString("es-PA") + " 11:59 PM";
-    
-    const sufijoCorte = fechaEncontrada ? " (Registro histórico)" : "";
+    if (fechaAsignacionStr) {
+        // Desglosamos "2026-01-17"
+        const partes = fechaAsignacionStr.split("-");
+        let y = parseInt(partes[0], 10);
+        let m = parseInt(partes[1], 10);
+        let d = parseInt(partes[2], 10);
+
+        // RESTAMOS 1 DÍA MATEMÁTICAMENTE
+        d = d - 1;
+
+        // Ajuste si el día llega a 0 (cambio de mes)
+        if (d === 0) {
+            m = m - 1;
+            if (m === 0) { // Si era Enero, pasamos a Diciembre del año anterior
+                m = 12;
+                y = y - 1;
+            }
+            // Días del mes anterior (simplificado pero funcional para reportes)
+            const diasEnMes = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+            // Ajuste bisiesto básico
+            if (m === 2 && ((y % 4 === 0 && y % 100 !== 0) || y % 400 === 0)) {
+                d = 29;
+            } else {
+                d = diasEnMes[m];
+            }
+        }
+
+        // Reconstruimos formato DD/MM/YYYY para el PDF
+        const dd = String(d).padStart(2, '0');
+        const mm = String(m).padStart(2, '0');
+        const yyyy = String(y);
+        
+        fechaCorteTexto = `${dd}/${mm}/${yyyy} 11:59 PM`;
+        sufijoCorte = " (Registro histórico)";
+    } else {
+        // Fallback si no hay fechas válidas: Usamos hoy del sistema
+        const hoy = new Date();
+        hoy.setDate(hoy.getDate() - 1);
+        fechaCorteTexto = hoy.toLocaleDateString("es-PA") + " 11:59 PM";
+    }
+
+    const fechaGen = new Date().toLocaleString("es-PA"); // Fecha de impresión
 
     const groups = new Map();
     for(const r of rows){
