@@ -307,7 +307,7 @@
 
   function renderAsignacion(rows){
     const tb = document.querySelector("#tbl_asignacion tbody");
-    tb.innerHTML = rows.slice(0, 2000).map(r => {
+    tb.innerHTML = rows.slice(0, 10000).map(r => {
       const b = fmtBultosTriple(r.Bultos_Ter||0, r.Bultos_Sec||0, r.Bultos_Prim||0);
       const lots = r.Lotes_Usados ? r.Lotes_Usados : "";
       
