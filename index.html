@@ -311,7 +311,6 @@
       const b = fmtBultosTriple(r.Bultos_Ter||0, r.Bultos_Sec||0, r.Bultos_Prim||0);
       const lots = r.Lotes_Usados ? r.Lotes_Usados : "";
       
-      // LECTURA DIRECTA DE DATOS DEL BACKEND V4.0 (Sin cálculos en frontend)
       const ldFecha = r.Ultimo_Despacho || "-";
       const ldQty = r.Qty_Ultimo ? fmt(r.Qty_Ultimo) : "-";
       const prom = r.Promedio_Hist ? fmt(r.Promedio_Hist) : "-";
@@ -384,7 +383,6 @@
       o.ues.add(String(r.Punto||""));
       o.cats.add(String(r.Categoria||""));
       
-      // LEER DIRECTAMENTE DEL ROW
       const fechaRow = r.Ultimo_Despacho;
       if(fechaRow && fechaRow !== "-"){
          const d = parseISODate(fechaRow);
@@ -416,14 +414,13 @@
   }
 
   function renderInvalidos(rows){
-    // FILTRO AJUSTADO PARA VER SI REDONDEO FUE CERO PERO ORIGINAL > 0
     const filtered = rows.filter(r => Number(r.Solicitado||0) > 0 && Number(r.Solicitado_redondeado||0) === 0);
     const out = filtered.slice().sort((a,b)=>{
       const da = parseISODate(a.Fecha); const db = parseISODate(b.Fecha);
       return (db - da);
     }).slice(0,2000).map(r => {
       const sol = Number(r.Solicitado||0);
-      const empT = r.Empaque_Ter ? Number(r.Empaque_Ter) : null; // Leer empaque real enviado por backend
+      const empT = r.Empaque_Ter ? Number(r.Empaque_Ter) : null;
       
       let motivo = "Solicitado redondeado = 0";
       if(empT && sol < empT) motivo = "Solicitado menor a empaque terciario";
@@ -460,7 +457,7 @@
     }
     const out = [...map.values()].map(o => ({
       Categoria:o.Categoria, Lineas:o.lineas, Solicitado_original:o.sol, Solicitado_redondeado:o.solr, Asignado:o.asg,
-      Fill_rate: o.sol > 0 ? (o.asg/o.sol) : 0 // FILL RATE CORREGIDO
+      Fill_rate: o.sol > 0 ? (o.asg/o.sol) : 0 
     })).sort((a,b)=> (a.Categoria||"").localeCompare(b.Categoria||""));
     const tb = document.querySelector("#tbl_fill_cat tbody");
     tb.innerHTML = out.map(r => `<tr>
@@ -508,10 +505,35 @@
     return LAST_FILTERED || []; 
   }
 
+  // --- HELPER: GENERADOR DE NOMBRE DE ARCHIVO DINÁMICO ---
+  function getDynamicFilename(prefix) {
+    const ue = document.getElementById('ue').value;
+    const cat = document.getElementById('cat').value;
+    const tipo = document.getElementById('tipo').value;
+    
+    let parts = [prefix];
+    if (ue && ue !== "ALL") parts.push(ue.replace(/[^a-zA-Z0-9\-_]/g, ""));
+    if (cat && cat !== "ALL") parts.push(cat.replace(/[^a-zA-Z0-9\-_]/g, ""));
+    if (tipo && tipo !== "ALL") parts.push(tipo.replace(/[^a-zA-Z0-9\-_]/g, ""));
+    
+    // Si no hay filtros, fecha
+    if (parts.length === 1) {
+        const today = new Date();
+        parts.push(`${today.getDate()}_${today.getMonth()+1}`);
+    }
+    
+    let name = parts.join("_");
+    if (name.length > 50) name = name.substring(0, 50); // Limitar largo
+    return name;
+  }
+
   // --- EXPORTACIÓN PDF (ACTUALIZADA CON AVISO EMPAQUE Y DATOS DIRECTOS) ---
   function exportPdfAsignacion(){
     const rows = _pickingRows();
     if(!rows.length){ alert("No hay datos visibles para exportar."); return; }
+    
+    // USAR NOMBRE DINÁMICO
+    const baseName = getDynamicFilename("Hoja_Asignacion");
     
     const groups = new Map();
     for(const r of rows){
@@ -559,7 +581,6 @@
       const b = fmtBultosTriple(r.Bultos_Ter||0, r.Bultos_Sec||0, r.Bultos_Prim||0);
       const lotes = r.Lotes_Usados ? String(r.Lotes_Usados) : "";
       
-      // LEER DATOS DIRECTOS
       const ldFecha = r.Ultimo_Despacho || "-";
       const ldQty = r.Qty_Ultimo ? fmt0(r.Qty_Ultimo) : "";
       const prom = r.Promedio_Hist ? fmt0(r.Promedio_Hist) : "";
@@ -586,12 +607,10 @@
       const totalItems = g.items.length;
       
       const escasezDetectada = g.totalRed > g.totalAsig;
-      // FILL RATE CORREGIDO EN PDF (SOBRE SOLICITADO ORIGINAL)
       const fillRate = g.totalSol > 0 ? ((g.totalAsig / g.totalSol) * 100).toFixed(1) + "%" : "0%";
       let escasezLabel = escasezDetectada ? "⚠️ SÍ (Fair Share aplicado)" : "✅ NO (Stock suficiente)";
       let escasezClass = escasezDetectada ? "color:#b00020;" : "color:#0a7a2f;";
 
-      // --- AVISO DE FALTA DE EMPAQUE ---
       if (g.items.some(i => i.Pack_Missing)) {
          escasezLabel += ` <span style="color:#b00020; font-size:10px; margin-left:8px;">(Nota: No existe empaque definido, se asume unidad mínima 1)</span>`;
       }
@@ -666,13 +685,11 @@
         </div>`;
     }).join("");
 
-    const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"/><title>Hoja de Asignación F8</title>
+    const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"/><title>${baseName}</title>
     <style>
       body{font-family:'Segoe UI', Arial, sans-serif; color:#111; margin:0;}
       
       table { width: 100%; border-collapse: collapse; margin-bottom: 0; }
-      
-      /* REPETICION AUTOMATICA DE HEADER EN CADA PAGINA */
       thead { display: table-header-group; } 
       tr { page-break-inside: auto; } 
       
@@ -695,6 +712,9 @@
     if(!rows.length){ alert("No hay datos visibles para exportar."); return; }
     if(typeof XLSX === "undefined"){ alert("No se pudo cargar XLSX."); return; }
     
+    // USAR NOMBRE DINÁMICO
+    const fileName = getDynamicFilename("Asignacion_F8") + ".xlsx";
+
     const groups = new Map();
     for(const r of rows){
       const ue = r.Punto || "SIN_UE"; const doc = r.N_Doc || "SIN_DOC"; const key = ue + "||" + doc;
@@ -713,7 +733,6 @@
       g.items.sort((a,b)=> String(a.Codigo||"").localeCompare(String(b.Codigo||"")));
       for(const r of g.items){
         const bults = `${fmtBultosPart(r.Bultos_Ter||0)}/${fmtBultosPart(r.Bultos_Sec||0)}/${fmtBultosPart(r.Bultos_Prim||0)}`;
-        // LECTURA DIRECTA
         const ldFecha = r.Ultimo_Despacho || "";
         const ldQty = r.Qty_Ultimo ? Number(r.Qty_Ultimo) : "";
         const prom = r.Promedio_Hist ? Number(r.Promedio_Hist) : "";
@@ -731,7 +750,7 @@
     ws["!freeze"] = { xSplit: 0, ySplit: 4 };
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Asignacion_F8");
-    XLSX.writeFile(wb, `Hoja_Asignacion_F8_${corte || "corte"}.xlsx`);
+    XLSX.writeFile(wb, fileName);
   }
 
   // --- LÓGICA DE CARGA DE DATOS ---
@@ -775,7 +794,6 @@
       if (!newData || newData.length === 0) alert("No se encontraron datos.");
       else {
           DATA = newData;
-          // No hace falta buildUeAliasMaps en V4.0 porque el backend ya lo trae limpio
           populateFilters(); applyFilters();    
       }
     } catch (e) { console.error(e); alert("Error de conexión."); } 
@@ -784,7 +802,6 @@
 
   async function init(){
     tickDateTime(); setInterval(tickDateTime, 60000);
-    // Carga inicial
     fetchAndLoad('allocation');
     
     document.getElementById('btnLoadDaily').addEventListener('click', () => fetchAndLoad('allocation'));
@@ -815,7 +832,6 @@
       try{
         if (byName['allocation.json']) DATA = await readJson(byName['allocation.json']);
         if (byName['params.json']) PARAMS = await readJson(byName['params.json']);
-        // LAST ya no se usa, viene integrado
         populateFilters(); applyFilters(); alert('Datos locales cargados.');
       }catch(e){ console.error(e); alert('No se pudo cargar uno de los JSON.'); }finally{ fileLoad.value = ''; }
     });
