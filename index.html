@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <link rel="icon" href="./favicon.ico?v=1"/>
   <link rel="shortcut icon" href="./favicon.ico?v=1"/>
-  <title>Motor de Asignación de Requisiciones F8 (Corte diario)</title>
+  <title>SIGUELO - Asignación F8 (Corte diario)</title>
   <style>
     body{font-family:Arial, sans-serif; margin:0; background:#fff;}
     .topbar{
@@ -66,7 +66,7 @@
   <div class="topbar">
     <img src="icons/icon-512.png" alt="Logo" width="40" height="40" onerror="this.style.display='none'">
     <div class="title">
-      <div class="title-main">Motor de Asignación de Requisiciones F8 — CEDIS PANAMÁ CSS </div>
+      <div class="title-main">SIGUELO — Motor de Asignación de Requisiciones F8</div>
       <div class="title-sub">
         <span id="currentDateTime">Cargando fecha...</span>
         <span style="opacity:.8;margin-left:8px;"> | C1 Corte diario · v5.2 Full</span>
@@ -98,15 +98,27 @@
         <input id="doc" class="input" placeholder="Ej: CDCH-2025-1-417" list="docList" autocomplete="off"/>
         <datalist id="docList"></datalist>
 
-        <!-- FILTRO DE FECHAS (ASIGNACIÓN) -->
-        <div class="row2" style="display:flex; gap:10px; margin-bottom:10px;">
+        <!-- 1. FILTRO ORIGINAL: FECHA DEL DOCUMENTO F8 -->
+        <div class="row2" style="display:flex; gap:10px; margin-top:5px;">
           <div style="flex:1;">
-            <label>Fecha Asignación (Desde)</label>
+            <label>Fecha Doc F8 (Desde)</label>
             <input id="dateFrom" class="input" type="date"/>
           </div>
           <div style="flex:1;">
-            <label>Fecha Asignación (Hasta)</label>
+            <label>Fecha Doc F8 (Hasta)</label>
             <input id="dateTo" class="input" type="date"/>
+          </div>
+        </div>
+
+        <!-- 2. NUEVO FILTRO: FECHA DE EJECUCIÓN/ASIGNACIÓN -->
+        <div class="row2" style="display:flex; gap:10px; margin-top:5px; margin-bottom:10px; padding-top:5px; border-top:1px dashed #eee;">
+          <div style="flex:1;">
+            <label style="color:#0a7a2f; font-weight:bold;">Fecha Proceso/Asig (Desde)</label>
+            <input id="allocDateFrom" class="input" type="date"/>
+          </div>
+          <div style="flex:1;">
+            <label style="color:#0a7a2f; font-weight:bold;">Fecha Proceso/Asig (Hasta)</label>
+            <input id="allocDateTo" class="input" type="date"/>
           </div>
         </div>
 
@@ -179,7 +191,7 @@
             <table id="tbl_asignacion">
               <thead>
                 <tr>
-                  <th>Fecha</th><th>Doc</th><th>Tipo</th><th>UE</th><th>Categoría</th>
+                  <th>Fecha F8</th><th>Doc</th><th>Tipo</th><th>UE</th><th>Categoría</th>
                   <th>Código</th><th>Suministro</th>
                   <th class="right">Solicitado</th><th class="right">Solic. red.</th>
                   <th class="right">Asignado</th><th class="right">Pendiente</th>
@@ -266,29 +278,38 @@
     const tipo = document.getElementById('tipo').value;
     const estado = document.getElementById('estado').value;
     
-    // FILTROS DE FECHA (ASIGNACIÓN)
+    // FILTROS 1: FECHA F8 (Documento)
     const dateFrom = document.getElementById('dateFrom').value;
     const dateTo = document.getElementById('dateTo').value;
+
+    // FILTROS 2: FECHA ASIGNACION (Proceso)
+    const allocFrom = document.getElementById('allocDateFrom').value;
+    const allocTo = document.getElementById('allocDateTo').value;
 
     let rows = DATA;
     const docQ = (document.getElementById('doc')?.value || '').trim().toLowerCase();
     
     if (docQ) rows = rows.filter(r => String(r.N_Doc || '').toLowerCase().includes(docQ));
     
-    // LÓGICA INTELIGENTE: Filtra por Fecha_Proceso (Histórico) o Fecha_Asignacion (fallback)
-    if (dateFrom || dateTo) {
+    // APLICAR FILTRO FECHA F8
+    if (dateFrom) rows = rows.filter(r => String(r.Fecha || '') >= dateFrom);
+    if (dateTo) rows = rows.filter(r => String(r.Fecha || '') <= dateTo);
+
+    // APLICAR FILTRO FECHA ASIGNACION (HISTÓRICO)
+    if (allocFrom || allocTo) {
         rows = rows.filter(r => {
-            // Buscamos la fecha de asignación donde sea que esté
-            let fechaRow = r.Fecha_Proceso || r.Fecha_Asignacion || "";
-            // Si no hay fecha de proceso explícita, usamos la fecha general del registro
-            if(!fechaRow) fechaRow = r.Fecha || "";
+            // Buscamos la fecha de proceso (Backend Histórico) o fallback a la fecha normal
+            let fechaAlloc = r.Fecha_Proceso || r.Fecha_Asignacion || "";
+            // Si es la vista diaria, puede que no tenga Fecha_Proceso aún, usamos hoy implícito o nada
+            // Pero si el usuario filtra por fecha de asignación en "Diario", asumimos que busca la fecha de hoy.
+            if (!fechaAlloc && r.Fecha_Asignacion) fechaAlloc = r.Fecha_Asignacion;
+
+            if(!fechaAlloc) return true; // Si no hay fecha de proceso, lo dejamos pasar si estamos en vista simple
             
-            // Normalizamos para comparar texto YYYY-MM-DD
-            const dStr = String(fechaRow).split("T")[0];
-            
+            const dStr = String(fechaAlloc).split("T")[0];
             let pass = true;
-            if (dateFrom && dStr < dateFrom) pass = false;
-            if (dateTo && dStr > dateTo) pass = false;
+            if (allocFrom && dStr < allocFrom) pass = false;
+            if (allocTo && dStr > allocTo) pass = false;
             return pass;
         });
     }
@@ -305,10 +326,9 @@
   }
 
   function renderKPIs(rows){
-    const req = rows.reduce((a,r)=>a + Number(r.Solicitado||0), 0); // Original
+    const req = rows.reduce((a,r)=>a + Number(r.Solicitado||0), 0);
     const reqR = rows.reduce((a,r)=>a + Number(r.Solicitado_redondeado||0), 0);
     const asg = rows.reduce((a,r)=>a + Number(r.Asignado||0), 0);
-    
     const fill = req > 0 ? (asg/req)*100 : 0;
     
     document.getElementById('k_lines').textContent = fmt(rows.length);
@@ -328,7 +348,7 @@
 
   function renderAsignacion(rows){
     const tb = document.querySelector("#tbl_asignacion tbody");
-    // AUMENTADO LÍMITE A 10,000 PARA QUE NO SE OCULTEN DATOS
+    // LÍMITE AUMENTADO
     tb.innerHTML = rows.slice(0, 10000).map(r => {
       const b = fmtBultosTriple(r.Bultos_Ter||0, r.Bultos_Sec||0, r.Bultos_Prim||0);
       const lots = r.Lotes_Usados ? r.Lotes_Usados : "";
@@ -547,7 +567,7 @@
     return name;
   }
 
-  // --- EXPORTACIÓN PDF (FECHA REAL DE LOS DATOS) ---
+  // --- EXPORTACIÓN PDF (FECHA REAL) ---
   function exportPdfAsignacion(){
     const rows = _pickingRows();
     if(!rows.length){ alert("No hay datos visibles para exportar."); return; }
@@ -557,7 +577,7 @@
     // 1. OBTENER FECHA REAL DE LOS DATOS VISIBLES
     let maxFechaAsignacion = "";
     if (rows.length > 0) {
-        // Buscamos la fecha más reciente en los datos filtrados
+        // Buscamos la fecha más reciente de proceso en los datos filtrados
         const sortedDates = rows.map(r => r.Fecha_Proceso || r.Fecha_Asignacion || "").sort();
         const ultimaFecha = sortedDates[sortedDates.length - 1];
         if(ultimaFecha && ultimaFecha.length > 5) maxFechaAsignacion = ultimaFecha.split("T")[0];
@@ -755,7 +775,7 @@
     aoa.push(["HOJA DE ASIGNACIÓN F8 — CORTE DIARIO"]);
     aoa.push([`Generado: ${now}`, `Corte: ${corte}`, "Reglas: Fair Share | Prioridad: Mensual > Fecha > UE"]);
     aoa.push([]);
-    const header = ["UE", "Documento", "Tipo", "C��digo", "Suministro", "Solicitado", "Solic. red.", "Asignado", "Pendiente", "Bultos T/S/P", "Lotes usados", "Último despacho (real)", "Qty último", "Promedio Hist."];
+    const header = ["UE", "Documento", "Tipo", "Código", "Suministro", "Solicitado", "Solic. red.", "Asignado", "Pendiente", "Bultos T/S/P", "Lotes usados", "Último despacho (real)", "Qty último", "Promedio Hist."];
     aoa.push(header);
     for(const g of Array.from(groups.values()).sort((a,b)=> (a.ue+a.doc).localeCompare(b.ue+b.doc))){
       g.items.sort((a,b)=> String(a.Codigo||"").localeCompare(String(b.Codigo||"")));
@@ -838,6 +858,7 @@
     document.getElementById('btnApply').addEventListener('click', applyFilters);
     document.getElementById('btnReset').addEventListener('click', () => {
         document.getElementById('q').value = ""; document.getElementById('doc').value = ""; document.getElementById('dateFrom').value = ""; document.getElementById('dateTo').value = ""; document.getElementById('cat').value = "ALL"; document.getElementById('ue').value = "ALL"; document.getElementById('tipo').value = "ALL"; document.getElementById('estado').value = "ALL";
+        document.getElementById('allocDateFrom').value = ""; document.getElementById('allocDateTo').value = "";
         applyFilters();
     });
     
