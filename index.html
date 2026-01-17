@@ -567,38 +567,53 @@
     return name;
   }
 
-  // --- EXPORTACIÓN PDF (CORREGIDA: TEXTOS COMPLETOS Y FECHA CORTE) ---
+  // --- EXPORTACIÓN PDF (FINAL: TEXTOS CORRECTOS Y FECHA VALIDADA) ---
   function exportPdfAsignacion(){
     const rows = _pickingRows();
     if(!rows.length){ alert("No hay datos visibles para exportar."); return; }
     
     const baseName = getDynamicFilename("Hoja_Asignacion");
     
-    // 1. DETECTAR FECHA DE ASIGNACIÓN REAL
-    let fechaAsignacionObj = new Date(); 
+    // 1. DETECTAR FECHA DE ASIGNACIÓN REAL (Validando formato YYYY-MM-DD del backend)
+    let fechaAsignacionObj = new Date(); // Fallback: Hoy
+    let fechaEncontrada = false;
+
     if (rows.length > 0) {
-        const sortedDates = rows.map(r => r.Fecha_Proceso || r.Fecha_Asignacion || "").sort();
-        const ultimaFechaStr = sortedDates[sortedDates.length - 1];
-        if(ultimaFechaStr && ultimaFechaStr.length > 5) {
-            // "T12:00:00" para evitar desfases de zona horaria
-            fechaAsignacionObj = new Date(ultimaFechaStr.split("T")[0] + "T12:00:00");
+        // El backend V5.2 ahora envía fechas en formato ISO YYYY-MM-DD gracias al fix.
+        // Buscamos la fecha más reciente (alfabéticamente YYYY-MM-DD funciona perfecto).
+        const todasLasFechas = rows
+            .map(r => r.Fecha_Proceso || r.Fecha_Asignacion || "") // Prioridad Histórico
+            .filter(f => f.match(/^\d{4}-\d{2}-\d{2}$/)); // Solo formato ISO válido
+
+        if (todasLasFechas.length > 0) {
+            todasLasFechas.sort();
+            const ultimaFechaIso = todasLasFechas[todasLasFechas.length - 1];
+            // "T12:00:00" evita problemas de zona horaria (UTC vs Local)
+            fechaAsignacionObj = new Date(ultimaFechaIso + "T12:00:00");
+            fechaEncontrada = true;
         }
     }
 
-    // 2. CALCULAR FECHA DE CORTE (DÍA ANTERIOR A LA ASIGNACIÓN)
+    // 2. CALCULAR FECHA DE CORTE
+    // Regla: Día anterior a la fecha de asignación detectada.
     const fechaCorteObj = new Date(fechaAsignacionObj);
     fechaCorteObj.setDate(fechaCorteObj.getDate() - 1); 
 
     const fechaGen = new Date().toLocaleString("es-PA");
+    
+    // Formato visual para el PDF (DD/MM/YYYY o según local)
     const fechaCorteTexto = fechaCorteObj.toLocaleDateString("es-PA") + " 11:59 PM";
     
+    // Sufijo para aclarar si es dato histórico real o fecha del sistema
+    const sufijoCorte = fechaEncontrada ? " (Registro histórico)" : "";
+
     const groups = new Map();
     for(const r of rows){
       const ue = r.Punto || "SIN_UE";
       const doc = r.N_Doc || "SIN_DOC";
       const key = ue + "||" + doc;
       const pr = Number.isFinite(+r.Prioridad) ? +r.Prioridad : 999;
-      const f  = (r.Fecha||"");
+      const f  = (r.Fecha||""); // Esta es la Fecha F8
       
       if(!groups.has(key)){ 
         groups.set(key, {
@@ -615,6 +630,7 @@
       g.totalAsig += Number(r.Asignado||0);
       g.totalPend += Number(r.Pendiente||0);
 
+      // Buscamos la fecha F8 más reciente dentro del grupo para el encabezado del grupo
       if(String(f) > String(g.maxFecha)) g.maxFecha = f;
       if(pr < g.prioridad) g.prioridad = pr;
     }
@@ -659,11 +675,9 @@
       const escasezDetectada = g.totalRed > g.totalAsig;
       const fillRate = g.totalSol > 0 ? ((g.totalAsig / g.totalSol) * 100).toFixed(1) + "%" : "0%";
       
-      // RESTAURADO: Textos descriptivos completos
       let escasezLabel = escasezDetectada ? "⚠️ SÍ (Fair Share aplicado)" : "✅ NO (Stock suficiente)";
       let escasezClass = escasezDetectada ? "color:#b00020;" : "color:#0a7a2f;";
 
-      // RESTAURADO: Nota de falta de empaque
       if (g.items.some(i => i.Pack_Missing)) {
          escasezLabel += ` <span style="color:#b00020; font-size:10px; margin-left:8px;">(Nota: No existe empaque definido, se asume unidad mínima 1)</span>`;
       }
@@ -672,14 +686,14 @@
         <div class="section">
           <table>
             <thead>
-              <!-- HEADER RESTAURADO COMPLETO -->
+              <!-- HEADER PRINCIPAL -->
               <tr>
                 <td colspan="11" style="background:#fff; border-bottom:2px solid #0b1f3a; padding: 10px 0;">
                   <div style="display:flex; gap:15px; align-items:center;">
                     <img src="./icons/icon-512.png" style="width:50px; height:50px; object-fit:contain;" alt="logo"/>
                     <div style="flex:1;">
                       <div style="font-size:18px; font-weight:700; color:#0b1f3a;">HOJA DE ASIGNACIÓN F8 — CORTE DIARIO</div>
-                      <div style="font-size:11px; color:#444; margin-top:4px;">Generado: ${esc(fechaGen)} | Corte: ${esc(fechaCorteTexto)}</div>
+                      <div style="font-size:11px; color:#444; margin-top:4px;">Generado: ${esc(fechaGen)} | Corte: ${esc(fechaCorteTexto)}${esc(sufijoCorte)}</div>
                       <div style="font-size:10px; color:#666; margin-top:2px; font-style:italic;">
                          Reglas de Asignación: <b>Fair Share (Reparto Proporcional en Escasez)</b>, FEFO, Vto ≥ 30 días.
                          <br>Prioridad por Tipo de Unidad Ejecutora: <b>CEDIS > HOSPITAL > POLICLINICA > ULAPS > CAPPS</b>
@@ -688,6 +702,7 @@
                   </div>
                 </td>
               </tr>
+              <!-- SUB-HEADER DE GRUPO (UE) -->
               <tr class="meta-row">
                 <th colspan="11" style="background:#f4f6f8; color:#0b1f3a; padding:10px; border-bottom:2px solid #0b1f3a; border-top:none;">
                   <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -697,6 +712,7 @@
                   <div style="margin-top:4px; font-size:11px; display:flex; gap:15px; color:#444;">
                     <span>Doc: <b>${esc(g.doc)}</b></span>
                     <span>Tipo: <b>${esc(g.tipo)}</b></span>
+                    <!-- CORREGIDO: Fecha F8 -->
                     <span>Fecha F8: <b>${esc(g.maxFecha||"")}</b></span>
                   </div>
                   <div style="margin-top:6px; padding-top:6px; border-top:1px solid #ccc; font-size:10px; display:flex; justify-content:space-between; align-items:center;">
