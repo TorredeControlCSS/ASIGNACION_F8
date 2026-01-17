@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <link rel="icon" href="./favicon.ico?v=1"/>
   <link rel="shortcut icon" href="./favicon.ico?v=1"/>
-  <title>SIGUELO - Asignación F8 (Corte diario)</title>
+  <title>Motor de Asignación de Requisiciones F8 (Corte diario)</title>
   <style>
     body{font-family:Arial, sans-serif; margin:0; background:#fff;}
     .topbar{
@@ -66,10 +66,10 @@
   <div class="topbar">
     <img src="icons/icon-512.png" alt="Logo" width="40" height="40" onerror="this.style.display='none'">
     <div class="title">
-      <div class="title-main">SIGUELO — Motor de Asignación de Requisiciones F8</div>
+      <div class="title-main">Motor de Asignación de Requisiciones F8 — CEDIS PANAMÁ CSS </div>
       <div class="title-sub">
         <span id="currentDateTime">Cargando fecha...</span>
-        <span style="opacity:.8;margin-left:8px;"> | C1 Corte diario · v4.0 Full</span>
+        <span style="opacity:.8;margin-left:8px;"> | C1 Corte diario · v5.2 Full</span>
       </div>
     </div>
     <div class="top-actions">
@@ -98,13 +98,14 @@
         <input id="doc" class="input" placeholder="Ej: CDCH-2025-1-417" list="docList" autocomplete="off"/>
         <datalist id="docList"></datalist>
 
-        <div class="row2">
-          <div>
-            <label>Fecha (desde)</label>
+        <!-- FILTRO DE FECHAS (ASIGNACIÓN) -->
+        <div class="row2" style="display:flex; gap:10px; margin-bottom:10px;">
+          <div style="flex:1;">
+            <label>Fecha Asignación (Desde)</label>
             <input id="dateFrom" class="input" type="date"/>
           </div>
-          <div>
-            <label>Fecha (hasta)</label>
+          <div style="flex:1;">
+            <label>Fecha Asignación (Hasta)</label>
             <input id="dateTo" class="input" type="date"/>
           </div>
         </div>
@@ -128,7 +129,6 @@
           <button id="btnReset">Reset</button>
         </div>
         
-        <!-- BOTONES REORGANIZADOS: PDF PRIMERO -->
         <div class="row" style="margin-top:10px;">
           <button id="btnExportPdf" class="btn-main">📄 Exportar PDF (Hoja de Asignación)</button>
         </div>
@@ -265,18 +265,40 @@
     const ue = document.getElementById('ue').value;
     const tipo = document.getElementById('tipo').value;
     const estado = document.getElementById('estado').value;
+    
+    // FILTROS DE FECHA (ASIGNACIÓN)
+    const dateFrom = document.getElementById('dateFrom').value;
+    const dateTo = document.getElementById('dateTo').value;
+
     let rows = DATA;
     const docQ = (document.getElementById('doc')?.value || '').trim().toLowerCase();
-    const dateFrom = document.getElementById('dateFrom')?.value || '';
-    const dateTo = document.getElementById('dateTo')?.value || '';
+    
     if (docQ) rows = rows.filter(r => String(r.N_Doc || '').toLowerCase().includes(docQ));
-    if (dateFrom) rows = rows.filter(r => String(r.Fecha || '') >= dateFrom);
-    if (dateTo) rows = rows.filter(r => String(r.Fecha || '') <= dateTo);
+    
+    // LÓGICA INTELIGENTE: Filtra por Fecha_Proceso (Histórico) o Fecha_Asignacion (fallback)
+    if (dateFrom || dateTo) {
+        rows = rows.filter(r => {
+            // Buscamos la fecha de asignación donde sea que esté
+            let fechaRow = r.Fecha_Proceso || r.Fecha_Asignacion || "";
+            // Si no hay fecha de proceso explícita, usamos la fecha general del registro
+            if(!fechaRow) fechaRow = r.Fecha || "";
+            
+            // Normalizamos para comparar texto YYYY-MM-DD
+            const dStr = String(fechaRow).split("T")[0];
+            
+            let pass = true;
+            if (dateFrom && dStr < dateFrom) pass = false;
+            if (dateTo && dStr > dateTo) pass = false;
+            return pass;
+        });
+    }
+
     if (q) rows = rows.filter(r => String(r.Codigo).includes(q) || String(r.Suministro || "").toLowerCase().includes(q));
     if (cat !== "ALL") rows = rows.filter(r => r.Categoria === cat);
     if (ue !== "ALL") rows = rows.filter(r => r.Punto === ue);
     if (tipo !== "ALL") rows = rows.filter(r => r.Tipo === tipo);
     if (estado !== "ALL") rows = rows.filter(r => coverage(r) === estado);
+    
     LAST_FILTERED = rows;
     renderKPIs(rows);
     renderActiveTab(rows);
@@ -287,7 +309,6 @@
     const reqR = rows.reduce((a,r)=>a + Number(r.Solicitado_redondeado||0), 0);
     const asg = rows.reduce((a,r)=>a + Number(r.Asignado||0), 0);
     
-    // CORRECCIÓN FILL RATE: Usar Solicitado Original como denominador
     const fill = req > 0 ? (asg/req)*100 : 0;
     
     document.getElementById('k_lines').textContent = fmt(rows.length);
@@ -307,6 +328,7 @@
 
   function renderAsignacion(rows){
     const tb = document.querySelector("#tbl_asignacion tbody");
+    // AUMENTADO LÍMITE A 10,000 PARA QUE NO SE OCULTEN DATOS
     tb.innerHTML = rows.slice(0, 10000).map(r => {
       const b = fmtBultosTriple(r.Bultos_Ter||0, r.Bultos_Sec||0, r.Bultos_Prim||0);
       const lots = r.Lotes_Usados ? r.Lotes_Usados : "";
@@ -505,7 +527,6 @@
     return LAST_FILTERED || []; 
   }
 
-  // --- HELPER: GENERADOR DE NOMBRE DE ARCHIVO DINÁMICO ---
   function getDynamicFilename(prefix) {
     const ue = document.getElementById('ue').value;
     const cat = document.getElementById('cat').value;
@@ -516,24 +537,44 @@
     if (cat && cat !== "ALL") parts.push(cat.replace(/[^a-zA-Z0-9\-_]/g, ""));
     if (tipo && tipo !== "ALL") parts.push(tipo.replace(/[^a-zA-Z0-9\-_]/g, ""));
     
-    // Si no hay filtros, fecha
     if (parts.length === 1) {
         const today = new Date();
         parts.push(`${today.getDate()}_${today.getMonth()+1}`);
     }
     
     let name = parts.join("_");
-    if (name.length > 50) name = name.substring(0, 50); // Limitar largo
+    if (name.length > 50) name = name.substring(0, 50); 
     return name;
   }
 
-  // --- EXPORTACIÓN PDF (ACTUALIZADA CON AVISO EMPAQUE Y DATOS DIRECTOS) ---
+  // --- EXPORTACIÓN PDF (FECHA REAL DE LOS DATOS) ---
   function exportPdfAsignacion(){
     const rows = _pickingRows();
     if(!rows.length){ alert("No hay datos visibles para exportar."); return; }
     
-    // USAR NOMBRE DINÁMICO
     const baseName = getDynamicFilename("Hoja_Asignacion");
+    
+    // 1. OBTENER FECHA REAL DE LOS DATOS VISIBLES
+    let maxFechaAsignacion = "";
+    if (rows.length > 0) {
+        // Buscamos la fecha más reciente en los datos filtrados
+        const sortedDates = rows.map(r => r.Fecha_Proceso || r.Fecha_Asignacion || "").sort();
+        const ultimaFecha = sortedDates[sortedDates.length - 1];
+        if(ultimaFecha && ultimaFecha.length > 5) maxFechaAsignacion = ultimaFecha.split("T")[0];
+    }
+
+    const now = new Date();
+    const fechaGen = now.toLocaleString("es-PA");
+    
+    // Si encontramos fecha en los datos, usamos esa. Si no, fallback a ayer.
+    let corteTexto = "";
+    if (maxFechaAsignacion) {
+        corteTexto = `${maxFechaAsignacion} (Registro histórico)`;
+    } else {
+        const ayer = new Date(now);
+        ayer.setDate(ayer.getDate() - 1);
+        corteTexto = ayer.toLocaleDateString("es-PA") + " 11:59 PM";
+    }
     
     const groups = new Map();
     for(const r of rows){
@@ -568,12 +609,6 @@
       return String(a.doc).localeCompare(String(b.doc));
     });
 
-    const now = new Date();
-    const ayer = new Date(now);
-    ayer.setDate(ayer.getDate() - 1);
-    const fechaGen = now.toLocaleString("es-PA");
-    const corte = ayer.toLocaleDateString("es-PA") + " 11:59 PM";
-    
     const esc = (s) => (s===null||s===undefined) ? "" : String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
     const fmt0 = (n) => { const x = Number(n); if(!Number.isFinite(x)) return ""; return x.toLocaleString("en-US", {maximumFractionDigits: 0}); };
 
@@ -608,11 +643,11 @@
       
       const escasezDetectada = g.totalRed > g.totalAsig;
       const fillRate = g.totalSol > 0 ? ((g.totalAsig / g.totalSol) * 100).toFixed(1) + "%" : "0%";
-      let escasezLabel = escasezDetectada ? "⚠️ SÍ (Fair Share aplicado)" : "✅ NO (Stock suficiente)";
+      let escasezLabel = escasezDetectada ? "⚠️ SÍ (Fair Share)" : "✅ NO";
       let escasezClass = escasezDetectada ? "color:#b00020;" : "color:#0a7a2f;";
 
       if (g.items.some(i => i.Pack_Missing)) {
-         escasezLabel += ` <span style="color:#b00020; font-size:10px; margin-left:8px;">(Nota: No existe empaque definido, se asume unidad mínima 1)</span>`;
+         escasezLabel += ` <span style="color:#b00020; font-size:10px;">(Sin Empaque)</span>`;
       }
 
       return `
@@ -625,10 +660,9 @@
                     <img src="./icons/icon-512.png" style="width:50px; height:50px; object-fit:contain;" alt="logo"/>
                     <div style="flex:1;">
                       <div style="font-size:18px; font-weight:700; color:#0b1f3a;">HOJA DE ASIGNACIÓN F8 — CORTE DIARIO</div>
-                      <div style="font-size:11px; color:#444; margin-top:4px;">Generado: ${esc(fechaGen)} | Corte: ${esc(corte)}</div>
+                      <div style="font-size:11px; color:#444; margin-top:4px;">Generado: ${esc(fechaGen)} | Corte: ${esc(corteTexto)}</div>
                       <div style="font-size:10px; color:#666; margin-top:2px; font-style:italic;">
-                         Reglas de Asignación: <b>Fair Share (Reparto Proporcional en Escasez)</b>, FEFO, Vto ≥ 30 días.
-                         <br>Prioridad por Tipo de Unidad Ejecutora: <b>CEDIS > HOSPITAL > POLICLINICA > ULAPS > CAPPS</b>
+                         Prioridad: <b>CEDIS > HOSPITAL > POLICLINICA > ULAPS > CAPPS</b>
                       </div>
                     </div>
                   </div>
@@ -643,16 +677,14 @@
                   <div style="margin-top:4px; font-size:11px; display:flex; gap:15px; color:#444;">
                     <span>Doc: <b>${esc(g.doc)}</b></span>
                     <span>Tipo: <b>${esc(g.tipo)}</b></span>
-                    <span>Fecha F8: <b>${esc(g.maxFecha||"")}</b></span>
+                    <span>F8: <b>${esc(g.maxFecha||"")}</b></span>
                   </div>
                   <div style="margin-top:6px; padding-top:6px; border-top:1px solid #ccc; font-size:10px; display:flex; justify-content:space-between; align-items:center;">
                     <div style="font-weight:bold; ${escasezClass}">Escasez: ${escasezLabel}</div>
                     <div style="display:flex; gap:12px; background:#fff; padding:3px 8px; border-radius:4px; border:1px solid #ddd;">
-                       <span>Solic.: <b>${fmt0(g.totalSol)}</b></span>
-                       <span>Red.: <b>${fmt0(g.totalRed)}</b></span>
-                       <span style="color:#0052cc;">Asig.: <b>${fmt0(g.totalAsig)}</b></span>
-                       <span>Pend.: <b>${fmt0(g.totalPend)}</b></span>
-                       <span>Fill Rate: <b>${fillRate}</b></span>
+                       <span>Sol: <b>${fmt0(g.totalSol)}</b></span>
+                       <span style="color:#0052cc;">Asig: <b>${fmt0(g.totalAsig)}</b></span>
+                       <span>Fill: <b>${fillRate}</b></span>
                     </div>
                   </div>
                 </th>
@@ -660,15 +692,15 @@
               <tr class="col-header">
                 <th style="width:70px;">Código</th>
                 <th>Suministro</th>
-                <th style="width:50px;" class="num">Solic.</th>
-                <th style="width:50px;" class="num">Sol.red</th>
-                <th style="width:50px;" class="num">Asig.</th>
-                <th style="width:50px;" class="num">Pend.</th>
-                <th style="width:65px;" class="center">Bultos</th>
-                <th style="width:130px;">Lotes</th>
-                <th style="width:65px;">Últ.desp</th>
-                <th style="width:40px;" class="num">Qty</th>
-                <th style="width:40px;" class="num">Prom</th>
+                <th style="width:40px;" class="num">Sol</th>
+                <th style="width:40px;" class="num">S.Red</th>
+                <th style="width:40px;" class="num">Asig</th>
+                <th style="width:40px;" class="num">Pend</th>
+                <th style="width:50px;" class="center">Bultos</th>
+                <th style="width:110px;">Lotes</th>
+                <th style="width:60px;">Últ.Desp</th>
+                <th style="width:35px;" class="num">Qty</th>
+                <th style="width:35px;" class="num">Prom</th>
               </tr>
             </thead>
             <tbody>${rowsHtml}</tbody>
@@ -688,14 +720,11 @@
     const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"/><title>${baseName}</title>
     <style>
       body{font-family:'Segoe UI', Arial, sans-serif; color:#111; margin:0;}
-      
       table { width: 100%; border-collapse: collapse; margin-bottom: 0; }
       thead { display: table-header-group; } 
       tr { page-break-inside: auto; } 
-      
       th, td { border: 1px solid #ccc; padding: 4px 5px; font-size: 10px; vertical-align: top; }
       thead tr:first-child td { border: none; }
-
       .col-header th { background: #f3f5f8; font-weight: bold; color: #333; text-transform: uppercase; }
       .num { text-align: right; } .center { text-align: center; }
       .section { margin-bottom: 20px; page-break-after: always; } .section:last-child { page-break-after: auto; }
@@ -712,7 +741,6 @@
     if(!rows.length){ alert("No hay datos visibles para exportar."); return; }
     if(typeof XLSX === "undefined"){ alert("No se pudo cargar XLSX."); return; }
     
-    // USAR NOMBRE DINÁMICO
     const fileName = getDynamicFilename("Asignacion_F8") + ".xlsx";
 
     const groups = new Map();
@@ -727,7 +755,7 @@
     aoa.push(["HOJA DE ASIGNACIÓN F8 — CORTE DIARIO"]);
     aoa.push([`Generado: ${now}`, `Corte: ${corte}`, "Reglas: Fair Share | Prioridad: Mensual > Fecha > UE"]);
     aoa.push([]);
-    const header = ["UE", "Documento", "Tipo", "Código", "Suministro", "Solicitado", "Solic. red.", "Asignado", "Pendiente", "Bultos T/S/P", "Lotes usados", "Último despacho (real)", "Qty último", "Promedio Hist."];
+    const header = ["UE", "Documento", "Tipo", "C��digo", "Suministro", "Solicitado", "Solic. red.", "Asignado", "Pendiente", "Bultos T/S/P", "Lotes usados", "Último despacho (real)", "Qty último", "Promedio Hist."];
     aoa.push(header);
     for(const g of Array.from(groups.values()).sort((a,b)=> (a.ue+a.doc).localeCompare(b.ue+b.doc))){
       g.items.sort((a,b)=> String(a.Codigo||"").localeCompare(String(b.Codigo||"")));
