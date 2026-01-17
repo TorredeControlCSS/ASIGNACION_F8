@@ -567,34 +567,30 @@
     return name;
   }
 
-  // --- EXPORTACIÓN PDF (FECHA REAL) ---
+  // --- EXPORTACIÓN PDF (CORREGIDA: TEXTOS COMPLETOS Y FECHA CORTE) ---
   function exportPdfAsignacion(){
     const rows = _pickingRows();
     if(!rows.length){ alert("No hay datos visibles para exportar."); return; }
     
     const baseName = getDynamicFilename("Hoja_Asignacion");
     
-    // 1. OBTENER FECHA REAL DE LOS DATOS VISIBLES
-    let maxFechaAsignacion = "";
+    // 1. DETECTAR FECHA DE ASIGNACIÓN REAL
+    let fechaAsignacionObj = new Date(); 
     if (rows.length > 0) {
-        // Buscamos la fecha más reciente de proceso en los datos filtrados
         const sortedDates = rows.map(r => r.Fecha_Proceso || r.Fecha_Asignacion || "").sort();
-        const ultimaFecha = sortedDates[sortedDates.length - 1];
-        if(ultimaFecha && ultimaFecha.length > 5) maxFechaAsignacion = ultimaFecha.split("T")[0];
+        const ultimaFechaStr = sortedDates[sortedDates.length - 1];
+        if(ultimaFechaStr && ultimaFechaStr.length > 5) {
+            // "T12:00:00" para evitar desfases de zona horaria
+            fechaAsignacionObj = new Date(ultimaFechaStr.split("T")[0] + "T12:00:00");
+        }
     }
 
-    const now = new Date();
-    const fechaGen = now.toLocaleString("es-PA");
-    
-    // Si encontramos fecha en los datos, usamos esa. Si no, fallback a ayer.
-    let corteTexto = "";
-    if (maxFechaAsignacion) {
-        corteTexto = `${maxFechaAsignacion} (Registro histórico)`;
-    } else {
-        const ayer = new Date(now);
-        ayer.setDate(ayer.getDate() - 1);
-        corteTexto = ayer.toLocaleDateString("es-PA") + " 11:59 PM";
-    }
+    // 2. CALCULAR FECHA DE CORTE (DÍA ANTERIOR A LA ASIGNACIÓN)
+    const fechaCorteObj = new Date(fechaAsignacionObj);
+    fechaCorteObj.setDate(fechaCorteObj.getDate() - 1); 
+
+    const fechaGen = new Date().toLocaleString("es-PA");
+    const fechaCorteTexto = fechaCorteObj.toLocaleDateString("es-PA") + " 11:59 PM";
     
     const groups = new Map();
     for(const r of rows){
@@ -635,7 +631,6 @@
     const makeRow = (r) => {
       const b = fmtBultosTriple(r.Bultos_Ter||0, r.Bultos_Sec||0, r.Bultos_Prim||0);
       const lotes = r.Lotes_Usados ? String(r.Lotes_Usados) : "";
-      
       const ldFecha = r.Ultimo_Despacho || "-";
       const ldQty = r.Qty_Ultimo ? fmt0(r.Qty_Ultimo) : "";
       const prom = r.Promedio_Hist ? fmt0(r.Promedio_Hist) : "";
@@ -663,26 +658,31 @@
       
       const escasezDetectada = g.totalRed > g.totalAsig;
       const fillRate = g.totalSol > 0 ? ((g.totalAsig / g.totalSol) * 100).toFixed(1) + "%" : "0%";
-      let escasezLabel = escasezDetectada ? "⚠️ SÍ (Fair Share)" : "✅ NO";
+      
+      // RESTAURADO: Textos descriptivos completos
+      let escasezLabel = escasezDetectada ? "⚠️ SÍ (Fair Share aplicado)" : "✅ NO (Stock suficiente)";
       let escasezClass = escasezDetectada ? "color:#b00020;" : "color:#0a7a2f;";
 
+      // RESTAURADO: Nota de falta de empaque
       if (g.items.some(i => i.Pack_Missing)) {
-         escasezLabel += ` <span style="color:#b00020; font-size:10px;">(Sin Empaque)</span>`;
+         escasezLabel += ` <span style="color:#b00020; font-size:10px; margin-left:8px;">(Nota: No existe empaque definido, se asume unidad mínima 1)</span>`;
       }
 
       return `
         <div class="section">
           <table>
             <thead>
+              <!-- HEADER RESTAURADO COMPLETO -->
               <tr>
                 <td colspan="11" style="background:#fff; border-bottom:2px solid #0b1f3a; padding: 10px 0;">
                   <div style="display:flex; gap:15px; align-items:center;">
                     <img src="./icons/icon-512.png" style="width:50px; height:50px; object-fit:contain;" alt="logo"/>
                     <div style="flex:1;">
                       <div style="font-size:18px; font-weight:700; color:#0b1f3a;">HOJA DE ASIGNACIÓN F8 — CORTE DIARIO</div>
-                      <div style="font-size:11px; color:#444; margin-top:4px;">Generado: ${esc(fechaGen)} | Corte: ${esc(corteTexto)}</div>
+                      <div style="font-size:11px; color:#444; margin-top:4px;">Generado: ${esc(fechaGen)} | Corte: ${esc(fechaCorteTexto)}</div>
                       <div style="font-size:10px; color:#666; margin-top:2px; font-style:italic;">
-                         Prioridad: <b>CEDIS > HOSPITAL > POLICLINICA > ULAPS > CAPPS</b>
+                         Reglas de Asignación: <b>Fair Share (Reparto Proporcional en Escasez)</b>, FEFO, Vto ≥ 30 días.
+                         <br>Prioridad por Tipo de Unidad Ejecutora: <b>CEDIS > HOSPITAL > POLICLINICA > ULAPS > CAPPS</b>
                       </div>
                     </div>
                   </div>
@@ -702,9 +702,11 @@
                   <div style="margin-top:6px; padding-top:6px; border-top:1px solid #ccc; font-size:10px; display:flex; justify-content:space-between; align-items:center;">
                     <div style="font-weight:bold; ${escasezClass}">Escasez: ${escasezLabel}</div>
                     <div style="display:flex; gap:12px; background:#fff; padding:3px 8px; border-radius:4px; border:1px solid #ddd;">
-                       <span>Sol: <b>${fmt0(g.totalSol)}</b></span>
-                       <span style="color:#0052cc;">Asig: <b>${fmt0(g.totalAsig)}</b></span>
-                       <span>Fill: <b>${fillRate}</b></span>
+                       <span>Solic.: <b>${fmt0(g.totalSol)}</b></span>
+                       <span>Red.: <b>${fmt0(g.totalRed)}</b></span>
+                       <span style="color:#0052cc;">Asig.: <b>${fmt0(g.totalAsig)}</b></span>
+                       <span>Pend.: <b>${fmt0(g.totalPend)}</b></span>
+                       <span>Fill Rate: <b>${fillRate}</b></span>
                     </div>
                   </div>
                 </th>
@@ -712,15 +714,15 @@
               <tr class="col-header">
                 <th style="width:70px;">Código</th>
                 <th>Suministro</th>
-                <th style="width:40px;" class="num">Sol</th>
-                <th style="width:40px;" class="num">S.Red</th>
-                <th style="width:40px;" class="num">Asig</th>
-                <th style="width:40px;" class="num">Pend</th>
-                <th style="width:50px;" class="center">Bultos</th>
-                <th style="width:110px;">Lotes</th>
-                <th style="width:60px;">Últ.Desp</th>
-                <th style="width:35px;" class="num">Qty</th>
-                <th style="width:35px;" class="num">Prom</th>
+                <th style="width:50px;" class="num">Solic.</th>
+                <th style="width:50px;" class="num">Sol.red</th>
+                <th style="width:50px;" class="num">Asig.</th>
+                <th style="width:50px;" class="num">Pend.</th>
+                <th style="width:65px;" class="center">Bultos</th>
+                <th style="width:130px;">Lotes</th>
+                <th style="width:65px;">Últ.desp</th>
+                <th style="width:40px;" class="num">Qty</th>
+                <th style="width:40px;" class="num">Prom</th>
               </tr>
             </thead>
             <tbody>${rowsHtml}</tbody>
