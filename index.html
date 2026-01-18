@@ -585,33 +585,21 @@
       const pr = Number.isFinite(+r.Prioridad) ? +r.Prioridad : 999;
       const f8  = (r.Fecha||"");
       
-      // --- LÓGICA DE FECHA (PLAN DE EMERGENCIA) ---
-      let fechaRaw = r.FECHA_ASIGNACION;
+       // --- LÓGICA DE FECHA (HTML LIMPIO) ---
+      // Leemos el dato que ahora el servidor manda correctamente como texto ("1/16/2026")
+      let fechaRaw = r.FECHA_ASIGNACION; 
 
+      // CASO 1: CORTE DIARIO (Viene vacío) -> Usamos HOY
       if (!fechaRaw || fechaRaw === "---" || fechaRaw === "") {
-          // Si está vacío (Corte Diario) -> HOY
           const hoy = new Date();
-          fechaRaw = hoy.toLocaleDateString("en-US");
-      } else {
-          // Si trae CUALQUIER COSA -> INTENTAR RESTAR 1 DÍA
-          try {
-              // Convertimos a objeto fecha (funciona con "2026-01-17", "1/17/2026", etc.)
-              let d = new Date(fechaRaw);
-              
-              // Verificamos si es una fecha válida
-              if (!isNaN(d.getTime())) {
-                  // RESTA 1 DÍA SIN PIEDAD
-                  d.setDate(d.getDate() - 1); // <--- AQUI SE RESTA
-                  
-                  // Guardamos el resultado
-                  fechaRaw = d.toLocaleDateString("en-US");
-              } else {
-                  // Si no era fecha válida, dejamos el texto original
-                  fechaRaw = String(fechaRaw);
-              }
-          } catch (e) {
-              fechaRaw = String(fechaRaw);
-          }
+          // Formato manual simple: M/D/YYYY
+          fechaRaw = `${hoy.getMonth()+1}/${hoy.getDate()}/${hoy.getFullYear()}`;
+      }
+      
+      // CASO 2: HISTÓRICO (Viene dato) -> Usamos lo que mandó el servidor tal cual
+      // Solo hacemos una limpieza preventiva por si acaso viniera hora (T00:00...)
+      else {
+           fechaRaw = String(fechaRaw).split("T")[0]; 
       }
       // -----------------------------------------------------
 
