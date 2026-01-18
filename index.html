@@ -567,75 +567,68 @@
     return name;
   }
 
-    // --- EXPORTACIÓN PDF (LÓGICA MANUAL DE TEXTO - SIN FECHAS DE NAVEGADOR) ---
+  // --- EXPORTACIÓN PDF (CORRECCIÓN: USAR SOLO FECHA_ASIGNACION) ---
   function exportPdfAsignacion(){
     const rows = _pickingRows();
     if(!rows.length){ alert("No hay datos visibles para exportar."); return; }
     
     const baseName = getDynamicFilename("Hoja_Asignacion");
     
-    // 1. OBTENER LA FECHA DE ASIGNACIÓN (TEXTO PURO YYYY-MM-DD)
-    // El backend ahora nos manda "YYYY-MM-DD", así que confiamos en eso.
+    // 1. OBTENER LA FECHA DE ASIGNACIÓN (SOLO DE LA COLUMNA ESPECÍFICA)
     let fechaAsignacionStr = "";
     
     if (rows.length > 0) {
-        // Buscamos la cadena YYYY-MM-DD más alta alfabéticamente
+        // Buscamos SOLO en el campo Fecha_Asignacion (ignora Fecha_Proceso)
         const fechas = rows
-            .map(r => r.Fecha_Proceso || r.Fecha_Asignacion || "")
-            .filter(f => /^\d{4}-\d{2}-\d{2}$/.test(f)) // Solo formato exacto
+            .map(r => r.Fecha_Asignacion || "") 
+            .filter(f => /^\d{4}-\d{2}-\d{2}$/.test(f)) // Solo formato YYYY-MM-DD válido
             .sort();
             
         if (fechas.length > 0) {
-            fechaAsignacionStr = fechas[fechas.length - 1]; // La última
+            // Tomamos la última fecha encontrada en los datos filtrados
+            fechaAsignacionStr = fechas[fechas.length - 1]; 
         }
     }
 
-    // 2. CALCULAR FECHA CORTE (MANIPULACIÓN DE CADENA)
+    // 2. CALCULAR FECHA CORTE (Resta de 1 día al texto)
     let fechaCorteTexto = "";
     let sufijoCorte = "";
 
     if (fechaAsignacionStr) {
-        // Desglosamos "2026-01-17"
+        // Entrada: 2026-01-16 (YYYY-MM-DD)
         const partes = fechaAsignacionStr.split("-");
         let y = parseInt(partes[0], 10);
         let m = parseInt(partes[1], 10);
         let d = parseInt(partes[2], 10);
 
-        // RESTAMOS 1 DÍA MATEMÁTICAMENTE
+        // RESTAMOS 1 DÍA
         d = d - 1;
 
-        // Ajuste si el día llega a 0 (cambio de mes)
+        // Ajuste si cambiamos de mes
         if (d === 0) {
             m = m - 1;
-            if (m === 0) { // Si era Enero, pasamos a Diciembre del año anterior
-                m = 12;
-                y = y - 1;
-            }
-            // Días del mes anterior (simplificado pero funcional para reportes)
+            if (m === 0) { m = 12; y = y - 1; }
             const diasEnMes = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-            // Ajuste bisiesto básico
-            if (m === 2 && ((y % 4 === 0 && y % 100 !== 0) || y % 400 === 0)) {
-                d = 29;
-            } else {
-                d = diasEnMes[m];
-            }
+            if (m === 2 && ((y % 4 === 0 && y % 100 !== 0) || y % 400 === 0)) d = 29;
+            else d = diasEnMes[m];
         }
 
-        // Reconstruimos formato DD/MM/YYYY para el PDF
         const dd = String(d).padStart(2, '0');
         const mm = String(m).padStart(2, '0');
         const yyyy = String(y);
         
-        fechaCorteTexto = `${dd}/${mm}/${yyyy} 11:59 PM`;
+        // SALIDA: MM/DD/YYYY (Formato Americano)
+        fechaCorteTexto = `${mm}/${dd}/${yyyy} 11:59 PM`;
         sufijoCorte = " (Registro histórico)";
+        
     } else {
-        // Fallback si no hay fechas válidas: Usamos hoy del sistema
+        // Si no encuentra Fecha_Asignacion (ej: vista diaria nueva), usa ayer
         const hoy = new Date();
         hoy.setDate(hoy.getDate() - 1);
-        fechaCorteTexto = hoy.toLocaleDateString("es-PA") + " 11:59 PM";
+        fechaCorteTexto = hoy.toLocaleDateString("en-US") + " 11:59 PM";
     }
 
-    const fechaGen = new Date().toLocaleString("es-PA"); // Fecha de impresión
+    const fechaGen = new Date().toLocaleString("en-US");
 
     const groups = new Map();
     for(const r of rows){
@@ -643,7 +636,8 @@
       const doc = r.N_Doc || "SIN_DOC";
       const key = ue + "||" + doc;
       const pr = Number.isFinite(+r.Prioridad) ? +r.Prioridad : 999;
-      const f  = (r.Fecha||"");
+      // Usamos la Fecha normal (F8) para agrupar, no la de asignación
+      const f  = (r.Fecha||""); 
       
       if(!groups.has(key)){ 
         groups.set(key, {
