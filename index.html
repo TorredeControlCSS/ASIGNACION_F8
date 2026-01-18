@@ -880,16 +880,34 @@
     }
   }
 
-    // --- INFORME GERENCIAL (PDF DEFINITIVO: ORDENADO, COMPLETO, CON GRAFICA Y DETALLE UEs) ---
+  // --- INFORME GERENCIAL (PDF FINAL: NOMBRE AUTOMÁTICO Y FECHA DE ASIGNACIÓN) ---
   function exportPdfGerencial(){
     const rows = _pickingRows();
     if(!rows.length){ alert("No hay datos para generar el informe."); return; }
     
-    const fechaCorte = (PARAMS && PARAMS.cut_date) ? PARAMS.cut_date : new Date().toLocaleDateString("es-PA");
+    // 1. DETERMINAR FECHA DE ASIGNACIÓN REAL
+    // Buscamos la fecha dentro de los datos para que sea exacta (Histórico o Diario)
+    let fechaReal = "";
+    if (rows.length > 0) {
+        // Intentamos leer la fecha de asignación de la primera fila
+        const f = rows[0].FECHA_ASIGNACION || rows[0].Fecha_Asignacion; 
+        if (f) {
+            // Si viene como fecha larga ISO (2026-01-18T...), la limpiamos
+            fechaReal = String(f).split("T")[0];
+        }
+    }
+    // Si no se encontró en las filas (caso raro), usamos la del sistema o parámetros
+    if (!fechaReal || fechaReal.length < 5) {
+        fechaReal = (PARAMS && PARAMS.cut_date) ? PARAMS.cut_date : new Date().toLocaleDateString("es-PA");
+    }
+
     const fechaGen = new Date().toLocaleString("es-PA");
     const fmtP = (n) => (n*100).toFixed(1) + "%";
+    
+    // NOMBRE DEL ARCHIVO DE SALIDA
+    const fileName = `Informe_Gerencial_${fechaReal.replace(/\//g, "-")}`;
 
-    // 1. DATA: KPIs
+    // --- PROCESAMIENTO DE DATOS ---
     const totalRenglones = rows.length;
     const totalSol = rows.reduce((a,r)=>a+Number(r.Solicitado||0),0);
     const totalAsg = rows.reduce((a,r)=>a+Number(r.Asignado||0),0);
@@ -897,40 +915,30 @@
     const vitales = rows.filter(r => r.Importancia === "VITAL").length;
     const esenciales = rows.filter(r => r.Importancia === "ESENCIAL").length;
 
-    // 2. DATA: UEs SIN COBERTURA
+    // UEs SIN COBERTURA
     const uesSinData = rows.filter(r => Number(r.Asignado||0) === 0 && Number(r.Solicitado_redondeado||0) > 0);
     const ueSinMap = new Map();
     uesSinData.forEach(r => {
         const k = r.Punto + "|" + r.Categoria;
-        if(!ueSinMap.has(k)) ueSinMap.set(k, {ue:r.Punto, cat:r.Categoria, lines:0, solOrig:0, solRed:0, lastDate:null});
-        const o = ueSinMap.get(k); 
-        o.lines++; o.solOrig+=Number(r.Solicitado||0); o.solRed+=Number(r.Solicitado_redondeado||0);
-        const d = parseISODate(r.Fecha);
-        if(d && (!o.lastDate || d > o.lastDate)) o.lastDate = d;
+        if(!ueSinMap.has(k)) ueSinMap.set(k, {ue:r.Punto, cat:r.Categoria, lines:0, solOrig:0, solRed:0});
+        const o = ueSinMap.get(k); o.lines++; o.solOrig+=Number(r.Solicitado||0); o.solRed+=Number(r.Solicitado_redondeado||0);
     });
     const ueSinList = [...ueSinMap.values()].sort((a,b)=> b.solRed - a.solRed);
 
-    // 3. DATA: SKUs CRÍTICOS (Ahora capturando nombres de UEs)
+    // SKUs CRÍTICOS (Con detalle de UEs)
     const skuSinData = rows.filter(r => Number(r.Asignado||0) === 0 && Number(r.Solicitado_redondeado||0) > 0);
     const skuSinMap = new Map();
     skuSinData.forEach(r => {
         const k = r.Codigo;
-        // Usamos un Set para guardar nombres únicos de UEs
         if(!skuSinMap.has(k)) skuSinMap.set(k, {code:r.Codigo, name:r.Suministro, imp:r.Importancia, sol:0, ues_names:new Set()});
-        const o = skuSinMap.get(k); 
-        o.sol+=Number(r.Solicitado||0); 
-        o.ues_names.add(r.Punto); // Guardar nombre
+        const o = skuSinMap.get(k); o.sol+=Number(r.Solicitado||0); o.ues_names.add(r.Punto);
     });
-    const skuSinList = [...skuSinMap.values()].map(x=>({
-        ...x, 
-        count: x.ues_names.size,
-        listaUEs: [...x.ues_names].sort().join(", ") // Convertir Set a String
-    })).sort((a,b)=> {
+    const skuSinList = [...skuSinMap.values()].map(x=>({...x, count: x.ues_names.size, listaUEs: [...x.ues_names].sort().join(", ")})).sort((a,b)=> {
         const impOrder = { "VITAL": 3, "ESENCIAL": 2, "": 1 };
         return (impOrder[b.imp||""]||0) - (impOrder[a.imp||""]||0) || b.sol - a.sol;
     });
 
-    // 4. DATA: FILL RATE POR UE
+    // FILL RATE POR UE
     const fillUeMap = new Map();
     rows.forEach(r => {
         const k = r.Punto || "SIN UE";
@@ -939,7 +947,7 @@
     });
     const fillUeList = [...fillUeMap.values()].map(x=>({...x, rate: x.sol>0?x.asg/x.sol:0})).sort((a,b)=>a.rate - b.rate);
 
-    // 5. DATA: CHART
+    // DATA CHART
     const catMap = new Map();
     rows.forEach(r => {
         const c = r.Categoria || "SIN CATEGORIA";
@@ -948,26 +956,15 @@
     });
     const catList = [...catMap.values()].map(x => ({...x, rate: x.sol>0?x.asg/x.sol:0})).sort((a,b)=>a.cat.localeCompare(b.cat));
 
-    // GENERACION HTML
+    // --- HTML ---
     const colorGlobal = globalFill >= 0.9 ? "#2e7d32" : (globalFill >= 0.7 ? "#f9a825" : "#c62828");
     
-    const htmlUeSin = ueSinList.map(u => {
-        const fStr = u.lastDate ? u.lastDate.toISOString().slice(0,10) : "-";
-        return `<tr><td>${u.ue}</td><td>${u.cat}</td><td class="center" style="font-weight:bold;color:#b71c1c;">${u.lines}</td><td class="right">${fmt(u.solOrig)}</td><td class="right">${fmt(u.solRed)}</td><td class="center">${fStr}</td></tr>`;
-    }).join("");
+    const htmlUeSin = ueSinList.map(u => `<tr><td>${u.ue}</td><td>${u.cat}</td><td class="center" style="font-weight:bold;color:#b71c1c;">${u.lines}</td><td class="right">${fmt(u.solOrig)}</td><td class="right">${fmt(u.solRed)}</td></tr>`).join("");
     
-    // Tabla SKUs con columna extra de detalle
     const htmlSkuSin = skuSinList.map(s => {
         const icon = s.imp==="VITAL"?"💓":(s.imp==="ESENCIAL"?"✅":"");
         const bg = s.imp==="VITAL"?"#ffebee":(s.imp==="ESENCIAL"?"#e8f5e9":"");
-        return `<tr style="background:${bg}">
-            <td>${s.code}</td>
-            <td>${icon} ${s.name}</td>
-            <td class="center"><span style="font-size:8px;font-weight:bold;">${s.imp||"-"}</span></td>
-            <td class="right">${fmt(s.sol)}</td>
-            <td class="center">${s.count}</td>
-            <td style="font-size:7px; color:#444;">${s.listaUEs}</td> <!-- AQUI EL DETALLE -->
-        </tr>`;
+        return `<tr style="background:${bg}"><td>${s.code}</td><td>${icon} ${s.name}</td><td class="center"><span style="font-size:8px;font-weight:bold;">${s.imp||"-"}</span></td><td class="right">${fmt(s.sol)}</td><td class="center">${s.count}</td><td style="font-size:7px; color:#444;">${s.listaUEs}</td></tr>`;
     }).join("");
 
     const htmlFillUe = fillUeList.map(u => {
@@ -976,13 +973,12 @@
     }).join("");
 
     const htmlChart = catList.map(c => {
-        const w = (c.rate * 100).toFixed(0);
-        const col = c.rate < 0.8 ? "#c62828" : (c.rate < 0.95 ? "#f9a825" : "#2e7d32");
+        const w = (c.rate * 100).toFixed(0); const col = c.rate < 0.8 ? "#c62828" : (c.rate < 0.95 ? "#f9a825" : "#2e7d32");
         return `<div style="display:flex; align-items:center; margin-bottom:6px;"><div style="width:180px; font-size:9px; text-align:right; padding-right:10px;">${c.cat}</div><div style="flex:1; background:#eee; height:12px; border-radius:3px;"><div style="width:${w}%; background:${col}; height:100%; border-radius:3px; min-width:2px;"></div></div><div style="width:40px; font-size:9px; font-weight:bold; padding-left:10px;">${fmtP(c.rate)}</div></div>`;
     }).join("");
 
     const html = `
-    <!doctype html><html><head><style>
+    <!doctype html><html><head><title>${fileName}</title><style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 10mm; color: #333; font-size: 10px; }
         h1 { font-size: 18px; margin: 0; color: #0b1f3a; text-transform:uppercase; } 
         h2 { font-size: 12px; margin: 20px 0 8px 0; color: #0b1f3a; border-bottom: 2px solid #ccc; padding-bottom: 3px; }
@@ -1000,7 +996,10 @@
         .chart-box { border:1px solid #ddd; padding:15px; background:#fafafa; border-radius:8px; margin-top:10px; }
     </style></head><body>
         <div class="header">
-            <div><h1>INFORME GERENCIAL DE ASIGNACIONES DEL ALMACEN</h1><div style="margin-top:5px; font-size:12px;"><b>Fecha de Corte: ${fechaCorte}</b></div></div>
+            <div>
+                <h1>INFORME GERENCIAL DE ASIGNACIONES DEL ALMACEN</h1>
+                <div style="margin-top:5px; font-size:12px;"><b>Fecha de Asignación: ${fechaReal}</b></div>
+            </div>
             <div style="text-align:right;">Generado: ${fechaGen}<br>Sistema SIGUELO v6.0</div>
         </div>
 
@@ -1013,12 +1012,11 @@
         </div>
 
         <h2>1. UNIDADES EJECUTORAS SIN COBERTURA (0% ASIGNACIÓN)</h2>
-        <div style="font-size:9px; color:#666; margin-bottom:5px;">Unidades que solicitaron mercancía pero no recibieron nada en este corte.</div>
-        <table><thead><tr><th>Unidad Ejecutora</th><th>Categoría</th><th class="center">Reng. 0%</th><th class="right">Sol. Orig.</th><th class="right">Sol. Red.</th><th class="center">Doc. Reciente</th></tr></thead><tbody>${htmlUeSin||"<tr><td colspan='6' class='center'>Excelente. No hay unidades con 0% de cobertura.</td></tr>"}</tbody></table>
+        <div style="font-size:9px; color:#666; margin-bottom:5px;">Unidades que solicitaron mercancía pero no recibieron nada.</div>
+        <table><thead><tr><th>Unidad Ejecutora</th><th>Categoría</th><th class="center">Reng. 0%</th><th class="right">Sol. Orig.</th><th class="right">Sol. Red.</th></tr></thead><tbody>${htmlUeSin||"<tr><td colspan='5' class='center'>Excelente. No hay unidades con 0% de cobertura.</td></tr>"}</tbody></table>
 
         <h2>2. RENGLONES CRÍTICOS SIN STOCK (TODOS)</h2>
         <div style="font-size:9px; color:#666; margin-bottom:5px;">Medicamentos e insumos solicitados con inventario agotado.</div>
-        <!-- TABLA EXPANDIDA CON DETALLE DE UES -->
         <table><thead><tr>
             <th style="width:10%;">Código</th>
             <th style="width:30%;">Suministro</th>
@@ -1040,7 +1038,14 @@
     </body></html>`;
 
     const w = window.open("", "_blank");
-    if(w) { w.document.open(); w.document.write(html); w.document.close(); setTimeout(()=>w.print(), 500); }
+    if(w) { 
+        w.document.open(); 
+        w.document.write(html); 
+        w.document.close(); 
+        // Asignamos el título al documento para que el navegador sugiera este nombre al guardar
+        w.document.title = fileName; 
+        setTimeout(()=>{ w.print(); }, 500); 
+    }
   }
 
   function exportXlsxAsignacion(){
