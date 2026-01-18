@@ -401,33 +401,45 @@
   }
 
   function renderUESin(rows){
+    // Filtramos líneas donde NO se asignó nada pero SÍ se pidió (huecos totales)
     const filtered = rows.filter(r => Number(r.Asignado||0) === 0 && Number(r.Solicitado_redondeado||0) > 0);
     const map = new Map();
+    
     for(const r of filtered){
       const key = `${r.Punto||""}||${r.Categoria||""}`;
-      if(!map.has(key)) map.set(key, {UE:r.Punto||"", Categoria:r.Categoria||"", lineas:0, sol:0, solr:0, fechaMax:null});
+      if(!map.has(key)) map.set(key, {UE:r.Punto||"", Categoria:r.Categoria||"", lineas:0, sol:0, solr:0, pendiente:0});
       const o = map.get(key);
       o.lineas += 1;
       o.sol += Number(r.Solicitado||0);
       o.solr += Number(r.Solicitado_redondeado||0);
-      const d = parseISODate(r.Fecha);
-      if(d && (!o.fechaMax || d > o.fechaMax)) o.fechaMax = d;
+      // Calculamos el pendiente (lo que pidieron y no recibieron)
+      o.pendiente += Number(r.Pendiente||0);
     }
+    
+    // Ordenamos por la cantidad pendiente (los que más les falta, van primero)
     const out = [...map.values()].map(o => ({
-      UE:o.UE, Categoria:o.Categoria, Lineas_sin_cobertura:o.lineas,
-      Solicitado_original:o.sol, Solicitado_redondeado:o.solr,
-      Pedido_mas_reciente:o.fechaMax ? o.fechaMax.toISOString().slice(0,10) : ""
-    })).sort((a,b)=> (b.Solicitado_redondeado - a.Solicitado_redondeado) || (b.Lineas_sin_cobertura - a.Lineas_sin_cobertura))
-      .slice(0,20);
+      UE:o.UE, 
+      Categoria:o.Categoria, 
+      Lineas_sin_cobertura:o.lineas,
+      Solicitado_original:o.sol, 
+      Solicitado_redondeado:o.solr,
+      Total_Pendiente:o.pendiente // Nueva métrica
+    })).sort((a,b)=> b.Total_Pendiente - a.Total_Pendiente).slice(0,20);
+    
+    // Ajuste visual del encabezado HTML (Hack para no tocar el HTML estático)
+    const thRef = document.querySelector("#tbl_ue_sin thead tr th:last-child");
+    if(thRef) thRef.textContent = "Unidades Pendientes (Déficit)";
+
     const tb = document.querySelector("#tbl_ue_sin tbody");
     tb.innerHTML = out.map(r => `<tr>
       <td>${r.UE}</td>
       <td>${r.Categoria}</td>
-      <td class="right">${fmt(r.Lineas_sin_cobertura)}</td>
+      <td class="right" style="font-weight:bold; color:#b71c1c;">${fmt(r.Lineas_sin_cobertura)}</td>
       <td class="right">${fmt(r.Solicitado_original)}</td>
       <td class="right">${fmt(r.Solicitado_redondeado)}</td>
-      <td>${r.Pedido_mas_reciente}</td>
+      <td class="right" style="background:#fff3e0; font-weight:bold;">${fmt(r.Total_Pendiente)}</td>
     </tr>`).join("");
+    
     window.__exportRows = out;
     window.__exportName = "ue_sin_cobertura_top20";
   }
