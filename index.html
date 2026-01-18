@@ -567,7 +567,7 @@
     return name;
   }
 
-  // --- EXPORTACIÓN PDF (CORRECCIÓN DE DESFASE DE FECHA DEL BACKEND) ---
+  // --- EXPORTACIÓN PDF (CORRECCIÓN DE FECHA CON RESTA MANUAL) ---
   function exportPdfAsignacion(){
     const rows = _pickingRows();
     if(!rows.length){ alert("No hay datos visibles para exportar."); return; }
@@ -575,30 +575,22 @@
     const baseName = getDynamicFilename("Hoja_Asignacion");
     const fechaGen = new Date().toLocaleString("en-US");
 
-    // Función para corregir la fecha "mentirosa" que viene del backend
-    function corregirFecha(fechaSucia) {
+    // Función que recibe "2026-01-17" y devuelve "1/16/2026"
+    function formatearVisual(fechaSucia) {
         if (!fechaSucia) return "---";
         
-        // El dato viene como "2026-01-17" o "2026-01-17T..."
-        // Lo limpiamos primero
         let limpio = String(fechaSucia).split("T")[0].split(" ")[0];
         
-        // Si tiene guiones (formato YYYY-MM-DD que vemos en la foto)
+        // Si viene con guiones (YYYY-MM-DD), restamos 1 día
         if (limpio.includes("-")) {
             const partes = limpio.split("-");
-            // Cuidado: new Date(anio, mes-1, dia)
-            // Creamos la fecha tal cual dice el texto (ej: 17)
+            // new Date(año, mes(0-11), dia)
             const d = new Date(parseInt(partes[0]), parseInt(partes[1]) - 1, parseInt(partes[2]));
-            
-            // LE RESTAMOS EL DÍA EXTRA QUE EL SISTEMA ESTÁ AGREGANDO
-            // Si tú ves 17 pero quieres 16, restamos 1.
-            d.setDate(d.getDate() - 1); // <--- AQUI ESTA LA MAGIA
-            
-            // Devolvemos en formato bonito DD/MM/YYYY
-            return d.toLocaleDateString("es-PA"); // O "en-US" si prefieres mes primero
+            d.setDate(d.getDate() - 1); // <--- CORRECCIÓN DE FECHA (-1 DÍA)
+            return d.toLocaleDateString("en-US"); 
         }
         
-        // Si ya viene con barras (1/16/2026), asumimos que está bien y no tocamos
+        // Si ya viene con barras, lo dejamos quieto
         return limpio;
     }
 
@@ -610,18 +602,16 @@
       const pr = Number.isFinite(+r.Prioridad) ? +r.Prioridad : 999;
       
       const f8  = (r.Fecha||""); 
+      const rawDate = r.Fecha_Asignacion || r.FECHA_ASIGNACION || r.Fecha_Proceso || "";
       
-      // Capturamos el dato crudo
-      let rawDate = r.Fecha_Asignacion || r.FECHA_ASIGNACION || r.Fecha_Proceso || "";
-      
-      // Aplicamos la corrección
-      let fechaFinal = corregirFecha(rawDate);
-      
+      // Aplicar corrección
+      const fechaCorregida = formatearVisual(rawDate);
+
       if(!groups.has(key)){ 
         groups.set(key, {
           ue, doc, tipo: r.Tipo||"", prioridad: pr, 
           maxFechaF8: f8,
-          fechaAsignacionGrupo: fechaFinal, // Guardamos la fecha corregida
+          fechaAsignacionGrupo: fechaCorregida, 
           items: [],
           totalSol: 0, totalRed: 0, totalAsig: 0, totalPend: 0
         }); 
@@ -635,9 +625,9 @@
       g.totalPend += Number(r.Pendiente||0);
 
       if(f8 > g.maxFechaF8) g.maxFechaF8 = f8;
-      // Actualizamos si vemos una fecha válida
-      if (fechaFinal !== "---" && g.fechaAsignacionGrupo === "---") {
-          g.fechaAsignacionGrupo = fechaFinal;
+      
+      if ((!g.fechaAsignacionGrupo || g.fechaAsignacionGrupo === "---") && fechaCorregida !== "---") {
+          g.fechaAsignacionGrupo = fechaCorregida;
       }
       
       if(pr < g.prioridad) g.prioridad = pr;
@@ -686,10 +676,10 @@
       let escasezClass = escasezDetectada ? "color:#b00020;" : "color:#0a7a2f;";
 
       if (g.items.some(i => i.Pack_Missing)) {
-         escasezLabel += ` <span style="color:#b00020; font-size:10px; margin-left:8px;">(Nota: No existe empaque definido, se asume unidad mínima 1)</span>`;
+         escasezLabel += ` <span style="color:#b00020; font-size:10px;">(Pack faltante)</span>`;
       }
 
-      let fechaAsigShow = esc(g.fechaAsignacionGrupo);
+      let fechaAsigShow = g.fechaAsignacionGrupo ? esc(g.fechaAsignacionGrupo) : "---";
 
       return `
         <div class="section">
@@ -703,8 +693,7 @@
                       <div style="font-size:18px; font-weight:700; color:#0b1f3a;">HOJA DE ASIGNACIÓN F8 — CORTE DIARIO</div>
                       <div style="font-size:11px; color:#444; margin-top:4px;">Generado: ${esc(fechaGen)}</div>
                       <div style="font-size:10px; color:#666; margin-top:2px; font-style:italic;">
-                         Reglas de Asignación: <b>Fair Share (Reparto Proporcional en Escasez)</b>, FEFO, Vto ≥ 30 días.
-                         <br>Prioridad por Tipo de Unidad Ejecutora: <b>CEDIS > HOSPITAL > POLICLINICA > ULAPS > CAPPS</b>
+                         Reglas: <b>Fair Share</b>, FEFO, Vto ≥ 30 días. Prioridad UE: <b>CEDIS > HOSPITAL > POLICLINICA > ULAPS > CAPPS</b>
                       </div>
                     </div>
                   </div>
@@ -750,7 +739,6 @@
             </thead>
             <tbody>${rowsHtml}</tbody>
           </table>
-          
           <div class="sign">
              <div>Preparado por: __________________</div>
              <div>Recibido por: __________________</div>
