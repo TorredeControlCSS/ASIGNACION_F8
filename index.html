@@ -567,15 +567,14 @@
     return name;
   }
 
-  // --- EXPORTACIÓN PDF (MODO TEXTO PURO - SIN INTERPRETACIÓN DE FECHAS) ---
+  // --- EXPORTACIÓN PDF (CORTE DE TEXTO DURO - SIN CÁLCULOS) ---
   function exportPdfAsignacion(){
     const rows = _pickingRows();
     if(!rows.length){ alert("No hay datos visibles para exportar."); return; }
     
     const baseName = getDynamicFilename("Hoja_Asignacion");
-    const fechaGen = new Date().toLocaleString("en-US"); // Solo para la fecha de generación del reporte
+    const fechaGen = new Date().toLocaleString("en-US"); // Fecha de generación (arriba)
 
-    // Agrupamos los datos
     const groups = new Map();
     for(const r of rows){
       const ue = r.Punto || "SIN_UE";
@@ -583,17 +582,24 @@
       const key = ue + "||" + doc;
       const pr = Number.isFinite(+r.Prioridad) ? +r.Prioridad : 999;
       
-      // TRATAMIENTO DE FECHAS COMO TEXTO PURO
       const f8  = (r.Fecha||""); 
-      // Tomamos el valor directo sin intentar convertirlo a fecha
-      const fAsig = (r.Fecha_Asignacion || r.Fecha_Proceso || ""); 
+      
+      // 1. OBTENCIÓN DEL DATO BRUTO (Probamos ambas mayúsculas/minúsculas por si acaso)
+      let rawDate = r.Fecha_Asignacion || r.FECHA_ASIGNACION || r.Fecha_Proceso || "";
+
+      // 2. LIMPIEZA DE HORA (TIJERETAZO AL STRING)
+      // Si viene "2026-01-16T14:00...", cortamos en la T.
+      // Si viene "2026-01-16 14:00...", cortamos en el espacio.
+      if(rawDate && typeof rawDate === 'string') {
+          if(rawDate.includes("T")) rawDate = rawDate.split("T")[0];
+          else if(rawDate.includes(" ")) rawDate = rawDate.split(" ")[0];
+      }
       
       if(!groups.has(key)){ 
         groups.set(key, {
           ue, doc, tipo: r.Tipo||"", prioridad: pr, 
           maxFechaF8: f8,
-          // Guardamos la fecha de asignación tal cual viene
-          fechaAsignacionGrupo: fAsig, 
+          fechaAsignacionGrupo: rawDate, // Guardamos el texto limpio
           items: [],
           totalSol: 0, totalRed: 0, totalAsig: 0, totalPend: 0
         }); 
@@ -606,10 +612,10 @@
       g.totalAsig += Number(r.Asignado||0);
       g.totalPend += Number(r.Pendiente||0);
 
-      // Actualizamos fechas si encontramos una "mayor" (alfabéticamente para texto)
-      // Esto es solo para asegurar que si hay filas vacías y una llena, agarre la llena
       if(f8 > g.maxFechaF8) g.maxFechaF8 = f8;
-      if(fAsig && fAsig > g.fechaAsignacionGrupo) g.fechaAsignacionGrupo = fAsig;
+      
+      // Si el grupo aún no tiene fecha y esta fila sí, la guardamos
+      if(!g.fechaAsignacionGrupo && rawDate) g.fechaAsignacionGrupo = rawDate;
       
       if(pr < g.prioridad) g.prioridad = pr;
     }
@@ -627,9 +633,9 @@
       const lotes = r.Lotes_Usados ? String(r.Lotes_Usados) : "";
       
       // Limpieza de datos nulos para la tabla
-      const ultDesp = r.Ultimo_Despacho || "-";
-      const qtyUlt = r.Qty_Ultimo !== null && r.Qty_Ultimo !== undefined ? fmt0(r.Qty_Ultimo) : "";
-      const prom = r.Promedio_Hist !== null && r.Promedio_Hist !== undefined ? fmt0(r.Promedio_Hist) : "";
+      const uDesp = r.Ultimo_Despacho || "-";
+      const qUlt = r.Qty_Ultimo != null ? fmt0(r.Qty_Ultimo) : "";
+      const pHist = r.Promedio_Hist != null ? fmt0(r.Promedio_Hist) : "";
 
       return `
       <tr>
@@ -641,9 +647,9 @@
         <td class="num">${fmt0(r.Pendiente)}</td>
         <td class="center">${esc(b)}</td>
         <td style="font-size:9px;">${esc(lotes)}</td>
-        <td>${esc(ultDesp)}</td>
-        <td class="num">${qtyUlt}</td>
-        <td class="num">${prom}</td>
+        <td>${esc(uDesp)}</td>
+        <td class="num">${qUlt}</td>
+        <td class="num">${pHist}</td>
       </tr>`;
     };
 
@@ -661,8 +667,7 @@
          escasezLabel += ` <span style="color:#b00020; font-size:10px; margin-left:8px;">(Nota: No existe empaque definido, se asume unidad mínima 1)</span>`;
       }
 
-      // AQUI ESTA LA CLAVE: Mostramos el texto tal cual, sin tocarlo.
-      // Si el dato es "1/16/2026", se imprimirá "1/16/2026".
+      // IMPRIMIR TEXTO TAL CUAL
       let fechaAsigShow = g.fechaAsignacionGrupo ? esc(g.fechaAsignacionGrupo) : "---";
 
       return `
@@ -694,8 +699,9 @@
                     <span>Doc: <b>${esc(g.doc)}</b></span>
                     <span>Tipo: <b>${esc(g.tipo)}</b></span>
                     <span>Fecha F8: <b>${esc(g.maxFechaF8||"")}</b></span>
-                    <!-- FECHA DE ASIGNACION REAL (TEXTO PURO) -->
-                    <span style="background:#fff; padding:0 4px; border:1px solid #ccc; border-radius:4px;">Fecha Asignación: <b>${fechaAsigShow}</b></span>
+                    
+                    <!-- AQUI ESTA LA ETIQUETA NUEVA SIN HORA -->
+                    <span style="background:#fff; padding:0 4px; border:1px solid #ccc; border-radius:4px;">Fecha de Asignación: <b>${fechaAsigShow}</b></span>
                   </div>
                   <div style="margin-top:6px; padding-top:6px; border-top:1px solid #ccc; font-size:10px; display:flex; justify-content:space-between; align-items:center;">
                     <div style="font-weight:bold; ${escasezClass}">Escasez: ${escasezLabel}</div>
@@ -737,21 +743,6 @@
         </div>`;
     }).join("");
 
-    const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"/><title>${baseName}</title>
-    <style>
-      body{font-family:'Segoe UI', Arial, sans-serif; color:#111; margin:0;}
-      table { width: 100%; border-collapse: collapse; margin-bottom: 0; }
-      thead { display: table-header-group; } 
-      tr { page-break-inside: auto; } 
-      th, td { border: 1px solid #ccc; padding: 4px 5px; font-size: 10px; vertical-align: top; }
-      thead tr:first-child td { border: none; }
-      .col-header th { background: #f3f5f8; font-weight: bold; color: #333; text-transform: uppercase; }
-      .num { text-align: right; } .center { text-align: center; }
-      .section { margin-bottom: 20px; page-break-after: always; } .section:last-child { page-break-after: auto; }
-      .sign { display: flex; justify-content: space-between; gap: 20px; margin-top: 30px; font-size: 11px; page-break-inside: avoid; }
-      @media print { body { margin: 10mm; } }
-    </style></head><body>${sections}</body></html>`;
-    
     const w = window.open("", "_blank"); w.document.open(); w.document.write(html); w.document.close(); w.focus(); 
     setTimeout(()=>{ w.print(); }, 500);
   }
