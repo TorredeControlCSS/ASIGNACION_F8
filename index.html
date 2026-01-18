@@ -1003,7 +1003,8 @@
         .chart-box { border:1px solid #ddd; padding:15px; background:#fafafa; border-radius:8px; margin-top:10px; }
     </style></head><body>
         <div class="header">
-            <div><h1>INFORME GERENCIAL DE ASIGNACIONES DEL ALMACEN</h1><div style="margin-top:5px; font-size:12px;"><b>Fecha de Asignación: ${fechaMostrar}</b></div></div>
+            <div><h1>INFORME GERENCIAL DE ASIGNACIONES DEL ALMACEN CEDIS PANAMA</h1><div style="margin-top:5px; font-size:12px;"><b>Fecha de Asignación: ${fechaMostrar}</b><b>Reglas de Asignación: Fair Share (Reparto Proporcional en Escasez), FEFO, Vto ≥ 30 días.
+Prioridad por Tipo de Unidad Ejecutora: CEDIS > HOSPITAL > POLICLINICA > ULAPS > CAPPS</b></div></div>
             <div style="text-align:right;">Generado: ${fechaGen}<br>Sistema SIGUELO v6.0</div>
         </div>
 
@@ -1016,8 +1017,8 @@
         </div>
 
         <h2>1. UNIDADES EJECUTORAS SIN COBERTURA (0% ASIGNACIÓN)</h2>
-        <div style="font-size:9px; color:#666; margin-bottom:5px;">Unidades que solicitaron mercancía pero no recibieron nada.</div>
-        <table><thead><tr><th>Unidad Ejecutora</th><th>Categoría</th><th class="center">Reng. 0%</th><th class="right">Sol. Orig.</th><th class="right">Sol. Red.</th></tr></thead><tbody>${htmlUeSin||"<tr><td colspan='5' class='center'>Excelente. No hay unidades con 0% de cobertura.</td></tr>"}</tbody></table>
+        <div style="font-size:9px; color:#666; margin-bottom:5px;">Unidades que solicitaron producto pero no recibiran nada por escasez de inventario.</div>
+        <table><thead><tr><th>Unidad Ejecutora</th><th>Categoría</th><th class="center">Renglones en 0</th><th class="right">Cant. Original</th><th class="right">Ajuste Empaque</th></tr></thead><tbody>${htmlUeSin||"<tr><td colspan='5' class='center'>Excelente. No hay unidades con 0% de cobertura.</td></tr>"}</tbody></table>
 
         <h2>2. RENGLONES CRÍTICOS SIN STOCK (TODOS)</h2>
         <div style="font-size:9px; color:#666; margin-bottom:5px;">Medicamentos e insumos solicitados con inventario agotado.</div>
