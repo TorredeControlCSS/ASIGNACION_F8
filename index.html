@@ -567,13 +567,13 @@
     return name;
   }
 
-  // --- EXPORTACIÓN PDF (LÓGICA CORRECTA PARA ACUMULADO MULTIFECHA) ---
+  // --- EXPORTACIÓN PDF (MODO TEXTO PURO - SIN INTERPRETACIÓN DE FECHAS) ---
   function exportPdfAsignacion(){
     const rows = _pickingRows();
     if(!rows.length){ alert("No hay datos visibles para exportar."); return; }
     
     const baseName = getDynamicFilename("Hoja_Asignacion");
-    const fechaGen = new Date().toLocaleString("en-US");
+    const fechaGen = new Date().toLocaleString("en-US"); // Solo para la fecha de generación del reporte
 
     // Agrupamos los datos
     const groups = new Map();
@@ -582,15 +582,17 @@
       const doc = r.N_Doc || "SIN_DOC";
       const key = ue + "||" + doc;
       const pr = Number.isFinite(+r.Prioridad) ? +r.Prioridad : 999;
-      const f8  = (r.Fecha||""); // Fecha del F8
-      // AQUÍ CAPTURAMOS LA FECHA DE ASIGNACIÓN ESPECÍFICA DE ESTA FILA
+      
+      // TRATAMIENTO DE FECHAS COMO TEXTO PURO
+      const f8  = (r.Fecha||""); 
+      // Tomamos el valor directo sin intentar convertirlo a fecha
       const fAsig = (r.Fecha_Asignacion || r.Fecha_Proceso || ""); 
       
       if(!groups.has(key)){ 
         groups.set(key, {
           ue, doc, tipo: r.Tipo||"", prioridad: pr, 
           maxFechaF8: f8,
-          // Guardamos la fecha de asignación para este grupo específico
+          // Guardamos la fecha de asignación tal cual viene
           fechaAsignacionGrupo: fAsig, 
           items: [],
           totalSol: 0, totalRed: 0, totalAsig: 0, totalPend: 0
@@ -604,16 +606,16 @@
       g.totalAsig += Number(r.Asignado||0);
       g.totalPend += Number(r.Pendiente||0);
 
-      if(String(f8) > String(g.maxFechaF8)) g.maxFechaF8 = f8;
-      // Si por alguna razón un mismo documento tiene fechas mezcladas, tomamos la más reciente
-      if(String(fAsig) > String(g.fechaAsignacionGrupo)) g.fechaAsignacionGrupo = fAsig;
+      // Actualizamos fechas si encontramos una "mayor" (alfabéticamente para texto)
+      // Esto es solo para asegurar que si hay filas vacías y una llena, agarre la llena
+      if(f8 > g.maxFechaF8) g.maxFechaF8 = f8;
+      if(fAsig && fAsig > g.fechaAsignacionGrupo) g.fechaAsignacionGrupo = fAsig;
       
       if(pr < g.prioridad) g.prioridad = pr;
     }
     
     const groupsArr = Array.from(groups.values()).sort((a,b)=>{
       if(a.prioridad !== b.prioridad) return a.prioridad - b.prioridad;
-      if(a.maxFechaF8 !== b.maxFechaF8) return String(b.maxFechaF8).localeCompare(String(a.maxFechaF8));
       return String(a.doc).localeCompare(String(b.doc));
     });
 
@@ -623,9 +625,11 @@
     const makeRow = (r) => {
       const b = fmtBultosTriple(r.Bultos_Ter||0, r.Bultos_Sec||0, r.Bultos_Prim||0);
       const lotes = r.Lotes_Usados ? String(r.Lotes_Usados) : "";
-      const ldFecha = r.Ultimo_Despacho || "-";
-      const ldQty = r.Qty_Ultimo ? fmt0(r.Qty_Ultimo) : "";
-      const prom = r.Promedio_Hist ? fmt0(r.Promedio_Hist) : "";
+      
+      // Limpieza de datos nulos para la tabla
+      const ultDesp = r.Ultimo_Despacho || "-";
+      const qtyUlt = r.Qty_Ultimo !== null && r.Qty_Ultimo !== undefined ? fmt0(r.Qty_Ultimo) : "";
+      const prom = r.Promedio_Hist !== null && r.Promedio_Hist !== undefined ? fmt0(r.Promedio_Hist) : "";
 
       return `
       <tr>
@@ -637,8 +641,8 @@
         <td class="num">${fmt0(r.Pendiente)}</td>
         <td class="center">${esc(b)}</td>
         <td style="font-size:9px;">${esc(lotes)}</td>
-        <td>${esc(ldFecha)}</td>
-        <td class="num">${ldQty}</td>
+        <td>${esc(ultDesp)}</td>
+        <td class="num">${qtyUlt}</td>
         <td class="num">${prom}</td>
       </tr>`;
     };
@@ -657,9 +661,9 @@
          escasezLabel += ` <span style="color:#b00020; font-size:10px; margin-left:8px;">(Nota: No existe empaque definido, se asume unidad mínima 1)</span>`;
       }
 
-      // Preparar fecha de asignación para mostrar en este grupo específico
-      let fechaAsigShow = g.fechaAsignacionGrupo || "---";
-      let sufijo = g.fechaAsignacionGrupo ? " (Histórico)" : "";
+      // AQUI ESTA LA CLAVE: Mostramos el texto tal cual, sin tocarlo.
+      // Si el dato es "1/16/2026", se imprimirá "1/16/2026".
+      let fechaAsigShow = g.fechaAsignacionGrupo ? esc(g.fechaAsignacionGrupo) : "---";
 
       return `
         <div class="section">
@@ -686,12 +690,12 @@
                     <div style="font-size:14px; font-weight:900;">${esc(g.ue)}</div>
                     <div style="font-size:11px;">Líneas: <b>${totalItems}</b></div>
                   </div>
-                  <div style="margin-top:4px; font-size:11px; display:flex; gap:15px; color:#444; flex-wrap: wrap;">
+                  <div style="margin-top:4px; font-size:11px; display:flex; gap:15px; color:#444; flex-wrap:wrap;">
                     <span>Doc: <b>${esc(g.doc)}</b></span>
                     <span>Tipo: <b>${esc(g.tipo)}</b></span>
                     <span>Fecha F8: <b>${esc(g.maxFechaF8||"")}</b></span>
-                    <!-- AQUI PONEMOS LA FECHA REAL DE CADA DOCUMENTO -->
-                    <span style="background:#fff; padding:0 4px; border:1px solid #ccc; border-radius:4px;">Fecha Asig: <b>${esc(fechaAsigShow)}</b></span>
+                    <!-- FECHA DE ASIGNACION REAL (TEXTO PURO) -->
+                    <span style="background:#fff; padding:0 4px; border:1px solid #ccc; border-radius:4px;">Fecha Asignación: <b>${fechaAsigShow}</b></span>
                   </div>
                   <div style="margin-top:6px; padding-top:6px; border-top:1px solid #ccc; font-size:10px; display:flex; justify-content:space-between; align-items:center;">
                     <div style="font-weight:bold; ${escasezClass}">Escasez: ${escasezLabel}</div>
