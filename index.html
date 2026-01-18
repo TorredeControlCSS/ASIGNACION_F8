@@ -585,28 +585,32 @@
       const pr = Number.isFinite(+r.Prioridad) ? +r.Prioridad : 999;
       const f8  = (r.Fecha||"");
       
-      // --- LÓGICA DE FECHA (VINCULADA A ESTA FILA/PEDIDO) ---
+      // --- LÓGICA DE FECHA (PLAN DE EMERGENCIA) ---
       let fechaRaw = r.FECHA_ASIGNACION;
 
-      // CASO A: SI NO HAY FECHA (CORTE DIARIO) -> USAR HOY
       if (!fechaRaw || fechaRaw === "---" || fechaRaw === "") {
+          // Si está vacío (Corte Diario) -> HOY
           const hoy = new Date();
-          fechaRaw = hoy.toLocaleDateString("en-US"); 
-      } 
-      // CASO B: SI HAY FECHA (HISTÓRICO) -> RESTAR 1 DÍA
-      else {
-          const s = String(fechaRaw).trim();
-          // Si viene con guiones (2026-01-17), restamos 1 día
-          if(s.includes("-")) {
-              const partes = s.split("T")[0].split("-");
-              if(partes.length === 3) {
-                 const fechaObj = new Date(parseInt(partes[0]), parseInt(partes[1]) - 1, parseInt(partes[2]));
-                 fechaObj.setDate(fechaObj.getDate() - 1); 
-                 fechaRaw = fechaObj.toLocaleDateString("en-US");
+          fechaRaw = hoy.toLocaleDateString("en-US");
+      } else {
+          // Si trae CUALQUIER COSA -> INTENTAR RESTAR 1 DÍA
+          try {
+              // Convertimos a objeto fecha (funciona con "2026-01-17", "1/17/2026", etc.)
+              let d = new Date(fechaRaw);
+              
+              // Verificamos si es una fecha válida
+              if (!isNaN(d.getTime())) {
+                  // RESTA 1 DÍA SIN PIEDAD
+                  d.setDate(d.getDate() - 1); // <--- AQUI SE RESTA
+                  
+                  // Guardamos el resultado
+                  fechaRaw = d.toLocaleDateString("en-US");
+              } else {
+                  // Si no era fecha válida, dejamos el texto original
+                  fechaRaw = String(fechaRaw);
               }
-          } else {
-              // Si ya viene bien, no tocamos
-              fechaRaw = s.split("T")[0];
+          } catch (e) {
+              fechaRaw = String(fechaRaw);
           }
       }
       // -----------------------------------------------------
