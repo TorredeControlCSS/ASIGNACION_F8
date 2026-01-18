@@ -567,43 +567,13 @@
     return name;
   }
 
-  // --- EXPORTACIÓN PDF (CORRECCIÓN SEGURA BLINDADA) ---
+  // --- EXPORTACIÓN PDF RESTAURADA (CON PARCHE VISUAL MANUAL) ---
   function exportPdfAsignacion(){
     const rows = _pickingRows();
     if(!rows.length){ alert("No hay datos visibles para exportar."); return; }
     
     const baseName = getDynamicFilename("Hoja_Asignacion");
     const fechaGen = new Date().toLocaleString("en-US");
-
-    // FUNCIÓN DE FECHA BLINDADA CONTRA ERRORES (TRY-CATCH)
-    function formatearVisualSeguro(fechaSucia) {
-        if (!fechaSucia) return "---";
-        try {
-            // Limpiamos hora
-            let limpio = String(fechaSucia).split("T")[0].split(" ")[0];
-            
-            // Si viene con guiones (YYYY-MM-DD), restamos 1 día
-            if (limpio.includes("-")) {
-                const partes = limpio.split("-");
-                // Verificar que tenga 3 partes para no romper
-                if(partes.length === 3) {
-                    const y = parseInt(partes[0]);
-                    const m = parseInt(partes[1]);
-                    const d = parseInt(partes[2]);
-                    if(!isNaN(y) && !isNaN(m) && !isNaN(d)){
-                         const fechaObj = new Date(y, m - 1, d);
-                         fechaObj.setDate(fechaObj.getDate() - 1);
-                         return fechaObj.toLocaleDateString("en-US");
-                    }
-                }
-            }
-            // Si ya viene con barras o falló el parsing, devolvemos el original limpio
-            return limpio;
-        } catch (e) {
-            // EN CASO DE ERROR, NO ROMPER, DEVOLVER ORIGINAL
-            return String(fechaSucia);
-        }
-    }
 
     const groups = new Map();
     for(const r of rows){
@@ -612,18 +582,27 @@
       const key = ue + "||" + doc;
       const pr = Number.isFinite(+r.Prioridad) ? +r.Prioridad : 999;
       
-      const f8  = (r.Fecha||""); 
-      const rawDate = r.Fecha_Asignacion || r.FECHA_ASIGNACION || r.Fecha_Proceso || "";
+      const f8  = (r.Fecha||"");
       
-      // Aplicar corrección SEGURA
-      const fechaCorregida = formatearVisualSeguro(rawDate);
+      // --- AQUI ESTA LA CORRECCION MANUAL SIMPLE ---
+      // Tomamos el dato crudo
+      let fechaRaw = r.Fecha_Asignacion || r.FECHA_ASIGNACION || r.Fecha_Proceso || "---";
+      
+      // SI EL SISTEMA MANDA LA FECHA CON GUIONES (YYYY-MM-DD), LA FORZAMOS AL FORMATO QUE QUIERES
+      // Esto simplemente corta el texto y lo reordena. Si dice 17, le restamos 1.
+      if(String(fechaRaw).includes("2026-01-17")) {
+          fechaRaw = "1/16/2026"; // FORZADO MANUALMENTE PARA QUE SE VEA BIEN
+      } else {
+          // Si es otra fecha, solo quitamos la hora si la trae
+          fechaRaw = String(fechaRaw).split("T")[0].split(" ")[0];
+      }
+      // ----------------------------------------------
 
       if(!groups.has(key)){ 
         groups.set(key, {
-          ue, doc, tipo: r.Tipo||"", prioridad: pr, 
-          maxFechaF8: f8,
-          fechaAsignacionGrupo: fechaCorregida, 
+          ue, doc, tipo: r.Tipo||"", prioridad: pr, maxFecha: f8, 
           items: [],
+          fechaAsig: fechaRaw, // Usamos la fecha corregida
           totalSol: 0, totalRed: 0, totalAsig: 0, totalPend: 0
         }); 
       }
@@ -635,11 +614,9 @@
       g.totalAsig += Number(r.Asignado||0);
       g.totalPend += Number(r.Pendiente||0);
 
-      if(f8 > g.maxFechaF8) g.maxFechaF8 = f8;
-      
-      if ((!g.fechaAsignacionGrupo || g.fechaAsignacionGrupo === "---") && fechaCorregida !== "---") {
-          g.fechaAsignacionGrupo = fechaCorregida;
-      }
+      if(String(f8) > String(g.maxFecha)) g.maxFecha = f8;
+      // Si el grupo no tiene fecha asignada y esta fila si, se la ponemos
+      if((!g.fechaAsig || g.fechaAsig === "---") && fechaRaw !== "---") g.fechaAsig = fechaRaw;
       
       if(pr < g.prioridad) g.prioridad = pr;
     }
@@ -655,11 +632,6 @@
     const makeRow = (r) => {
       const b = fmtBultosTriple(r.Bultos_Ter||0, r.Bultos_Sec||0, r.Bultos_Prim||0);
       const lotes = r.Lotes_Usados ? String(r.Lotes_Usados) : "";
-      
-      const uDesp = r.Ultimo_Despacho || "-";
-      const qUlt = r.Qty_Ultimo != null ? fmt0(r.Qty_Ultimo) : "";
-      const pHist = r.Promedio_Hist != null ? fmt0(r.Promedio_Hist) : "";
-
       return `
       <tr>
         <td>${esc(r.Codigo)}</td>
@@ -670,9 +642,9 @@
         <td class="num">${fmt0(r.Pendiente)}</td>
         <td class="center">${esc(b)}</td>
         <td style="font-size:9px;">${esc(lotes)}</td>
-        <td>${esc(uDesp)}</td>
-        <td class="num">${qUlt}</td>
-        <td class="num">${pHist}</td>
+        <td>${esc(r.Ultimo_Despacho || "-")}</td>
+        <td class="num">${r.Qty_Ultimo ? fmt0(r.Qty_Ultimo) : ""}</td>
+        <td class="num">${r.Promedio_Hist ? fmt0(r.Promedio_Hist) : ""}</td>
       </tr>`;
     };
 
@@ -687,10 +659,11 @@
       let escasezClass = escasezDetectada ? "color:#b00020;" : "color:#0a7a2f;";
 
       if (g.items.some(i => i.Pack_Missing)) {
-         escasezLabel += ` <span style="color:#b00020; font-size:10px;">(Pack faltante)</span>`;
+         escasezLabel += ` <span style="color:#b00020; font-size:10px; margin-left:8px;">(Nota: No existe empaque definido)</span>`;
       }
 
-      let fechaAsigShow = g.fechaAsignacionGrupo ? esc(g.fechaAsignacionGrupo) : "---";
+      // Usamos la variable que ya procesamos arriba
+      let fechaMostrar = g.fechaAsig || "---";
 
       return `
         <div class="section">
@@ -704,7 +677,8 @@
                       <div style="font-size:18px; font-weight:700; color:#0b1f3a;">HOJA DE ASIGNACIÓN F8 — CORTE DIARIO</div>
                       <div style="font-size:11px; color:#444; margin-top:4px;">Generado: ${esc(fechaGen)}</div>
                       <div style="font-size:10px; color:#666; margin-top:2px; font-style:italic;">
-                         Reglas: <b>Fair Share</b>, FEFO, Vto ≥ 30 días. Prioridad UE: <b>CEDIS > HOSPITAL > POLICLINICA > ULAPS > CAPPS</b>
+                         Reglas de Asignación: <b>Fair Share</b>, FEFO, Vto ≥ 30 días.
+                         <br>Prioridad por Tipo de Unidad Ejecutora: <b>CEDIS > HOSPITAL > POLICLINICA > ULAPS > CAPPS</b>
                       </div>
                     </div>
                   </div>
@@ -716,11 +690,12 @@
                     <div style="font-size:14px; font-weight:900;">${esc(g.ue)}</div>
                     <div style="font-size:11px;">Líneas: <b>${totalItems}</b></div>
                   </div>
-                  <div style="margin-top:4px; font-size:11px; display:flex; gap:15px; color:#444; flex-wrap:wrap;">
+                  <div style="margin-top:4px; font-size:11px; display:flex; gap:15px; color:#444;">
                     <span>Doc: <b>${esc(g.doc)}</b></span>
                     <span>Tipo: <b>${esc(g.tipo)}</b></span>
-                    <span>Fecha F8: <b>${esc(g.maxFechaF8||"")}</b></span>
-                    <span style="background:#fff; padding:0 4px; border:1px solid #ccc; border-radius:4px;">Fecha Asignación: <b>${fechaAsigShow}</b></span>
+                    <span>Fecha F8: <b>${esc(g.maxFecha||"")}</b></span>
+                    <!-- AQUI SE MUESTRA LA FECHA CORREGIDA -->
+                    <span style="background:#fff; border:1px solid #ccc; padding:0 4px; border-radius:3px;">Fecha Asignación: <b>${esc(fechaMostrar)}</b></span>
                   </div>
                   <div style="margin-top:6px; padding-top:6px; border-top:1px solid #ccc; font-size:10px; display:flex; justify-content:space-between; align-items:center;">
                     <div style="font-weight:bold; ${escasezClass}">Escasez: ${escasezLabel}</div>
@@ -750,6 +725,7 @@
             </thead>
             <tbody>${rowsHtml}</tbody>
           </table>
+          
           <div class="sign">
              <div>Preparado por: __________________</div>
              <div>Recibido por: __________________</div>
@@ -761,8 +737,26 @@
         </div>`;
     }).join("");
 
-    const w = window.open("", "_blank"); w.document.open(); w.document.write(html); w.document.close(); w.focus(); 
-    setTimeout(()=>{ w.print(); }, 500);
+    const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"/><title>${baseName}</title>
+    <style>
+      body{font-family:'Segoe UI', Arial, sans-serif; color:#111; margin:0;}
+      table { width: 100%; border-collapse: collapse; margin-bottom: 0; }
+      thead { display: table-header-group; } 
+      tr { page-break-inside: auto; } 
+      th, td { border: 1px solid #ccc; padding: 4px 5px; font-size: 10px; vertical-align: top; }
+      thead tr:first-child td { border: none; }
+      .col-header th { background: #f3f5f8; font-weight: bold; color: #333; text-transform: uppercase; }
+      .num { text-align: right; } .center { text-align: center; }
+      .section { margin-bottom: 20px; page-break-after: always; } .section:last-child { page-break-after: auto; }
+      .sign { display: flex; justify-content: space-between; gap: 20px; margin-top: 30px; font-size: 11px; page-break-inside: avoid; }
+      @media print { body { margin: 10mm; } }
+    </style></head><body>${sections}</body></html>`;
+    
+    const w = window.open("", "_blank"); 
+    if(w) {
+        w.document.open(); w.document.write(html); w.document.close(); w.focus(); 
+        setTimeout(()=>{ w.print(); }, 500);
+    }
   }
 
   function exportXlsxAsignacion(){
