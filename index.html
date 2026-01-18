@@ -586,28 +586,27 @@
       const f8  = (r.Fecha||"");
       
       // --- LÓGICA DE FECHA (VINCULADA A ESTA FILA/PEDIDO) ---
-      let fechaRaw = r.FECHA_ASIGNACION; // Solo leemos la columna que pediste
+      let fechaRaw = r.FECHA_ASIGNACION;
 
-      // A. Si viene vacía (Corte Diario), usamos HOY
+      // CASO A: SI NO HAY FECHA (CORTE DIARIO) -> USAR HOY
       if (!fechaRaw || fechaRaw === "---" || fechaRaw === "") {
           const hoy = new Date();
-          fechaRaw = `${hoy.getMonth()+1}/${hoy.getDate()}/${hoy.getFullYear()}`;
-      }
-      // B. Si trae dato (Histórico), corregimos formato
+          fechaRaw = hoy.toLocaleDateString("en-US"); 
+      } 
+      // CASO B: SI HAY FECHA (HISTÓRICO) -> RESTAR 1 DÍA
       else {
-          let s = String(fechaRaw).trim();
-          // Si es formato con guiones (YYYY-MM-DD), restamos 1 día
-          if (s.includes("-") && s.length >= 10) {
-              try {
-                  let partes = s.split("T")[0].split("-");
-                  if (partes.length === 3) {
-                      let d = new Date(parseInt(partes[0]), parseInt(partes[1]) - 1, parseInt(partes[2]));
-                      d.setDate(d.getDate() - 1);
-                      fechaRaw = d.toLocaleDateString("en-US");
-                  } else { fechaRaw = s.split("T")[0]; }
-              } catch(e) { fechaRaw = s; }
+          const s = String(fechaRaw).trim();
+          // Si viene con guiones (2026-01-17), restamos 1 día
+          if(s.includes("-")) {
+              const partes = s.split("T")[0].split("-");
+              if(partes.length === 3) {
+                 const fechaObj = new Date(parseInt(partes[0]), parseInt(partes[1]) - 1, parseInt(partes[2]));
+                 fechaObj.setDate(fechaObj.getDate() - 1); 
+                 fechaRaw = fechaObj.toLocaleDateString("en-US");
+              }
           } else {
-              fechaRaw = s.split("T")[0]; // Limpieza básica
+              // Si ya viene bien, no tocamos
+              fechaRaw = s.split("T")[0];
           }
       }
       // -----------------------------------------------------
