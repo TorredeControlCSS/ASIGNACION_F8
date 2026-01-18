@@ -69,7 +69,7 @@
       <div class="title-main">SIGUELO — Motor de Asignación de Requisiciones F8</div>
       <div class="title-sub">
         <span id="currentDateTime">Cargando fecha...</span>
-        <span style="opacity:.8;margin-left:8px;"> | C1 Corte diario · v5.2 Full</span>
+        <span style="opacity:.8;margin-left:8px;"> | C1 Corte diario · v6.0 Full</span>
       </div>
     </div>
     <div class="top-actions">
@@ -171,6 +171,8 @@
           <div class="box"><div class="muted">Solicitado (redondeado)</div><div class="value" id="k_req_r">-</div></div>
           <div class="box"><div class="muted">Asignado</div><div class="value" id="k_assigned">-</div></div>
           <div class="box"><div class="muted">Fill rate (vs Original)</div><div class="value" id="k_fill">-</div></div>
+          <!-- CAMBIO 1: AGREGADO KPI CLASIFICACION -->
+          <div class="box"><div class="muted">Clasificación</div><div class="value" id="k_importancia" style="font-size:12px;">-</div></div>
         </div>
 
         <div class="tabs" role="tablist" aria-label="Pestañas">
@@ -336,6 +338,13 @@
     document.getElementById('k_req_r').textContent = fmt(reqR);
     document.getElementById('k_assigned').textContent = fmt(asg);
     document.getElementById('k_fill').textContent = `${fill.toFixed(1)}%`;
+
+    // CAMBIO 2: LOGICA VISUAL PARA KPI
+    const vitales = rows.filter(r => r.Importancia === "VITAL").length;
+    const esenciales = rows.filter(r => r.Importancia === "ESENCIAL").length;
+    
+    document.getElementById('k_importancia').innerHTML = 
+        `<span style="color:#d32f2f; font-weight:bold;">💓 V: ${fmt(vitales)}</span> | <span style="color:#2e7d32; font-weight:bold;">✅ E: ${fmt(esenciales)}</span>`;
   }
 
   function showTab(tab){
@@ -640,16 +649,49 @@
     const esc = (s) => (s===null||s===undefined) ? "" : String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
     const fmt0 = (n) => { const x = Number(n); if(!Number.isFinite(x)) return ""; return x.toLocaleString("en-US", {maximumFractionDigits: 0}); };
 
+    // --- CAMBIO 3: ICONOS CREATIVOS Y LOGICA DE FILA ---
     const makeRow = (r) => {
       const b = fmtBultosTriple(r.Bultos_Ter||0, r.Bultos_Sec||0, r.Bultos_Prim||0);
       const lotes = r.Lotes_Usados ? String(r.Lotes_Usados) : "";
+      
+      let rowStyle = "";
+      let icons = [];
+      
+      // FRIO (Copo de nieve)
+      if(r.Frio) {
+         rowStyle = "background-color: #e3f2fd;"; 
+         icons.push("❄️"); 
+      }
+      
+      // IMPORTANCIA (Iconos Solicitados)
+      if(r.Importancia === "VITAL") {
+         rowStyle = "background-color: #ffebee;"; 
+         icons.push("<span style='font-size:15px;' title='VITAL'>💓</span>"); 
+      } else if (r.Importancia === "ESENCIAL") {
+         if(!r.Frio) rowStyle = "background-color: #e8f5e9;"; 
+         icons.push("<span style='font-size:15px;' title='ESENCIAL'>✅</span>"); 
+      }
+
+      // Mezcla FRIO + VITAL
+      if (r.Frio && r.Importancia === "VITAL") {
+          rowStyle = "background-color: #e1f5fe; border-left: 4px solid #d32f2f;";
+      }
+
+      const iconHtml = icons.length ? `<div style="margin-top:4px;">${icons.join(" ")}</div>` : "";
+
       return `
-      <tr>
-        <td>${esc(r.Codigo)}</td>
-        <td>${esc(r.Suministro||"")}</td>
+      <tr style="${rowStyle}">
+        <td>
+            ${esc(r.Codigo)} 
+            ${iconHtml}
+        </td>
+        <td>
+            ${esc(r.Suministro||"")}
+            ${r.Importancia ? `<div style="font-size:9px; font-weight:bold; color:#555; margin-top:2px;">[${r.Importancia}]</div>` : ""}
+        </td>
         <td class="num">${fmt0(r.Solicitado)}</td>
         <td class="num">${fmt0(r.Solicitado_redondeado)}</td>
-        <td class="num" style="background:#e3f2fd; font-weight:bold;">${fmt0(r.Asignado)}</td>
+        <td class="num" style="background:rgba(255,255,255,0.5); font-weight:bold;">${fmt0(r.Asignado)}</td>
         <td class="num">${fmt0(r.Pendiente)}</td>
         <td class="center">${esc(b)}</td>
         <td style="font-size:9px;">${esc(lotes)}</td>
@@ -676,6 +718,17 @@
       // Mostramos la fecha del GRUPO (Documento) que calculamos arriba
       let fechaMostrar = g.fechaAsig; 
 
+      // --- CAMBIO 4: STAMPS DE FRIO Y DIAS DE ENTREGA ---
+      const tieneFrio = g.items.some(i => i.Frio);
+      const stampFrio = tieneFrio 
+        ? `<span style="border:1px solid #0277bd; background:#e1f5fe; color:#0277bd; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:10px; margin-left:8px;">❄️ REFRIGERADO</span>` 
+        : "";
+
+      const diasEntregaRaw = g.items[0].Dias_Entrega || "";
+      const stampDias = diasEntregaRaw
+        ? `<div style="margin-top:4px; background:#fff; border:1px dashed #333; padding:3px 8px; font-size:11px; font-weight:bold; color:#333; display:inline-block; border-radius:4px;">🚚 ENTREGA: ${esc(diasEntregaRaw)}</div>`
+        : "";
+
       return `
         <div class="section">
           <table>
@@ -697,9 +750,12 @@
               </tr>
               <tr class="meta-row">
                 <th colspan="11" style="background:#f4f6f8; color:#0b1f3a; padding:10px; border-bottom:2px solid #0b1f3a; border-top:none;">
-                  <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div style="font-size:14px; font-weight:900;">${esc(g.ue)}</div>
-                    <div style="font-size:11px;">Líneas: <b>${totalItems}</b></div>
+                  <div style="display:flex; justify-content:space-between; align-items:start;"> <!-- Align start para que quepan los stamps -->
+                    <div>
+                        <div style="font-size:14px; font-weight:900;">${esc(g.ue)} ${stampFrio}</div>
+                        ${stampDias}
+                    </div>
+                    <div style="font-size:11px; text-align:right;">Líneas: <b>${totalItems}</b></div>
                   </div>
                   <div style="margin-top:4px; font-size:11px; display:flex; gap:15px; color:#444;">
                     <span>Doc: <b>${esc(g.doc)}</b></span>
@@ -788,7 +844,8 @@
     aoa.push(["HOJA DE ASIGNACIÓN F8 — CORTE DIARIO"]);
     aoa.push([`Generado: ${now}`, `Corte: ${corte}`, "Reglas: Fair Share | Prioridad: Mensual > Fecha > UE"]);
     aoa.push([]);
-    const header = ["UE", "Documento", "Tipo", "Código", "Suministro", "Solicitado", "Solic. red.", "Asignado", "Pendiente", "Bultos T/S/P", "Lotes usados", "Último despacho (real)", "Qty último", "Promedio Hist."];
+    // --- CAMBIO 5: AGREGADO ENCABEZADOS EXTRA EXCEL ---
+    const header = ["UE", "Documento", "Tipo", "Código", "Suministro", "Solicitado", "Solic. red.", "Asignado", "Pendiente", "Bultos T/S/P", "Lotes usados", "Último despacho (real)", "Qty último", "Promedio Hist.", "Frio", "Importancia"];
     aoa.push(header);
     for(const g of Array.from(groups.values()).sort((a,b)=> (a.ue+a.doc).localeCompare(b.ue+b.doc))){
       g.items.sort((a,b)=> String(a.Codigo||"").localeCompare(String(b.Codigo||"")));
@@ -801,13 +858,15 @@
         aoa.push([
           g.ue, g.doc, g.tipo, r.Codigo||"", r.Suministro||"", Number(r.Solicitado||0), Number(r.Solicitado_redondeado||0),
           Number(r.Asignado||0), Number(r.Pendiente||0), bults, r.Lotes_Usados||"", 
-          ldFecha, ldQty, prom
+          ldFecha, ldQty, prom,
+          // COLUMNAS NUEVAS EN EXCEL
+          r.Frio ? "SI" : "", r.Importancia || ""
         ]);
       }
       aoa.push([]);
     }
     const ws = XLSX.utils.aoa_to_sheet(aoa);
-    ws["!cols"] = [{wch:22},{wch:18},{wch:12},{wch:12},{wch:60},{wch:12},{wch:12},{wch:12},{wch:12},{wch:14},{wch:40},{wch:18},{wch:12},{wch:12}];
+    ws["!cols"] = [{wch:22},{wch:18},{wch:12},{wch:12},{wch:60},{wch:12},{wch:12},{wch:12},{wch:12},{wch:14},{wch:40},{wch:18},{wch:12},{wch:12},{wch:8},{wch:12}];
     ws["!freeze"] = { xSplit: 0, ySplit: 4 };
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Asignacion_F8");
