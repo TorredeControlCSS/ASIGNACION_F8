@@ -880,34 +880,42 @@
     }
   }
 
-  // --- INFORME GERENCIAL (PDF FINAL: NOMBRE AUTOMÁTICO Y FECHA DE ASIGNACIÓN) ---
+  // --- INFORME GERENCIAL (PDF DEFINITIVO: FECHA EXACTA DEL DATO) ---
   function exportPdfGerencial(){
     const rows = _pickingRows();
     if(!rows.length){ alert("No hay datos para generar el informe."); return; }
     
-    // 1. DETERMINAR FECHA DE ASIGNACIÓN REAL
-    // Buscamos la fecha dentro de los datos para que sea exacta (Histórico o Diario)
-    let fechaReal = "";
-    if (rows.length > 0) {
-        // Intentamos leer la fecha de asignación de la primera fila
-        const f = rows[0].FECHA_ASIGNACION || rows[0].Fecha_Asignacion; 
-        if (f) {
-            // Si viene como fecha larga ISO (2026-01-18T...), la limpiamos
-            fechaReal = String(f).split("T")[0];
-        }
-    }
-    // Si no se encontró en las filas (caso raro), usamos la del sistema o parámetros
-    if (!fechaReal || fechaReal.length < 5) {
-        fechaReal = (PARAMS && PARAMS.cut_date) ? PARAMS.cut_date : new Date().toLocaleDateString("es-PA");
+    // 1. DETERMINAR FECHA DE ASIGNACIÓN REAL (LÓGICA ROBUSTA)
+    let fechaMostrar = "---";
+    
+    // Obtenemos todas las fechas de asignación únicas presentes en los datos filtrados
+    const fechasUnicas = [...new Set(rows.map(r => {
+        // Intentamos leer la fecha en sus distintas variantes posibles
+        let f = r.Fecha_Asignacion || r.FECHA_ASIGNACION || r.Fecha_Proceso || r.DIA_PROCESO;
+        if(!f) return null;
+        // Limpieza: Si viene como "2026-01-18T00:00:00.000Z", cortamos en la T
+        return String(f).split("T")[0]; 
+    }).filter(f => f))].sort();
+
+    if (fechasUnicas.length === 1) {
+        // Si todos los datos son del mismo día, mostramos esa fecha exacta
+        // Re-formateamos de YYYY-MM-DD a un formato más legible si es necesario, o lo dejamos tal cual
+        const parts = fechasUnicas[0].split("-");
+        if(parts.length === 3) fechaMostrar = `${parts[1]}/${parts[2]}/${parts[0]}`; // MM/DD/YYYY
+        else fechaMostrar = fechasUnicas[0];
+    } else if (fechasUnicas.length > 1) {
+        // Si hay varias fechas (ej: filtro histórico de una semana), mostramos el rango
+        fechaMostrar = `Rango: ${fechasUnicas[0]} al ${fechasUnicas[fechasUnicas.length-1]}`;
+    } else {
+        // Fallback final: Si es corte diario y aún no hay fecha fija, usamos la del parámetro o la de hoy
+        fechaMostrar = (PARAMS && PARAMS.cut_date) ? PARAMS.cut_date : new Date().toLocaleDateString("es-PA");
     }
 
     const fechaGen = new Date().toLocaleString("es-PA");
+    const fileName = `Informe_Gerencial_${fechaMostrar.replace(/[^a-zA-Z0-9]/g, "-")}`;
     const fmtP = (n) => (n*100).toFixed(1) + "%";
-    
-    // NOMBRE DEL ARCHIVO DE SALIDA
-    const fileName = `Informe_Gerencial_${fechaReal.replace(/\//g, "-")}`;
 
-    // --- PROCESAMIENTO DE DATOS ---
+    // 2. DATA: KPIs
     const totalRenglones = rows.length;
     const totalSol = rows.reduce((a,r)=>a+Number(r.Solicitado||0),0);
     const totalAsg = rows.reduce((a,r)=>a+Number(r.Asignado||0),0);
@@ -915,7 +923,7 @@
     const vitales = rows.filter(r => r.Importancia === "VITAL").length;
     const esenciales = rows.filter(r => r.Importancia === "ESENCIAL").length;
 
-    // UEs SIN COBERTURA
+    // 3. DATA: UEs SIN COBERTURA
     const uesSinData = rows.filter(r => Number(r.Asignado||0) === 0 && Number(r.Solicitado_redondeado||0) > 0);
     const ueSinMap = new Map();
     uesSinData.forEach(r => {
@@ -925,7 +933,7 @@
     });
     const ueSinList = [...ueSinMap.values()].sort((a,b)=> b.solRed - a.solRed);
 
-    // SKUs CRÍTICOS (Con detalle de UEs)
+    // 4. DATA: SKUs CRÍTICOS (Con detalle UEs)
     const skuSinData = rows.filter(r => Number(r.Asignado||0) === 0 && Number(r.Solicitado_redondeado||0) > 0);
     const skuSinMap = new Map();
     skuSinData.forEach(r => {
@@ -938,7 +946,7 @@
         return (impOrder[b.imp||""]||0) - (impOrder[a.imp||""]||0) || b.sol - a.sol;
     });
 
-    // FILL RATE POR UE
+    // 5. DATA: FILL RATE POR UE
     const fillUeMap = new Map();
     rows.forEach(r => {
         const k = r.Punto || "SIN UE";
@@ -947,7 +955,7 @@
     });
     const fillUeList = [...fillUeMap.values()].map(x=>({...x, rate: x.sol>0?x.asg/x.sol:0})).sort((a,b)=>a.rate - b.rate);
 
-    // DATA CHART
+    // 6. DATA: CHART CATEGORÍAS
     const catMap = new Map();
     rows.forEach(r => {
         const c = r.Categoria || "SIN CATEGORIA";
@@ -997,8 +1005,8 @@
     </style></head><body>
         <div class="header">
             <div>
-                <h1>INFORME GERENCIAL DE ASIGNACIONES DEL ALMACEN</h1>
-                <div style="margin-top:5px; font-size:12px;"><b>Fecha de Asignación: ${fechaReal}</b></div>
+                <h1>INFORME GERENCIAL DE ASIGNACIONES DEL ALMACEN CEDIS PANAMA</h1>
+                <div style="margin-top:5px; font-size:12px;"><b>Fecha de Asignación: ${fechaMostrar}</b></div>
             </div>
             <div style="text-align:right;">Generado: ${fechaGen}<br>Sistema SIGUELO v6.0</div>
         </div>
@@ -1008,12 +1016,12 @@
             <div class="kpi"><div class="kpi-n">${fmt(totalRenglones)}</div><div class="kpi-l">Total Renglones</div></div>
             <div class="kpi"><div class="kpi-n">${fmt(totalSol)}</div><div class="kpi-l">Unidades Solicitadas</div></div>
             <div class="kpi"><div class="kpi-n">${fmt(totalAsg)}</div><div class="kpi-l">Unidades Asignadas</div></div>
-            <div class="kpi"><div class="kpi-n">💓 ${vitales} | ✅ ${esenciales}</div><div class="kpi-l">Renglones Vit / Esen</div></div>
+            <div class="kpi"><div class="kpi-n">💓 ${vitales} | ✅ ${esenciales}</div><div class="kpi-l">Renglones Vital / Esencial</div></div>
         </div>
 
         <h2>1. UNIDADES EJECUTORAS SIN COBERTURA (0% ASIGNACIÓN)</h2>
-        <div style="font-size:9px; color:#666; margin-bottom:5px;">Unidades que solicitaron mercancía pero no recibieron nada.</div>
-        <table><thead><tr><th>Unidad Ejecutora</th><th>Categoría</th><th class="center">Reng. 0%</th><th class="right">Sol. Orig.</th><th class="right">Sol. Red.</th></tr></thead><tbody>${htmlUeSin||"<tr><td colspan='5' class='center'>Excelente. No hay unidades con 0% de cobertura.</td></tr>"}</tbody></table>
+        <div style="font-size:9px; color:#666; margin-bottom:5px;">Unidades que solicitaron producto pero no recibiran nada por escasez de inventario.</div>
+        <table><thead><tr><th>Unidad Ejecutora</th><th>Categoría</th><th class="center">Renglones en 0</th><th class="right">Cant. Original.</th><th class="right">Cant. Redondeada.</th></tr></thead><tbody>${htmlUeSin||"<tr><td colspan='5' class='center'>Excelente. No hay unidades con 0% de cobertura.</td></tr>"}</tbody></table>
 
         <h2>2. RENGLONES CRÍTICOS SIN STOCK (TODOS)</h2>
         <div style="font-size:9px; color:#666; margin-bottom:5px;">Medicamentos e insumos solicitados con inventario agotado.</div>
@@ -1042,7 +1050,6 @@
         w.document.open(); 
         w.document.write(html); 
         w.document.close(); 
-        // Asignamos el título al documento para que el navegador sugiera este nombre al guardar
         w.document.title = fileName; 
         setTimeout(()=>{ w.print(); }, 500); 
     }
