@@ -567,40 +567,31 @@
     return name;
   }
 
-  // --- EXPORTACIÓN PDF (SIMPLIFICADA: SOLO MUESTRA FECHA ASIGNACIÓN) ---
+  // --- EXPORTACIÓN PDF (LÓGICA CORRECTA PARA ACUMULADO MULTIFECHA) ---
   function exportPdfAsignacion(){
     const rows = _pickingRows();
     if(!rows.length){ alert("No hay datos visibles para exportar."); return; }
     
     const baseName = getDynamicFilename("Hoja_Asignacion");
-    
-    // 1. OBTENER LA FECHA TAL CUAL VIENE
-    let fechaMostrar = "";
-    let sufijo = "";
-
-    if (rows.length > 0 && rows[0].Fecha_Asignacion) {
-        // Tomamos el dato directo de la primera fila
-        fechaMostrar = rows[0].Fecha_Asignacion; 
-        sufijo = " (Registro histórico)";
-    } else {
-        // Si no hay dato, ponemos la fecha de hoy simple
-        fechaMostrar = new Date().toLocaleDateString("en-US");
-        sufijo = "";
-    }
-
     const fechaGen = new Date().toLocaleString("en-US");
 
+    // Agrupamos los datos
     const groups = new Map();
     for(const r of rows){
       const ue = r.Punto || "SIN_UE";
       const doc = r.N_Doc || "SIN_DOC";
       const key = ue + "||" + doc;
       const pr = Number.isFinite(+r.Prioridad) ? +r.Prioridad : 999;
-      const f  = (r.Fecha||"");
+      const f8  = (r.Fecha||""); // Fecha del F8
+      // AQUÍ CAPTURAMOS LA FECHA DE ASIGNACIÓN ESPECÍFICA DE ESTA FILA
+      const fAsig = (r.Fecha_Asignacion || r.Fecha_Proceso || ""); 
       
       if(!groups.has(key)){ 
         groups.set(key, {
-          ue, doc, tipo: r.Tipo||"", prioridad: pr, maxFecha: f, 
+          ue, doc, tipo: r.Tipo||"", prioridad: pr, 
+          maxFechaF8: f8,
+          // Guardamos la fecha de asignación para este grupo específico
+          fechaAsignacionGrupo: fAsig, 
           items: [],
           totalSol: 0, totalRed: 0, totalAsig: 0, totalPend: 0
         }); 
@@ -613,13 +604,16 @@
       g.totalAsig += Number(r.Asignado||0);
       g.totalPend += Number(r.Pendiente||0);
 
-      if(String(f) > String(g.maxFecha)) g.maxFecha = f;
+      if(String(f8) > String(g.maxFechaF8)) g.maxFechaF8 = f8;
+      // Si por alguna razón un mismo documento tiene fechas mezcladas, tomamos la más reciente
+      if(String(fAsig) > String(g.fechaAsignacionGrupo)) g.fechaAsignacionGrupo = fAsig;
+      
       if(pr < g.prioridad) g.prioridad = pr;
     }
     
     const groupsArr = Array.from(groups.values()).sort((a,b)=>{
       if(a.prioridad !== b.prioridad) return a.prioridad - b.prioridad;
-      if(a.maxFecha !== b.maxFecha) return String(b.maxFecha).localeCompare(String(a.maxFecha));
+      if(a.maxFechaF8 !== b.maxFechaF8) return String(b.maxFechaF8).localeCompare(String(a.maxFechaF8));
       return String(a.doc).localeCompare(String(b.doc));
     });
 
@@ -663,6 +657,10 @@
          escasezLabel += ` <span style="color:#b00020; font-size:10px; margin-left:8px;">(Nota: No existe empaque definido, se asume unidad mínima 1)</span>`;
       }
 
+      // Preparar fecha de asignación para mostrar en este grupo específico
+      let fechaAsigShow = g.fechaAsignacionGrupo || "---";
+      let sufijo = g.fechaAsignacionGrupo ? " (Histórico)" : "";
+
       return `
         <div class="section">
           <table>
@@ -673,8 +671,7 @@
                     <img src="./icons/icon-512.png" style="width:50px; height:50px; object-fit:contain;" alt="logo"/>
                     <div style="flex:1;">
                       <div style="font-size:18px; font-weight:700; color:#0b1f3a;">HOJA DE ASIGNACIÓN F8 — CORTE DIARIO</div>
-                      <!-- CAMBIO AQUI: ETIQUETA NUEVA Y FECHA DIRECTA -->
-                      <div style="font-size:11px; color:#444; margin-top:4px;">Generado: ${esc(fechaGen)} | Fecha de Asignación: ${esc(fechaMostrar)}${esc(sufijo)}</div>
+                      <div style="font-size:11px; color:#444; margin-top:4px;">Generado: ${esc(fechaGen)}</div>
                       <div style="font-size:10px; color:#666; margin-top:2px; font-style:italic;">
                          Reglas de Asignación: <b>Fair Share (Reparto Proporcional en Escasez)</b>, FEFO, Vto ≥ 30 días.
                          <br>Prioridad por Tipo de Unidad Ejecutora: <b>CEDIS > HOSPITAL > POLICLINICA > ULAPS > CAPPS</b>
@@ -689,10 +686,12 @@
                     <div style="font-size:14px; font-weight:900;">${esc(g.ue)}</div>
                     <div style="font-size:11px;">Líneas: <b>${totalItems}</b></div>
                   </div>
-                  <div style="margin-top:4px; font-size:11px; display:flex; gap:15px; color:#444;">
+                  <div style="margin-top:4px; font-size:11px; display:flex; gap:15px; color:#444; flex-wrap: wrap;">
                     <span>Doc: <b>${esc(g.doc)}</b></span>
                     <span>Tipo: <b>${esc(g.tipo)}</b></span>
-                    <span>Fecha F8: <b>${esc(g.maxFecha||"")}</b></span>
+                    <span>Fecha F8: <b>${esc(g.maxFechaF8||"")}</b></span>
+                    <!-- AQUI PONEMOS LA FECHA REAL DE CADA DOCUMENTO -->
+                    <span style="background:#fff; padding:0 4px; border:1px solid #ccc; border-radius:4px;">Fecha Asig: <b>${esc(fechaAsigShow)}</b></span>
                   </div>
                   <div style="margin-top:6px; padding-top:6px; border-top:1px solid #ccc; font-size:10px; display:flex; justify-content:space-between; align-items:center;">
                     <div style="font-weight:bold; ${escasezClass}">Escasez: ${escasezLabel}</div>
