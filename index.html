@@ -145,6 +145,11 @@
           <button id="btnExportPdf" class="btn-main">📄 Exportar PDF (Hoja de Asignación)</button>
         </div>
         
+        <!-- NUEVO BOTÓN: INFORME GERENCIAL -->
+        <div class="row" style="margin-top:10px;">
+          <button id="btnExportPdfManager" class="btn-main" style="background:#37474f;">📊 Informe Gerencial (PDF)</button>
+        </div>
+
         <div class="row" style="margin-top:10px;">
           <button id="btnExportXlsx">Exportar Excel</button>
           <button id="btnExportCsv">Exportar CSV</button>
@@ -181,6 +186,8 @@
           <div class="tab" data-tab="sku_sin">SKUs críticos sin stock</div>
           <div class="tab" data-tab="invalidos">Pedidos inválidos</div>
           <div class="tab" data-tab="fill_cat">Fill rate por categoría</div>
+          <!-- NUEVA PESTAÑA: FILL RATE POR UE -->
+          <div class="tab" data-tab="fill_ue">Fill rate por UE</div>
         </div>
 
         <div id="viewTitle" style="margin-top:10px;font-weight:700;">Asignación (líneas SALMI)</div>
@@ -219,6 +226,10 @@
         </div>
         <div id="view_fill_cat" class="view" style="display:none;margin-top:10px;">
           <div class="scroll"><table id="tbl_fill_cat"><thead><tr><th>Categoría</th><th class="right">Líneas</th><th class="right">Solicitado (original)</th><th class="right">Solicitado (red.)</th><th class="right">Asignado</th><th class="right">Fill rate</th></tr></thead><tbody></tbody></table></div>
+        </div>
+        <!-- NUEVA VISTA: FILL RATE POR UE -->
+        <div id="view_fill_ue" class="view" style="display:none;margin-top:10px;">
+          <div class="scroll"><table id="tbl_fill_ue"><thead><tr><th>UE</th><th>Categoría</th><th class="right">Líneas</th><th class="right">Solicitado</th><th class="right">Asignado</th><th class="right">Fill Rate</th></tr></thead><tbody></tbody></table></div>
         </div>
 
         <div class="muted" style="margin-top:10px;">
@@ -523,12 +534,40 @@
     window.__exportName = "fill_rate_por_categoria";
   }
 
+  // --- NUEVA FUNCIÓN: FILL RATE POR UE ---
+  function renderFillUE(rows){
+    const map = new Map();
+    for(const r of rows){
+      const ue = String(r.Punto||"");
+      if(!map.has(ue)) map.set(ue, {UE:ue, Cat:r.Categoria||"", lineas:0, sol:0, asg:0});
+      const o = map.get(ue);
+      o.lineas++; o.sol += Number(r.Solicitado||0); o.asg += Number(r.Asignado||0);
+    }
+    const out = [...map.values()].map(o => ({
+      UE:o.UE, Categoria:o.Cat, Lineas:o.lineas, Solicitado:o.sol, Asignado:o.asg, 
+      Fill_rate: o.sol > 0 ? (o.asg/o.sol) : 0 
+    })).sort((a,b)=> a.Fill_rate - b.Fill_rate); // Ordenar de MENOR a MAYOR cumplimiento
+    
+    const tb = document.querySelector("#tbl_fill_ue tbody");
+    tb.innerHTML = out.map(r => {
+        const color = r.Fill_rate < 0.8 ? '#ffebee' : (r.Fill_rate < 0.95 ? '#fff3e0' : '#e8f5e9');
+        return `<tr style="background:${color}">
+          <td>${r.UE}</td><td>${r.Categoria}</td><td class="right">${fmt(r.Lineas)}</td>
+          <td class="right">${fmt(r.Solicitado)}</td><td class="right">${fmt(r.Asignado)}</td>
+          <td class="right" style="font-weight:bold;">${(r.Fill_rate*100).toFixed(1)}%</td>
+        </tr>`;
+    }).join("");
+    window.__exportRows = out; window.__exportName = "fill_rate_por_ue";
+  }
+
   function renderActiveTab(rows){
     if(ACTIVE_TAB === "asignacion") return renderAsignacion(rows);
     if(ACTIVE_TAB === "ue_sin") return renderUESin(rows);
     if(ACTIVE_TAB === "sku_sin") return renderSKUSin(rows);
     if(ACTIVE_TAB === "invalidos") return renderInvalidos(rows);
     if(ACTIVE_TAB === "fill_cat") return renderFillCat(rows);
+    // NUEVA TAB
+    if(ACTIVE_TAB === "fill_ue") return renderFillUE(rows);
   }
 
   function exportCsv(){
@@ -825,6 +864,165 @@
     }
   }
 
+  // --- NUEVA FUNCION: INFORME GERENCIAL (PDF EJECUTIVO) ---
+  function exportPdfGerencial(){
+    const rows = _pickingRows();
+    if(!rows.length){ alert("No hay datos para generar el informe."); return; }
+    
+    // 1. PREPARAR DATOS
+    const now = new Date().toLocaleString("es-PA");
+    const totalSol = rows.reduce((a,r)=>a+Number(r.Solicitado||0),0);
+    const totalAsg = rows.reduce((a,r)=>a+Number(r.Asignado||0),0);
+    const globalFill = totalSol > 0 ? (totalAsg/totalSol)*100 : 0;
+    
+    const vitales = rows.filter(r => r.Importancia === "VITAL");
+    const vSol = vitales.reduce((a,r)=>a+Number(r.Solicitado||0),0);
+    const vAsg = vitales.reduce((a,r)=>a+Number(r.Asignado||0),0);
+    const vFill = vSol > 0 ? (vAsg/vSol)*100 : 0;
+
+    // AGRUPAR POR UE
+    const ueMap = new Map();
+    rows.forEach(r => {
+        const k = r.Punto || "SIN UE";
+        if(!ueMap.has(k)) ueMap.set(k, {name:k, cat:r.Categoria||"", sol:0, asg:0});
+        const o = ueMap.get(k); o.sol+=Number(r.Solicitado||0); o.asg+=Number(r.Asignado||0);
+    });
+    const ueList = [...ueMap.values()]
+        .map(x => ({...x, rate: x.sol>0 ? x.asg/x.sol : 0}))
+        .sort((a,b) => a.rate - b.rate); // Ordenar por peor desempeño primero
+
+    // AGRUPAR SKUS CRÍTICOS
+    const skuCritMap = new Map();
+    rows.filter(r => Number(r.Asignado||0) === 0 && Number(r.Solicitado_redondeado||0) > 0).forEach(r => {
+        const k = r.Codigo + "|" + r.Suministro;
+        if(!skuCritMap.has(k)) skuCritMap.set(k, {code:r.Codigo, name:r.Suministro, imp:r.Importancia, sol:0, ues:new Set()});
+        const o = skuCritMap.get(k); o.sol+=Number(r.Solicitado||0); o.ues.add(r.Punto);
+    });
+    const skuCritList = [...skuCritMap.values()]
+        .map(x => ({...x, count: x.ues.size}))
+        .sort((a,b) => {
+            const impOrder = { "VITAL": 3, "ESENCIAL": 2, "": 1 };
+            const pA = impOrder[a.imp||""] || 0; const pB = impOrder[b.imp||""] || 0;
+            return (pB - pA) || (b.sol - a.sol);
+        }).slice(0, 35); 
+
+    // 2. CONSTRUIR HTML
+    const colorFill = globalFill >= 90 ? "#2e7d32" : (globalFill >= 70 ? "#f9a825" : "#c62828");
+    
+    // Generador filas UE
+    const rowsUE = ueList.map(u => {
+        const barW = (u.rate * 100).toFixed(0);
+        const color = u.rate < 0.8 ? "#ffebee" : "";
+        return `<tr style="background:${color}">
+            <td style="font-weight:bold; font-size:9px;">${u.name}</td>
+            <td style="font-size:9px;">${u.cat}</td>
+            <td class="right">${fmt(u.sol)}</td>
+            <td class="right">${fmt(u.asg)}</td>
+            <td class="right" style="width:80px;">
+                <div style="background:#ddd; height:8px; width:100%; border-radius:2px;">
+                    <div style="background:#0b1f3a; height:100%; width:${barW}%;"></div>
+                </div>
+                <div style="font-size:9px; text-align:right;">${(u.rate*100).toFixed(1)}%</div>
+            </td>
+        </tr>`;
+    }).join("");
+
+    // Generador filas SKU
+    const rowsSKU = skuCritList.map(s => {
+        const icon = s.imp === "VITAL" ? "💓" : (s.imp === "ESENCIAL" ? "✅" : "");
+        return `<tr>
+            <td>${s.code}</td>
+            <td>${icon} ${s.name}</td>
+            <td class="center"><span style="font-size:9px; background:#eee; padding:1px 4px; border-radius:3px;">${s.imp||"GRAL"}</span></td>
+            <td class="right">${fmt(s.sol)}</td>
+            <td class="center">${s.count}</td>
+        </tr>`;
+    }).join("");
+
+    const html = `
+    <!doctype html><html><head><style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 15mm; color: #333; }
+        h1, h2, h3 { color: #0b1f3a; margin: 0 0 10px 0; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0b1f3a; padding-bottom: 10px; margin-bottom: 20px; }
+        .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
+        .kpi-box { border: 1px solid #ddd; padding: 10px; border-radius: 6px; text-align: center; background: #f8f9fa; }
+        .kpi-val { font-size: 20px; font-weight: bold; color: #0b1f3a; }
+        .kpi-lbl { font-size: 11px; color: #666; text-transform: uppercase; }
+        
+        table { width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 20px; }
+        th { background: #0b1f3a; color: white; text-align: left; padding: 5px; }
+        td { border-bottom: 1px solid #eee; padding: 4px 5px; vertical-align: middle; }
+        .right { text-align: right; } .center { text-align: center; }
+        
+        .cols-container { display: flex; gap: 20px; }
+        .col-half { flex: 1; }
+        
+        .page-break { page-break-before: always; }
+        .footer { position: fixed; bottom: 0; left: 0; right: 0; font-size: 9px; color: #999; text-align: center; border-top: 1px solid #eee; padding-top: 5px; }
+    </style></head>
+    <body>
+        <div class="header">
+            <div>
+                <h1>INFORME GERENCIAL DE ABASTECIMIENTO</h1>
+                <div style="font-size:12px;">Reporte de Asignación F8 (Corte Diario / Histórico)</div>
+            </div>
+            <div style="text-align:right; font-size:11px;">
+                Generado: ${now}<br>
+                Fuente: SIGUELO v6.0
+            </div>
+        </div>
+
+        <!-- SECCIÓN 1: BIG NUMBERS -->
+        <div class="kpi-grid">
+            <div class="kpi-box" style="border-color:${colorFill}; background:#fff;">
+                <div class="kpi-val" style="color:${colorFill}; font-size:24px;">${globalFill.toFixed(1)}%</div>
+                <div class="kpi-lbl">FILL RATE GLOBAL</div>
+            </div>
+            <div class="kpi-box">
+                <div class="kpi-val">${fmt(totalSol)}</div>
+                <div class="kpi-lbl">UNIDADES SOLICITADAS</div>
+            </div>
+            <div class="kpi-box">
+                <div class="kpi-val" style="color:#0a7a2f;">${fmt(totalAsg)}</div>
+                <div class="kpi-lbl">UNIDADES ASIGNADAS</div>
+            </div>
+            <div class="kpi-box">
+                <div class="kpi-val">${vFill.toFixed(1)}%</div>
+                <div class="kpi-lbl">COBERTURA VITALES</div>
+            </div>
+        </div>
+
+        <div class="cols-container">
+            <!-- SECCIÓN 2: DESEMPEÑO POR UNIDAD EJECUTORA -->
+            <div class="col-half">
+                <h3>📉 Desempeño por Unidad Ejecutora</h3>
+                <div style="font-size:10px; color:#666; margin-bottom:5px;">Ordenado de menor a mayor cumplimiento</div>
+                <table>
+                    <thead><tr><th>UE</th><th>Cat.</th><th class="right">Sol.</th><th class="right">Asig.</th><th class="right">Fill Rate</th></tr></thead>
+                    <tbody>${rowsUE}</tbody>
+                </table>
+            </div>
+
+            <!-- SECCIÓN 3: SKUS CRÍTICOS -->
+            <div class="col-half">
+                <h3>🚨 Top SKUs Críticos Sin Stock</h3>
+                <div style="font-size:10px; color:#666; margin-bottom:5px;">Items con Solicitud > 0 y Asignación = 0</div>
+                <table>
+                    <thead><tr><th>Código</th><th>Suministro</th><th class="center">Imp.</th><th class="right">Cant. Sol.</th><th class="center"># UEs</th></tr></thead>
+                    <tbody>${rowsSKU}</tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="footer">
+            Documento generado automáticamente por el sistema SIGUELO. Uso exclusivo administrativo.
+        </div>
+    </body></html>`;
+
+    const w = window.open("", "_blank");
+    if(w) { w.document.open(); w.document.write(html); w.document.close(); setTimeout(()=>w.print(), 500); }
+  }
+
   function exportXlsxAsignacion(){
     const rows = _pickingRows(); 
     if(!rows.length){ alert("No hay datos visibles para exportar."); return; }
@@ -936,6 +1134,8 @@
     
     document.getElementById('btnExportCsv').addEventListener('click', exportCsv);
     document.getElementById('btnExportPdf').addEventListener('click', exportPdfAsignacion);
+    // LISTENER PARA EL NUEVO REPORTE GERENCIAL
+    document.getElementById('btnExportPdfManager').addEventListener('click', exportPdfGerencial);
     document.getElementById('btnExportXlsx').addEventListener('click', exportXlsxAsignacion);
     
     document.querySelectorAll('.tab').forEach(el => el.addEventListener('click', () => showTab(el.dataset.tab)));
