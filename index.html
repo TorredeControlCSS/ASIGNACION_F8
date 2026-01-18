@@ -880,34 +880,26 @@
     }
   }
 
-  // --- INFORME GERENCIAL (PDF DEFINITIVO: FECHA EXACTA DEL DATO) ---
+  // --- INFORME GERENCIAL (PDF FINAL CON DOBLE GRÁFICA) ---
   function exportPdfGerencial(){
     const rows = _pickingRows();
     if(!rows.length){ alert("No hay datos para generar el informe."); return; }
     
-    // 1. DETERMINAR FECHA DE ASIGNACIÓN REAL (LÓGICA ROBUSTA)
+    // 1. FECHA DE ASIGNACIÓN REAL
     let fechaMostrar = "---";
-    
-    // Obtenemos todas las fechas de asignación únicas presentes en los datos filtrados
     const fechasUnicas = [...new Set(rows.map(r => {
-        // Intentamos leer la fecha en sus distintas variantes posibles
         let f = r.Fecha_Asignacion || r.FECHA_ASIGNACION || r.Fecha_Proceso || r.DIA_PROCESO;
         if(!f) return null;
-        // Limpieza: Si viene como "2026-01-18T00:00:00.000Z", cortamos en la T
         return String(f).split("T")[0]; 
     }).filter(f => f))].sort();
 
     if (fechasUnicas.length === 1) {
-        // Si todos los datos son del mismo día, mostramos esa fecha exacta
-        // Re-formateamos de YYYY-MM-DD a un formato más legible si es necesario, o lo dejamos tal cual
         const parts = fechasUnicas[0].split("-");
-        if(parts.length === 3) fechaMostrar = `${parts[1]}/${parts[2]}/${parts[0]}`; // MM/DD/YYYY
+        if(parts.length === 3) fechaMostrar = `${parts[1]}/${parts[2]}/${parts[0]}`; 
         else fechaMostrar = fechasUnicas[0];
     } else if (fechasUnicas.length > 1) {
-        // Si hay varias fechas (ej: filtro histórico de una semana), mostramos el rango
         fechaMostrar = `Rango: ${fechasUnicas[0]} al ${fechasUnicas[fechasUnicas.length-1]}`;
     } else {
-        // Fallback final: Si es corte diario y aún no hay fecha fija, usamos la del parámetro o la de hoy
         fechaMostrar = (PARAMS && PARAMS.cut_date) ? PARAMS.cut_date : new Date().toLocaleDateString("es-PA");
     }
 
@@ -923,7 +915,7 @@
     const vitales = rows.filter(r => r.Importancia === "VITAL").length;
     const esenciales = rows.filter(r => r.Importancia === "ESENCIAL").length;
 
-    // 3. DATA: UEs SIN COBERTURA
+    // 3. UEs SIN COBERTURA
     const uesSinData = rows.filter(r => Number(r.Asignado||0) === 0 && Number(r.Solicitado_redondeado||0) > 0);
     const ueSinMap = new Map();
     uesSinData.forEach(r => {
@@ -933,7 +925,7 @@
     });
     const ueSinList = [...ueSinMap.values()].sort((a,b)=> b.solRed - a.solRed);
 
-    // 4. DATA: SKUs CRÍTICOS (Con detalle UEs)
+    // 4. SKUs CRÍTICOS
     const skuSinData = rows.filter(r => Number(r.Asignado||0) === 0 && Number(r.Solicitado_redondeado||0) > 0);
     const skuSinMap = new Map();
     skuSinData.forEach(r => {
@@ -946,7 +938,7 @@
         return (impOrder[b.imp||""]||0) - (impOrder[a.imp||""]||0) || b.sol - a.sol;
     });
 
-    // 5. DATA: FILL RATE POR UE
+    // 5. FILL RATE POR UE
     const fillUeMap = new Map();
     rows.forEach(r => {
         const k = r.Punto || "SIN UE";
@@ -955,7 +947,7 @@
     });
     const fillUeList = [...fillUeMap.values()].map(x=>({...x, rate: x.sol>0?x.asg/x.sol:0})).sort((a,b)=>a.rate - b.rate);
 
-    // 6. DATA: CHART CATEGORÍAS
+    // 6. CHART CATEGORÍAS
     const catMap = new Map();
     rows.forEach(r => {
         const c = r.Categoria || "SIN CATEGORIA";
@@ -964,7 +956,7 @@
     });
     const catList = [...catMap.values()].map(x => ({...x, rate: x.sol>0?x.asg/x.sol:0})).sort((a,b)=>a.cat.localeCompare(b.cat));
 
-    // --- HTML ---
+    // --- HTML GENERATORS ---
     const colorGlobal = globalFill >= 0.9 ? "#2e7d32" : (globalFill >= 0.7 ? "#f9a825" : "#c62828");
     
     const htmlUeSin = ueSinList.map(u => `<tr><td>${u.ue}</td><td>${u.cat}</td><td class="center" style="font-weight:bold;color:#b71c1c;">${u.lines}</td><td class="right">${fmt(u.solOrig)}</td><td class="right">${fmt(u.solRed)}</td></tr>`).join("");
@@ -980,9 +972,16 @@
         return `<tr style="background:${color}"><td>${u.ue}</td><td style="font-size:8px;">${u.cat}</td><td class="right">${fmt(u.sol)}</td><td class="right">${fmt(u.asg)}</td><td class="right"><b>${fmtP(u.rate)}</b></td></tr>`;
     }).join("");
 
-    const htmlChart = catList.map(c => {
+    // Gráfica Categorías
+    const htmlChartCat = catList.map(c => {
         const w = (c.rate * 100).toFixed(0); const col = c.rate < 0.8 ? "#c62828" : (c.rate < 0.95 ? "#f9a825" : "#2e7d32");
         return `<div style="display:flex; align-items:center; margin-bottom:6px;"><div style="width:180px; font-size:9px; text-align:right; padding-right:10px;">${c.cat}</div><div style="flex:1; background:#eee; height:12px; border-radius:3px;"><div style="width:${w}%; background:${col}; height:100%; border-radius:3px; min-width:2px;"></div></div><div style="width:40px; font-size:9px; font-weight:bold; padding-left:10px;">${fmtP(c.rate)}</div></div>`;
+    }).join("");
+
+    // Gráfica UEs (Nueva)
+    const htmlChartUE = fillUeList.map(u => {
+        const w = (u.rate * 100).toFixed(0); const col = u.rate < 0.8 ? "#c62828" : (u.rate < 0.95 ? "#f9a825" : "#2e7d32");
+        return `<div style="display:flex; align-items:center; margin-bottom:4px;"><div style="width:180px; font-size:8px; text-align:right; padding-right:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${u.ue}</div><div style="flex:1; background:#eee; height:10px; border-radius:3px;"><div style="width:${w}%; background:${col}; height:100%; border-radius:3px; min-width:2px;"></div></div><div style="width:40px; font-size:8px; font-weight:bold; padding-left:10px;">${fmtP(u.rate)}</div></div>`;
     }).join("");
 
     const html = `
@@ -1004,10 +1003,7 @@
         .chart-box { border:1px solid #ddd; padding:15px; background:#fafafa; border-radius:8px; margin-top:10px; }
     </style></head><body>
         <div class="header">
-            <div>
-                <h1>INFORME GERENCIAL DE ASIGNACIONES DEL ALMACEN CEDIS PANAMA</h1>
-                <div style="margin-top:5px; font-size:12px;"><b>Fecha de Asignación: ${fechaMostrar}</b></div>
-            </div>
+            <div><h1>INFORME GERENCIAL DE ASIGNACIONES DEL ALMACEN</h1><div style="margin-top:5px; font-size:12px;"><b>Fecha de Asignación: ${fechaMostrar}</b></div></div>
             <div style="text-align:right;">Generado: ${fechaGen}<br>Sistema SIGUELO v6.0</div>
         </div>
 
@@ -1016,31 +1012,29 @@
             <div class="kpi"><div class="kpi-n">${fmt(totalRenglones)}</div><div class="kpi-l">Total Renglones</div></div>
             <div class="kpi"><div class="kpi-n">${fmt(totalSol)}</div><div class="kpi-l">Unidades Solicitadas</div></div>
             <div class="kpi"><div class="kpi-n">${fmt(totalAsg)}</div><div class="kpi-l">Unidades Asignadas</div></div>
-            <div class="kpi"><div class="kpi-n">💓 ${vitales} | ✅ ${esenciales}</div><div class="kpi-l">Renglones Vital / Esencial</div></div>
+            <div class="kpi"><div class="kpi-n">💓 ${vitales} | ✅ ${esenciales}</div><div class="kpi-l">Renglones Vit / Esen</div></div>
         </div>
 
         <h2>1. UNIDADES EJECUTORAS SIN COBERTURA (0% ASIGNACIÓN)</h2>
-        <div style="font-size:9px; color:#666; margin-bottom:5px;">Unidades que solicitaron producto pero no recibiran nada por escasez de inventario.</div>
-        <table><thead><tr><th>Unidad Ejecutora</th><th>Categoría</th><th class="center">Renglones en 0</th><th class="right">Cant. Original.</th><th class="right">Cant. Redondeada.</th></tr></thead><tbody>${htmlUeSin||"<tr><td colspan='5' class='center'>Excelente. No hay unidades con 0% de cobertura.</td></tr>"}</tbody></table>
+        <div style="font-size:9px; color:#666; margin-bottom:5px;">Unidades que solicitaron mercancía pero no recibieron nada.</div>
+        <table><thead><tr><th>Unidad Ejecutora</th><th>Categoría</th><th class="center">Reng. 0%</th><th class="right">Sol. Orig.</th><th class="right">Sol. Red.</th></tr></thead><tbody>${htmlUeSin||"<tr><td colspan='5' class='center'>Excelente. No hay unidades con 0% de cobertura.</td></tr>"}</tbody></table>
 
         <h2>2. RENGLONES CRÍTICOS SIN STOCK (TODOS)</h2>
         <div style="font-size:9px; color:#666; margin-bottom:5px;">Medicamentos e insumos solicitados con inventario agotado.</div>
-        <table><thead><tr>
-            <th style="width:10%;">Código</th>
-            <th style="width:30%;">Suministro</th>
-            <th style="width:5%;" class="center">Imp</th>
-            <th style="width:10%;" class="right">Cant. Sol.</th>
-            <th style="width:5%;" class="center"># UEs</th>
-            <th style="width:40%;">UEs Afectadas (Detalle)</th>
-        </tr></thead><tbody>${htmlSkuSin}</tbody></table>
+        <table><thead><tr><th style="width:10%;">Código</th><th style="width:30%;">Suministro</th><th style="width:5%;" class="center">Imp</th><th style="width:10%;" class="right">Cant. Sol.</th><th style="width:5%;" class="center"># UEs</th><th style="width:40%;">UEs Afectadas (Detalle)</th></tr></thead><tbody>${htmlSkuSin}</tbody></table>
 
         <div class="page-break"></div>
 
         <h2>3. DETALLE DE CUMPLIMIENTO POR UNIDAD EJECUTORA</h2>
         <table><thead><tr><th>Unidad Ejecutora</th><th>Categoría</th><th class="right">Solicitado</th><th class="right">Asignado</th><th class="right">Fill Rate</th></tr></thead><tbody>${htmlFillUe}</tbody></table>
 
+        <div class="page-break"></div>
+
         <h2>4. RESUMEN GRÁFICO POR CATEGORÍA</h2>
-        <div class="chart-box">${htmlChart}</div>
+        <div class="chart-box">${htmlChartCat}</div>
+
+        <h2>5. RESUMEN GRÁFICO POR UNIDAD EJECUTORA</h2>
+        <div class="chart-box">${htmlChartUE}</div>
 
         <div style="text-align:center; color:#999; margin-top:20px; font-size:9px;">Fin del Informe Gerencial</div>
     </body></html>`;
