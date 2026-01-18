@@ -299,7 +299,7 @@
     if (allocFrom || allocTo) {
         rows = rows.filter(r => {
             // Buscamos la fecha de proceso (Backend Histórico) o fallback a la fecha normal
-            let fechaAlloc = r.Fecha_Proceso || r.Fecha_Asignacion || "";
+            let fechaAlloc = r.Fecha_Asignacion || r.FECHA_ASIGNACION || r.Fecha_Proceso || "";
             // Si es la vista diaria, puede que no tenga Fecha_Proceso aún, usamos hoy implícito o nada
             // Pero si el usuario filtra por fecha de asignación en "Diario", asumimos que busca la fecha de hoy.
             if (!fechaAlloc && r.Fecha_Asignacion) fechaAlloc = r.Fecha_Asignacion;
