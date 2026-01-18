@@ -567,84 +567,67 @@
     return name;
   }
 
-  // --- EXPORTACIÓN PDF (LÓGICA MANUAL DE TEXTO) ---
+  // --- EXPORTACIÓN PDF (VERSIÓN DEFINITIVA: ORDENAMIENTO NUMÉRICO REAL) ---
   function exportPdfAsignacion(){
     const rows = _pickingRows();
     if(!rows.length){ alert("No hay datos visibles para exportar."); return; }
     
     const baseName = getDynamicFilename("Hoja_Asignacion");
     
-    // 1. ENCONTRAR LA FECHA DE ASIGNACIÓN MÁS RECIENTE (TEXTO)
-    let fechaRaw = "";
+    // 1. ENCONTRAR LA FECHA MÁXIMA REAL (Convirtiendo a Timestamp para ordenar bien)
+    let maxTs = 0;
     
     if (rows.length > 0) {
-        // Buscamos fechas que tengan barras "/" (ej: 1/16/2026)
-        const fechasConBarras = rows
-            .map(r => r.Fecha_Asignacion || "")
-            .filter(f => f.includes("/"));
-            
-        // Si hay fechas con barras, tomamos la última
-        if (fechasConBarras.length > 0) {
-            fechasConBarras.sort();
-            fechaRaw = fechasConBarras[fechasConBarras.length - 1];
-        } 
-        // Si no hay barras, buscamos con guiones (por si acaso viene del backend nuevo)
-        else {
-             const fechasGuiones = rows
-                .map(r => r.Fecha_Asignacion || "")
-                .filter(f => f.includes("-"))
-                .sort();
-             if (fechasGuiones.length > 0) fechaRaw = fechasGuiones[fechasGuiones.length - 1];
-        }
+        rows.forEach(r => {
+            const f = r.Fecha_Asignacion || ""; // Buscamos "1/16/2026"
+            if (!f || f.length < 5) return;
+
+            let ts = 0;
+            // Detectar formato
+            if (f.includes("/")) {
+                // Formato M/D/Y
+                const parts = f.split("/");
+                // new Date(Año, Mes-1, Dia)
+                const d = new Date(parseInt(parts[2]), parseInt(parts[0])-1, parseInt(parts[1]));
+                ts = d.getTime();
+            } else if (f.includes("-")) {
+                // Formato Y-M-D
+                const parts = f.split("-");
+                const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+                ts = d.getTime();
+            }
+
+            if (ts > maxTs) maxTs = ts;
+        });
     }
 
-    // 2. RESTA MANUAL (MATEMÁTICA BÁSICA SOBRE TEXTO)
+    // 2. CALCULAR FECHA DE CORTE (RESTAR 1 DÍA EN MILISEGUNDOS)
     let fechaCorteTexto = "";
-    let sufijoCorte = " (Registro histórico)";
+    let sufijoCorte = "";
 
-    if (fechaRaw) {
-        let dia = 0, mes = 0, anio = 0;
-
-        if (fechaRaw.includes("/")) {
-            // FORMATO MANUAL TUYO: M/D/Y (ej: 1/16/2026)
-            const partes = fechaRaw.split("/");
-            // Asumimos M/D/Y porque así lo escribiste
-            mes = parseInt(partes[0]); 
-            dia = parseInt(partes[1]);
-            anio = parseInt(partes[2]);
-        } else {
-            // FORMATO BACKEND ISO: Y-M-D (ej: 2026-01-16)
-            const partes = fechaRaw.split("-");
-            anio = parseInt(partes[0]);
-            mes = parseInt(partes[1]);
-            dia = parseInt(partes[2]);
-        }
-
-        // --- LA RESTA ---
-        if (dia > 1) {
-            dia = dia - 1; // 16 se vuelve 15
-        } else {
-            // Si es día 1, hay que retroceder mes
-            mes = mes - 1;
-            if (mes === 0) { mes = 12; anio = anio - 1; }
-            // Días aproximados para no complicar (reporte visual)
-            const diasMes = [0,31,28,31,30,31,30,31,31,30,31,30,31]; 
-            dia = diasMes[mes] || 30; 
-        }
-
-        // --- RECONSTRUCCIÓN (MM/DD/YYYY) ---
-        const dd = String(dia).padStart(2, '0');
-        const mm = String(mes).padStart(2, '0');
-        fechaCorteTexto = `${mm}/${dd}/${anio} 11:59 PM`;
-
+    if (maxTs > 0) {
+        // Tenemos una fecha válida del historial (ej: 16 Ene)
+        // Restamos 24 horas exactas
+        const fechaAsig = new Date(maxTs);
+        const fechaCorte = new Date(maxTs - (24 * 60 * 60 * 1000));
+        
+        // Formateamos MANUALMENTE a MM/DD/YYYY
+        const dd = String(fechaCorte.getDate()).padStart(2, '0');
+        const mm = String(fechaCorte.getMonth() + 1).padStart(2, '0');
+        const yyyy = fechaCorte.getFullYear();
+        
+        fechaCorteTexto = `${mm}/${dd}/${yyyy} 11:59 PM`;
+        sufijoCorte = " (Registro histórico)";
     } else {
-        // EMERGENCIA: Si no encuentra fecha, usa AYER real
+        // Fallback: Si no encontró nada, usa AYER real del sistema
         const hoy = new Date();
-        hoy.setDate(hoy.getDate() - 1);
-        let d = hoy.getDate();
-        let m = hoy.getMonth() + 1;
-        let y = hoy.getFullYear();
-        fechaCorteTexto = `${String(m).padStart(2,'0')}/${String(d).padStart(2,'0')}/${y} 11:59 PM`;
+        const ayer = new Date(hoy.getTime() - (24 * 60 * 60 * 1000));
+        
+        const dd = String(ayer.getDate()).padStart(2, '0');
+        const mm = String(ayer.getMonth() + 1).padStart(2, '0');
+        const yyyy = ayer.getFullYear();
+        
+        fechaCorteTexto = `${mm}/${dd}/${yyyy} 11:59 PM`;
         sufijoCorte = "";
     }
 
