@@ -567,44 +567,47 @@
     return name;
   }
 
-  // --- EXPORTACIÓN PDF (CORRECCIÓN: USAR SOLO FECHA_ASIGNACION) ---
+  // --- EXPORTACIÓN PDF (CORRECCIÓN: RESTA -1 DIA A LA FECHA VISIBLE) ---
   function exportPdfAsignacion(){
     const rows = _pickingRows();
     if(!rows.length){ alert("No hay datos visibles para exportar."); return; }
     
     const baseName = getDynamicFilename("Hoja_Asignacion");
     
-    // 1. OBTENER LA FECHA DE ASIGNACIÓN (SOLO DE LA COLUMNA ESPECÍFICA)
+    // 1. OBTENER LA FECHA DE ASIGNACIÓN (DE LOS DATOS VISIBLES)
     let fechaAsignacionStr = "";
     
     if (rows.length > 0) {
-        // Buscamos SOLO en el campo Fecha_Asignacion (ignora Fecha_Proceso)
+        // Buscamos SOLO en el campo Fecha_Asignacion
+        // Si estamos en vista diaria, esto suele ser HOY. Si es histórico, es la fecha grabada.
         const fechas = rows
             .map(r => r.Fecha_Asignacion || "") 
-            .filter(f => /^\d{4}-\d{2}-\d{2}$/.test(f)) // Solo formato YYYY-MM-DD válido
+            .filter(f => /^\d{4}-\d{2}-\d{2}$/.test(f)) // Formato YYYY-MM-DD
             .sort();
             
         if (fechas.length > 0) {
-            // Tomamos la última fecha encontrada en los datos filtrados
+            // Tomamos la fecha más reciente encontrada en las filas filtradas
             fechaAsignacionStr = fechas[fechas.length - 1]; 
         }
     }
 
-    // 2. CALCULAR FECHA CORTE (Resta de 1 día al texto)
+    // 2. CALCULAR FECHA CORTE (SIEMPRE RESTAR 1 DÍA)
     let fechaCorteTexto = "";
     let sufijoCorte = "";
 
     if (fechaAsignacionStr) {
-        // Entrada: 2026-01-16 (YYYY-MM-DD)
+        // Entrada: "2026-01-16"
         const partes = fechaAsignacionStr.split("-");
         let y = parseInt(partes[0], 10);
         let m = parseInt(partes[1], 10);
         let d = parseInt(partes[2], 10);
 
-        // RESTAMOS 1 DÍA
+        // RESTAMOS 1 DÍA MATEMÁTICAMENTE
+        // Si entra 16, d se vuelve 15.
+        // Si entra 17, d se vuelve 16.
         d = d - 1;
 
-        // Ajuste si cambiamos de mes
+        // Ajuste cambios de mes
         if (d === 0) {
             m = m - 1;
             if (m === 0) { m = 12; y = y - 1; }
@@ -617,12 +620,12 @@
         const mm = String(m).padStart(2, '0');
         const yyyy = String(y);
         
-        // SALIDA: MM/DD/YYYY (Formato Americano)
+        // SALIDA: MM/DD/YYYY
         fechaCorteTexto = `${mm}/${dd}/${yyyy} 11:59 PM`;
         sufijoCorte = " (Registro histórico)";
         
     } else {
-        // Si no encuentra Fecha_Asignacion (ej: vista diaria nueva), usa ayer
+        // Fallback si no hay fecha: Ayer
         const hoy = new Date();
         hoy.setDate(hoy.getDate() - 1);
         fechaCorteTexto = hoy.toLocaleDateString("en-US") + " 11:59 PM";
@@ -636,8 +639,7 @@
       const doc = r.N_Doc || "SIN_DOC";
       const key = ue + "||" + doc;
       const pr = Number.isFinite(+r.Prioridad) ? +r.Prioridad : 999;
-      // Usamos la Fecha normal (F8) para agrupar, no la de asignación
-      const f  = (r.Fecha||""); 
+      const f  = (r.Fecha||"");
       
       if(!groups.has(key)){ 
         groups.set(key, {
