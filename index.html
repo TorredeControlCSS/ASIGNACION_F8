@@ -567,7 +567,7 @@
     return name;
   }
 
-  // --- EXPORTACIÓN PDF RESTAURADA (CON PARCHE VISUAL MANUAL) ---
+  // --- EXPORTACIÓN PDF (FINAL: LÓGICA VINCULADA AL DOCUMENTO) ---
   function exportPdfAsignacion(){
     const rows = _pickingRows();
     if(!rows.length){ alert("No hay datos visibles para exportar."); return; }
@@ -576,51 +576,71 @@
     const fechaGen = new Date().toLocaleString("en-US");
 
     const groups = new Map();
+    
+    // 1. RECORREMOS LAS FILAS PARA AGRUPAR POR DOCUMENTO
     for(const r of rows){
       const ue = r.Punto || "SIN_UE";
       const doc = r.N_Doc || "SIN_DOC";
       const key = ue + "||" + doc;
       const pr = Number.isFinite(+r.Prioridad) ? +r.Prioridad : 999;
-      
       const f8  = (r.Fecha||"");
       
-      // --- AQUI ESTA LA CORRECCION MANUAL SIMPLE ---
-      // Tomamos el dato crudo
-      let fechaRaw = r.Fecha_Asignacion || r.FECHA_ASIGNACION || r.Fecha_Proceso || "---";
-      
-      // SI EL SISTEMA MANDA LA FECHA CON GUIONES (YYYY-MM-DD), LA FORZAMOS AL FORMATO QUE QUIERES
-      // Esto simplemente corta el texto y lo reordena. Si dice 17, le restamos 1.
-      if(String(fechaRaw).includes("2026-01-17")) {
-          fechaRaw = "1/16/2026"; // FORZADO MANUALMENTE PARA QUE SE VEA BIEN
-      } else {
-          // Si es otra fecha, solo quitamos la hora si la trae
-          fechaRaw = String(fechaRaw).split("T")[0].split(" ")[0];
+      // --- LÓGICA DE FECHA (VINCULADA A ESTA FILA/PEDIDO) ---
+      let fechaRaw = r.FECHA_ASIGNACION; // Solo leemos la columna que pediste
+
+      // A. Si viene vacía (Corte Diario), usamos HOY
+      if (!fechaRaw || fechaRaw === "---" || fechaRaw === "") {
+          const hoy = new Date();
+          fechaRaw = `${hoy.getMonth()+1}/${hoy.getDate()}/${hoy.getFullYear()}`;
       }
-      // ----------------------------------------------
+      // B. Si trae dato (Histórico), corregimos formato
+      else {
+          let s = String(fechaRaw).trim();
+          // Si es formato con guiones (YYYY-MM-DD), restamos 1 día
+          if (s.includes("-") && s.length >= 10) {
+              try {
+                  let partes = s.split("T")[0].split("-");
+                  if (partes.length === 3) {
+                      let d = new Date(parseInt(partes[0]), parseInt(partes[1]) - 1, parseInt(partes[2]));
+                      d.setDate(d.getDate() - 1);
+                      fechaRaw = d.toLocaleDateString("en-US");
+                  } else { fechaRaw = s.split("T")[0]; }
+              } catch(e) { fechaRaw = s; }
+          } else {
+              fechaRaw = s.split("T")[0]; // Limpieza básica
+          }
+      }
+      // -----------------------------------------------------
 
       if(!groups.has(key)){ 
         groups.set(key, {
           ue, doc, tipo: r.Tipo||"", prioridad: pr, maxFecha: f8, 
           items: [],
-          fechaAsig: fechaRaw, // Usamos la fecha corregida
+          fechaAsig: fechaRaw, // Asignamos la fecha calculada al GRUPO (Documento)
           totalSol: 0, totalRed: 0, totalAsig: 0, totalPend: 0
         }); 
       }
       const g = groups.get(key);
       g.items.push(r);
       
+      // Sumamos totales del documento
       g.totalSol += Number(r.Solicitado||0);
       g.totalRed += Number(r.Solicitado_redondeado||0);
       g.totalAsig += Number(r.Asignado||0);
       g.totalPend += Number(r.Pendiente||0);
 
       if(String(f8) > String(g.maxFecha)) g.maxFecha = f8;
-      // Si el grupo no tiene fecha asignada y esta fila si, se la ponemos
-      if((!g.fechaAsig || g.fechaAsig === "---") && fechaRaw !== "---") g.fechaAsig = fechaRaw;
+      
+      // Si el grupo ya existe pero tenía una fecha "rara" y esta fila trae una mejor, actualizamos
+      // Esto asegura que el Documento tenga la fecha correcta
+      if((!g.fechaAsig || g.fechaAsig.length < 6) && fechaRaw.length > 5) {
+          g.fechaAsig = fechaRaw;
+      }
       
       if(pr < g.prioridad) g.prioridad = pr;
     }
     
+    // 2. ORDENAMOS Y GENERAMOS HTML
     const groupsArr = Array.from(groups.values()).sort((a,b)=>{
       if(a.prioridad !== b.prioridad) return a.prioridad - b.prioridad;
       return String(a.doc).localeCompare(String(b.doc));
@@ -662,8 +682,8 @@
          escasezLabel += ` <span style="color:#b00020; font-size:10px; margin-left:8px;">(Nota: No existe empaque definido)</span>`;
       }
 
-      // Usamos la variable que ya procesamos arriba
-      let fechaMostrar = g.fechaAsig || "---";
+      // Mostramos la fecha del GRUPO (Documento) que calculamos arriba
+      let fechaMostrar = g.fechaAsig; 
 
       return `
         <div class="section">
@@ -694,7 +714,6 @@
                     <span>Doc: <b>${esc(g.doc)}</b></span>
                     <span>Tipo: <b>${esc(g.tipo)}</b></span>
                     <span>Fecha F8: <b>${esc(g.maxFecha||"")}</b></span>
-                    <!-- AQUI SE MUESTRA LA FECHA CORREGIDA -->
                     <span style="background:#fff; border:1px solid #ccc; padding:0 4px; border-radius:3px;">Fecha Asignación: <b>${esc(fechaMostrar)}</b></span>
                   </div>
                   <div style="margin-top:6px; padding-top:6px; border-top:1px solid #ccc; font-size:10px; display:flex; justify-content:space-between; align-items:center;">
