@@ -1019,7 +1019,7 @@
             <div class="kpi"><div class="kpi-n">${fmt(totalRenglones)}</div><div class="kpi-l">Total Renglones</div></div>
             <div class="kpi"><div class="kpi-n">${fmt(totalSol)}</div><div class="kpi-l">Unidades Solicitadas</div></div>
             <div class="kpi"><div class="kpi-n">${fmt(totalAsg)}</div><div class="kpi-l">Unidades Asignadas</div></div>
-            <div class="kpi"><div class="kpi-n">💓 ${vitales} | ✅ ${esenciales}</div><div class="kpi-l">Renglones Vit / Esen</div></div>
+            <div class="kpi"><div class="kpi-n">💓 ${vitales} | ✅ ${esenciales}</div><div class="kpi-l">Renglones Vitales / Esenciales</div></div>
         </div>
 
         <h2>1. UNIDADES EJECUTORAS SIN COBERTURA (0% ASIGNACIÓN)</h2>
@@ -1037,11 +1037,11 @@
 
         <div class="page-break"></div>
 
-        <h2>4. RESUMEN GRÁFICO DE FILL RATE ESPERADO POR CATEGORÍA DE UNIDAD EJECUTORA</h2>
-        <div class="chart-box">${htmlChartCat}</div>
-
-        <h2>5. RESUMEN GRÁFICO DE FILL RATE ESPERADO POR UNIDAD EJECUTORA</h2>
+        <h2>4. RESUMEN GRÁFICO DE FILL RATE ESPERADO POR UNIDAD EJECUTORA</h2>
         <div class="chart-box">${htmlChartUE}</div>
+        
+        <h2>5. RESUMEN GRÁFICO DE FILL RATE ESPERADO POR CATEGORÍA DE UNIDAD EJECUTORA</h2>
+        <div class="chart-box">${htmlChartCat}</div>
 
         <div style="text-align:center; color:#999; margin-top:20px; font-size:9px;">Fin del Informe Gerencial</div>
     </body></html>`;
