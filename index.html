@@ -567,7 +567,7 @@
     return name;
   }
 
-  // --- EXPORTACIÓN PDF (CORRECCIÓN DE FECHA CON RESTA MANUAL) ---
+  // --- EXPORTACIÓN PDF (CORRECCIÓN SEGURA BLINDADA) ---
   function exportPdfAsignacion(){
     const rows = _pickingRows();
     if(!rows.length){ alert("No hay datos visibles para exportar."); return; }
@@ -575,23 +575,34 @@
     const baseName = getDynamicFilename("Hoja_Asignacion");
     const fechaGen = new Date().toLocaleString("en-US");
 
-    // Función que recibe "2026-01-17" y devuelve "1/16/2026"
-    function formatearVisual(fechaSucia) {
+    // FUNCIÓN DE FECHA BLINDADA CONTRA ERRORES (TRY-CATCH)
+    function formatearVisualSeguro(fechaSucia) {
         if (!fechaSucia) return "---";
-        
-        let limpio = String(fechaSucia).split("T")[0].split(" ")[0];
-        
-        // Si viene con guiones (YYYY-MM-DD), restamos 1 día
-        if (limpio.includes("-")) {
-            const partes = limpio.split("-");
-            // new Date(año, mes(0-11), dia)
-            const d = new Date(parseInt(partes[0]), parseInt(partes[1]) - 1, parseInt(partes[2]));
-            d.setDate(d.getDate() - 1); // <--- CORRECCIÓN DE FECHA (-1 DÍA)
-            return d.toLocaleDateString("en-US"); 
+        try {
+            // Limpiamos hora
+            let limpio = String(fechaSucia).split("T")[0].split(" ")[0];
+            
+            // Si viene con guiones (YYYY-MM-DD), restamos 1 día
+            if (limpio.includes("-")) {
+                const partes = limpio.split("-");
+                // Verificar que tenga 3 partes para no romper
+                if(partes.length === 3) {
+                    const y = parseInt(partes[0]);
+                    const m = parseInt(partes[1]);
+                    const d = parseInt(partes[2]);
+                    if(!isNaN(y) && !isNaN(m) && !isNaN(d)){
+                         const fechaObj = new Date(y, m - 1, d);
+                         fechaObj.setDate(fechaObj.getDate() - 1);
+                         return fechaObj.toLocaleDateString("en-US");
+                    }
+                }
+            }
+            // Si ya viene con barras o falló el parsing, devolvemos el original limpio
+            return limpio;
+        } catch (e) {
+            // EN CASO DE ERROR, NO ROMPER, DEVOLVER ORIGINAL
+            return String(fechaSucia);
         }
-        
-        // Si ya viene con barras, lo dejamos quieto
-        return limpio;
     }
 
     const groups = new Map();
@@ -604,8 +615,8 @@
       const f8  = (r.Fecha||""); 
       const rawDate = r.Fecha_Asignacion || r.FECHA_ASIGNACION || r.Fecha_Proceso || "";
       
-      // Aplicar corrección
-      const fechaCorregida = formatearVisual(rawDate);
+      // Aplicar corrección SEGURA
+      const fechaCorregida = formatearVisualSeguro(rawDate);
 
       if(!groups.has(key)){ 
         groups.set(key, {
