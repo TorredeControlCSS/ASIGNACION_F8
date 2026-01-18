@@ -907,7 +907,7 @@
           document.getElementById('cutDate').textContent = PARAMS.cut_date || "Hoy";
       } else {
           newData = await loadJsonp(`${WEBAPP_BASE}?file=history`);
-          document.getElementById('mainHeader').textContent = "HISTORIAL ACUMULADO";
+          document.getElementById('mainHeader').textContent = "⚠️HISTORIAL ACUMULADO⚠️";
           document.getElementById('cutDate').textContent = "Histórico Completo";
       }
 
