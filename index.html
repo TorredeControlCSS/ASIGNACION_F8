@@ -567,83 +567,85 @@
     return name;
   }
 
-  // --- EXPORTACIÓN PDF (LÓGICA BRUTA: TOMAR NÚMERO DEL MEDIO -1) ---
+  // --- EXPORTACIÓN PDF (SOLUCIÓN FINAL "HARDCODED" PARA 1/16/2026) ---
   function exportPdfAsignacion(){
     const rows = _pickingRows();
     if(!rows.length){ alert("No hay datos visibles para exportar."); return; }
     
     const baseName = getDynamicFilename("Hoja_Asignacion");
     
-    // 1. OBTENER LA FECHA DE ASIGNACIÓN COMO TEXTO
-    let fechaAsignacionStr = "";
+    // 1. ENCONTRAR LA FECHA DE ASIGNACIÓN MÁS RECIENTE (TEXTO)
+    let fechaRaw = "";
     
     if (rows.length > 0) {
-        // Buscamos la fecha en Fecha_Asignacion. 
-        // Filtramos vacíos.
-        const fechas = rows
-            .map(r => r.Fecha_Asignacion || "") 
-            .filter(f => f.length > 5)
-            .sort();
+        // Buscamos fechas que tengan barras "/" (ej: 1/16/2026)
+        const fechasConBarras = rows
+            .map(r => r.Fecha_Asignacion || "")
+            .filter(f => f.includes("/"));
             
-        if (fechas.length > 0) {
-            fechaAsignacionStr = fechas[fechas.length - 1]; 
+        // Si hay fechas con barras, tomamos la última
+        if (fechasConBarras.length > 0) {
+            fechasConBarras.sort();
+            fechaRaw = fechasConBarras[fechasConBarras.length - 1];
+        } 
+        // Si no hay barras, buscamos con guiones (por si acaso viene del backend nuevo)
+        else {
+             const fechasGuiones = rows
+                .map(r => r.Fecha_Asignacion || "")
+                .filter(f => f.includes("-"))
+                .sort();
+             if (fechasGuiones.length > 0) fechaRaw = fechasGuiones[fechasGuiones.length - 1];
         }
     }
 
-    // 2. CALCULAR FECHA CORTE (LÓGICA MANUAL)
+    // 2. RESTA MANUAL (MATEMÁTICA BÁSICA SOBRE TEXTO)
     let fechaCorteTexto = "";
-    let sufijoCorte = "";
+    let sufijoCorte = " (Registro histórico)";
 
-    if (fechaAsignacionStr) {
-        // Tu formato es M/D/Y (ej: 1/16/2026) o YYYY-MM-DD (2026-01-16)
-        // Vamos a detectar qué separador usa
-        let sep = fechaAsignacionStr.includes("/") ? "/" : "-";
-        let partes = fechaAsignacionStr.split(sep);
-        
-        let d = 0, m = 0, y = 0;
+    if (fechaRaw) {
+        let dia = 0, mes = 0, anio = 0;
 
-        if (sep === "-") {
-            // Asumimos YYYY-MM-DD (formato backend estándar)
-            y = parseInt(partes[0]);
-            m = parseInt(partes[1]);
-            d = parseInt(partes[2]);
+        if (fechaRaw.includes("/")) {
+            // FORMATO MANUAL TUYO: M/D/Y (ej: 1/16/2026)
+            const partes = fechaRaw.split("/");
+            // Asumimos M/D/Y porque así lo escribiste
+            mes = parseInt(partes[0]); 
+            dia = parseInt(partes[1]);
+            anio = parseInt(partes[2]);
         } else {
-            // Asumimos M/D/Y (formato hoja visual) 
-            // Si es 1/16/2026 -> partes[0]=1, partes[1]=16, partes[2]=2026
-            // EL NÚMERO DEL MEDIO ES EL DÍA
-            m = parseInt(partes[0]);
-            d = parseInt(partes[1]);
-            y = parseInt(partes[2]);
+            // FORMATO BACKEND ISO: Y-M-D (ej: 2026-01-16)
+            const partes = fechaRaw.split("-");
+            anio = parseInt(partes[0]);
+            mes = parseInt(partes[1]);
+            dia = parseInt(partes[2]);
         }
 
-        // RESTAMOS 1 AL DÍA
-        d = d - 1;
-
-        // Ajuste cambios de mes/año manual
-        if (d === 0) {
-            m = m - 1;
-            if (m === 0) { 
-                m = 12;
-                y = y - 1;
-            }
-            const diasEnMes = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-            // Bisiesto simple
-            if (m === 2 && (y % 4 === 0)) d = 29;
-            else d = diasEnMes[m];
+        // --- LA RESTA ---
+        if (dia > 1) {
+            dia = dia - 1; // 16 se vuelve 15
+        } else {
+            // Si es día 1, hay que retroceder mes
+            mes = mes - 1;
+            if (mes === 0) { mes = 12; anio = anio - 1; }
+            // Días aproximados para no complicar (reporte visual)
+            const diasMes = [0,31,28,31,30,31,30,31,31,30,31,30,31]; 
+            dia = diasMes[mes] || 30; 
         }
 
-        // RECONSTRUIMOS MM/DD/YYYY
-        // (Aseguramos ceros a la izquierda para que se vea profesional 01/15/2026)
-        const ddStr = String(d).padStart(2, '0');
-        const mmStr = String(m).padStart(2, '0');
-        
-        fechaCorteTexto = `${mmStr}/${ddStr}/${y} 11:59 PM`;
-        sufijoCorte = " (Registro histórico)";
-        
+        // --- RECONSTRUCCIÓN (MM/DD/YYYY) ---
+        const dd = String(dia).padStart(2, '0');
+        const mm = String(mes).padStart(2, '0');
+        fechaCorteTexto = `${mm}/${dd}/${anio} 11:59 PM`;
+
     } else {
+        // EMERGENCIA: Si no encuentra fecha, usa AYER real
         const hoy = new Date();
         hoy.setDate(hoy.getDate() - 1);
-        fechaCorteTexto = hoy.toLocaleDateString("en-US") + " 11:59 PM";
+        let d = hoy.getDate();
+        let m = hoy.getMonth() + 1;
+        let y = hoy.getFullYear();
+        fechaCorteTexto = `${String(m).padStart(2,'0')}/${String(d).padStart(2,'0')}/${y} 11:59 PM`;
+        sufijoCorte = "";
     }
 
     const fechaGen = new Date().toLocaleString("en-US");
@@ -791,21 +793,6 @@
         </div>`;
     }).join("");
 
-    const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"/><title>${baseName}</title>
-    <style>
-      body{font-family:'Segoe UI', Arial, sans-serif; color:#111; margin:0;}
-      table { width: 100%; border-collapse: collapse; margin-bottom: 0; }
-      thead { display: table-header-group; } 
-      tr { page-break-inside: auto; } 
-      th, td { border: 1px solid #ccc; padding: 4px 5px; font-size: 10px; vertical-align: top; }
-      thead tr:first-child td { border: none; }
-      .col-header th { background: #f3f5f8; font-weight: bold; color: #333; text-transform: uppercase; }
-      .num { text-align: right; } .center { text-align: center; }
-      .section { margin-bottom: 20px; page-break-after: always; } .section:last-child { page-break-after: auto; }
-      .sign { display: flex; justify-content: space-between; gap: 20px; margin-top: 30px; font-size: 11px; page-break-inside: avoid; }
-      @media print { body { margin: 10mm; } }
-    </style></head><body>${sections}</body></html>`;
-    
     const w = window.open("", "_blank"); w.document.open(); w.document.write(html); w.document.close(); w.focus(); 
     setTimeout(()=>{ w.print(); }, 500);
   }
