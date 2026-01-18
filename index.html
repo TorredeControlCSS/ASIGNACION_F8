@@ -567,70 +567,25 @@
     return name;
   }
 
-  // --- EXPORTACIÓN PDF (LÓGICA SIMPLE: AGARRAR DATO VISIBLE Y RESTAR 1) ---
+  // --- EXPORTACIÓN PDF (SIMPLIFICADA: SOLO MUESTRA FECHA ASIGNACIÓN) ---
   function exportPdfAsignacion(){
     const rows = _pickingRows();
     if(!rows.length){ alert("No hay datos visibles para exportar."); return; }
     
     const baseName = getDynamicFilename("Hoja_Asignacion");
     
-    // 1. OBTENER LA FECHA VISIBLE (TEXTO BRUTO)
-    // No buscamos la máxima, agarramos la primera que tenga datos porque todas son iguales en el filtro.
-    let fechaRaw = "";
-    for(let i=0; i<rows.length; i++){
-        if(rows[i].Fecha_Asignacion && rows[i].Fecha_Asignacion.includes("/")){
-            fechaRaw = rows[i].Fecha_Asignacion;
-            break;
-        }
-    }
+    // 1. OBTENER LA FECHA TAL CUAL VIENE
+    let fechaMostrar = "";
+    let sufijo = "";
 
-    // 2. RESTA MANUAL AL NÚMERO DEL MEDIO
-    let fechaCorteTexto = "";
-    let sufijoCorte = " (Registro histórico)";
-
-    if (fechaRaw) {
-        // Asumimos formato: ALGO / DIA / ALGO
-        // Ejemplo: 1/16/2026
-        const partes = fechaRaw.split("/");
-        
-        if (partes.length === 3) {
-            let parte1 = partes[0]; // Mes (1)
-            let parte2 = parseInt(partes[1]); // Día (16)
-            let parte3 = partes[2]; // Año (2026)
-
-            // RESTAMOS 1 AL DÍA
-            let diaNuevo = parte2 - 1;
-
-            // Manejo básico si el día llega a 0 (para que no salga 1/0/2026)
-            if (diaNuevo === 0) {
-                // Si llegamos a 0, retrocedemos manualmente al 30 (simple visual)
-                // O intentamos retroceder mes.
-                let m = parseInt(parte1) - 1;
-                let y = parseInt(parte3);
-                if (m === 0) { m = 12; y = y - 1; }
-                
-                parte1 = m;
-                parte3 = y;
-                diaNuevo = 30; // Aproximación segura para reporte
-            }
-
-            // RECONSTRUCCIÓN CON CEROS
-            // padStart asegura que 1 quede como 01
-            const p1 = String(parte1).padStart(2,'0'); 
-            const p2 = String(diaNuevo).padStart(2,'0');
-            const p3 = String(parte3);
-
-            fechaCorteTexto = `${p1}/${p2}/${p3} 11:59 PM`;
-        } else {
-            // Si el formato no tiene 3 partes, devolvemos el original
-            fechaCorteTexto = fechaRaw + " (Sin cálculo)";
-        }
+    if (rows.length > 0 && rows[0].Fecha_Asignacion) {
+        // Tomamos el dato directo de la primera fila
+        fechaMostrar = rows[0].Fecha_Asignacion; 
+        sufijo = " (Registro histórico)";
     } else {
-        // Fallback si no encuentra fechas con /
-        const hoy = new Date();
-        hoy.setDate(hoy.getDate() - 1);
-        fechaCorteTexto = hoy.toLocaleDateString("en-US") + " 11:59 PM";
-        sufijoCorte = "";
+        // Si no hay dato, ponemos la fecha de hoy simple
+        fechaMostrar = new Date().toLocaleDateString("en-US");
+        sufijo = "";
     }
 
     const fechaGen = new Date().toLocaleString("en-US");
@@ -718,7 +673,8 @@
                     <img src="./icons/icon-512.png" style="width:50px; height:50px; object-fit:contain;" alt="logo"/>
                     <div style="flex:1;">
                       <div style="font-size:18px; font-weight:700; color:#0b1f3a;">HOJA DE ASIGNACIÓN F8 — CORTE DIARIO</div>
-                      <div style="font-size:11px; color:#444; margin-top:4px;">Generado: ${esc(fechaGen)} | Corte: ${esc(fechaCorteTexto)}${esc(sufijoCorte)}</div>
+                      <!-- CAMBIO AQUI: ETIQUETA NUEVA Y FECHA DIRECTA -->
+                      <div style="font-size:11px; color:#444; margin-top:4px;">Generado: ${esc(fechaGen)} | Fecha de Asignación: ${esc(fechaMostrar)}${esc(sufijo)}</div>
                       <div style="font-size:10px; color:#666; margin-top:2px; font-style:italic;">
                          Reglas de Asignación: <b>Fair Share (Reparto Proporcional en Escasez)</b>, FEFO, Vto ≥ 30 días.
                          <br>Prioridad por Tipo de Unidad Ejecutora: <b>CEDIS > HOSPITAL > POLICLINICA > ULAPS > CAPPS</b>
