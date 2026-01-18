@@ -567,65 +567,80 @@
     return name;
   }
 
-  // --- EXPORTACIÓN PDF (CORRECCIÓN: RESTA -1 DIA A LA FECHA VISIBLE) ---
+  // --- EXPORTACIÓN PDF (LÓGICA BRUTA: TOMAR NÚMERO DEL MEDIO -1) ---
   function exportPdfAsignacion(){
     const rows = _pickingRows();
     if(!rows.length){ alert("No hay datos visibles para exportar."); return; }
     
     const baseName = getDynamicFilename("Hoja_Asignacion");
     
-    // 1. OBTENER LA FECHA DE ASIGNACIÓN (DE LOS DATOS VISIBLES)
+    // 1. OBTENER LA FECHA DE ASIGNACIÓN COMO TEXTO
     let fechaAsignacionStr = "";
     
     if (rows.length > 0) {
-        // Buscamos SOLO en el campo Fecha_Asignacion
-        // Si estamos en vista diaria, esto suele ser HOY. Si es histórico, es la fecha grabada.
+        // Buscamos la fecha en Fecha_Asignacion. 
+        // Filtramos vacíos.
         const fechas = rows
             .map(r => r.Fecha_Asignacion || "") 
-            .filter(f => /^\d{4}-\d{2}-\d{2}$/.test(f)) // Formato YYYY-MM-DD
+            .filter(f => f.length > 5)
             .sort();
             
         if (fechas.length > 0) {
-            // Tomamos la fecha más reciente encontrada en las filas filtradas
             fechaAsignacionStr = fechas[fechas.length - 1]; 
         }
     }
 
-    // 2. CALCULAR FECHA CORTE (SIEMPRE RESTAR 1 DÍA)
+    // 2. CALCULAR FECHA CORTE (LÓGICA MANUAL)
     let fechaCorteTexto = "";
     let sufijoCorte = "";
 
     if (fechaAsignacionStr) {
-        // Entrada: "2026-01-16"
-        const partes = fechaAsignacionStr.split("-");
-        let y = parseInt(partes[0], 10);
-        let m = parseInt(partes[1], 10);
-        let d = parseInt(partes[2], 10);
+        // Tu formato es M/D/Y (ej: 1/16/2026) o YYYY-MM-DD (2026-01-16)
+        // Vamos a detectar qué separador usa
+        let sep = fechaAsignacionStr.includes("/") ? "/" : "-";
+        let partes = fechaAsignacionStr.split(sep);
+        
+        let d = 0, m = 0, y = 0;
 
-        // RESTAMOS 1 DÍA MATEMÁTICAMENTE
-        // Si entra 16, d se vuelve 15.
-        // Si entra 17, d se vuelve 16.
+        if (sep === "-") {
+            // Asumimos YYYY-MM-DD (formato backend estándar)
+            y = parseInt(partes[0]);
+            m = parseInt(partes[1]);
+            d = parseInt(partes[2]);
+        } else {
+            // Asumimos M/D/Y (formato hoja visual) 
+            // Si es 1/16/2026 -> partes[0]=1, partes[1]=16, partes[2]=2026
+            // EL NÚMERO DEL MEDIO ES EL DÍA
+            m = parseInt(partes[0]);
+            d = parseInt(partes[1]);
+            y = parseInt(partes[2]);
+        }
+
+        // RESTAMOS 1 AL DÍA
         d = d - 1;
 
-        // Ajuste cambios de mes
+        // Ajuste cambios de mes/año manual
         if (d === 0) {
             m = m - 1;
-            if (m === 0) { m = 12; y = y - 1; }
+            if (m === 0) { 
+                m = 12;
+                y = y - 1;
+            }
             const diasEnMes = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-            if (m === 2 && ((y % 4 === 0 && y % 100 !== 0) || y % 400 === 0)) d = 29;
+            // Bisiesto simple
+            if (m === 2 && (y % 4 === 0)) d = 29;
             else d = diasEnMes[m];
         }
 
-        const dd = String(d).padStart(2, '0');
-        const mm = String(m).padStart(2, '0');
-        const yyyy = String(y);
+        // RECONSTRUIMOS MM/DD/YYYY
+        // (Aseguramos ceros a la izquierda para que se vea profesional 01/15/2026)
+        const ddStr = String(d).padStart(2, '0');
+        const mmStr = String(m).padStart(2, '0');
         
-        // SALIDA: MM/DD/YYYY
-        fechaCorteTexto = `${mm}/${dd}/${yyyy} 11:59 PM`;
+        fechaCorteTexto = `${mmStr}/${ddStr}/${y} 11:59 PM`;
         sufijoCorte = " (Registro histórico)";
         
     } else {
-        // Fallback si no hay fecha: Ayer
         const hoy = new Date();
         hoy.setDate(hoy.getDate() - 1);
         fechaCorteTexto = hoy.toLocaleDateString("en-US") + " 11:59 PM";
