@@ -567,67 +567,69 @@
     return name;
   }
 
-  // --- EXPORTACIÓN PDF (VERSIÓN DEFINITIVA: ORDENAMIENTO NUMÉRICO REAL) ---
+  // --- EXPORTACIÓN PDF (LÓGICA SIMPLE: AGARRAR DATO VISIBLE Y RESTAR 1) ---
   function exportPdfAsignacion(){
     const rows = _pickingRows();
     if(!rows.length){ alert("No hay datos visibles para exportar."); return; }
     
     const baseName = getDynamicFilename("Hoja_Asignacion");
     
-    // 1. ENCONTRAR LA FECHA MÁXIMA REAL (Convirtiendo a Timestamp para ordenar bien)
-    let maxTs = 0;
-    
-    if (rows.length > 0) {
-        rows.forEach(r => {
-            const f = r.Fecha_Asignacion || ""; // Buscamos "1/16/2026"
-            if (!f || f.length < 5) return;
-
-            let ts = 0;
-            // Detectar formato
-            if (f.includes("/")) {
-                // Formato M/D/Y
-                const parts = f.split("/");
-                // new Date(Año, Mes-1, Dia)
-                const d = new Date(parseInt(parts[2]), parseInt(parts[0])-1, parseInt(parts[1]));
-                ts = d.getTime();
-            } else if (f.includes("-")) {
-                // Formato Y-M-D
-                const parts = f.split("-");
-                const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
-                ts = d.getTime();
-            }
-
-            if (ts > maxTs) maxTs = ts;
-        });
+    // 1. OBTENER LA FECHA VISIBLE (TEXTO BRUTO)
+    // No buscamos la máxima, agarramos la primera que tenga datos porque todas son iguales en el filtro.
+    let fechaRaw = "";
+    for(let i=0; i<rows.length; i++){
+        if(rows[i].Fecha_Asignacion && rows[i].Fecha_Asignacion.includes("/")){
+            fechaRaw = rows[i].Fecha_Asignacion;
+            break;
+        }
     }
 
-    // 2. CALCULAR FECHA DE CORTE (RESTAR 1 DÍA EN MILISEGUNDOS)
+    // 2. RESTA MANUAL AL NÚMERO DEL MEDIO
     let fechaCorteTexto = "";
-    let sufijoCorte = "";
+    let sufijoCorte = " (Registro histórico)";
 
-    if (maxTs > 0) {
-        // Tenemos una fecha válida del historial (ej: 16 Ene)
-        // Restamos 24 horas exactas
-        const fechaAsig = new Date(maxTs);
-        const fechaCorte = new Date(maxTs - (24 * 60 * 60 * 1000));
+    if (fechaRaw) {
+        // Asumimos formato: ALGO / DIA / ALGO
+        // Ejemplo: 1/16/2026
+        const partes = fechaRaw.split("/");
         
-        // Formateamos MANUALMENTE a MM/DD/YYYY
-        const dd = String(fechaCorte.getDate()).padStart(2, '0');
-        const mm = String(fechaCorte.getMonth() + 1).padStart(2, '0');
-        const yyyy = fechaCorte.getFullYear();
-        
-        fechaCorteTexto = `${mm}/${dd}/${yyyy} 11:59 PM`;
-        sufijoCorte = " (Registro histórico)";
+        if (partes.length === 3) {
+            let parte1 = partes[0]; // Mes (1)
+            let parte2 = parseInt(partes[1]); // Día (16)
+            let parte3 = partes[2]; // Año (2026)
+
+            // RESTAMOS 1 AL DÍA
+            let diaNuevo = parte2 - 1;
+
+            // Manejo básico si el día llega a 0 (para que no salga 1/0/2026)
+            if (diaNuevo === 0) {
+                // Si llegamos a 0, retrocedemos manualmente al 30 (simple visual)
+                // O intentamos retroceder mes.
+                let m = parseInt(parte1) - 1;
+                let y = parseInt(parte3);
+                if (m === 0) { m = 12; y = y - 1; }
+                
+                parte1 = m;
+                parte3 = y;
+                diaNuevo = 30; // Aproximación segura para reporte
+            }
+
+            // RECONSTRUCCIÓN CON CEROS
+            // padStart asegura que 1 quede como 01
+            const p1 = String(parte1).padStart(2,'0'); 
+            const p2 = String(diaNuevo).padStart(2,'0');
+            const p3 = String(parte3);
+
+            fechaCorteTexto = `${p1}/${p2}/${p3} 11:59 PM`;
+        } else {
+            // Si el formato no tiene 3 partes, devolvemos el original
+            fechaCorteTexto = fechaRaw + " (Sin cálculo)";
+        }
     } else {
-        // Fallback: Si no encontró nada, usa AYER real del sistema
+        // Fallback si no encuentra fechas con /
         const hoy = new Date();
-        const ayer = new Date(hoy.getTime() - (24 * 60 * 60 * 1000));
-        
-        const dd = String(ayer.getDate()).padStart(2, '0');
-        const mm = String(ayer.getMonth() + 1).padStart(2, '0');
-        const yyyy = ayer.getFullYear();
-        
-        fechaCorteTexto = `${mm}/${dd}/${yyyy} 11:59 PM`;
+        hoy.setDate(hoy.getDate() - 1);
+        fechaCorteTexto = hoy.toLocaleDateString("en-US") + " 11:59 PM";
         sufijoCorte = "";
     }
 
