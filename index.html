@@ -567,13 +567,40 @@
     return name;
   }
 
-  // --- EXPORTACIÓN PDF (CORTE DE TEXTO DURO - VERSIÓN CORREGIDA) ---
+  // --- EXPORTACIÓN PDF (CORRECCIÓN DE DESFASE DE FECHA DEL BACKEND) ---
   function exportPdfAsignacion(){
     const rows = _pickingRows();
     if(!rows.length){ alert("No hay datos visibles para exportar."); return; }
     
     const baseName = getDynamicFilename("Hoja_Asignacion");
     const fechaGen = new Date().toLocaleString("en-US");
+
+    // Función para corregir la fecha "mentirosa" que viene del backend
+    function corregirFecha(fechaSucia) {
+        if (!fechaSucia) return "---";
+        
+        // El dato viene como "2026-01-17" o "2026-01-17T..."
+        // Lo limpiamos primero
+        let limpio = String(fechaSucia).split("T")[0].split(" ")[0];
+        
+        // Si tiene guiones (formato YYYY-MM-DD que vemos en la foto)
+        if (limpio.includes("-")) {
+            const partes = limpio.split("-");
+            // Cuidado: new Date(anio, mes-1, dia)
+            // Creamos la fecha tal cual dice el texto (ej: 17)
+            const d = new Date(parseInt(partes[0]), parseInt(partes[1]) - 1, parseInt(partes[2]));
+            
+            // LE RESTAMOS EL DÍA EXTRA QUE EL SISTEMA ESTÁ AGREGANDO
+            // Si tú ves 17 pero quieres 16, restamos 1.
+            d.setDate(d.getDate() - 1); // <--- AQUI ESTA LA MAGIA
+            
+            // Devolvemos en formato bonito DD/MM/YYYY
+            return d.toLocaleDateString("es-PA"); // O "en-US" si prefieres mes primero
+        }
+        
+        // Si ya viene con barras (1/16/2026), asumimos que está bien y no tocamos
+        return limpio;
+    }
 
     const groups = new Map();
     for(const r of rows){
@@ -584,20 +611,17 @@
       
       const f8  = (r.Fecha||""); 
       
-      // 1. OBTENCIÓN DEL DATO BRUTO 
+      // Capturamos el dato crudo
       let rawDate = r.Fecha_Asignacion || r.FECHA_ASIGNACION || r.Fecha_Proceso || "";
-
-      // 2. LIMPIEZA DE HORA (TIJERETAZO)
-      if(rawDate && typeof rawDate === 'string') {
-          if(rawDate.includes("T")) rawDate = rawDate.split("T")[0];
-          else if(rawDate.includes(" ")) rawDate = rawDate.split(" ")[0];
-      }
+      
+      // Aplicamos la corrección
+      let fechaFinal = corregirFecha(rawDate);
       
       if(!groups.has(key)){ 
         groups.set(key, {
           ue, doc, tipo: r.Tipo||"", prioridad: pr, 
           maxFechaF8: f8,
-          fechaAsignacionGrupo: rawDate, 
+          fechaAsignacionGrupo: fechaFinal, // Guardamos la fecha corregida
           items: [],
           totalSol: 0, totalRed: 0, totalAsig: 0, totalPend: 0
         }); 
@@ -611,7 +635,10 @@
       g.totalPend += Number(r.Pendiente||0);
 
       if(f8 > g.maxFechaF8) g.maxFechaF8 = f8;
-      if(!g.fechaAsignacionGrupo && rawDate) g.fechaAsignacionGrupo = rawDate;
+      // Actualizamos si vemos una fecha válida
+      if (fechaFinal !== "---" && g.fechaAsignacionGrupo === "---") {
+          g.fechaAsignacionGrupo = fechaFinal;
+      }
       
       if(pr < g.prioridad) g.prioridad = pr;
     }
@@ -662,7 +689,7 @@
          escasezLabel += ` <span style="color:#b00020; font-size:10px; margin-left:8px;">(Nota: No existe empaque definido, se asume unidad mínima 1)</span>`;
       }
 
-      let fechaAsigShow = g.fechaAsignacionGrupo ? esc(g.fechaAsignacionGrupo) : "---";
+      let fechaAsigShow = esc(g.fechaAsignacionGrupo);
 
       return `
         <div class="section">
@@ -693,7 +720,7 @@
                     <span>Doc: <b>${esc(g.doc)}</b></span>
                     <span>Tipo: <b>${esc(g.tipo)}</b></span>
                     <span>Fecha F8: <b>${esc(g.maxFechaF8||"")}</b></span>
-                    <span style="background:#fff; padding:0 4px; border:1px solid #ccc; border-radius:4px;">Fecha de Asignación: <b>${fechaAsigShow}</b></span>
+                    <span style="background:#fff; padding:0 4px; border:1px solid #ccc; border-radius:4px;">Fecha Asignación: <b>${fechaAsigShow}</b></span>
                   </div>
                   <div style="margin-top:6px; padding-top:6px; border-top:1px solid #ccc; font-size:10px; display:flex; justify-content:space-between; align-items:center;">
                     <div style="font-weight:bold; ${escasezClass}">Escasez: ${escasezLabel}</div>
@@ -735,21 +762,6 @@
         </div>`;
     }).join("");
 
-    const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"/><title>${baseName}</title>
-    <style>
-      body{font-family:'Segoe UI', Arial, sans-serif; color:#111; margin:0;}
-      table { width: 100%; border-collapse: collapse; margin-bottom: 0; }
-      thead { display: table-header-group; } 
-      tr { page-break-inside: auto; } 
-      th, td { border: 1px solid #ccc; padding: 4px 5px; font-size: 10px; vertical-align: top; }
-      thead tr:first-child td { border: none; }
-      .col-header th { background: #f3f5f8; font-weight: bold; color: #333; text-transform: uppercase; }
-      .num { text-align: right; } .center { text-align: center; }
-      .section { margin-bottom: 20px; page-break-after: always; } .section:last-child { page-break-after: auto; }
-      .sign { display: flex; justify-content: space-between; gap: 20px; margin-top: 30px; font-size: 11px; page-break-inside: avoid; }
-      @media print { body { margin: 10mm; } }
-    </style></head><body>${sections}</body></html>`;
-    
     const w = window.open("", "_blank"); w.document.open(); w.document.write(html); w.document.close(); w.focus(); 
     setTimeout(()=>{ w.print(); }, 500);
   }
