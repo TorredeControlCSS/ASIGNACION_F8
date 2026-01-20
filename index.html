@@ -753,6 +753,7 @@
         <td class="num">${fmt0(r.Solicitado)}</td>
         <td class="num">${fmt0(r.Solicitado_redondeado)}</td>
         <td class="num" style="background:rgba(255,255,255,0.5); font-weight:bold;">${fmt0(r.Asignado)}</td>
+        <td class="num" style="color:purple; font-weight:bold;">${r.Reservado > 0 ? fmt0(r.Reservado) : "-"}</td>
         <td class="num">${fmt0(r.Pendiente)}</td>
         <td class="center">${esc(b)}</td>
         <td style="font-size:9px;">${esc(lotes)}</td>
@@ -842,6 +843,7 @@
                 <th style="width:50px;" class="num">Solic.</th>
                 <th style="width:50px;" class="num">Sol.red</th>
                 <th style="width:50px;" class="num">Asig.</th>
+                <th style="width:50px; color:purple;" class="num">Reserv.</th>
                 <th style="width:50px;" class="num">Pend.</th>
                 <th style="width:65px;" class="center">Bultos</th>
                 <th style="width:130px;">Lotes</th>
