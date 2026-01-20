@@ -203,8 +203,12 @@
                   <th>Fecha F8</th><th>Doc</th><th>Tipo</th><th>UE</th><th>Categoría</th>
                   <th>Código</th><th>Suministro</th>
                   <th class="right">Solicitado</th><th class="right">Solic. red.</th>
-                  <th class="right">Asignado</th><th class="right">Pendiente</th>
-                  <th class="right" style="color:purple;">Reservado</th>
+                  
+                  <th class="right">Asignado</th>
+                  <!-- AQUÍ VA RESERVADO (Entre Asignado y Pendiente) -->
+                  <th class="right" style="color:purple;">Reservado</th> 
+                  <th class="right">Pendiente</th>
+                  
                   <th class="center">Bultos (T/S/P)</th><th>Lotes usados</th>
                   <th>Último despacho</th><th class="right">Qty último</th>
                   <th class="right">Promedio Hist.</th>
@@ -389,6 +393,7 @@
         <td class="right">${fmt(r.Solicitado)}</td>
         <td class="right">${fmt(r.Solicitado_redondeado)}</td>
         <td class="right">${fmt(r.Asignado)}</td>
+        <td class="right" style="color:purple; font-weight:bold;">${r.Reservado > 0 ? fmt(r.Reservado) : "-"}</td>
         <td class="right">${fmt(r.Pendiente)}</td>
         <td class="center">${b}</td>
         <td>${lots}</td>
