@@ -756,6 +756,7 @@
         <td class="num">${fmt0(r.Solicitado_redondeado)}</td>
         <td class="num" style="background:rgba(255,255,255,0.5); font-weight:bold;">${fmt0(r.Asignado)}</td>
         <td class="num" style="color:purple; font-weight:bold;">${r.Reservado > 0 ? fmt0(r.Reservado) : "-"}</td>
+        <td style="font-size:8px; color:#444; text-align:center;">${esc(r.Reservado_Doc||"")}</td>
         <td class="num">${fmt0(r.Pendiente)}</td>
         <td class="center">${esc(b)}</td>
         <td style="font-size:9px;">${esc(lotes)}</td>
@@ -798,7 +799,7 @@
           <table>
             <thead>
               <tr>
-                <td colspan="12" style="background:#fff; border-bottom:2px solid #0b1f3a; padding: 10px 0;">
+                <td colspan="13" style="background:#fff; border-bottom:2px solid #0b1f3a; padding: 10px 0;">
                   <div style="display:flex; gap:15px; align-items:center;">
                     <img src="./icons/icon-512.png" style="width:50px; height:50px; object-fit:contain;" alt="logo"/>
                     <div style="flex:1;">
@@ -813,7 +814,7 @@
                 </td>
               </tr>
               <tr class="meta-row">
-                <th colspan="12" style="background:#f4f6f8; color:#0b1f3a; padding:10px; border-bottom:2px solid #0b1f3a; border-top:none;">
+                <th colspan="13" style="background:#f4f6f8; color:#0b1f3a; padding:10px; border-bottom:2px solid #0b1f3a; border-top:none;">
                   <div style="display:flex; justify-content:space-between; align-items:start;"> <!-- Align start para que quepan los stamps -->
                     <div>
                         <div style="font-size:14px; font-weight:900;">${esc(g.ue)} ${stampFrio}</div>
@@ -846,6 +847,8 @@
                 <th style="width:50px;" class="num">Sol.red</th>
                 <th style="width:50px;" class="num">Asig.</th>
                 <th style="width:50px; color:purple;" class="num">Reserv.</th>
+                <!-- NUEVA LÍNEA -->
+                <th style="width:70px; color:purple; font-size:9px;">Doc. Res.</th> 
                 <th style="width:50px;" class="num">Pend.</th>
                 <th style="width:65px;" class="center">Bultos</th>
                 <th style="width:130px;">Lotes</th>
