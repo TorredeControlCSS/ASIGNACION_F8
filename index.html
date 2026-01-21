@@ -207,6 +207,7 @@
                   <th class="right">Asignado</th>
                   <!-- AQUÍ VA RESERVADO (Entre Asignado y Pendiente) -->
                   <th class="right" style="color:purple;">Reservado</th> 
+                  <th style="font-size:9px; color:purple;">Doc. Reserva</th> <!-- NUEVA COLUMNA -->
                   <th class="right">Pendiente</th>
                   
                   <th class="center">Bultos (T/S/P)</th><th>Lotes usados</th>
@@ -394,6 +395,7 @@
         <td class="right">${fmt(r.Solicitado_redondeado)}</td>
         <td class="right">${fmt(r.Asignado)}</td>
         <td class="right" style="color:purple; font-weight:bold;">${r.Reservado > 0 ? fmt(r.Reservado) : "-"}</td>
+        <td style="font-size:9px; color:#555;">${r.Reservado_Doc || ""}</td> <!-- NUEVA CELDA -->
         <td class="right">${fmt(r.Pendiente)}</td>
         <td class="center">${b}</td>
         <td>${lots}</td>
