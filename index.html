@@ -213,6 +213,8 @@
                   <th class="center">Bultos (T/S/P)</th><th>Lotes usados</th>
                   <th>Último despacho</th><th class="right">Qty último</th>
                   <th class="right">Promedio Hist.</th>
+                  <!-- PEGAR ESTA LÍNEA AQUÍ: -->
+                  <th style="font-size:10px; color:#555;">Estado</th>
                 </tr>
               </thead>
               <tbody></tbody>
@@ -402,6 +404,8 @@
         <td>${ldFecha}</td>
         <td class="right">${ldQty}</td>
         <td class="right" style="background:#f0f8ff;">${prom}</td>
+        <!-- PEGAR ESTA LÍNEA AQUÍ: -->
+        <td style="font-size:10px; font-weight:bold; color:${(r.Estado||"").includes('SIN') ? 'red' : 'green'};">${r.Estado||""}</td>
       </tr>`;
     }).join("");
     window.__exportRows = rows;
