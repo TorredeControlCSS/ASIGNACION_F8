@@ -805,7 +805,7 @@
         </td>
         <td style="font-size:8px;">${esc(r.Grupo || "-")}</td>
         <td class="num">${fmt0(r.Solicitado)}</td>
-        <td class="num">${fmt0(r.Solicitado_redondeado)}</td>
+        <td class="num" style="${r.Acaparamiento ? 'color:#bf360c;font-weight:bold;text-decoration:underline;' : ''}">${fmt0(r.Solicitado_redondeado)}${r.Acaparamiento ? ' ⚠️' : ''}</td>
         <td class="num" style="background:rgba(255,255,255,0.5); font-weight:bold;">${fmt0(r.Asignado)}</td>
         <td class="num" style="color:blue;">${transito}</td>
         <td class="num" style="color:purple;">${r.Reservado > 0 ? fmt0(r.Reservado) : "-"}</td>
