@@ -69,7 +69,7 @@
       <div class="title-main">TORRE DE CONTROL — Motor de Asignación de Requisiciones F8 - CEDIS PANAMA</div>
       <div class="title-sub">
         <span id="currentDateTime">Cargando fecha...</span>
-        <span style="opacity:.8;margin-left:8px;"> | C1 Corte diario · v6.0 Full</span>
+        <span style="opacity:.8;margin-left:8px;"> | C1 Corte diario · v7.0 Full (Integrado)</span>
       </div>
     </div>
     <div class="top-actions">
@@ -202,18 +202,21 @@
                 <tr>
                   <th>Fecha F8</th><th>Doc</th><th>Tipo</th><th>UE</th><th>Categoría</th>
                   <th>Código</th><th>Suministro</th>
-                  <th class="right">Solicitado</th><th class="right">Solic. red.</th>
+                  <th>Grupo</th> <!-- NUEVO -->
+                  <th class="right">Solicitado</th><th class="right">Solic. Ajust.</th>
                   
                   <th class="right">Asignado</th>
-                  <!-- AQUÍ VA RESERVADO (Entre Asignado y Pendiente) -->
+                  <th class="right" style="color:blue;">Tránsito</th> <!-- NUEVO -->
+
                   <th class="right" style="color:purple;">Reservado</th> 
-                  <th style="font-size:9px; color:purple;">Doc. Reserva</th> <!-- NUEVA COLUMNA -->
+                  <th style="font-size:9px; color:purple;">Doc. Reserva</th>
                   <th class="right">Pendiente</th>
                   
-                  <th class="center">Bultos (T/S/P)</th><th>Lotes usados</th>
+                  <th class="center">Bultos</th>
+                  <th>Lotes / Info Tránsito</th> <!-- COMBINADO -->
+                  
                   <th>Último despacho</th><th class="right">Qty último</th>
                   <th class="right">Promedio Hist.</th>
-                  <!-- PEGAR ESTA LÍNEA AQUÍ: -->
                   <th style="font-size:10px; color:#555;">Estado</th>
                 </tr>
               </thead>
@@ -224,10 +227,10 @@
 
         <!-- PESTAÑAS OCULTAS -->
         <div id="view_ue_sin" class="view" style="display:none;margin-top:10px;">
-          <div class="scroll"><table id="tbl_ue_sin"><thead><tr><th>UE</th><th>Categoría</th><th class="right">Líneas sin cobertura</th><th class="right">Solicitado (original)</th><th class="right">Solicitado (red.)</th><th>Pedido más reciente</th></tr></thead><tbody></tbody></table></div>
+          <div class="scroll"><table id="tbl_ue_sin"><thead><tr><th>UE</th><th>Categoría</th><th class="right">Líneas sin cobertura</th><th class="right">Solicitado (original)</th><th class="right">Solicitado (red.)</th><th>Unidades Pendientes (Déficit)</th></tr></thead><tbody></tbody></table></div>
         </div>
         <div id="view_sku_sin" class="view" style="display:none;margin-top:10px;">
-          <div class="scroll"><table id="tbl_sku_sin"><thead><tr><th>Código</th><th>Suministro</th><th class="right">Solicitado (original)</th><th class="right">Solicitado (red.)</th><th class="right">Nº UEs</th><th>Categorías afectadas</th><th>Último despacho (real)</th></tr></thead><tbody></tbody></table></div>
+          <div class="scroll"><table id="tbl_sku_sin"><thead><tr><th>Código</th><th>Suministro</th><th class="right">Solicitado (original)</th><th class="right">Solicitado (red.)</th><th class="right">Nº UEs</th><th>UEs Afectadas (Detalle)</th><th>Último despacho (real)</th></tr></thead><tbody></tbody></table></div>
         </div>
         <div id="view_invalidos" class="view" style="display:none;margin-top:10px;">
           <div class="scroll"><table id="tbl_invalidos"><thead><tr><th>Fecha</th><th>UE</th><th>Categoría</th><th>Código</th><th>Suministro</th><th class="right">Solicitado (original)</th><th class="right">Empaque terciario</th><th class="right">Solicitado (red.)</th><th>Motivo</th></tr></thead><tbody></tbody></table></div>
@@ -249,15 +252,37 @@
 
 <script>
   // --- UTILS ---
-  function uniq(arr){ return [...new Set(arr)].filter(x => x !== null && x !== undefined); }
-  function parseISODate(s){ if(!s) return null; const m = String(s).match(/(\d{4})-(\d{2})-(\d{2})/); if(!m) return null; return new Date(`${m[1]}-${m[2]}-${m[3]}T00:00:00`); }
-  function fmtBultosPart(n){ const x = Number(n); if(!Number.isFinite(x)) return "0"; return Math.abs(x - Math.round(x)) < 1e-9 ? String(Math.round(x)) : String(parseFloat(x.toFixed(3))); }
-  function fmtBultosTriple(t,s,p){ return `${fmtBultosPart(t)}/${fmtBultosPart(s)}/${fmtBultosPart(p)}`; }
-  const fmt = (n) => { if (n === null || n === undefined || isNaN(n)) return "-"; return new Intl.NumberFormat('es-PA', {maximumFractionDigits: 0}).format(n); };
-  
-  function tickDateTime(){
+  function uniq(arr) {
+    return [...new Set(arr)].filter(x => x !== null && x !== undefined);
+  }
+
+  function parseISODate(s) {
+    if (!s) return null;
+    const m = String(s).match(/(\d{4})-(\d{2})-(\d{2})/);
+    if (!m) return null;
+    return new Date(`${m[1]}-${m[2]}-${m[3]}T00:00:00`);
+  }
+
+  function fmtBultosPart(n) {
+    const x = Number(n);
+    if (!Number.isFinite(x)) return "0";
+    return Math.abs(x - Math.round(x)) < 1e-9 ? String(Math.round(x)) : String(parseFloat(x.toFixed(3)));
+  }
+
+  function fmtBultosTriple(t, s, p) {
+    return `${fmtBultosPart(t)}/${fmtBultosPart(s)}/${fmtBultosPart(p)}`;
+  }
+
+  const fmt = (n) => {
+    if (n === null || n === undefined || isNaN(n)) return "-";
+    return new Intl.NumberFormat('es-PA', { maximumFractionDigits: 0 }).format(n);
+  };
+
+  function tickDateTime() {
     const el = document.getElementById('currentDateTime');
-    if(el) el.textContent = new Date().toLocaleString('es-PA', { weekday:'long', year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit' });
+    if (el) el.textContent = new Date().toLocaleString('es-PA', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
   }
 
   // --- VARIABLES ---
@@ -267,72 +292,68 @@
   let ACTIVE_TAB = "asignacion";
   let LAST_FILTERED = [];
 
-  function coverage(r){
+  function coverage(r) {
     const req = Number(r.Solicitado_redondeado || 0);
     const asg = Number(r.Asignado || 0);
-    if (asg <= 0) return "SIN";
+    const trans = Number(r.Asignado_Transito || 0); // NUEVO LOGICA
+
+    if (asg <= 0 && trans <= 0) return "SIN";
     if (asg >= req && req > 0) return "COMPLETO";
     return "PARCIAL";
   }
 
-  function populateFilters(){
+  function populateFilters() {
     const catSel = document.getElementById('cat');
     const ueSel = document.getElementById('ue');
     const tipoSel = document.getElementById('tipo');
     const docList = document.getElementById('docList');
+    
     const cats = ["ALL", ...uniq(DATA.map(r => r.Categoria)).sort()];
     catSel.innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join("");
+    
     const ues = ["ALL", ...uniq(DATA.map(r => r.Punto)).sort()];
     ueSel.innerHTML = ues.map(u => `<option value="${u}">${u}</option>`).join("");
+    
     const tipos = ["ALL", ...uniq(DATA.map(r => r.Tipo)).sort()];
     tipoSel.innerHTML = tipos.map(t => `<option value="${t}">${t}</option>`).join("");
-    if(docList){
+    
+    if (docList) {
       const docs = uniq(DATA.map(r => r.N_Doc)).sort();
       docList.innerHTML = docs.map(d => `<option value="${d}"></option>`).join("");
     }
   }
 
-  function applyFilters(){
+  function applyFilters() {
     const q = (document.getElementById('q').value || "").trim().toLowerCase();
     const cat = document.getElementById('cat').value;
     const ue = document.getElementById('ue').value;
     const tipo = document.getElementById('tipo').value;
     const estado = document.getElementById('estado').value;
-    
-    // FILTROS 1: FECHA F8 (Documento)
+
     const dateFrom = document.getElementById('dateFrom').value;
     const dateTo = document.getElementById('dateTo').value;
-
-    // FILTROS 2: FECHA ASIGNACION (Proceso)
     const allocFrom = document.getElementById('allocDateFrom').value;
     const allocTo = document.getElementById('allocDateTo').value;
 
     let rows = DATA;
     const docQ = (document.getElementById('doc')?.value || '').trim().toLowerCase();
-    
+
     if (docQ) rows = rows.filter(r => String(r.N_Doc || '').toLowerCase().includes(docQ));
-    
-    // APLICAR FILTRO FECHA F8
     if (dateFrom) rows = rows.filter(r => String(r.Fecha || '') >= dateFrom);
     if (dateTo) rows = rows.filter(r => String(r.Fecha || '') <= dateTo);
 
-    // APLICAR FILTRO FECHA ASIGNACION (HISTÓRICO)
     if (allocFrom || allocTo) {
-        rows = rows.filter(r => {
-            // Buscamos la fecha de proceso (Backend Histórico) o fallback a la fecha normal
-            let fechaAlloc = r.Fecha_Asignacion || r.FECHA_ASIGNACION || r.Fecha_Proceso || "";
-            // Si es la vista diaria, puede que no tenga Fecha_Proceso aún, usamos hoy implícito o nada
-            // Pero si el usuario filtra por fecha de asignación en "Diario", asumimos que busca la fecha de hoy.
-            if (!fechaAlloc && r.Fecha_Asignacion) fechaAlloc = r.Fecha_Asignacion;
-
-            if(!fechaAlloc) return true; // Si no hay fecha de proceso, lo dejamos pasar si estamos en vista simple
-            
-            const dStr = String(fechaAlloc).split("T")[0];
-            let pass = true;
-            if (allocFrom && dStr < allocFrom) pass = false;
-            if (allocTo && dStr > allocTo) pass = false;
-            return pass;
-        });
+      rows = rows.filter(r => {
+        let fechaAlloc = r.Fecha_Asignacion || r.FECHA_ASIGNACION || r.Fecha_Proceso || "";
+        if (!fechaAlloc && r.Fecha_Asignacion) fechaAlloc = r.Fecha_Asignacion;
+        if (!fechaAlloc) return true;
+        
+        const dStr = String(fechaAlloc).split("T")[0];
+        let pass = true;
+        if (allocFrom && dStr < allocFrom) pass = false;
+        if (allocTo && dStr > allocTo) pass = false;
+        return pass;
+      });
     }
 
     if (q) rows = rows.filter(r => String(r.Codigo).includes(q) || String(r.Suministro || "").toLowerCase().includes(q));
@@ -340,33 +361,32 @@
     if (ue !== "ALL") rows = rows.filter(r => r.Punto === ue);
     if (tipo !== "ALL") rows = rows.filter(r => r.Tipo === tipo);
     if (estado !== "ALL") rows = rows.filter(r => coverage(r) === estado);
-    
+
     LAST_FILTERED = rows;
     renderKPIs(rows);
     renderActiveTab(rows);
   }
 
-  function renderKPIs(rows){
-    const req = rows.reduce((a,r)=>a + Number(r.Solicitado||0), 0);
-    const reqR = rows.reduce((a,r)=>a + Number(r.Solicitado_redondeado||0), 0);
-    const asg = rows.reduce((a,r)=>a + Number(r.Asignado||0), 0);
-    const fill = req > 0 ? (asg/req)*100 : 0;
-    
+  function renderKPIs(rows) {
+    const req = rows.reduce((a, r) => a + Number(r.Solicitado || 0), 0);
+    const reqR = rows.reduce((a, r) => a + Number(r.Solicitado_redondeado || 0), 0);
+    const asg = rows.reduce((a, r) => a + Number(r.Asignado || 0), 0);
+    const fill = req > 0 ? (asg / req) * 100 : 0;
+
     document.getElementById('k_lines').textContent = fmt(rows.length);
     document.getElementById('k_req').textContent = fmt(req);
     document.getElementById('k_req_r').textContent = fmt(reqR);
     document.getElementById('k_assigned').textContent = fmt(asg);
     document.getElementById('k_fill').textContent = `${fill.toFixed(1)}%`;
 
-    // CAMBIO 2: LOGICA VISUAL PARA KPI
     const vitales = rows.filter(r => r.Importancia === "VITAL").length;
     const esenciales = rows.filter(r => r.Importancia === "ESENCIAL").length;
-    
-    document.getElementById('k_importancia').innerHTML = 
-        `<span style="color:#d32f2f; font-weight:bold;">💓 V: ${fmt(vitales)}</span> | <span style="color:#2e7d32; font-weight:bold;">✅ E: ${fmt(esenciales)}</span>`;
+
+    document.getElementById('k_importancia').innerHTML =
+      `<span style="color:#d32f2f; font-weight:bold;">💓 V: ${fmt(vitales)}</span> | <span style="color:#2e7d32; font-weight:bold;">✅ E: ${fmt(esenciales)}</span>`;
   }
 
-  function showTab(tab){
+  function showTab(tab) {
     ACTIVE_TAB = tab;
     document.querySelectorAll('.tab').forEach(el => el.classList.toggle('active', el.dataset.tab === tab));
     document.querySelectorAll('.view').forEach(v => v.style.display = "none");
@@ -374,73 +394,88 @@
     renderActiveTab(LAST_FILTERED.length ? LAST_FILTERED : DATA);
   }
 
-  function renderAsignacion(rows){
+  // --- RENDER ASIGNACION CON NUEVAS COLUMNAS (EXPANDIDO) ---
+  function renderAsignacion(rows) {
     const tb = document.querySelector("#tbl_asignacion tbody");
-    // LÍMITE AUMENTADO
     tb.innerHTML = rows.slice(0, 10000).map(r => {
-      const b = fmtBultosTriple(r.Bultos_Ter||0, r.Bultos_Sec||0, r.Bultos_Prim||0);
-      const lots = r.Lotes_Usados ? r.Lotes_Usados : "";
+      const b = fmtBultosTriple(r.Bultos_Ter || 0, r.Bultos_Sec || 0, r.Bultos_Prim || 0);
       
-      const ldFecha = r.Ultimo_Despacho || "-";
-      const ldQty = r.Qty_Ultimo ? fmt(r.Qty_Ultimo) : "-";
-      const prom = r.Promedio_Hist ? fmt(r.Promedio_Hist) : "-";
+      // Combinar Lotes + Transito
+      let infoExtra = r.Lotes_Usados || "";
+      if(r.Transito_Info) {
+          infoExtra += (infoExtra ? " | " : "") + `<span style="color:blue;font-weight:bold;">${r.Transito_Info}</span>`;
+      }
+
+      // Iconos
+      let iconos = "";
+      if(r.Frio) iconos += "❄️ ";
+      if(r.Narcotico) iconos += "💊 "; 
+
+      // Alerta Acaparamiento
+      let estiloSol = "";
+      if(r.Acaparamiento) estiloSol = "color:orange; font-weight:bold; text-decoration:underline;";
 
       return `<tr>
-        <td>${r.Fecha||""}</td>
-        <td>${r.N_Doc||""}</td>
-        <td>${r.Tipo||""}</td>
-        <td>${r.Punto||""}</td>
-        <td>${r.Categoria||""}</td>
-        <td>${r.Codigo||""}</td>
-        <td>${r.Suministro||""}</td>
+        <td>${r.Fecha || ""}</td>
+        <td>${r.N_Doc || ""}</td>
+        <td>${r.Tipo || ""}</td>
+        <td>${r.Punto || ""}</td>
+        <td>${r.Categoria || ""}</td>
+        <td>${r.Codigo || ""}</td>
+        <td>${iconos} ${r.Suministro || ""}</td>
+        <td style="font-size:10px;">${r.Grupo || "-"}</td> 
+
         <td class="right">${fmt(r.Solicitado)}</td>
-        <td class="right">${fmt(r.Solicitado_redondeado)}</td>
-        <td class="right">${fmt(r.Asignado)}</td>
+        <td class="right" style="${estiloSol}" title="${r.Acaparamiento ? 'Recortado por Anti-Acaparamiento' : ''}">${fmt(r.Solicitado_redondeado)}</td>
+        
+        <td class="right" style="font-weight:bold;">${fmt(r.Asignado)}</td>
+        <td class="right" style="color:blue; font-weight:bold;">${r.Asignado_Transito > 0 ? fmt(r.Asignado_Transito) : "-"}</td> 
+
         <td class="right" style="color:purple; font-weight:bold;">${r.Reservado > 0 ? fmt(r.Reservado) : "-"}</td>
-        <td style="font-size:9px; color:#555;">${r.Reservado_Doc || ""}</td> <!-- NUEVA CELDA -->
+        <td style="font-size:9px; color:#555;">${r.Reservado_Doc || ""}</td>
         <td class="right">${fmt(r.Pendiente)}</td>
+        
         <td class="center">${b}</td>
-        <td>${lots}</td>
-        <td>${ldFecha}</td>
-        <td class="right">${ldQty}</td>
-        <td class="right" style="background:#f0f8ff;">${prom}</td>
-        <!-- PEGAR ESTA LÍNEA AQUÍ: -->
-        <td style="font-size:10px; font-weight:bold; color:${(r.Estado||"").includes('SIN') ? 'red' : 'green'};">${r.Estado||""}</td>
+        <td style="font-size:10px;">${infoExtra}</td>
+        
+        <td>${r.Ultimo_Despacho || "-"}</td>
+        <td class="right">${r.Qty_Ultimo ? fmt(r.Qty_Ultimo) : "-"}</td>
+        <td class="right" style="background:#f0f8ff;">${r.Promedio_Hist ? fmt(r.Promedio_Hist) : "-"}</td>
+        <td style="font-size:10px; font-weight:bold; color:${(r.Estado || "").includes('SIN') ? 'red' : 'green'};">${r.Estado || ""}</td>
       </tr>`;
     }).join("");
+    
     window.__exportRows = rows;
     window.__exportName = "asignacion";
   }
 
-  function renderUESin(rows){
-    // Filtramos líneas donde NO se asignó nada pero SÍ se pidió (huecos totales)
-    const filtered = rows.filter(r => Number(r.Asignado||0) === 0 && Number(r.Solicitado_redondeado||0) > 0);
+  function renderUESin(rows) {
+    const filtered = rows.filter(r => Number(r.Asignado || 0) === 0 && Number(r.Solicitado_redondeado || 0) > 0);
     const map = new Map();
     
-    for(const r of filtered){
-      const key = `${r.Punto||""}||${r.Categoria||""}`;
-      if(!map.has(key)) map.set(key, {UE:r.Punto||"", Categoria:r.Categoria||"", lineas:0, sol:0, solr:0, pendiente:0});
+    for (const r of filtered) {
+      const key = `${r.Punto || ""}||${r.Categoria || ""}`;
+      if (!map.has(key)) {
+        map.set(key, { UE: r.Punto || "", Categoria: r.Categoria || "", lineas: 0, sol: 0, solr: 0, pendiente: 0 });
+      }
       const o = map.get(key);
       o.lineas += 1;
-      o.sol += Number(r.Solicitado||0);
-      o.solr += Number(r.Solicitado_redondeado||0);
-      // Calculamos el pendiente (lo que pidieron y no recibieron)
-      o.pendiente += Number(r.Pendiente||0);
+      o.sol += Number(r.Solicitado || 0);
+      o.solr += Number(r.Solicitado_redondeado || 0);
+      o.pendiente += Number(r.Pendiente || 0);
     }
     
-    // Ordenamos por la cantidad pendiente (los que más les falta, van primero)
     const out = [...map.values()].map(o => ({
-      UE:o.UE, 
-      Categoria:o.Categoria, 
-      Lineas_sin_cobertura:o.lineas,
-      Solicitado_original:o.sol, 
-      Solicitado_redondeado:o.solr,
-      Total_Pendiente:o.pendiente // Nueva métrica
-    })).sort((a,b)=> b.Total_Pendiente - a.Total_Pendiente).slice(0,20);
-    
-    // Ajuste visual del encabezado HTML (Hack para no tocar el HTML estático)
+      UE: o.UE,
+      Categoria: o.Categoria,
+      Lineas_sin_cobertura: o.lineas,
+      Solicitado_original: o.sol,
+      Solicitado_redondeado: o.solr,
+      Total_Pendiente: o.pendiente
+    })).sort((a, b) => b.Total_Pendiente - a.Total_Pendiente).slice(0, 20);
+
     const thRef = document.querySelector("#tbl_ue_sin thead tr th:last-child");
-    if(thRef) thRef.textContent = "Unidades Pendientes (Déficit)";
+    if (thRef) thRef.textContent = "Unidades Pendientes (Déficit)";
 
     const tb = document.querySelector("#tbl_ue_sin tbody");
     tb.innerHTML = out.map(r => `<tr>
@@ -451,43 +486,45 @@
       <td class="right">${fmt(r.Solicitado_redondeado)}</td>
       <td class="right" style="background:#fff3e0; font-weight:bold;">${fmt(r.Total_Pendiente)}</td>
     </tr>`).join("");
-    
+
     window.__exportRows = out;
     window.__exportName = "ue_sin_cobertura_top20";
   }
 
-  function renderSKUSin(rows){
-    const filtered = rows.filter(r => Number(r.Asignado||0) === 0 && Number(r.Solicitado_redondeado||0) > 0);
+  function renderSKUSin(rows) {
+    const filtered = rows.filter(r => Number(r.Asignado || 0) === 0 && Number(r.Solicitado_redondeado || 0) > 0);
     const map = new Map();
-    for(const r of filtered){
-      const code = String(r.Codigo||"");
-      const key = `${code}||${String(r.Suministro||"")}`;
-      if(!map.has(key)) map.set(key, {Codigo:code, Suministro:String(r.Suministro||""), sol:0, solr:0, ues_names:new Set(), last:null});
+    
+    for (const r of filtered) {
+      const code = String(r.Codigo || "");
+      const key = `${code}||${String(r.Suministro || "")}`;
+      if (!map.has(key)) {
+        map.set(key, { Codigo: code, Suministro: String(r.Suministro || ""), sol: 0, solr: 0, ues_names: new Set(), last: null });
+      }
       const o = map.get(key);
-      o.sol += Number(r.Solicitado||0);
-      o.solr += Number(r.Solicitado_redondeado||0);
-      o.ues_names.add(String(r.Punto||"")); // Guardamos nombres específicos
+      o.sol += Number(r.Solicitado || 0);
+      o.solr += Number(r.Solicitado_redondeado || 0);
+      o.ues_names.add(String(r.Punto || ""));
       
       const fechaRow = r.Ultimo_Despacho;
-      if(fechaRow && fechaRow !== "-"){
-         const d = parseISODate(fechaRow);
-         if(d && (!o.last || d > o.last)) o.last = d;
+      if (fechaRow && fechaRow !== "-") {
+        const d = parseISODate(fechaRow);
+        if (d && (!o.last || d > o.last)) o.last = d;
       }
     }
+    
     const out = [...map.values()].map(o => ({
-      Codigo:o.Codigo,
-      Suministro:o.Suministro,
-      Solicitado_original:o.sol,
-      Solicitado_redondeado:o.solr,
-      Num_UEs:o.ues_names.size,
-      UEs_Lista:[...o.ues_names].sort().join(", "), // Lista detallada
-      Ultimo_despacho_real:o.last ? o.last.toISOString().slice(0,10) : ""
-    })).sort((a,b)=> (b.Solicitado_redondeado - a.Solicitado_redondeado) || (b.Num_UEs - a.Num_UEs))
-      .slice(0,20);
-      
-    // Ajuste dinámico del encabezado HTML para que coincida
+      Codigo: o.Codigo,
+      Suministro: o.Suministro,
+      Solicitado_original: o.sol,
+      Solicitado_redondeado: o.solr,
+      Num_UEs: o.ues_names.size,
+      UEs_Lista: [...o.ues_names].sort().join(", "),
+      Ultimo_despacho_real: o.last ? o.last.toISOString().slice(0, 10) : ""
+    })).sort((a, b) => (b.Solicitado_redondeado - a.Solicitado_redondeado) || (b.Num_UEs - a.Num_UEs)).slice(0, 20);
+
     const thRef = document.querySelector("#tbl_sku_sin thead tr th:nth-child(6)");
-    if(thRef) thRef.textContent = "UEs Afectadas (Detalle)";
+    if (thRef) thRef.textContent = "UEs Afectadas (Detalle)";
 
     const tb = document.querySelector("#tbl_sku_sin tbody");
     tb.innerHTML = out.map(r => `<tr>
@@ -499,29 +536,39 @@
       <td style="font-size:9px;">${r.UEs_Lista}</td>
       <td>${r.Ultimo_despacho_real || "-"}</td>
     </tr>`).join("");
+
     window.__exportRows = out;
     window.__exportName = "skus_criticos_sin_stock_top20";
   }
 
-  function renderInvalidos(rows){
-    const filtered = rows.filter(r => Number(r.Solicitado||0) > 0 && Number(r.Solicitado_redondeado||0) === 0);
-    const out = filtered.slice().sort((a,b)=>{
-      const da = parseISODate(a.Fecha); const db = parseISODate(b.Fecha);
+  function renderInvalidos(rows) {
+    const filtered = rows.filter(r => Number(r.Solicitado || 0) > 0 && Number(r.Solicitado_redondeado || 0) === 0);
+    const out = filtered.slice().sort((a, b) => {
+      const da = parseISODate(a.Fecha);
+      const db = parseISODate(b.Fecha);
       return (db - da);
-    }).slice(0,2000).map(r => {
-      const sol = Number(r.Solicitado||0);
+    }).slice(0, 2000).map(r => {
+      const sol = Number(r.Solicitado || 0);
       const empT = r.Empaque_Ter ? Number(r.Empaque_Ter) : null;
-      
       let motivo = "Solicitado redondeado = 0";
-      if(empT && sol < empT) motivo = "Solicitado menor a empaque terciario";
-      else if(empT && (sol % empT) !== 0) motivo = "Solicitado no es múltiplo";
-      else if(!empT) motivo = "Sin empaque definido";
+      
+      if (empT && sol < empT) motivo = "Solicitado menor a empaque terciario";
+      else if (empT && (sol % empT) !== 0) motivo = "Solicitado no es múltiplo";
+      else if (!empT) motivo = "Sin empaque definido";
       
       return {
-        Fecha:r.Fecha||"", UE:r.Punto||"", Categoria:r.Categoria||"", Codigo:r.Codigo||"", Suministro:r.Suministro||"",
-        Solicitado_original:sol, Empaque_terciario:empT, Solicitado_redondeado:Number(r.Solicitado_redondeado||0), Motivo:motivo
+        Fecha: r.Fecha || "",
+        UE: r.Punto || "",
+        Categoria: r.Categoria || "",
+        Codigo: r.Codigo || "",
+        Suministro: r.Suministro || "",
+        Solicitado_original: sol,
+        Empaque_terciario: empT,
+        Solicitado_redondeado: Number(r.Solicitado_redondeado || 0),
+        Motivo: motivo
       };
     });
+
     const tb = document.querySelector("#tbl_invalidos tbody");
     tb.innerHTML = out.map(r => `<tr>
       <td>${r.Fecha}</td><td>${r.UE}</td><td>${r.Categoria}</td><td>${r.Codigo}</td><td>${r.Suministro}</td>
@@ -530,25 +577,32 @@
       <td class="right">${fmt(r.Solicitado_redondeado)}</td>
       <td class="${r.Motivo.includes("menor") ? "danger" : ""}">${r.Motivo}</td>
     </tr>`).join("");
+
     window.__exportRows = out;
     window.__exportName = "pedidos_invalidos_por_empaque";
   }
 
-  function renderFillCat(rows){
+  function renderFillCat(rows) {
     const map = new Map();
-    for(const r of rows){
-      const cat = String(r.Categoria||"");
-      if(!map.has(cat)) map.set(cat, {Categoria:cat, lineas:0, sol:0, solr:0, asg:0});
+    for (const r of rows) {
+      const cat = String(r.Categoria || "");
+      if (!map.has(cat)) map.set(cat, { Categoria: cat, lineas: 0, sol: 0, solr: 0, asg: 0 });
       const o = map.get(cat);
       o.lineas += 1;
-      o.sol += Number(r.Solicitado||0);
-      o.solr += Number(r.Solicitado_redondeado||0);
-      o.asg += Number(r.Asignado||0);
+      o.sol += Number(r.Solicitado || 0);
+      o.solr += Number(r.Solicitado_redondeado || 0);
+      o.asg += Number(r.Asignado || 0);
     }
+    
     const out = [...map.values()].map(o => ({
-      Categoria:o.Categoria, Lineas:o.lineas, Solicitado_original:o.sol, Solicitado_redondeado:o.solr, Asignado:o.asg,
-      Fill_rate: o.sol > 0 ? (o.asg/o.sol) : 0 
-    })).sort((a,b)=> (a.Categoria||"").localeCompare(b.Categoria||""));
+      Categoria: o.Categoria,
+      Lineas: o.lineas,
+      Solicitado_original: o.sol,
+      Solicitado_redondeado: o.solr,
+      Asignado: o.asg,
+      Fill_rate: o.sol > 0 ? (o.asg / o.sol) : 0
+    })).sort((a, b) => (a.Categoria || "").localeCompare(b.Categoria || ""));
+
     const tb = document.querySelector("#tbl_fill_cat tbody");
     tb.innerHTML = out.map(r => `<tr>
       <td>${r.Categoria}</td>
@@ -556,59 +610,72 @@
       <td class="right">${fmt(r.Solicitado_original)}</td>
       <td class="right">${fmt(r.Solicitado_redondeado)}</td>
       <td class="right">${fmt(r.Asignado)}</td>
-      <td class="right">${(r.Fill_rate*100).toFixed(1)}%</td>
+      <td class="right">${(r.Fill_rate * 100).toFixed(1)}%</td>
     </tr>`).join("");
+
     window.__exportRows = out;
     window.__exportName = "fill_rate_por_categoria";
   }
 
-  // --- NUEVA FUNCIÓN: FILL RATE POR UE ---
-  function renderFillUE(rows){
+  function renderFillUE(rows) {
     const map = new Map();
-    for(const r of rows){
-      const ue = String(r.Punto||"");
-      if(!map.has(ue)) map.set(ue, {UE:ue, Cat:r.Categoria||"", lineas:0, sol:0, asg:0});
+    for (const r of rows) {
+      const ue = String(r.Punto || "");
+      if (!map.has(ue)) map.set(ue, { UE: ue, Cat: r.Categoria || "", lineas: 0, sol: 0, asg: 0 });
       const o = map.get(ue);
-      o.lineas++; o.sol += Number(r.Solicitado||0); o.asg += Number(r.Asignado||0);
+      o.lineas++;
+      o.sol += Number(r.Solicitado || 0);
+      o.asg += Number(r.Asignado || 0);
     }
-    const out = [...map.values()].map(o => ({
-      UE:o.UE, Categoria:o.Cat, Lineas:o.lineas, Solicitado:o.sol, Asignado:o.asg, 
-      Fill_rate: o.sol > 0 ? (o.asg/o.sol) : 0 
-    })).sort((a,b)=> a.Fill_rate - b.Fill_rate); // Ordenar de MENOR a MAYOR cumplimiento
     
+    const out = [...map.values()].map(o => ({
+      UE: o.UE,
+      Categoria: o.Cat,
+      Lineas: o.lineas,
+      Solicitado: o.sol,
+      Asignado: o.asg,
+      Fill_rate: o.sol > 0 ? (o.asg / o.sol) : 0
+    })).sort((a, b) => a.Fill_rate - b.Fill_rate);
+
     const tb = document.querySelector("#tbl_fill_ue tbody");
     tb.innerHTML = out.map(r => {
-        const color = r.Fill_rate < 0.8 ? '#ffebee' : (r.Fill_rate < 0.95 ? '#fff3e0' : '#e8f5e9');
-        return `<tr style="background:${color}">
-          <td>${r.UE}</td><td>${r.Categoria}</td><td class="right">${fmt(r.Lineas)}</td>
-          <td class="right">${fmt(r.Solicitado)}</td><td class="right">${fmt(r.Asignado)}</td>
-          <td class="right" style="font-weight:bold;">${(r.Fill_rate*100).toFixed(1)}%</td>
-        </tr>`;
+      const color = r.Fill_rate < 0.8 ? '#ffebee' : (r.Fill_rate < 0.95 ? '#fff3e0' : '#e8f5e9');
+      return `<tr style="background:${color}">
+        <td>${r.UE}</td>
+        <td>${r.Categoria}</td>
+        <td class="right">${fmt(r.Lineas)}</td>
+        <td class="right">${fmt(r.Solicitado)}</td>
+        <td class="right">${fmt(r.Asignado)}</td>
+        <td class="right" style="font-weight:bold;">${(r.Fill_rate * 100).toFixed(1)}%</td>
+      </tr>`;
     }).join("");
-    window.__exportRows = out; window.__exportName = "fill_rate_por_ue";
+
+    window.__exportRows = out;
+    window.__exportName = "fill_rate_por_ue";
   }
 
-  function renderActiveTab(rows){
-    if(ACTIVE_TAB === "asignacion") return renderAsignacion(rows);
-    if(ACTIVE_TAB === "ue_sin") return renderUESin(rows);
-    if(ACTIVE_TAB === "sku_sin") return renderSKUSin(rows);
-    if(ACTIVE_TAB === "invalidos") return renderInvalidos(rows);
-    if(ACTIVE_TAB === "fill_cat") return renderFillCat(rows);
-    // NUEVA TAB
-    if(ACTIVE_TAB === "fill_ue") return renderFillUE(rows);
+  function renderActiveTab(rows) {
+    if (ACTIVE_TAB === "asignacion") return renderAsignacion(rows);
+    if (ACTIVE_TAB === "ue_sin") return renderUESin(rows);
+    if (ACTIVE_TAB === "sku_sin") return renderSKUSin(rows);
+    if (ACTIVE_TAB === "invalidos") return renderInvalidos(rows);
+    if (ACTIVE_TAB === "fill_cat") return renderFillCat(rows);
+    if (ACTIVE_TAB === "fill_ue") return renderFillUE(rows);
   }
 
-  function exportCsv(){
+  function exportCsv() {
     const rows = window.__exportRows || [];
     const cols = Object.keys(rows[0] || {});
     if (!cols.length) return;
+    
     const esc = (v) => {
       const s = (v === null || v === undefined) ? "" : String(v);
-      if (s.includes('"') || s.includes(",") || s.includes("\n")) return '"' + s.replaceAll('"','""') + '"';
+      if (s.includes('"') || s.includes(",") || s.includes("\n")) return '"' + s.replaceAll('"', '""') + '"';
       return s;
     };
+    
     const csv = [cols.join(",")].concat(rows.map(r => cols.map(c => esc(r[c])).join(","))).join("\n");
-    const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -619,152 +686,134 @@
     URL.revokeObjectURL(url);
   }
 
-  function _pickingRows(){ 
-    return LAST_FILTERED || []; 
+  function _pickingRows() {
+    return LAST_FILTERED || [];
   }
 
   function getDynamicFilename(prefix) {
     const ue = document.getElementById('ue').value;
     const cat = document.getElementById('cat').value;
     const tipo = document.getElementById('tipo').value;
-    
     let parts = [prefix];
+    
     if (ue && ue !== "ALL") parts.push(ue.replace(/[^a-zA-Z0-9\-_]/g, ""));
     if (cat && cat !== "ALL") parts.push(cat.replace(/[^a-zA-Z0-9\-_]/g, ""));
     if (tipo && tipo !== "ALL") parts.push(tipo.replace(/[^a-zA-Z0-9\-_]/g, ""));
     
     if (parts.length === 1) {
-        const today = new Date();
-        parts.push(`${today.getDate()}_${today.getMonth()+1}`);
+      const today = new Date();
+      parts.push(`${today.getDate()}_${today.getMonth() + 1}`);
     }
     
     let name = parts.join("_");
-    if (name.length > 50) name = name.substring(0, 50); 
+    if (name.length > 50) name = name.substring(0, 50);
     return name;
   }
 
-  // --- EXPORTACIÓN PDF (FINAL: LÓGICA VINCULADA AL DOCUMENTO) ---
-  function exportPdfAsignacion(){
+  // --- PDF ASIGNACION (EXPANDIDO) ---
+  function exportPdfAsignacion() {
     const rows = _pickingRows();
-    if(!rows.length){ alert("No hay datos visibles para exportar."); return; }
-    
+    if (!rows.length) {
+      alert("No hay datos visibles para exportar.");
+      return;
+    }
+
     const baseName = getDynamicFilename("Hoja_Asignacion");
     const fechaGen = new Date().toLocaleString("en-US");
-
     const groups = new Map();
-    
-    // 1. RECORREMOS LAS FILAS PARA AGRUPAR POR DOCUMENTO
-    for(const r of rows){
+
+    for (const r of rows) {
       const ue = r.Punto || "SIN_UE";
       const doc = r.N_Doc || "SIN_DOC";
       const key = ue + "||" + doc;
       const pr = Number.isFinite(+r.Prioridad) ? +r.Prioridad : 999;
-      const f8  = (r.Fecha||"");
+      const f8 = (r.Fecha || "");
+      let fechaRaw = r.FECHA_ASIGNACION;
       
-       // --- LÓGICA DE FECHA (HTML LIMPIO) ---
-      // Leemos el dato que ahora el servidor manda correctamente como texto ("1/16/2026")
-      let fechaRaw = r.FECHA_ASIGNACION; 
-
-      // CASO 1: CORTE DIARIO (Viene vacío) -> Usamos HOY
       if (!fechaRaw || fechaRaw === "---" || fechaRaw === "") {
-          const hoy = new Date();
-          // Formato manual simple: M/D/YYYY
-          fechaRaw = `${hoy.getMonth()+1}/${hoy.getDate()}/${hoy.getFullYear()}`;
+        const hoy = new Date();
+        fechaRaw = `${hoy.getMonth() + 1}/${hoy.getDate()}/${hoy.getFullYear()}`;
+      } else {
+        fechaRaw = String(fechaRaw).split("T")[0];
+      }
+
+      if (!groups.has(key)) {
+        groups.set(key, {
+          ue, doc, tipo: r.Tipo || "", prioridad: pr, maxFecha: f8, items: [],
+          fechaAsig: fechaRaw, totalSol: 0, totalRed: 0, totalAsig: 0, totalPend: 0
+        });
       }
       
-      // CASO 2: HISTÓRICO (Viene dato) -> Usamos lo que mandó el servidor tal cual
-      // Solo hacemos una limpieza preventiva por si acaso viniera hora (T00:00...)
-      else {
-           fechaRaw = String(fechaRaw).split("T")[0]; 
-      }
-      // -----------------------------------------------------
-
-      if(!groups.has(key)){ 
-        groups.set(key, {
-          ue, doc, tipo: r.Tipo||"", prioridad: pr, maxFecha: f8, 
-          items: [],
-          fechaAsig: fechaRaw, // Asignamos la fecha calculada al GRUPO (Documento)
-          totalSol: 0, totalRed: 0, totalAsig: 0, totalPend: 0
-        }); 
-      }
       const g = groups.get(key);
       g.items.push(r);
+      g.totalSol += Number(r.Solicitado || 0);
+      g.totalRed += Number(r.Solicitado_redondeado || 0);
+      g.totalAsig += Number(r.Asignado || 0);
+      g.totalPend += Number(r.Pendiente || 0);
       
-      // Sumamos totales del documento
-      g.totalSol += Number(r.Solicitado||0);
-      g.totalRed += Number(r.Solicitado_redondeado||0);
-      g.totalAsig += Number(r.Asignado||0);
-      g.totalPend += Number(r.Pendiente||0);
-
-      if(String(f8) > String(g.maxFecha)) g.maxFecha = f8;
-      
-      // Si el grupo ya existe pero tenía una fecha "rara" y esta fila trae una mejor, actualizamos
-      // Esto asegura que el Documento tenga la fecha correcta
-      if((!g.fechaAsig || g.fechaAsig.length < 6) && fechaRaw.length > 5) {
-          g.fechaAsig = fechaRaw;
-      }
-      
-      if(pr < g.prioridad) g.prioridad = pr;
+      if (String(f8) > String(g.maxFecha)) g.maxFecha = f8;
+      if ((!g.fechaAsig || g.fechaAsig.length < 6) && fechaRaw.length > 5) g.fechaAsig = fechaRaw;
+      if (pr < g.prioridad) g.prioridad = pr;
     }
-    
-    // 2. ORDENAMOS Y GENERAMOS HTML
-    const groupsArr = Array.from(groups.values()).sort((a,b)=>{
-      if(a.prioridad !== b.prioridad) return a.prioridad - b.prioridad;
+
+    const groupsArr = Array.from(groups.values()).sort((a, b) => {
+      if (a.prioridad !== b.prioridad) return a.prioridad - b.prioridad;
       return String(a.doc).localeCompare(String(b.doc));
     });
 
-    const esc = (s) => (s===null||s===undefined) ? "" : String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
-    const fmt0 = (n) => { const x = Number(n); if(!Number.isFinite(x)) return ""; return x.toLocaleString("en-US", {maximumFractionDigits: 0}); };
+    const esc = (s) => (s === null || s === undefined) ? "" : String(s).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+    const fmt0 = (n) => {
+      const x = Number(n);
+      if (!Number.isFinite(x)) return "";
+      return x.toLocaleString("en-US", { maximumFractionDigits: 0 });
+    };
 
-    // --- CAMBIO 3: ICONOS CREATIVOS Y LOGICA DE FILA ---
     const makeRow = (r) => {
-      const b = fmtBultosTriple(r.Bultos_Ter||0, r.Bultos_Sec||0, r.Bultos_Prim||0);
+      const b = fmtBultosTriple(r.Bultos_Ter || 0, r.Bultos_Sec || 0, r.Bultos_Prim || 0);
       const lotes = r.Lotes_Usados ? String(r.Lotes_Usados) : "";
       
       let rowStyle = "";
       let icons = [];
       
-      // FRIO (Copo de nieve)
-      if(r.Frio) {
-         rowStyle = "background-color: #e3f2fd;"; 
-         icons.push("❄️"); 
+      if (r.Frio) {
+        rowStyle = "background-color: #e3f2fd;";
+        icons.push("❄️");
+      }
+      if (r.Narcotico) icons.push("💊");
+      
+      if (r.Importancia === "VITAL") {
+        rowStyle = "background-color: #ffebee;";
+        icons.push("<span style='font-size:10px;' title='VITAL'>💓</span>");
+      } else if (r.Importancia === "ESENCIAL") {
+        if (!r.Frio) rowStyle = "background-color: #e8f5e9;";
+        icons.push("<span style='font-size:10px;' title='ESENCIAL'>✅</span>");
       }
       
-      // IMPORTANCIA (Iconos Solicitados)
-      if(r.Importancia === "VITAL") {
-         rowStyle = "background-color: #ffebee;"; 
-         icons.push("<span style='font-size:10px;' title='VITAL'>💓</span>"); 
-      } else if (r.Importancia === "ESENCIAL") {
-         if(!r.Frio) rowStyle = "background-color: #e8f5e9;"; 
-         icons.push("<span style='font-size:10px;' title='ESENCIAL'>✅</span>"); 
-      }
-
-      // Mezcla FRIO + VITAL
       if (r.Frio && r.Importancia === "VITAL") {
-          rowStyle = "background-color: #e1f5fe; border-left: 4px solid #d32f2f;";
+        rowStyle = "background-color: #e1f5fe; border-left: 4px solid #d32f2f;";
       }
 
       const iconHtml = icons.length ? `<div style="margin-top:1px;">${icons.join(" ")}</div>` : "";
+      const transito = r.Asignado_Transito > 0 ? `<div style="color:blue;font-weight:bold;">T:${fmt0(r.Asignado_Transito)}</div>` : "";
 
       return `
       <tr style="${rowStyle}">
+        <td>${esc(r.Codigo)} ${iconHtml}</td>
         <td>
-            ${esc(r.Codigo)} 
-            ${iconHtml}
-        </td>
-        <td>
-            ${esc(r.Suministro||"")}
+            ${esc(r.Suministro || "")}
             ${r.Importancia ? `<div style="font-size:7px; font-weight:bold; color:#555; margin-top:2px;">[${r.Importancia}]</div>` : ""}
         </td>
+        <td style="font-size:8px;">${esc(r.Grupo || "-")}</td>
         <td class="num">${fmt0(r.Solicitado)}</td>
         <td class="num">${fmt0(r.Solicitado_redondeado)}</td>
         <td class="num" style="background:rgba(255,255,255,0.5); font-weight:bold;">${fmt0(r.Asignado)}</td>
-        <td class="num" style="color:purple; font-weight:bold;">${r.Reservado > 0 ? fmt0(r.Reservado) : "-"}</td>
-        <td style="font-size:8px; color:#444; text-align:center;">${esc(r.Reservado_Doc||"")}</td>
+        <td class="num" style="color:blue;">${transito}</td>
+        <td class="num" style="color:purple;">${r.Reservado > 0 ? fmt0(r.Reservado) : "-"}</td>
+        <td style="font-size:8px; color:#444; text-align:center;">${esc(r.Reservado_Doc || "")}</td>
         <td class="num">${fmt0(r.Pendiente)}</td>
-        <td style="font-size:7px; text-align:center;">${esc(r.Estado||"")}</td> <!-- NUEVO -->
+        <td style="font-size:7px; text-align:center;">${esc(r.Estado || "")}</td>
         <td class="center">${esc(b)}</td>
-        <td style="font-size:9px;">${esc(lotes)}</td>
+        <td style="font-size:9px;">${esc(lotes)} ${r.Transito_Info ? '<br><span style="color:blue">' + esc(r.Transito_Info) + '</span>' : ''}</td>
         <td>${esc(r.Ultimo_Despacho || "-")}</td>
         <td class="num">${r.Qty_Ultimo ? fmt0(r.Qty_Ultimo) : ""}</td>
         <td class="num">${r.Promedio_Hist ? fmt0(r.Promedio_Hist) : ""}</td>
@@ -772,39 +821,29 @@
     };
 
     const sections = groupsArr.map((g, idx) => {
-      g.items.sort((a,b)=> String(a.Codigo||"").localeCompare(String(b.Codigo||"")));
+      g.items.sort((a, b) => String(a.Codigo || "").localeCompare(String(b.Codigo || "")));
       const rowsHtml = g.items.map(makeRow).join("");
       const totalItems = g.items.length;
-      
       const escasezDetectada = g.totalRed > g.totalAsig;
       const fillRate = g.totalSol > 0 ? ((g.totalAsig / g.totalSol) * 100).toFixed(1) + "%" : "0%";
+      
       let escasezLabel = escasezDetectada ? "⚠️ SÍ (Fair Share aplicado)" : "✅ NO (Stock suficiente)";
       let escasezClass = escasezDetectada ? "color:#b00020;" : "color:#0a7a2f;";
-
-      if (g.items.some(i => i.Pack_Missing)) {
-         escasezLabel += ` <span style="color:#b00020; font-size:10px; margin-left:8px;">(Nota: No existe empaque definido)</span>`;
-      }
-
-      // Mostramos la fecha del GRUPO (Documento) que calculamos arriba
-      let fechaMostrar = g.fechaAsig; 
-
-      // --- CAMBIO 4: STAMPS DE FRIO Y DIAS DE ENTREGA ---
+      
+      if (g.items.some(i => i.Pack_Missing)) escasezLabel += ` <span style="color:#b00020; font-size:10px; margin-left:8px;">(Nota: No existe empaque definido)</span>`;
+      
+      let fechaMostrar = g.fechaAsig;
       const tieneFrio = g.items.some(i => i.Frio);
-      const stampFrio = tieneFrio 
-        ? `<span style="border:1px solid #0277bd; background:#e1f5fe; color:#0277bd; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:10px; margin-left:8px;">❄️ REFRIGERADO</span>` 
-        : "";
-
+      const stampFrio = tieneFrio ? `<span style="border:1px solid #0277bd; background:#e1f5fe; color:#0277bd; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:10px; margin-left:8px;">❄️ REFRIGERADO</span>` : "";
       const diasEntregaRaw = g.items[0].Dias_Entrega || "";
-      const stampDias = diasEntregaRaw
-        ? `<div style="margin-top:4px; background:#fff; border:1px dashed #333; padding:3px 8px; font-size:11px; font-weight:bold; color:#333; display:inline-block; border-radius:4px;">🚚 ENTREGA: ${esc(diasEntregaRaw)}</div>`
-        : "";
+      const stampDias = diasEntregaRaw ? `<div style="margin-top:4px; background:#fff; border:1px dashed #333; padding:3px 8px; font-size:11px; font-weight:bold; color:#333; display:inline-block; border-radius:4px;">🚚 ENTREGA: ${esc(diasEntregaRaw)}</div>` : "";
 
       return `
         <div class="section">
           <table>
             <thead>
               <tr>
-                <td colspan="15" style="background:#fff; border-bottom:2px solid #0b1f3a; padding: 10px 0;">
+                <td colspan="16" style="background:#fff; border-bottom:2px solid #0b1f3a; padding: 10px 0;">
                   <div style="display:flex; gap:15px; align-items:center;">
                     <img src="./icons/icon-512.png" style="width:50px; height:50px; object-fit:contain;" alt="logo"/>
                     <div style="flex:1;">
@@ -819,18 +858,15 @@
                 </td>
               </tr>
               <tr class="meta-row">
-                <th colspan="15" style="background:#f4f6f8; color:#0b1f3a; padding:10px; border-bottom:2px solid #0b1f3a; border-top:none;">
-                  <div style="display:flex; justify-content:space-between; align-items:start;"> <!-- Align start para que quepan los stamps -->
-                    <div>
-                        <div style="font-size:14px; font-weight:900;">${esc(g.ue)} ${stampFrio}</div>
-                        ${stampDias}
-                    </div>
+                <th colspan="16" style="background:#f4f6f8; color:#0b1f3a; padding:10px; border-bottom:2px solid #0b1f3a; border-top:none;">
+                  <div style="display:flex; justify-content:space-between; align-items:start;">
+                    <div><div style="font-size:14px; font-weight:900;">${esc(g.ue)} ${stampFrio}</div>${stampDias}</div>
                     <div style="font-size:11px; text-align:right;">Líneas: <b>${totalItems}</b></div>
                   </div>
                   <div style="margin-top:4px; font-size:11px; display:flex; gap:15px; color:#444;">
                     <span>Doc: <b>${esc(g.doc)}</b></span>
                     <span>Tipo: <b>${esc(g.tipo)}</b></span>
-                    <span>Fecha F8: <b>${esc(g.maxFecha||"")}</b></span>
+                    <span>Fecha F8: <b>${esc(g.maxFecha || "")}</b></span>
                     <span style="background:#fff; border:1px solid #ccc; padding:0 4px; border-radius:3px;">Fecha Asignación: <b>${esc(fechaMostrar)}</b></span>
                   </div>
                   <div style="margin-top:6px; padding-top:6px; border-top:1px solid #ccc; font-size:10px; display:flex; justify-content:space-between; align-items:center;">
@@ -846,165 +882,189 @@
                 </th>
               </tr>
               <tr class="col-header">
-                <th style="width:70px;">Código</th>
-                <th>Suministro</th>
-                <th style="width:50px;" class="num">Solic.</th>
-                <th style="width:50px;" class="num">Sol.red</th>
-                <th style="width:50px;" class="num">Asig.</th>
-                <th style="width:50px; color:purple;" class="num">Reserv.</th>
-                <!-- NUEVA LÍNEA -->
-                <th style="width:70px; color:purple; font-size:9px;">Doc. Res.</th> 
-                <th style="width:50px;" class="num">Pend.</th>
-                <th style="width:80px; font-size:9px;">Estado</th> <!-- NUEVO -->
-                <th style="width:65px;" class="center">Bultos</th>
-                <th style="width:130px;">Lotes</th>
-                <th style="width:65px;">Últ.desp</th>
-                <th style="width:40px;" class="num">Qty</th>
-                <th style="width:40px;" class="num">Prom</th>
+                <th style="width:70px;">Código</th> <th>Suministro</th> <th style="width:40px;">Grp</th>
+                <th style="width:40px;" class="num">Solic.</th> <th style="width:40px;" class="num">Red.</th>
+                <th style="width:40px;" class="num">Asig.</th> <th style="width:40px;" class="num">Trans.</th>
+                <th style="width:40px; color:purple;" class="num">Reserv.</th> <th style="width:60px; color:purple; font-size:9px;">Doc. Res.</th> 
+                <th style="width:40px;" class="num">Pend.</th> <th style="width:60px; font-size:9px;">Estado</th> 
+                <th style="width:50px;" class="center">Bultos</th> <th style="width:110px;">Lotes/Info</th>
+                <th style="width:60px;">Últ.desp</th> <th style="width:30px;" class="num">Qty</th> <th style="width:30px;" class="num">Prom</th>
               </tr>
             </thead>
             <tbody>${rowsHtml}</tbody>
           </table>
-          
-          <div class="sign">
-             <div>Preparado por: __________________</div>
-             <div>Recibido por: __________________</div>
-             <div>Fecha: __________________</div>
-          </div>
-          <div style="text-align:center; font-size:9px; color:#999; margin-top:5px; border-top:1px dashed #ccc; padding-top:2px;">
-             Fin del Documento ${esc(g.doc)}
-          </div>
+          <div class="sign"><div>Preparado por: __________________</div><div>Recibido por: __________________</div><div>Fecha: __________________</div></div>
+          <div style="text-align:center; font-size:9px; color:#999; margin-top:5px; border-top:1px dashed #ccc; padding-top:2px;">Fin del Documento ${esc(g.doc)}</div>
         </div>`;
     }).join("");
 
     const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"/><title>${baseName}</title>
     <style>
       body{font-family:'Segoe UI', Arial, sans-serif; color:#111; margin:0;}
-      table { width: 100%; border-collapse: collapse; margin-bottom: 0; }
-      thead { display: table-header-group; } 
-      tr { page-break-inside: auto; } 
-      th, td { border: 1px solid #ccc; padding: 4px 5px; font-size: 10px; vertical-align: top; }
-      thead tr:first-child td { border: none; }
+      table { width: 100%; border-collapse: collapse; margin-bottom: 0; } thead { display: table-header-group; } tr { page-break-inside: auto; } 
+      th, td { border: 1px solid #ccc; padding: 4px 5px; font-size: 10px; vertical-align: top; } thead tr:first-child td { border: none; }
       .col-header th { background: #f3f5f8; font-weight: bold; color: #333; text-transform: uppercase; }
-      .num { text-align: right; } .center { text-align: center; }
-      .section { margin-bottom: 20px; page-break-after: always; } .section:last-child { page-break-after: auto; }
+      .num { text-align: right; } .center { text-align: center; } .section { margin-bottom: 20px; page-break-after: always; } .section:last-child { page-break-after: auto; }
       .sign { display: flex; justify-content: space-between; gap: 20px; margin-top: 30px; font-size: 11px; page-break-inside: avoid; }
       @media print { body { margin: 10mm; } }
     </style></head><body>${sections}</body></html>`;
     
-    const w = window.open("", "_blank"); 
-    if(w) {
-        w.document.open(); w.document.write(html); w.document.close(); w.focus(); 
-        setTimeout(()=>{ w.print(); }, 500);
+    const w = window.open("", "_blank");
+    if (w) {
+      w.document.open();
+      w.document.write(html);
+      w.document.close();
+      w.document.title = fileName;
+      setTimeout(() => { w.print(); }, 500);
     }
   }
 
-  // --- INFORME GERENCIAL (PDF FINAL CON DOBLE GRÁFICA) ---
-  function exportPdfGerencial(){
+  // --- INFORME GERENCIAL (EXPANDIDO) ---
+  function exportPdfGerencial() {
     const rows = _pickingRows();
-    if(!rows.length){ alert("No hay datos para generar el informe."); return; }
+    if (!rows.length) {
+      alert("No hay datos para generar el informe.");
+      return;
+    }
     
-    // 1. FECHA DE ASIGNACIÓN REAL
     let fechaMostrar = "---";
     const fechasUnicas = [...new Set(rows.map(r => {
-        let f = r.Fecha_Asignacion || r.FECHA_ASIGNACION || r.Fecha_Proceso || r.DIA_PROCESO;
-        if(!f) return null;
-        return String(f).split("T")[0]; 
+      let f = r.Fecha_Asignacion || r.FECHA_ASIGNACION || r.Fecha_Proceso || r.DIA_PROCESO;
+      if (!f) return null;
+      return String(f).split("T")[0];
     }).filter(f => f))].sort();
 
     if (fechasUnicas.length === 1) {
-        const parts = fechasUnicas[0].split("-");
-        if(parts.length === 3) fechaMostrar = `${parts[1]}/${parts[2]}/${parts[0]}`; 
-        else fechaMostrar = fechasUnicas[0];
+      const parts = fechasUnicas[0].split("-");
+      if (parts.length === 3) fechaMostrar = `${parts[1]}/${parts[2]}/${parts[0]}`;
+      else fechaMostrar = fechasUnicas[0];
     } else if (fechasUnicas.length > 1) {
-        fechaMostrar = `Rango: ${fechasUnicas[0]} al ${fechasUnicas[fechasUnicas.length-1]}`;
+      fechaMostrar = `Rango: ${fechasUnicas[0]} al ${fechasUnicas[fechasUnicas.length - 1]}`;
     } else {
-        fechaMostrar = (PARAMS && PARAMS.cut_date) ? PARAMS.cut_date : new Date().toLocaleDateString("es-PA");
+      fechaMostrar = (PARAMS && PARAMS.cut_date) ? PARAMS.cut_date : new Date().toLocaleDateString("es-PA");
     }
 
     const fechaGen = new Date().toLocaleString("es-PA");
     const fileName = `Informe_Gerencial_${fechaMostrar.replace(/[^a-zA-Z0-9]/g, "-")}`;
-    const fmtP = (n) => (n*100).toFixed(1) + "%";
+    const fmtP = (n) => (n * 100).toFixed(1) + "%";
 
-    // 2. DATA: KPIs
     const totalRenglones = rows.length;
-    const totalSol = rows.reduce((a,r)=>a+Number(r.Solicitado||0),0);
-    const totalAsg = rows.reduce((a,r)=>a+Number(r.Asignado||0),0);
-    const globalFill = totalSol > 0 ? (totalAsg/totalSol) : 0;
+    const totalSol = rows.reduce((a, r) => a + Number(r.Solicitado || 0), 0);
+    const totalAsg = rows.reduce((a, r) => a + Number(r.Asignado || 0), 0);
+    const globalFill = totalSol > 0 ? (totalAsg / totalSol) : 0;
     const vitales = rows.filter(r => r.Importancia === "VITAL").length;
     const esenciales = rows.filter(r => r.Importancia === "ESENCIAL").length;
 
-    // 3. UEs SIN COBERTURA
-    const uesSinData = rows.filter(r => Number(r.Asignado||0) === 0 && Number(r.Solicitado_redondeado||0) > 0);
+    const uesSinData = rows.filter(r => Number(r.Asignado || 0) === 0 && Number(r.Solicitado_redondeado || 0) > 0);
     const ueSinMap = new Map();
     uesSinData.forEach(r => {
-        const k = r.Punto + "|" + r.Categoria;
-        if(!ueSinMap.has(k)) ueSinMap.set(k, {ue:r.Punto, cat:r.Categoria, lines:0, solOrig:0, solRed:0});
-        const o = ueSinMap.get(k); o.lines++; o.solOrig+=Number(r.Solicitado||0); o.solRed+=Number(r.Solicitado_redondeado||0);
+      const k = r.Punto + "|" + r.Categoria;
+      if (!ueSinMap.has(k)) ueSinMap.set(k, { ue: r.Punto, cat: r.Categoria, lines: 0, solOrig: 0, solRed: 0 });
+      const o = ueSinMap.get(k);
+      o.lines++;
+      o.solOrig += Number(r.Solicitado || 0);
+      o.solRed += Number(r.Solicitado_redondeado || 0);
     });
-    const ueSinList = [...ueSinMap.values()].sort((a,b)=> b.solRed - a.solRed);
+    const ueSinList = [...ueSinMap.values()].sort((a, b) => b.solRed - a.solRed);
 
-    // 4. SKUs CRÍTICOS
-    const skuSinData = rows.filter(r => Number(r.Asignado||0) === 0 && Number(r.Solicitado_redondeado||0) > 0);
+    const skuSinData = rows.filter(r => Number(r.Asignado || 0) === 0 && Number(r.Solicitado_redondeado || 0) > 0);
     const skuSinMap = new Map();
     skuSinData.forEach(r => {
-        const k = r.Codigo;
-        if(!skuSinMap.has(k)) skuSinMap.set(k, {code:r.Codigo, name:r.Suministro, imp:r.Importancia, sol:0, ues_names:new Set()});
-        const o = skuSinMap.get(k); o.sol+=Number(r.Solicitado||0); o.ues_names.add(r.Punto);
+      const k = r.Codigo;
+      if (!skuSinMap.has(k)) skuSinMap.set(k, { code: r.Codigo, name: r.Suministro, imp: r.Importancia, sol: 0, ues_names: new Set() });
+      const o = skuSinMap.get(k);
+      o.sol += Number(r.Solicitado || 0);
+      o.ues_names.add(r.Punto);
     });
-    const skuSinList = [...skuSinMap.values()].map(x=>({...x, count: x.ues_names.size, listaUEs: [...x.ues_names].sort().join(", ")})).sort((a,b)=> {
-        const impOrder = { "VITAL": 3, "ESENCIAL": 2, "": 1 };
-        return (impOrder[b.imp||""]||0) - (impOrder[a.imp||""]||0) || b.sol - a.sol;
+    
+    const skuSinList = [...skuSinMap.values()].map(x => ({
+      ...x,
+      count: x.ues_names.size,
+      listaUEs: [...x.ues_names].sort().join(", ")
+    })).sort((a, b) => {
+      const impOrder = { "VITAL": 3, "ESENCIAL": 2, "": 1 };
+      return (impOrder[b.imp || ""] || 0) - (impOrder[a.imp || ""] || 0) || b.sol - a.sol;
     });
 
-    // 5. FILL RATE POR UE
     const fillUeMap = new Map();
     rows.forEach(r => {
-        const k = r.Punto || "SIN UE";
-        if(!fillUeMap.has(k)) fillUeMap.set(k, {ue:k, cat:r.Categoria, sol:0, asg:0});
-        const o = fillUeMap.get(k); o.sol+=Number(r.Solicitado||0); o.asg+=Number(r.Asignado||0);
+      const k = r.Punto || "SIN UE";
+      if (!fillUeMap.has(k)) fillUeMap.set(k, { ue: k, cat: r.Categoria, sol: 0, asg: 0 });
+      const o = fillUeMap.get(k);
+      o.sol += Number(r.Solicitado || 0);
+      o.asg += Number(r.Asignado || 0);
     });
-    const fillUeList = [...fillUeMap.values()].map(x=>({...x, rate: x.sol>0?x.asg/x.sol:0})).sort((a,b)=>a.rate - b.rate);
+    const fillUeList = [...fillUeMap.values()].map(x => ({ ...x, rate: x.sol > 0 ? x.asg / x.sol : 0 })).sort((a, b) => a.rate - b.rate);
 
-    // 6. CHART CATEGORÍAS
     const catMap = new Map();
     rows.forEach(r => {
-        const c = r.Categoria || "SIN CATEGORIA";
-        if(!catMap.has(c)) catMap.set(c, {cat:c, sol:0, asg:0});
-        const o = catMap.get(c); o.sol+=Number(r.Solicitado||0); o.asg+=Number(r.Asignado||0);
+      const c = r.Categoria || "SIN CATEGORIA";
+      if (!catMap.has(c)) catMap.set(c, { cat: c, sol: 0, asg: 0 });
+      const o = catMap.get(c);
+      o.sol += Number(r.Solicitado || 0);
+      o.asg += Number(r.Asignado || 0);
     });
-    const catList = [...catMap.values()].map(x => ({...x, rate: x.sol>0?x.asg/x.sol:0})).sort((a,b)=>a.cat.localeCompare(b.cat));
+    const catList = [...catMap.values()].map(x => ({ ...x, rate: x.sol > 0 ? x.asg / x.sol : 0 })).sort((a, b) => a.cat.localeCompare(b.cat));
 
-    // --- HTML GENERATORS ---
     const colorGlobal = globalFill >= 0.9 ? "#2e7d32" : (globalFill >= 0.7 ? "#f9a825" : "#c62828");
     
-    const htmlUeSin = ueSinList.map(u => `<tr><td>${u.ue}</td><td>${u.cat}</td><td class="center" style="font-weight:bold;color:#b71c1c;">${u.lines}</td><td class="right">${fmt(u.solOrig)}</td><td class="right">${fmt(u.solRed)}</td></tr>`).join("");
-    
+    const htmlUeSin = ueSinList.map(u => `<tr>
+      <td>${u.ue}</td>
+      <td>${u.cat}</td>
+      <td class="center" style="font-weight:bold;color:#b71c1c;">${u.lines}</td>
+      <td class="right">${fmt(u.solOrig)}</td>
+      <td class="right">${fmt(u.solRed)}</td>
+    </tr>`).join("");
+
     const htmlSkuSin = skuSinList.map(s => {
-        const icon = s.imp==="VITAL"?"💓":(s.imp==="ESENCIAL"?"✅":"");
-        const bg = s.imp==="VITAL"?"#ffebee":(s.imp==="ESENCIAL"?"#e8f5e9":"");
-        return `<tr style="background:${bg}"><td>${s.code}</td><td>${icon} ${s.name}</td><td class="center"><span style="font-size:8px;font-weight:bold;">${s.imp||"-"}</span></td><td class="right">${fmt(s.sol)}</td><td class="center">${s.count}</td><td style="font-size:7px; color:#444;">${s.listaUEs}</td></tr>`;
+      const icon = s.imp === "VITAL" ? "💓" : (s.imp === "ESENCIAL" ? "✅" : "");
+      const bg = s.imp === "VITAL" ? "#ffebee" : (s.imp === "ESENCIAL" ? "#e8f5e9" : "");
+      return `<tr style="background:${bg}">
+        <td>${s.code}</td>
+        <td>${icon} ${s.name}</td>
+        <td class="center"><span style="font-size:8px;font-weight:bold;">${s.imp || "-"}</span></td>
+        <td class="right">${fmt(s.sol)}</td>
+        <td class="center">${s.count}</td>
+        <td style="font-size:7px; color:#444;">${s.listaUEs}</td>
+      </tr>`;
     }).join("");
 
     const htmlFillUe = fillUeList.map(u => {
-        const color = u.rate < 0.8 ? "#ffebee" : "";
-        return `<tr style="background:${color}"><td>${u.ue}</td><td style="font-size:8px;">${u.cat}</td><td class="right">${fmt(u.sol)}</td><td class="right">${fmt(u.asg)}</td><td class="right"><b>${fmtP(u.rate)}</b></td></tr>`;
+      const color = u.rate < 0.8 ? "#ffebee" : "";
+      return `<tr style="background:${color}">
+        <td>${u.ue}</td>
+        <td style="font-size:8px;">${u.cat}</td>
+        <td class="right">${fmt(u.sol)}</td>
+        <td class="right">${fmt(u.asg)}</td>
+        <td class="right"><b>${fmtP(u.rate)}</b></td>
+      </tr>`;
     }).join("");
 
-    // Gráfica Categorías
     const htmlChartCat = catList.map(c => {
-        const w = (c.rate * 100).toFixed(0); const col = c.rate < 0.8 ? "#c62828" : (c.rate < 0.95 ? "#f9a825" : "#2e7d32");
-        return `<div style="display:flex; align-items:center; margin-bottom:6px;"><div style="width:180px; font-size:9px; text-align:right; padding-right:10px;">${c.cat}</div><div style="flex:1; background:#eee; height:12px; border-radius:3px;"><div style="width:${w}%; background:${col}; height:100%; border-radius:3px; min-width:2px;"></div></div><div style="width:40px; font-size:9px; font-weight:bold; padding-left:10px;">${fmtP(c.rate)}</div></div>`;
+      const w = (c.rate * 100).toFixed(0);
+      const col = c.rate < 0.8 ? "#c62828" : (c.rate < 0.95 ? "#f9a825" : "#2e7d32");
+      return `<div style="display:flex; align-items:center; margin-bottom:6px;">
+        <div style="width:180px; font-size:9px; text-align:right; padding-right:10px;">${c.cat}</div>
+        <div style="flex:1; background:#eee; height:12px; border-radius:3px;">
+          <div style="width:${w}%; background:${col}; height:100%; border-radius:3px; min-width:2px;"></div>
+        </div>
+        <div style="width:40px; font-size:9px; font-weight:bold; padding-left:10px;">${fmtP(c.rate)}</div>
+      </div>`;
     }).join("");
 
-    // Gráfica UEs (Nueva)
     const htmlChartUE = fillUeList.map(u => {
-        const w = (u.rate * 100).toFixed(0); const col = u.rate < 0.8 ? "#c62828" : (u.rate < 0.95 ? "#f9a825" : "#2e7d32");
-        return `<div style="display:flex; align-items:center; margin-bottom:4px;"><div style="width:180px; font-size:8px; text-align:right; padding-right:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${u.ue}</div><div style="flex:1; background:#eee; height:10px; border-radius:3px;"><div style="width:${w}%; background:${col}; height:100%; border-radius:3px; min-width:2px;"></div></div><div style="width:40px; font-size:8px; font-weight:bold; padding-left:10px;">${fmtP(u.rate)}</div></div>`;
+      const w = (u.rate * 100).toFixed(0);
+      const col = u.rate < 0.8 ? "#c62828" : (u.rate < 0.95 ? "#f9a825" : "#2e7d32");
+      return `<div style="display:flex; align-items:center; margin-bottom:4px;">
+        <div style="width:180px; font-size:8px; text-align:right; padding-right:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${u.ue}</div>
+        <div style="flex:1; background:#eee; height:10px; border-radius:3px;">
+          <div style="width:${w}%; background:${col}; height:100%; border-radius:3px; min-width:2px;"></div>
+        </div>
+        <div style="width:40px; font-size:8px; font-weight:bold; padding-left:10px;">${fmtP(u.rate)}</div>
+      </div>`;
     }).join("");
 
-    const html = `
-    <!doctype html><html><head><title>${fileName}</title><style>
+    const html = `<!doctype html><html><head><title>${fileName}</title><style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 10mm; color: #333; font-size: 10px; }
         h1 { font-size: 18px; margin: 0; color: #0b1f3a; text-transform:uppercase; } 
         h2 { font-size: 12px; margin: 20px 0 8px 0; color: #0b1f3a; border-bottom: 2px solid #ccc; padding-bottom: 3px; }
@@ -1030,7 +1090,7 @@
                     Prioridad por Tipo de Unidad Ejecutora: <b>CEDIS > HOSPITAL > POLICLINICA > ULAPS > CAPPS</b>
                 </div>
             </div>
-            <div style="text-align:right;">Generado: ${fechaGen}<br>Torre de Control v1.0</div>
+            <div style="text-align:right;">Generado: ${fechaGen}<br>Torre de Control v7.0</div>
         </div>
 
         <div class="kpi-row">
@@ -1043,16 +1103,50 @@
 
         <h2>1. UNIDADES EJECUTORAS SIN COBERTURA (0% ASIGNACIÓN)</h2>
         <div style="font-size:9px; color:#666; margin-bottom:5px;">Unidades que solicitaron producto pero no recibiran nada por escasez de inventario.</div>
-        <table><thead><tr><th>Unidad Ejecutora</th><th>Categoría</th><th class="center">Renglones en 0</th><th class="right">Cant. Original</th><th class="right">Ajuste Empaque</th></tr></thead><tbody>${htmlUeSin||"<tr><td colspan='5' class='center'>Excelente. No hay unidades con 0% de cobertura.</td></tr>"}</tbody></table>
+        <table>
+            <thead>
+                <tr>
+                    <th>Unidad Ejecutora</th>
+                    <th>Categoría</th>
+                    <th class="center">Renglones en 0</th>
+                    <th class="right">Cant. Original</th>
+                    <th class="right">Ajuste Empaque</th>
+                </tr>
+            </thead>
+            <tbody>${htmlUeSin || "<tr><td colspan='5' class='center'>Excelente. No hay unidades con 0% de cobertura.</td></tr>"}</tbody>
+        </table>
 
         <h2>2. RENGLONES CRÍTICOS SIN STOCK (TODOS)</h2>
         <div style="font-size:9px; color:#666; margin-bottom:5px;">Medicamentos e insumos solicitados con inventario agotado.</div>
-        <table><thead><tr><th style="width:10%;">Código</th><th style="width:30%;">Suministro</th><th style="width:5%;" class="center">Imp</th><th style="width:10%;" class="right">Cant. Sol.</th><th style="width:5%;" class="center"># UEs</th><th style="width:40%;">UEs Afectadas (Detalle)</th></tr></thead><tbody>${htmlSkuSin}</tbody></table>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:10%;">Código</th>
+                    <th style="width:30%;">Suministro</th>
+                    <th style="width:5%;" class="center">Imp</th>
+                    <th style="width:10%;" class="right">Cant. Sol.</th>
+                    <th style="width:5%;" class="center"># UEs</th>
+                    <th style="width:40%;">UEs Afectadas (Detalle)</th>
+                </tr>
+            </thead>
+            <tbody>${htmlSkuSin}</tbody>
+        </table>
 
         <div class="page-break"></div>
 
         <h2>3. DETALLE DE CUMPLIMIENTO POR UNIDAD EJECUTORA</h2>
-        <table><thead><tr><th>Unidad Ejecutora</th><th>Categoría</th><th class="right">Solicitado</th><th class="right">Asignado</th><th class="right">Fill Rate</th></tr></thead><tbody>${htmlFillUe}</tbody></table>
+        <table>
+            <thead>
+                <tr>
+                    <th>Unidad Ejecutora</th>
+                    <th>Categoría</th>
+                    <th class="right">Solicitado</th>
+                    <th class="right">Asignado</th>
+                    <th class="right">Fill Rate</th>
+                </tr>
+            </thead>
+            <tbody>${htmlFillUe}</tbody>
+        </table>
 
         <div class="page-break"></div>
 
@@ -1066,73 +1160,92 @@
     </body></html>`;
 
     const w = window.open("", "_blank");
-    if(w) { 
-        w.document.open(); 
-        w.document.write(html); 
-        w.document.close(); 
-        w.document.title = fileName; 
-        setTimeout(()=>{ w.print(); }, 500); 
+    if (w) {
+      w.document.open();
+      w.document.write(html);
+      w.document.close();
+      w.document.title = fileName;
+      setTimeout(() => { w.print(); }, 500);
     }
   }
 
-  function exportXlsxAsignacion(){
-    const rows = _pickingRows(); 
-    if(!rows.length){ alert("No hay datos visibles para exportar."); return; }
-    if(typeof XLSX === "undefined"){ alert("No se pudo cargar XLSX."); return; }
-    
-    const fileName = getDynamicFilename("Asignacion_F8") + ".xlsx";
+  // --- EXCEL CON NUEVAS COLUMNAS (EXPANDIDO) ---
+  function exportXlsxAsignacion() {
+    const rows = _pickingRows();
+    if (!rows.length) {
+      alert("No hay datos visibles para exportar.");
+      return;
+    }
+    if (typeof XLSX === "undefined") {
+      alert("No se pudo cargar XLSX.");
+      return;
+    }
 
+    const fileName = getDynamicFilename("Asignacion_F8") + ".xlsx";
     const groups = new Map();
-    for(const r of rows){
-      const ue = r.Punto || "SIN_UE"; const doc = r.N_Doc || "SIN_DOC"; const key = ue + "||" + doc;
-      if(!groups.has(key)) groups.set(key, {ue, doc, tipo: r.Tipo||"", items: []});
+    
+    for (const r of rows) {
+      const ue = r.Punto || "SIN_UE";
+      const doc = r.N_Doc || "SIN_DOC";
+      const key = ue + "||" + doc;
+      if (!groups.has(key)) groups.set(key, { ue, doc, tipo: r.Tipo || "", items: [] });
       groups.get(key).items.push(r);
     }
+
     const corte = (PARAMS && PARAMS.corte) ? PARAMS.corte : "";
     const now = new Date().toLocaleString("es-PA");
     const aoa = [];
     aoa.push(["HOJA DE ASIGNACIÓN F8 — CORTE DIARIO"]);
     aoa.push([`Generado: ${now}`, `Corte: ${corte}`, "Reglas: Fair Share | Prioridad: Mensual > Fecha > UE"]);
     aoa.push([]);
-    // --- CAMBIO 5: AGREGADO ENCABEZADOS EXTRA EXCEL ---
-    const header = ["UE", "Documento", "Tipo", "Código", "Suministro", "Solicitado", "Solic. red.", "Asignado", "Pendiente", "Bultos T/S/P", "Lotes usados", "Último despacho (real)", "Qty último", "Promedio Hist.", "Frio", "Importancia"];
+    
+    // ENCABEZADOS EXCEL
+    const header = ["UE", "Documento", "Tipo", "Código", "Suministro", "Grupo", "Solicitado", "Solic. red.", "Asignado", "Transito", "Pendiente", "Bultos T/S/P", "Lotes usados", "Info Transito", "Último despacho (real)", "Qty último", "Promedio Hist.", "Frio", "Narcotico", "Importancia", "Acaparamiento"];
     aoa.push(header);
-    for(const g of Array.from(groups.values()).sort((a,b)=> (a.ue+a.doc).localeCompare(b.ue+b.doc))){
-      g.items.sort((a,b)=> String(a.Codigo||"").localeCompare(String(b.Codigo||"")));
-      for(const r of g.items){
-        const bults = `${fmtBultosPart(r.Bultos_Ter||0)}/${fmtBultosPart(r.Bultos_Sec||0)}/${fmtBultosPart(r.Bultos_Prim||0)}`;
-        const ldFecha = r.Ultimo_Despacho || "";
-        const ldQty = r.Qty_Ultimo ? Number(r.Qty_Ultimo) : "";
-        const prom = r.Promedio_Hist ? Number(r.Promedio_Hist) : "";
 
+    for (const g of Array.from(groups.values()).sort((a, b) => (a.ue + a.doc).localeCompare(b.ue + b.doc))) {
+      g.items.sort((a, b) => String(a.Codigo || "").localeCompare(String(b.Codigo || "")));
+      for (const r of g.items) {
+        const bults = `${fmtBultosPart(r.Bultos_Ter || 0)}/${fmtBultosPart(r.Bultos_Sec || 0)}/${fmtBultosPart(r.Bultos_Prim || 0)}`;
         aoa.push([
-          g.ue, g.doc, g.tipo, r.Codigo||"", r.Suministro||"", Number(r.Solicitado||0), Number(r.Solicitado_redondeado||0),
-          Number(r.Asignado||0), Number(r.Pendiente||0), bults, r.Lotes_Usados||"", 
-          ldFecha, ldQty, prom,
-          // COLUMNAS NUEVAS EN EXCEL
-          r.Frio ? "SI" : "", r.Importancia || ""
+          g.ue, g.doc, g.tipo, r.Codigo || "", r.Suministro || "", r.Grupo || "",
+          Number(r.Solicitado || 0), Number(r.Solicitado_redondeado || 0), Number(r.Asignado || 0), Number(r.Asignado_Transito || 0),
+          Number(r.Pendiente || 0), bults, r.Lotes_Usados || "", r.Transito_Info || "",
+          r.Ultimo_Despacho || "", r.Qty_Ultimo ? Number(r.Qty_Ultimo) : "", r.Promedio_Hist ? Number(r.Promedio_Hist) : "",
+          r.Frio ? "SI" : "", r.Narcotico ? "SI" : "", r.Importancia || "", r.Acaparamiento ? "SI" : ""
         ]);
       }
       aoa.push([]);
     }
+
     const ws = XLSX.utils.aoa_to_sheet(aoa);
-    ws["!cols"] = [{wch:22},{wch:18},{wch:12},{wch:12},{wch:60},{wch:12},{wch:12},{wch:12},{wch:12},{wch:14},{wch:40},{wch:18},{wch:12},{wch:12},{wch:8},{wch:12}];
+    ws["!cols"] = [
+      { wch: 22 }, { wch: 18 }, { wch: 12 }, { wch: 12 }, { wch: 60 }, { wch: 15 },
+      { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 14 },
+      { wch: 40 }, { wch: 20 }, { wch: 18 }, { wch: 12 }, { wch: 12 }, { wch: 8 },
+      { wch: 8 }, { wch: 12 }, { wch: 12 }
+    ];
     ws["!freeze"] = { xSplit: 0, ySplit: 4 };
+    
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Asignacion_F8");
     XLSX.writeFile(wb, fileName);
   }
 
-  // --- LÓGICA DE CARGA DE DATOS ---
+  // --- LÓGICA DE CARGA ---
   const WEBAPP_BASE = "https://script.google.com/macros/s/AKfycbyVHDQ8IuVHibz259AiEvZ-jUfVC7fxvSSqC-wfaiiq1_13C9_TK4dVtPK0SMW4sZoJ/exec";
 
-  function loadJsonp(url){
-    return new Promise((resolve, reject)=>{
+  function loadJsonp(url) {
+    return new Promise((resolve, reject) => {
       const cb = 'cb_' + Math.random().toString(36).slice(2);
       const script = document.createElement('script');
       script.src = `${url}&callback=${cb}&_ts=${Date.now()}`;
       script.onerror = () => reject(new Error('Script error'));
-      window[cb] = (data) => { resolve(data); delete window[cb]; script.remove(); };
+      window[cb] = (data) => {
+        resolve(data);
+        delete window[cb];
+        script.remove();
+      };
       document.body.appendChild(script);
     });
   }
@@ -1147,66 +1260,92 @@
     try {
       let newData;
       if (type === 'allocation') {
-          const [alloc, params] = await Promise.all([
-              loadJsonp(`${WEBAPP_BASE}?file=allocation`),
-              loadJsonp(`${WEBAPP_BASE}?file=params`)
-          ]);
-          newData = alloc;
-          PARAMS = params; 
-          document.getElementById('mainHeader').textContent = "Asignación F8 (Corte diario)";
-          document.getElementById('cutDate').textContent = PARAMS.cut_date || "Hoy";
+        const [alloc, params] = await Promise.all([
+          loadJsonp(`${WEBAPP_BASE}?file=allocation`),
+          loadJsonp(`${WEBAPP_BASE}?file=params`)
+        ]);
+        newData = alloc;
+        PARAMS = params;
+        document.getElementById('mainHeader').textContent = "Asignación F8 (Corte diario)";
+        document.getElementById('cutDate').textContent = PARAMS.cut_date || "Hoy";
       } else {
-          newData = await loadJsonp(`${WEBAPP_BASE}?file=history`);
-          document.getElementById('mainHeader').textContent = "⚠️HISTORIAL ACUMULADO⚠️";
-          document.getElementById('cutDate').textContent = "Histórico Completo";
+        newData = await loadJsonp(`${WEBAPP_BASE}?file=history`);
+        document.getElementById('mainHeader').textContent = "⚠️HISTORIAL ACUMULADO⚠️";
+        document.getElementById('cutDate').textContent = "Histórico Completo";
       }
 
       if (!newData || newData.length === 0) alert("No se encontraron datos.");
       else {
-          DATA = newData;
-          populateFilters(); applyFilters();    
+        DATA = newData;
+        populateFilters();
+        applyFilters();
       }
-    } catch (e) { console.error(e); alert("Error de conexión."); } 
-    finally { btn.textContent = originalText; document.body.style.cursor = 'default'; }
+    } catch (e) {
+      console.error(e);
+      alert("Error de conexión.");
+    } finally {
+      btn.textContent = originalText;
+      document.body.style.cursor = 'default';
+    }
   }
 
-  async function init(){
-    tickDateTime(); setInterval(tickDateTime, 60000);
+  async function init() {
+    tickDateTime();
+    setInterval(tickDateTime, 60000);
     fetchAndLoad('allocation');
-    
+
     document.getElementById('btnLoadDaily').addEventListener('click', () => fetchAndLoad('allocation'));
     document.getElementById('btnLoadHistory').addEventListener('click', () => fetchAndLoad('history'));
-    
+
     document.getElementById('btnApply').addEventListener('click', applyFilters);
     document.getElementById('btnReset').addEventListener('click', () => {
-        document.getElementById('q').value = ""; document.getElementById('doc').value = ""; document.getElementById('dateFrom').value = ""; document.getElementById('dateTo').value = ""; document.getElementById('cat').value = "ALL"; document.getElementById('ue').value = "ALL"; document.getElementById('tipo').value = "ALL"; document.getElementById('estado').value = "ALL";
-        document.getElementById('allocDateFrom').value = ""; document.getElementById('allocDateTo').value = "";
-        applyFilters();
+      document.getElementById('q').value = "";
+      document.getElementById('doc').value = "";
+      document.getElementById('dateFrom').value = "";
+      document.getElementById('dateTo').value = "";
+      document.getElementById('cat').value = "ALL";
+      document.getElementById('ue').value = "ALL";
+      document.getElementById('tipo').value = "ALL";
+      document.getElementById('estado').value = "ALL";
+      document.getElementById('allocDateFrom').value = "";
+      document.getElementById('allocDateTo').value = "";
+      applyFilters();
     });
-    
+
     document.getElementById('btnExportCsv').addEventListener('click', exportCsv);
     document.getElementById('btnExportPdf').addEventListener('click', exportPdfAsignacion);
-    // LISTENER PARA EL NUEVO REPORTE GERENCIAL
     document.getElementById('btnExportPdfManager').addEventListener('click', exportPdfGerencial);
     document.getElementById('btnExportXlsx').addEventListener('click', exportXlsxAsignacion);
-    
+
     document.querySelectorAll('.tab').forEach(el => el.addEventListener('click', () => showTab(el.dataset.tab)));
   }
-  
+
   const btnLoad = document.getElementById('btnLoadLocal');
   const fileLoad = document.getElementById('fileLoad');
-  if (btnLoad && fileLoad){
-    btnLoad.addEventListener('click', ()=> fileLoad.click());
-    fileLoad.addEventListener('change', async (ev)=>{
+  if (btnLoad && fileLoad) {
+    btnLoad.addEventListener('click', () => fileLoad.click());
+    fileLoad.addEventListener('change', async (ev) => {
       const files = Array.from(ev.target.files || []);
       if (!files.length) return;
-      const byName = Object.fromEntries(files.map(f=>[f.name.toLowerCase(), f]));
-      async function readJson(file){ const txt = await file.text(); return JSON.parse(txt); }
-      try{
+      const byName = Object.fromEntries(files.map(f => [f.name.toLowerCase(), f]));
+      
+      async function readJson(file) {
+        const txt = await file.text();
+        return JSON.parse(txt);
+      }
+      
+      try {
         if (byName['allocation.json']) DATA = await readJson(byName['allocation.json']);
         if (byName['params.json']) PARAMS = await readJson(byName['params.json']);
-        populateFilters(); applyFilters(); alert('Datos locales cargados.');
-      }catch(e){ console.error(e); alert('No se pudo cargar uno de los JSON.'); }finally{ fileLoad.value = ''; }
+        populateFilters();
+        applyFilters();
+        alert('Datos locales cargados.');
+      } catch (e) {
+        console.error(e);
+        alert('No se pudo cargar uno de los JSON.');
+      } finally {
+        fileLoad.value = '';
+      }
     });
   }
   init();
