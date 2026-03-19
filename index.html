@@ -417,9 +417,29 @@
       if(r.Frio) iconos += "❄️ ";
       if(r.Narcotico) iconos += "💊 "; 
 
-      // Alerta Acaparamiento
+      // LÓGICA ACAPARAMIENTO (VISUAL)
+      let acapHtml = "-";
       let estiloSol = "";
-      if(r.Acaparamiento) estiloSol = "color:orange; font-weight:bold; text-decoration:underline;";
+      if(r.Acaparamiento) {
+         estiloSol = "color:#d32f2f; font-weight:bold; text-decoration:underline;";
+         acapHtml = `<span style="background:#ffebee; color:#d32f2f; border:1px solid #d32f2f; padding:1px 4px; border-radius:4px; font-weight:bold; font-size:10px;">⚠️ SÍ</span>`;
+      }
+
+      // LÓGICA SATURACIÓN (VISUAL)
+      let saturacionHtml = "-";
+      let sol = Number(r.Solicitado || 0);
+      let solAj = Number(r.Solicitado_redondeado || 0);
+      
+      if (r.Acaparamiento) {
+         saturacionHtml = `<span style="color:#b71c1c; font-weight:900;">100% (Recorte)</span>`;
+      } else if (sol > 0 && sol <= solAj) {
+         saturacionHtml = `<span style="color:#2e7d32; font-weight:bold;">OK</span>`;
+      } else if (sol > 0 && solAj < sol) {
+         saturacionHtml = `<span style="color:#f57f17;">Ajuste Empaque</span>`;
+      }
+
+      // Estilo Estado
+      const colorEstado = (r.Estado || "").includes('SIN') ? 'red' : 'green';
 
       return `<tr>
         <td>${r.Fecha || ""}</td>
@@ -447,7 +467,15 @@
         <td>${r.Ultimo_Despacho || "-"}</td>
         <td class="right">${r.Qty_Ultimo ? fmt(r.Qty_Ultimo) : "-"}</td>
         <td class="right" style="background:#f0f8ff;">${r.Promedio_Hist ? fmt(r.Promedio_Hist) : "-"}</td>
-        <td style="font-size:10px; font-weight:bold; color:${(r.Estado || "").includes('SIN') ? 'red' : 'green'};">${r.Estado || ""}</td>
+        
+        <!-- COLUMNAS NUEVAS AGREGADAS -->
+        <td style="font-size:10px; color:#555;">${r.Estado || ""}</td>
+        <td class="center">${acapHtml}</td>
+        <td class="center" style="font-size:10px;">${saturacionHtml}</td>
+        <td class="center" style="font-size:10px; font-weight:bold;">${r.Factor_Riesgo ? r.Factor_Riesgo + 'x' : "-"}</td>
+        <td class="right" style="font-size:10px;">${fmt(r.Cuota_Max)}</td>
+        <td class="right" style="font-size:10px;">${fmt(r.Ejecucion_Previa)}</td>
+        <td class="right" style="font-size:10px; font-weight:bold; color:${r.Saldo_Disponible < 0 ? 'red' : 'black'}">${fmt(r.Saldo_Disponible)}</td>
       </tr>`;
     }).join("");
     
@@ -1321,7 +1349,59 @@
     document.getElementById('btnExportCsv').addEventListener('click', exportCsv);
     document.getElementById('btnExportPdf').addEventListener('click', exportPdfAsignacion);
     document.getElementById('btnExportPdfManager').addEventListener('click', exportPdfGerencial);
-    document.getElementById('btnExportXlsx').addEventListener('click', exportXlsxAsignacion);
+      // ==============================================================
+  // EXPORTACIÓN EXCEL V8.1 (RESUMEN + DETALLE + QUIEBRES)
+  // ==============================================================
+  document.getElementById('btnExportXlsx').addEventListener('click', exportXlsxFull);
+
+  function exportXlsxFull() {
+    const rows = _pickingRows(); 
+    if (!rows.length) { alert("No hay datos."); return; }
+
+    const wb = XLSX.utils.book_new();
+    const fechaHoy = new Date().toLocaleString("es-PA");
+    
+    // HOJA 1: RESUMEN
+    const totalSol = rows.reduce((a, r) => a + Number(r.Solicitado || 0), 0);
+    const totalAsig = rows.reduce((a, r) => a + Number(r.Asignado || 0), 0);
+    const fillRate = totalSol > 0 ? (totalAsig / totalSol) : 0;
+    
+    const resumenData = [
+      ["REPORTE TORRE DE CONTROL V8.1"], ["Generado:", fechaHoy], [""],
+      ["METRICAS", "VALOR"],
+      ["Total Solicitado", totalSol], ["Total Asignado", totalAsig], ["Fill Rate", (fillRate * 100).toFixed(2) + "%"]
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(resumenData), "Resumen");
+
+    // HOJA 2: DETALLE COMPLETO
+    const detalle = rows.map(r => ({
+      "Fecha F8": r.Fecha, "Doc": r.N_Doc, "UE": r.Punto, "Categoria": r.Categoria,
+      "Codigo": r.Codigo, "Suministro": r.Suministro, "Grupo": r.Grupo,
+      "Solicitado": Number(r.Solicitado), "Ajustado (Cuota)": Number(r.Solicitado_redondeado),
+      "Asignado": Number(r.Asignado), "Pendiente": Number(r.Pendiente),
+      "ACAPARAMIENTO": r.Acaparamiento ? "SI" : "NO",
+      "% SATURACION": r.Acaparamiento ? "100% (Recorte)" : "OK",
+      "Ultimo Despacho": r.Ultimo_Despacho, "Promedio Hist": Number(r.Promedio_Hist||0),
+      "Estado": r.Estado, "Lotes": r.Lotes_Usados,
+      // CAMPOS NUEVOS
+      "Factor Riesgo": r.Factor_Riesgo,
+      "Consumo Base": Number(r.Consumo_Base || 0),
+      "Cuota Maxima": Number(r.Cuota_Max || 0),
+      "Ejecutado Antes de Hoy": Number(r.Ejecucion_Previa || 0),
+      "Saldo Disponible (Inicio dia)": Number(r.Saldo_Disponible || 0)
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(detalle), "Detalle Asignacion");
+
+    // HOJA 3: QUIEBRES
+    const quiebres = rows.filter(r => Number(r.Pendiente) > 0).map(r => ({
+       "UE": r.Punto, "Codigo": r.Codigo, "Suministro": r.Suministro, 
+       "Solicitado": Number(r.Solicitado_redondeado), "No Entregado": Number(r.Pendiente),
+       "Motivo": Number(r.Asignado)===0 ? "SIN STOCK" : "STOCK INSUFICIENTE"
+    }));
+    if(quiebres.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(quiebres), "Faltantes");
+
+    XLSX.writeFile(wb, `Reporte_V8_${fechaHoy.replace(/[^a-zA-Z0-9]/g,"_")}.xlsx`);
+  }
 
     document.querySelectorAll('.tab').forEach(el => el.addEventListener('click', () => showTab(el.dataset.tab)));
   }
