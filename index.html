@@ -760,26 +760,28 @@
     return name;
   }
 
-  // --- PDF ASIGNACION (EXPANDIDO) ---
+  // ==============================================================
+  // EXPORTAR PDF (F8) - V8.5 (CORREGIDO: ERROR FILENAME + VISUAL)
+  // ==============================================================
   function exportPdfAsignacion() {
     const rows = _pickingRows();
-    if (!rows.length) {
-      alert("No hay datos visibles para exportar.");
-      return;
-    }
+    if (!rows.length) { alert("No hay datos visibles para exportar."); return; }
 
-    const baseName = getDynamicFilename("Hoja_Asignacion");
     const fechaGen = new Date().toLocaleString("en-US");
     const groups = new Map();
+    const uesInReport = new Set(); // Para detectar nombre de UE
 
+    // 1. AGRUPAMIENTO Y DATOS
     for (const r of rows) {
       const ue = r.Punto || "SIN_UE";
+      uesInReport.add(ue); // Guardamos la UE
+      
       const doc = r.N_Doc || "SIN_DOC";
       const key = ue + "||" + doc;
       const pr = Number.isFinite(+r.Prioridad) ? +r.Prioridad : 999;
       const f8 = (r.Fecha || "");
-      let fechaRaw = r.FECHA_ASIGNACION;
       
+      let fechaRaw = r.FECHA_ASIGNACION;
       if (!fechaRaw || fechaRaw === "---" || fechaRaw === "") {
         const hoy = new Date();
         fechaRaw = `${hoy.getMonth() + 1}/${hoy.getDate()}/${hoy.getFullYear()}`;
@@ -806,6 +808,17 @@
       if (pr < g.prioridad) g.prioridad = pr;
     }
 
+    // 2. GENERAR NOMBRE INTELIGENTE DEL ARCHIVO
+    // Si hay una sola UE, usamos su nombre. Si son varias, "Consolidado".
+    const fechaCorta = new Date().toISOString().split('T')[0];
+    let nombreArchivo = `Asignacion_F8_Consolidado_${fechaCorta}`;
+    
+    if (uesInReport.size === 1) {
+        // Limpiamos el nombre de caracteres raros
+        const uniqueUE = [...uesInReport][0].replace(/[^a-zA-Z0-9]/g, '_');
+        nombreArchivo = `Asignacion_F8_${uniqueUE}_${fechaCorta}`;
+    }
+
     const groupsArr = Array.from(groups.values()).sort((a, b) => {
       if (a.prioridad !== b.prioridad) return a.prioridad - b.prioridad;
       return String(a.doc).localeCompare(String(b.doc));
@@ -818,6 +831,7 @@
       return x.toLocaleString("en-US", { maximumFractionDigits: 0 });
     };
 
+    // 3. GENERADOR DE FILAS (TU LÓGICA VISUAL)
     const makeRow = (r) => {
       const b = fmtBultosTriple(r.Bultos_Ter || 0, r.Bultos_Sec || 0, r.Bultos_Prim || 0);
       const lotes = r.Lotes_Usados ? String(r.Lotes_Usados) : "";
@@ -825,10 +839,7 @@
       let rowStyle = "";
       let icons = [];
       
-      if (r.Frio) {
-        rowStyle = "background-color: #e3f2fd;";
-        icons.push("❄️");
-      }
+      if (r.Frio) { rowStyle = "background-color: #e3f2fd;"; icons.push("❄️"); }
       if (r.Narcotico) icons.push("💊");
       
       if (r.Importancia === "VITAL") {
@@ -937,7 +948,7 @@
               </tr>
               <tr class="col-header">
                 <th style="width:50px;">Código</th> 
-                <th>Suministro</th> <!-- Sin ancho fijo para que ocupe lo que sobre -->
+                <th>Suministro</th> 
                 <th style="width:25px;">Grp</th>
                 <th style="width:35px;" class="num">Solic.</th> 
                 <th style="width:35px;" class="num">Red.</th>
@@ -948,11 +959,10 @@
                 <th style="width:30px;" class="num">Pend.</th> 
                 <th style="width:40px; font-size:8px;">Estado</th> 
                 <th style="width:40px;" class="center">Bultos</th> 
-                <th style="width:70px;">Lotes/Info</th> <!-- Reducido de 110 a 70 -->
+                <th style="width:70px;">Lotes/Info</th> 
                 <th style="width:45px;">Últ.desp</th> 
                 <th style="width:25px;" class="num">Qty</th> 
                 <th style="width:25px;" class="num">Prom</th>
-                <!-- NUEVAS COLUMNAS (Anchos ajustados) -->
                 <th style="width:25px;" class="center">Riesgo</th>
                 <th style="width:30px;" class="num">Cuota</th>
                 <th style="width:30px;" class="num">Previo</th>
@@ -966,7 +976,9 @@
         </div>`;
     }).join("");
 
-    const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"/><title>${baseName}</title>
+    const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"/>
+    <!-- TÍTULO DINÁMICO PARA GUARDAR PDF -->
+    <title>${nombreArchivo}</title>
     <style>
       body{font-family:'Segoe UI', Arial, sans-serif; color:#111; margin:0;}
       table { width: 100%; border-collapse: collapse; margin-bottom: 0; } thead { display: table-header-group; } tr { page-break-inside: auto; } 
@@ -977,14 +989,13 @@
       @media print { body { margin: 10mm; } }
     </style></head><body>${sections}</body></html>`;
     
-    const nombreArchivo = "Asignacion_F8_" + new Date().toISOString().split('T')[0];
     const w = window.open("", "_blank");
     if (w) {
       w.document.open();
-      w.document.write(html.replace('<head>', '<head><title>' + nombreArchivo + '</title>'));
+      w.document.write(html);
       w.document.close();
-      w.document.title = fileName;
-      setTimeout(() => { w.print(); }, 500);
+      // Ya no necesitamos w.document.title = ... porque el HTML ya tiene <title>
+      setTimeout(() => { w.focus(); w.print(); }, 500);
     }
   }
 
