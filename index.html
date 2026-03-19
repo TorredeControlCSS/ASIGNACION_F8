@@ -1528,6 +1528,7 @@
     });
   }
    // --- REPORTE TABLERO DE LLENADO (FINAL VERIFICADO) ---
+  // --- REPORTE TABLERO DE LLENADO (FINAL: LOGO + NOMBRE ARCHIVO DINÁMICO) ---
   async function exportPdfCuotas() {
     const btn = document.getElementById('btnExportCuotas');
     const oldText = btn.textContent;
@@ -1568,6 +1569,10 @@
 
         const fechaHoy = new Date().toLocaleString("es-PA");
         
+        // --- NUEVO: CREAR NOMBRE DE ARCHIVO DINÁMICO ---
+        const fechaNombre = new Date().toISOString().split('T')[0]; 
+        const nombreArchivo = `Tablero_Llenado_${fUE === 'ALL' ? 'General' : fUE.replace(/[^a-zA-Z0-9]/g, '_')}_${fechaNombre}`;
+
         // Helper Riesgo
         const getRiskText = (n) => {
             if(n >= 2) return `<span style="color:red; font-weight:bold;">ALTO (${n})</span>`;
@@ -1641,19 +1646,17 @@
 
         const finalHtml = `
         <!doctype html><html><head>
-        <base href="${baseHref}"> 
-        <title>Tablero Llenado</title>
+        <base href="${baseHref}">
+        <title>${nombreArchivo}</title> <!-- AQUI SE INSERTA EL NOMBRE -->
         <style>
             body { font-family: 'Segoe UI', Arial, sans-serif; font-size:10px; margin: 10mm; color: #111; }
             
-            /* HEADER ESTILO TABLA IDENTICO AL REPORTE ASIGNACION */
             .header-table { width:100%; border-bottom: 2px solid #0b1f3a; margin-bottom:15px; padding-bottom:10px; }
             .header-logo img { width: 50px; height: 50px; object-fit: contain; }
             
             .header-title { font-size:16px; font-weight:700; color:#0b1f3a; text-transform:uppercase; margin-bottom:5px; }
             .header-meta { font-size:11px; color:#444; }
 
-            /* ARREGLO DE SALTO DE PAGINA: display block y NO page-break-inside avoid en el contenedor */
             .ue-block { margin-bottom:20px; display:block; }
             .ue-header { background:#0b1f3a; color:white; padding:5px; font-weight:bold; }
             
@@ -1668,7 +1671,6 @@
         </style>
         </head><body>
             
-            <!-- HEADER CON TABLA Y LOGO LOCAL RELATIVO -->
             <table class="header-table" style="border:none;">
                 <tr>
                     <td style="border:none; width:60px; vertical-align:top;" class="header-logo">
