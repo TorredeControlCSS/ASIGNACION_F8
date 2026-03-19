@@ -59,6 +59,20 @@
     .btn-daily { background: #0a7a2f; color: white; border: none; }
     .btn-history { background: #444; color: white; border: none; }
     .btn-secondary { background: #f0f0f0; color: #333; border: 1px solid #ccc; }
+        /* --- ESTILOS MODAL AUDITORIA --- */
+    .modal { display: none; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(2px); }
+    .modal-content { background-color: #fefefe; margin: 5% auto; padding: 0; border: 1px solid #888; width: 600px; max-width: 90%; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); animation: slideIn 0.3s; }
+    .modal-header { padding: 15px 20px; background: #0b1f3a; color: white; border-top-left-radius: 12px; border-top-right-radius: 12px; display:flex; justify-content:space-between; align-items:center; }
+    .modal-body { padding: 20px; font-size: 14px; line-height: 1.5; color: #333; max-height: 70vh; overflow-y: auto; }
+    .close-btn { color: #aaa; font-size: 28px; font-weight: bold; cursor: pointer; }
+    .close-btn:hover { color: #fff; }
+    @keyframes slideIn { from {transform: translateY(-50px); opacity: 0;} to {transform: translateY(0); opacity: 1;} }
+    .audit-step { margin-bottom: 15px; padding-left: 15px; border-left: 3px solid #ddd; }
+    .audit-step.ok { border-left-color: #2e7d32; }
+    .audit-step.warn { border-left-color: #f57f17; }
+    .audit-step.danger { border-left-color: #c62828; }
+    .audit-title { font-weight: bold; display: block; margin-bottom: 4px; font-size: 13px; text-transform: uppercase; color: #555; }
+    .audit-val { font-family: monospace; font-weight: bold; background: #eee; padding: 2px 6px; border-radius: 4px; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
@@ -256,6 +270,20 @@
     </div>
   </div>
 
+<!-- MODAL DE AUDITORÍA -->
+<div id="auditModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <span style="font-weight:bold; font-size:16px;">🕵️ AUDITORÍA DE ASIGNACIÓN</span>
+      <span class="close-btn" onclick="closeAudit()">&times;</span>
+    </div>
+    <div class="modal-body" id="auditBody"></div>
+    <div style="padding:15px; text-align:right; background:#f9f9f9; border-bottom-left-radius:12px; border-bottom-right-radius:12px;">
+      <button onclick="closeAudit()" style="background:#333; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer;">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <script>
   // --- UTILS ---
   function uniq(arr) {
@@ -400,19 +428,17 @@
     renderActiveTab(LAST_FILTERED.length ? LAST_FILTERED : DATA);
   }
 
-  // --- RENDER ASIGNACION CON NUEVAS COLUMNAS (EXPANDIDO) ---
   function renderAsignacion(rows) {
     const tb = document.querySelector("#tbl_asignacion tbody");
-    tb.innerHTML = rows.slice(0, 10000).map(r => {
+    // Referencia global para que el modal encuentre los datos
+    window.__currentData = rows; 
+
+    tb.innerHTML = rows.slice(0, 10000).map((r, index) => {
       const b = fmtBultosTriple(r.Bultos_Ter || 0, r.Bultos_Sec || 0, r.Bultos_Prim || 0);
       
-      // Combinar Lotes + Transito
       let infoExtra = r.Lotes_Usados || "";
-      if(r.Transito_Info) {
-          infoExtra += (infoExtra ? " | " : "") + `<span style="color:blue;font-weight:bold;">${r.Transito_Info}</span>`;
-      }
+      if(r.Transito_Info) infoExtra += (infoExtra ? " | " : "") + `<span style="color:blue;font-weight:bold;">${r.Transito_Info}</span>`;
 
-      // Iconos
       let iconos = "";
       if(r.Frio) iconos += "❄️ ";
       if(r.Narcotico) iconos += "💊 "; 
@@ -438,10 +464,13 @@
          saturacionHtml = `<span style="color:#f57f17;">Ajuste Empaque</span>`;
       }
 
-      // Estilo Estado
       const colorEstado = (r.Estado || "").includes('SIN') ? 'red' : 'green';
 
       return `<tr>
+        <!-- BOTON AUDITORIA -->
+        <td class="center">
+            <button onclick="openAudit(${index})" style="background:#e3f2fd; color:#0d47a1; border:1px solid #90caf9; padding:2px 6px; border-radius:4px; cursor:pointer;" title="Ver explicación">🔍</button>
+        </td>
         <td>${r.Fecha || ""}</td>
         <td>${r.N_Doc || ""}</td>
         <td>${r.Tipo || ""}</td>
@@ -468,7 +497,6 @@
         <td class="right">${r.Qty_Ultimo ? fmt(r.Qty_Ultimo) : "-"}</td>
         <td class="right" style="background:#f0f8ff;">${r.Promedio_Hist ? fmt(r.Promedio_Hist) : "-"}</td>
         
-        <!-- COLUMNAS NUEVAS AGREGADAS -->
         <td style="font-size:10px; color:#555;">${r.Estado || ""}</td>
         <td class="center">${acapHtml}</td>
         <td class="center" style="font-size:10px;">${saturacionHtml}</td>
@@ -851,6 +879,10 @@
         <td>${esc(r.Ultimo_Despacho || "-")}</td>
         <td class="num">${r.Qty_Ultimo ? fmt0(r.Qty_Ultimo) : ""}</td>
         <td class="num">${r.Promedio_Hist ? fmt0(r.Promedio_Hist) : ""}</td>
+        <td class="center" style="font-size:7px;">${r.Factor_Riesgo || "-"}</td>
+        <td class="num" style="font-size:7px;">${fmt0(r.Cuota_Max)}</td>
+        <td class="num" style="font-size:7px;">${fmt0(r.Ejecucion_Previa)}</td>
+        <td class="num" style="font-size:7px; font-weight:bold;">${fmt0(r.Saldo_Disponible)}</td>
       </tr>`;
     };
 
@@ -923,6 +955,10 @@
                 <th style="width:40px;" class="num">Pend.</th> <th style="width:60px; font-size:9px;">Estado</th> 
                 <th style="width:50px;" class="center">Bultos</th> <th style="width:110px;">Lotes/Info</th>
                 <th style="width:60px;">Últ.desp</th> <th style="width:30px;" class="num">Qty</th> <th style="width:30px;" class="num">Prom</th>
+                <th style="width:20px;" class="center">Riesgo</th>
+                <th style="width:30px;" class="num">Cuota</th>
+                <th style="width:30px;" class="num">Previo</th>
+                <th style="width:30px;" class="num">Saldo</th>
               </tr>
             </thead>
             <tbody>${rowsHtml}</tbody>
@@ -1323,6 +1359,54 @@
     }
   }
 
+    // --- LÓGICA DEL MODAL DE AUDITORÍA ---
+  function openAudit(index) {
+    const r = window.__currentData[index];
+    if(!r) return;
+
+    const sol = Number(r.Solicitado || 0);
+    const solAj = Number(r.Solicitado_redondeado || 0);
+    const asig = Number(r.Asignado || 0);
+    const cuota = Number(r.Cuota_Max || 0);
+    const saldo = Number(r.Saldo_Disponible || 0);
+    const despPrev = Number(r.Ejecucion_Previa || 0); 
+    const consumo = Number(r.Consumo_Base || 0);
+    const factor = Number(r.Factor_Riesgo || 1.1);
+
+    let html = `<div style="margin-bottom:15px; border-bottom:1px solid #eee; padding-bottom:10px;">
+      <div style="font-size:18px; font-weight:bold; color:#0b1f3a;">${r.Suministro}</div>
+      <div style="font-size:12px; color:#666;">SKU: ${r.Codigo} | UE: ${r.Punto}</div>
+    </div>`;
+
+    // 1. CUOTA
+    html += `<div class="audit-step ${r.Acaparamiento ? 'danger' : 'ok'}">
+      <span class="audit-title">1. ANÁLISIS DE CUOTA (TECHO MENSUAL)</span>
+      <div>Consumo prom: <span class="audit-val">${fmt(consumo)}</span> x Factor Riesgo <span class="audit-val">${factor}x</span> = Cuota Máx <span class="audit-val">${fmt(cuota)}</span>.</div>
+      <div style="margin-top:4px;">Ya despachado este mes: <span class="audit-val">${fmt(despPrev)}</span>. Saldo disponible al iniciar: <span class="audit-val">${fmt(saldo)}</span>.</div>`;
+    if (r.Acaparamiento) html += `<div style="margin-top:5px; color:#d32f2f; font-weight:bold;">⚠️ RECORTADO: Pidió ${fmt(sol)} pero supera su saldo (${fmt(saldo)}).</div>`;
+    else html += `<div style="margin-top:5px; color:#2e7d32; font-weight:bold;">✅ OK: El pedido (${fmt(sol)}) está dentro del saldo disponible.</div>`;
+    html += `</div>`;
+
+    // 2. EMPAQUE
+    html += `<div class="audit-step ok"><span class="audit-title">2. AJUSTE EMPAQUE</span>
+      <div>Empaque Terciario: <span class="audit-val">${r.Empaque_Ter||1}</span>. Solicitud ajustada final: <span class="audit-val">${fmt(solAj)}</span>.</div></div>`;
+
+    // 3. STOCK
+    let stClass = (asig < solAj && solAj > 0) ? 'warn' : 'ok';
+    if(asig===0 && solAj > 0) stClass = 'danger';
+    
+    html += `<div class="audit-step ${stClass}"><span class="audit-title">3. ASIGNACIÓN (REALIDAD CEDIS)</span>`;
+    if(asig === solAj && solAj > 0) html += `<div style="color:#2e7d32; font-weight:bold;">✅ STOCK COMPLETO: Se asignaron ${fmt(asig)}.</div>`;
+    else if(asig === 0 && solAj > 0) html += `<div style="color:#b71c1c; font-weight:bold;">🛑 SIN STOCK: Inventario agotado.</div>`;
+    else html += `<div style="color:#f57f17; font-weight:bold;">⚠️ STOCK PARCIAL (FAIR SHARE): Se asignaron ${fmt(asig)} de ${fmt(solAj)}.</div>`;
+    html += `</div>`;
+
+    document.getElementById('auditBody').innerHTML = html;
+    document.getElementById('auditModal').style.display = "block";
+  }
+  function closeAudit() { document.getElementById('auditModal').style.display = "none"; }
+  window.onclick = function(event) { if (event.target == document.getElementById('auditModal')) closeAudit(); }
+  
   async function init() {
     tickDateTime();
     setInterval(tickDateTime, 60000);
