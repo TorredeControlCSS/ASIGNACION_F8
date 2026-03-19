@@ -977,10 +977,11 @@
       @media print { body { margin: 10mm; } }
     </style></head><body>${sections}</body></html>`;
     
+    const nombreArchivo = "Asignacion_F8_" + new Date().toISOString().split('T')[0];
     const w = window.open("", "_blank");
     if (w) {
       w.document.open();
-      w.document.write(html);
+      w.document.write(html.replace('<head>', '<head><title>' + nombreArchivo + '</title>'));
       w.document.close();
       w.document.title = fileName;
       setTimeout(() => { w.print(); }, 500);
