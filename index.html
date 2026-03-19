@@ -97,27 +97,6 @@
     </div>
   </div>
 
-  <div class="page">
-    <h1><span id="mainHeader">Asignación F8 (Corte diario)</span></h1>
-    <div class="muted">
-      Corte: <span id="cutDate"></span> · Lotes elegibles: vencimiento ≥ 30 dias <span id="minVto"></span> ·
-      Prioridad UE: <b>CEDIS > Hospital > Policlínica > ULAPS > CAPPS</b>
-    </div>
-
-¡No! **No uses el código que acabas de pegar en tu mensaje.** Ese código mezcla la estructura vieja con la nueva y te duplicará las tablas y los KPIs, causando más errores.
-
-Para terminar con esto de una vez y que te quede perfecto sin errores, borra todo lo que esté dentro de `<div class="page">` y pega **exclusivamente** este bloque maestro que ya contiene:
-1.  Filtros arriba (con todos los IDs reparados: `tipo`, `btnExportCsv`, etc.).
-2.  Tabla abajo (ancho completo).
-3.  Modal al final.
-
-### INSTRUCCIÓN ÚNICA:
-Ve a tu archivo `index.html`.
-**BORRA TODO** lo que hay desde la línea **`<div class="page">`** hasta justo **ANTES** de la etiqueta **`<script>`**.
-
-**Y PEGA ESTE BLOQUE DEFINITIVO EN ESE HUECO:**
-
-```html
 <div class="page">
     <h1><span id="mainHeader">Asignación F8 (Corte diario)</span></h1>
     <div class="muted">
@@ -287,7 +266,7 @@ Ve a tu archivo `index.html`.
     </div>
   </div>
 </div>
-
+  
 <script>
   // --- UTILS ---
   function uniq(arr) {
