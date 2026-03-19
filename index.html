@@ -1527,7 +1527,7 @@
       }
     });
   }
-   // --- REPORTE TABLERO DE LLENADO (PDF) - FINAL ---
+   // --- REPORTE TABLERO DE LLENADO (FINAL VERIFICADO) ---
   async function exportPdfCuotas() {
     const btn = document.getElementById('btnExportCuotas');
     const oldText = btn.textContent;
@@ -1540,87 +1540,70 @@
         btn.textContent = oldText;
         return;
     }
-    w.document.write('<div style="font-family:sans-serif; padding:20px;">⏳ Procesando datos y aplicando filtros...</div>');
+    w.document.write('<div style="font-family:sans-serif; padding:20px;">⏳ Generando reporte...</div>');
 
     try {
-        // 2. OBTENER DATOS
         const rawData = await loadJsonp(`${WEBAPP_BASE}?file=cuotas`);
         if(!rawData || rawData.length === 0) { w.close(); alert("No hay datos."); return; }
 
-        // 3. APLICAR FILTROS ACTIVOS DEL DASHBOARD (Para evitar 600 paginas)
+        // FILTROS DASHBOARD
         const fUE = document.getElementById('ue').value;
-        const fCat = document.getElementById('cat').value; // Asumiendo que quisieras filtrar cat si existiera en data
         const fQ = document.getElementById('q').value.toLowerCase();
 
-        // Filtramos la data cruda
         const filteredData = rawData.filter(r => {
             if (fUE !== 'ALL' && r.UE !== fUE) return false;
-            // Si la hoja de cuotas tuviera categoria se filtraria aqui, por ahora filtramos por UE y Busqueda
             if (fQ && !String(r.Codigo).includes(fQ) && !r.Suministro.toLowerCase().includes(fQ)) return false;
             return true;
         });
 
         if (filteredData.length === 0) {
-             w.close(); 
-             alert("No hay datos con los filtros actuales (UE: " + fUE + ")."); 
-             return; 
+             w.close(); alert("No hay datos con los filtros actuales."); return; 
         }
 
-        // 4. AGRUPAR POR UE
         const groups = {};
         filteredData.forEach(r => {
             if(!groups[r.UE]) groups[r.UE] = [];
             groups[r.UE].push(r);
         });
 
-        // 5. GENERAR HTML
         const fechaHoy = new Date().toLocaleString("es-PA");
         
-        // Helper para semántica de riesgo
+        // Helper Riesgo
         const getRiskText = (n) => {
             if(n >= 2) return `<span style="color:red; font-weight:bold;">ALTO (${n})</span>`;
-            if(n >= 1.5) return `<span style="color:#f57c00;">MEDIO (${n})</span>`;
+            if(n >= 1.5) return `<span style="color:#e65100;">MEDIO (${n})</span>`;
             return `BAJO (${n})`;
         };
 
         let htmlContent = "";
 
         Object.keys(groups).sort().forEach(ue => {
-            // Ordenar: Primero los saturados (Púrpura/Verde)
             const items = groups[ue].sort((a,b) => b.Saturacion - a.Saturacion);
             
             let rows = items.map(i => {
-                const satVal = i.Saturacion; // El valor crudo (ej: 1.5 para 150%)
+                const satVal = i.Saturacion;
                 const pctTexto = (satVal * 100).toFixed(1) + "%";
                 
-                // LÓGICA DE COLORES PEDIDA:
-                // > 100% -> Púrpura
-                // 100% (o cercano, digamos >90%) -> Verde
-                // < 90% -> Amarillo
-                // Muy bajo (ej < 20%) -> Rojo
-                
-                let barColor = '#fbc02d'; // Amarillo default
-                if (satVal > 1.0) barColor = '#7b1fa2'; // Púrpura (Sobre-ejecución)
-                else if (satVal >= 0.9) barColor = '#2e7d32'; // Verde (Lleno)
-                else if (satVal < 0.2) barColor = '#d32f2f'; // Rojo (Vacío)
+                // LOGICA DE COLORES
+                let barColor = '#fbc02d'; // Amarillo
+                if (satVal > 1.0) barColor = '#7b1fa2'; // Purpura
+                else if (satVal >= 0.9) barColor = '#2e7d32'; // Verde
+                else if (satVal < 0.2) barColor = '#d32f2f'; // Rojo
 
-                // Tope visual de la barra al 100% para no romper la tabla
                 const barWidth = Math.min(satVal * 100, 100);
 
                 return `
                 <tr>
                     <td style="font-weight:bold;">${i.Codigo}</td>
-                    <td style="font-size:8px;">${i.Suministro}</td>
-                    <td class="center" style="font-size:8px;">${getRiskText(i.FactorRiesgo)}</td>
+                    <td style="font-size:9px;">${i.Suministro}</td>
+                    <td class="center" style="font-size:9px;">${getRiskText(i.FactorRiesgo)}</td>
                     <td class="right">${fmt(i.ConsumoBase)}</td>
                     <td class="right" style="font-weight:bold;">${fmt(i.CuotaMax)}</td>
                     <td class="right">${fmt(i.Ejecucion)}</td>
                     <td class="right" style="color:${i.SaldoRemanente < 0 ? 'red' : 'black'}">${fmt(i.SaldoRemanente)}</td>
-                    
-                    <!-- BARRA DE LLENADO -->
                     <td style="width:130px; padding:2px 4px;">
                         <div style="display:flex; align-items:center; gap:5px;">
-                            <div style="flex:1; height:12px; background:#e0e0e0; border-radius:3px; overflow:hidden; border:1px solid #999;">
+                            <div style="flex:1; height:12px; background:#e0e0e0; border:1px solid #999;">
                                 <div style="height:100%; width:${barWidth}%; background:${barColor};"></div>
                             </div>
                             <div style="font-size:9px; font-weight:bold; width:38px; text-align:right;">${pctTexto}</div>
@@ -1633,19 +1616,19 @@
             <div class="ue-block">
                 <div class="ue-header">
                     <span style="font-size:12px; font-weight:bold;">${ue}</span>
-                    <span style="font-size:9px; opacity:0.8;">${items.length} Renglones filtrados</span>
+                    <span style="font-size:10px;"> (${items.length} Renglones)</span>
                 </div>
                 <table>
                     <thead>
                         <tr style="background:#f0f2f5; color:#333;">
-                            <th style="width:50px;">Código</th>
-                            <th>Suministro</th>
-                            <th style="width:50px;">Riesgo</th>
-                            <th style="width:40px;" class="right">Base</th>
-                            <th style="width:40px;" class="right">Cuota</th>
-                            <th style="width:40px;" class="right">Ejec.</th>
-                            <th style="width:40px;" class="right">Saldo</th>
-                            <th style="width:130px;">% Llenado (Saturación)</th>
+                            <th style="width:50px;">CODIGO</th>
+                            <th>DESCRIPCION</th>
+                            <th style="width:50px;">FACTOR_RIESGO</th>
+                            <th style="width:45px;" class="right">CONSUMO_BASE</th>
+                            <th style="width:45px;" class="right">CUOTA_MAX_MES</th>
+                            <th style="width:45px;" class="right">EJECUCION</th>
+                            <th style="width:45px;" class="right">SALDO_REMANENTE</th>
+                            <th style="width:130px;">%_SATURACION</th>
                         </tr>
                     </thead>
                     <tbody>${rows}</tbody>
@@ -1653,54 +1636,57 @@
             </div>`;
         });
 
-        // HTML FINAL CON LOGO CORREGIDO Y SIN ESPACIO BLANCO GIGANTE
+        // Aseguramos que cargue la imagen relativa usando BASE HREF
+        const baseHref = window.location.origin + window.location.pathname;
+
         const finalHtml = `
-        <!doctype html><html><head><title>Tablero Llenado</title>
+        <!doctype html><html><head>
+        <base href="${baseHref}"> 
+        <title>Tablero Llenado</title>
         <style>
             body { font-family: 'Segoe UI', Arial, sans-serif; font-size:10px; margin: 10mm; color: #111; }
             
-            /* HEADER COMPACTO */
-            .header-table { width:100%; border-bottom: 2px solid #0056b3; margin-bottom:15px; padding-bottom:10px; }
-            .header-logo { width:60px; } 
-            .header-title { text-align:center; }
-            .header-title h1 { margin:0; color:#003366; font-size:16px; text-transform:uppercase; }
-            .header-meta { font-size:9px; color:#555; margin-top:5px; }
+            /* HEADER ESTILO TABLA IDENTICO AL REPORTE ASIGNACION */
+            .header-table { width:100%; border-bottom: 2px solid #0b1f3a; margin-bottom:15px; padding-bottom:10px; }
+            .header-logo img { width: 50px; height: 50px; object-fit: contain; }
+            
+            .header-title { font-size:16px; font-weight:700; color:#0b1f3a; text-transform:uppercase; margin-bottom:5px; }
+            .header-meta { font-size:11px; color:#444; }
 
-            .ue-block { margin-bottom:20px; page-break-inside:avoid; }
-            .ue-header { background:#003366; color:white; padding:6px 10px; border-radius:4px 4px 0 0; }
+            /* ARREGLO DE SALTO DE PAGINA: display block y NO page-break-inside avoid en el contenedor */
+            .ue-block { margin-bottom:20px; display:block; }
+            .ue-header { background:#0b1f3a; color:white; padding:5px; font-weight:bold; }
             
             table { width:100%; border-collapse:collapse; font-size:9px; }
-            th, td { border:1px solid #ccc; padding:3px 4px; vertical-align:middle; }
-            .right { text-align:right; }
-            .center { text-align:center; }
+            thead { display: table-header-group; } 
+            tr { page-break-inside: avoid; }
+            th, td { border:1px solid #ccc; padding:3px; vertical-align:middle; }
+            .right { text-align:right; } .center { text-align:center; }
             
-            /* LEYENDA DE COLORES */
-            .legend { display:flex; gap:15px; justify-content:center; font-size:9px; margin-bottom:15px; padding:5px; background:#f9f9f9; border-radius:4px; }
-            .dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:3px; vertical-align:middle; }
+            .legend { text-align:center; font-size:9px; margin-bottom:10px; padding:5px; background:#f9f9f9; border-radius:4px; }
+            .dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:2px; }
         </style>
         </head><body>
             
-            <!-- HEADER TABLA PARA ALINEAR LOGO Y TITULO -->
+            <!-- HEADER CON TABLA Y LOGO LOCAL RELATIVO -->
             <table class="header-table" style="border:none;">
                 <tr>
-                    <td style="border:none; width:80px;">
-                        <!-- LOGO CSS OFICIAL -->
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/e/e5/Caja_de_Seguro_Social_%28Panam%C3%A1%29_logo.svg" style="width:60px; height:auto;">
+                    <td style="border:none; width:60px; vertical-align:top;" class="header-logo">
+                        <img src="./icons/icon-512.png" alt="logo">
                     </td>
-                    <td style="border:none; text-align:center;">
-                        <h1 style="margin:0; color:#003366; font-size:18px;">TABLERO DE LLENADO DE RENGLONES (CUOTAS)</h1>
-                        <div style="font-size:11px; margin-top:4px;">CEDIS PANAMÁ — UNIDADES EJECUTORAS</div>
-                        <div class="header-meta">Generado el: <b>${fechaHoy}</b> | Filtro aplicado: <b>${fUE === 'ALL' ? 'Todas las UEs' : fUE}</b></div>
+                    <td style="border:none; padding-left:15px; vertical-align:top;">
+                        <div class="header-title">TABLERO DE LLENADO DE RENGLONES SERVIDOS POR EL CEDIS PANAMA A UNIDADES EJECUTORAS</div>
+                        <div class="header-meta">Generado: <b>${fechaHoy}</b></div>
+                        <div class="header-meta">Filtro aplicado: <b>${fUE === 'ALL' ? 'TODAS LAS UNIDADES' : fUE}</b></div>
                     </td>
-                    <td style="border:none; width:80px;"></td> <!-- Espacio balance -->
                 </tr>
             </table>
 
             <div class="legend">
-                <span><span class="dot" style="background:#7b1fa2;"></span>>100% (Excedido)</span>
-                <span><span class="dot" style="background:#2e7d32;"></span>90-100% (Completo)</span>
-                <span><span class="dot" style="background:#fbc02d;"></span>En Progreso</span>
-                <span><span class="dot" style="background:#d32f2f;"></span>Bajo/Vacío</span>
+                <span style="margin-right:15px;"><span class="dot" style="background:#7b1fa2;"></span>>100% (Excedido)</span>
+                <span style="margin-right:15px;"><span class="dot" style="background:#2e7d32;"></span>90-100% (Completo)</span>
+                <span style="margin-right:15px;"><span class="dot" style="background:#fbc02d;"></span>< 90% (En Progreso)</span>
+                <span><span class="dot" style="background:#d32f2f;"></span>< 20% (Bajo)</span>
             </div>
 
             ${htmlContent}
@@ -1710,7 +1696,7 @@
         w.document.write(finalHtml);
         w.document.close();
         
-        setTimeout(() => { w.focus(); w.print(); }, 800);
+        setTimeout(() => { w.focus(); w.print(); }, 1000);
 
     } catch (e) {
         console.error(e);
