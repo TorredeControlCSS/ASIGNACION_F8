@@ -935,14 +935,24 @@
                 </th>
               </tr>
               <tr class="col-header">
-                <th style="width:70px;">Código</th> <th>Suministro</th> <th style="width:40px;">Grp</th>
-                <th style="width:40px;" class="num">Solic.</th> <th style="width:40px;" class="num">Red.</th>
-                <th style="width:40px;" class="num">Asig.</th> <th style="width:40px;" class="num">Trans.</th>
-                <th style="width:40px; color:purple;" class="num">Reserv.</th> <th style="width:60px; color:purple; font-size:9px;">Doc. Res.</th> 
-                <th style="width:40px;" class="num">Pend.</th> <th style="width:60px; font-size:9px;">Estado</th> 
-                <th style="width:50px;" class="center">Bultos</th> <th style="width:110px;">Lotes/Info</th>
-                <th style="width:60px;">Últ.desp</th> <th style="width:30px;" class="num">Qty</th> <th style="width:30px;" class="num">Prom</th>
-                <th style="width:20px;" class="center">Riesgo</th>
+                <th style="width:50px;">Código</th> 
+                <th>Suministro</th> <!-- Sin ancho fijo para que ocupe lo que sobre -->
+                <th style="width:25px;">Grp</th>
+                <th style="width:35px;" class="num">Solic.</th> 
+                <th style="width:35px;" class="num">Red.</th>
+                <th style="width:35px;" class="num">Asig.</th> 
+                <th style="width:35px;" class="num">Trans.</th>
+                <th style="width:30px; color:purple;" class="num">Resv.</th> 
+                <th style="width:35px; color:purple; font-size:8px;">Doc.R</th> 
+                <th style="width:30px;" class="num">Pend.</th> 
+                <th style="width:40px; font-size:8px;">Estado</th> 
+                <th style="width:40px;" class="center">Bultos</th> 
+                <th style="width:70px;">Lotes/Info</th> <!-- Reducido de 110 a 70 -->
+                <th style="width:45px;">Últ.desp</th> 
+                <th style="width:25px;" class="num">Qty</th> 
+                <th style="width:25px;" class="num">Prom</th>
+                <!-- NUEVAS COLUMNAS (Anchos ajustados) -->
+                <th style="width:25px;" class="center">Riesgo</th>
                 <th style="width:30px;" class="num">Cuota</th>
                 <th style="width:30px;" class="num">Previo</th>
                 <th style="width:30px;" class="num">Saldo</th>
@@ -959,7 +969,7 @@
     <style>
       body{font-family:'Segoe UI', Arial, sans-serif; color:#111; margin:0;}
       table { width: 100%; border-collapse: collapse; margin-bottom: 0; } thead { display: table-header-group; } tr { page-break-inside: auto; } 
-      th, td { border: 1px solid #ccc; padding: 4px 5px; font-size: 10px; vertical-align: top; } thead tr:first-child td { border: none; }
+      th, td { border: 1px solid #ccc; padding: 2px 3px; font-size: 9px; vertical-align: middle; } thead tr:first-child td { border: none; }
       .col-header th { background: #f3f5f8; font-weight: bold; color: #333; text-transform: uppercase; }
       .num { text-align: right; } .center { text-align: center; } .section { margin-bottom: 20px; page-break-after: always; } .section:last-child { page-break-after: auto; }
       .sign { display: flex; justify-content: space-between; gap: 20px; margin-top: 30px; font-size: 11px; page-break-inside: avoid; }
