@@ -26,8 +26,8 @@
       .topbar .top-actions{width:100%;justify-content:center;margin-top:8px;}
       .topbar .theme-select{width:100%;max-width:220px;}
     }
-    .page{padding:18px;}
-    .grid{display:grid;grid-template-columns:300px 1fr;gap:12px;align-items:start;}
+    .page { padding: 10px; max-width: 100vw; overflow-x: hidden; }
+    .grid{display:grid;grid-template-columns:260px 1fr;gap:12px;align-items:start;}
     .card{border:1px solid #ddd;border-radius:10px;padding:12px;box-shadow:0 1px 2px rgba(0,0,0,.04);background:#fff;}
     h1{font-size:18px;margin:0 0 8px 0;}
     h2{font-size:14px;margin:0 0 8px 0;}
@@ -1383,11 +1383,20 @@
 
     // 1. CUOTA
     html += `<div class="audit-step ${r.Acaparamiento ? 'danger' : 'ok'}">
-      <span class="audit-title">1. ANÁLISIS DE CUOTA (TECHO MENSUAL)</span>
-      <div>Consumo prom: <span class="audit-val">${fmt(consumo)}</span> x Factor Riesgo <span class="audit-val">${factor}x</span> = Cuota Máx <span class="audit-val">${fmt(cuota)}</span>.</div>
-      <div style="margin-top:4px;">Ya despachado este mes: <span class="audit-val">${fmt(despPrev)}</span>. Saldo disponible al iniciar: <span class="audit-val">${fmt(saldo)}</span>.</div>`;
+      <span class="audit-title">1. ANÁLISIS DE CUOTA (TECHO MENSUAL)</span>`;
+      
+    if (consumo === 0) {
+        html += `<div>⚠️ <b>Sin historial de consumo:</b> El sistema no tiene datos históricos para este SKU en esta UE.
+        <br>Regla aplicada: <i>"Si consumo=0, la Cuota es igual a lo Solicitado"</i>.
+        <br>Cuota Asignada: <span class="audit-val">${fmt(sol)}</span>.</div>`;
+    } else {
+        html += `<div>Consumo Promedio: <span class="audit-val">${fmt(consumo)}</span> x Factor Riesgo <span class="audit-val">${factor}x</span> = Cuota Máx <span class="audit-val">${fmt(cuota)}</span>.</div>
+        <div style="margin-top:4px;">Despachado previo: <span class="audit-val">${fmt(despPrev)}</span>. Saldo disp: <span class="audit-val">${fmt(saldo)}</span>.</div>`;
+    }
+
     if (r.Acaparamiento) html += `<div style="margin-top:5px; color:#d32f2f; font-weight:bold;">⚠️ RECORTADO: Pidió ${fmt(sol)} pero supera su saldo (${fmt(saldo)}).</div>`;
-    else html += `<div style="margin-top:5px; color:#2e7d32; font-weight:bold;">✅ OK: El pedido (${fmt(sol)}) está dentro del saldo disponible.</div>`;
+    else html += `<div style="margin-top:5px; color:#2e7d32; font-weight:bold;">✅ OK: Pedido dentro del límite permitido.</div>`;
+    
     html += `</div>`;
 
     // 2. EMPAQUE
