@@ -145,8 +145,15 @@
                  </select>
             </div>
             
-            <!-- Inputs ocultos para fecha de proceso (necesarios para evitar error si el JS los busca) -->
-            <div style="display:none;"><input id="allocDateFrom"><input id="allocDateTo"></div> 
+            <!-- FILTROS RESTAURADOS: FECHA PROCESO/ASIG -->
+            <div>
+                <label style="color:#0a7a2f; font-weight:bold;">Fecha Proceso (Desde)</label>
+                <input id="allocDateFrom" type="date"/>
+            </div>
+            <div>
+                <label style="color:#0a7a2f; font-weight:bold;">Fecha Proceso (Hasta)</label>
+                <input id="allocDateTo" type="date"/>
+            </div>
 
             <!-- Botones Aplicar -->
             <div style="display:flex; gap:5px;">
