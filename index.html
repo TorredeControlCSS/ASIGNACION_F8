@@ -218,6 +218,8 @@
                   <th>Código</th>
                   <th>Suministro</th>
                   <th style="font-size:9px;">Grp</th>
+                  <!-- NUEVA COLUMNA VISUAL -->
+                  <th class="right" style="background:#e3f2fd; color:#0d47a1;">Stock</th>
                   <th class="right">Solic.</th>
                   <th class="right">Redond.</th>
                   <th class="right">Asig.</th>
@@ -418,7 +420,6 @@
 
   function renderAsignacion(rows) {
     const tb = document.querySelector("#tbl_asignacion tbody");
-    // Referencia global para que el modal encuentre los datos
     window.__currentData = rows; 
 
     tb.innerHTML = rows.slice(0, 10000).map((r, index) => {
@@ -431,7 +432,6 @@
       if(r.Frio) iconos += "❄️ ";
       if(r.Narcotico) iconos += "💊 "; 
 
-      // LÓGICA ACAPARAMIENTO (VISUAL)
       let acapHtml = "-";
       let estiloSol = "";
       if(r.Acaparamiento) {
@@ -439,7 +439,6 @@
          acapHtml = `<span style="background:#ffebee; color:#d32f2f; border:1px solid #d32f2f; padding:1px 4px; border-radius:4px; font-weight:bold; font-size:10px;">⚠️ SÍ</span>`;
       }
 
-      // LÓGICA SATURACIÓN (VISUAL)
       let saturacionHtml = "-";
       let sol = Number(r.Solicitado || 0);
       let solAj = Number(r.Solicitado_redondeado || 0);
@@ -452,10 +451,7 @@
          saturacionHtml = `<span style="color:#f57f17;">Ajuste Empaque</span>`;
       }
 
-      const colorEstado = (r.Estado || "").includes('SIN') ? 'red' : 'green';
-
       return `<tr>
-        <!-- BOTON AUDITORIA -->
         <td class="center">
             <button onclick="openAudit(${index})" style="background:#e3f2fd; color:#0d47a1; border:1px solid #90caf9; padding:2px 6px; border-radius:4px; cursor:pointer;" title="Ver explicación">🔍</button>
         </td>
@@ -467,6 +463,9 @@
         <td>${r.Codigo || ""}</td>
         <td style="max-width:220px; white-space:normal; word-wrap:break-word; overflow-wrap:break-word; font-size:10px; line-height:1.1;">${iconos} ${r.Suministro || ""}</td>
         <td style="font-size:10px;">${r.Grupo || "-"}</td> 
+
+        <!-- NUEVA COLUMNA STOCK (SOLO WEB) -->
+        <td class="right" style="background:#e3f2fd; color:#0d47a1; font-weight:bold;">${fmt(r.Saldo_Disponible)}</td>
 
         <td class="right">${fmt(r.Solicitado)}</td>
         <td class="right" style="${estiloSol}" title="${r.Acaparamiento ? 'Recortado por Anti-Acaparamiento' : ''}">${fmt(r.Solicitado_redondeado)}</td>
