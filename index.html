@@ -450,21 +450,35 @@
       if(r.Narcotico) iconos += "💊 "; 
 
       // --- NUEVA LÓGICA VISUAL UNIFICADA ---
+            // --- NUEVA LÓGICA VISUAL UNIFICADA (CORREGIDA) ---
       let stBg = "transparent"; 
       let stColor = "#333"; 
+      let stIcon = "";     // <--- ESTA ERA LA VARIABLE QUE FALTABA
       let alertaMsg = "";
       
-      // 1. Estilos según el Estado
       const st = (r.Estado || "").toUpperCase();
       
-      if (st.includes("COMPLETO")) { stBg="#e8f5e9"; stColor="#2e7d32"; }       // Verde
-      else if (st.includes("SIN STOCK")) { stBg="#ffebee"; stColor="#b71c1c"; } // Rojo
-      else if (st.includes("PARCIAL")) { stBg="#fff3e0"; stColor="#ef6c00"; }   // Naranja
-      else if (st.includes("MAX CUOTA")) { stBg="#f3e5f5"; stColor="#7b1fa2"; } // Morado
-      else if (st.includes("AJUSTE") || st.includes("EMPAQUE")) { stBg="#fff8e1"; stColor="#fbc02d"; } // Amarillo
-      else if (st.includes("MINIMO")) { stBg="#f5f5f5"; stColor="#757575"; }    // Gris
+      // 1. Asignar Colores e Iconos
+      if (st.includes("COMPLETO")) { 
+          stBg="#e8f5e9"; stColor="#2e7d32"; stIcon="✅"; 
+      }       
+      else if (st.includes("SIN STOCK")) { 
+          stBg="#ffebee"; stColor="#b71c1c"; stIcon="⛔"; 
+      } 
+      else if (st.includes("PARCIAL")) { 
+          stBg="#fff3e0"; stColor="#ef6c00"; stIcon="⚠️"; 
+      }   
+      else if (st.includes("MAX CUOTA")) { 
+          stBg="#f3e5f5"; stColor="#7b1fa2"; stIcon="🛑"; 
+      } 
+      else if (st.includes("AJUSTE") || st.includes("EMPAQUE")) { 
+          stBg="#fff8e1"; stColor="#fbc02d"; stIcon="📦"; 
+      } 
+      else if (st.includes("MINIMO")) { 
+          stBg="#f5f5f5"; stColor="#757575"; stIcon="📉"; 
+      }
 
-      // 2. Lógica de Alerta (Columna nueva)
+      // 2. Lógica de Alerta
       if (r.Acaparamiento || st.includes("MAX CUOTA")) {
           alertaMsg = `<span style="color:#b71c1c; font-weight:bold; font-size:9px;">⚠️ TOPE CUOTA</span>`;
       } else if (st.includes("MINIMO")) {
@@ -473,7 +487,7 @@
           alertaMsg = `<span style="color:#b71c1c; font-size:9px; font-weight:bold;">AGOTADO</span>`;
       }
 
-      // 3. Estilo para la columna Solicitado (Tachado si hubo recorte por acaparamiento)
+      // 3. Estilo Tachado si es necesario
       let estiloSol = "";
       if (r.Acaparamiento) {
           estiloSol = "color:#d32f2f; font-weight:bold; text-decoration:underline;";
