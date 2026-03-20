@@ -465,7 +465,7 @@
         <td style="font-size:10px;">${r.Grupo || "-"}</td> 
 
         <!-- NUEVA COLUMNA STOCK (SOLO WEB) -->
-        <td class="right" style="background:#e3f2fd; color:#0d47a1; font-weight:bold;">${fmt(r.Saldo_Disponible)}</td>
+        <td class="right" style="background:#e3f2fd; color:#0d47a1; font-weight:bold;">${fmt(r.Stock_Fisico)}</td>
 
         <td class="right">${fmt(r.Solicitado)}</td>
         <td class="right" style="${estiloSol}" title="${r.Acaparamiento ? 'Recortado por Anti-Acaparamiento' : ''}">${fmt(r.Solicitado_redondeado)}</td>
