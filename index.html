@@ -37,8 +37,26 @@
     select,input{width:100%;padding:8px;border:1px solid #ccc;border-radius:8px;box-sizing:border-box;}
     button{padding:9px 12px;border:1px solid #333;border-radius:10px;background:#fff;cursor:pointer;}
     button:disabled{opacity:.5;cursor:not-allowed;}
-    .kpi{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;}
-    .kpi .box{border:1px solid #e5e5e5;border-radius:10px;padding:10px;}
+       /* CAMBIO: Usamos grid-template-columns: repeat(auto-fit, minmax(...)) para que quepan todos */
+    .kpi {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr); /* Fuerza 6 columnas iguales */
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+    
+    /* Ajuste para pantallas pequeñas */
+    @media (max-width: 1200px) {
+        .kpi { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    .kpi .box {
+        border: 1px solid #e5e5e5;
+        border-radius: 8px;
+        padding: 6px 10px; /* Reducimos padding para ahorrar más espacio */
+        background: #fdfdfd;
+        min-width: 0; /* Evita desbordes en grid */
+    }
     .kpi .value{font-size:16px;font-weight:700;margin-top:6px;}
     .muted{color:#666;font-size:12px;}
     .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
