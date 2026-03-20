@@ -250,9 +250,8 @@
                   <th>Últ. Desp</th>
                   <th class="right">Qty</th>
                   <th class="right">Prom</th>
-                  <th style="font-size:9px;">Estado</th>
-                  <th class="center" style="font-size:9px;">Acap.</th>
-                  <th class="center" style="font-size:9px;">Satur.</th>
+                  <th class="center" style="width:70px;">Estado</th>
+                  <th class="center" style="width:60px;">Alerta</th>
                   <th class="center" style="font-size:9px;">Riesgo</th>
                   <th class="right" style="font-size:9px;">Cuota</th>
                   <th class="right" style="font-size:9px;">Previo</th>
@@ -450,23 +449,34 @@
       if(r.Frio) iconos += "❄️ ";
       if(r.Narcotico) iconos += "💊 "; 
 
-      let acapHtml = "-";
-      let estiloSol = "";
-      if(r.Acaparamiento) {
-         estiloSol = "color:#d32f2f; font-weight:bold; text-decoration:underline;";
-         acapHtml = `<span style="background:#ffebee; color:#d32f2f; border:1px solid #d32f2f; padding:1px 4px; border-radius:4px; font-weight:bold; font-size:10px;">⚠️ SÍ</span>`;
+      // --- NUEVA LÓGICA VISUAL UNIFICADA ---
+      let stBg = "transparent"; 
+      let stColor = "#333"; 
+      let alertaMsg = "";
+      
+      // 1. Estilos según el Estado
+      const st = (r.Estado || "").toUpperCase();
+      
+      if (st.includes("COMPLETO")) { stBg="#e8f5e9"; stColor="#2e7d32"; }       // Verde
+      else if (st.includes("SIN STOCK")) { stBg="#ffebee"; stColor="#b71c1c"; } // Rojo
+      else if (st.includes("PARCIAL")) { stBg="#fff3e0"; stColor="#ef6c00"; }   // Naranja
+      else if (st.includes("MAX CUOTA")) { stBg="#f3e5f5"; stColor="#7b1fa2"; } // Morado
+      else if (st.includes("AJUSTE") || st.includes("EMPAQUE")) { stBg="#fff8e1"; stColor="#fbc02d"; } // Amarillo
+      else if (st.includes("MINIMO")) { stBg="#f5f5f5"; stColor="#757575"; }    // Gris
+
+      // 2. Lógica de Alerta (Columna nueva)
+      if (r.Acaparamiento || st.includes("MAX CUOTA")) {
+          alertaMsg = `<span style="color:#b71c1c; font-weight:bold; font-size:9px;">⚠️ TOPE CUOTA</span>`;
+      } else if (st.includes("MINIMO")) {
+          alertaMsg = `<span style="color:#555; font-size:9px;">📦 BAJO MIN.</span>`;
+      } else if (st.includes("SIN STOCK")) {
+          alertaMsg = `<span style="color:#b71c1c; font-size:9px; font-weight:bold;">AGOTADO</span>`;
       }
 
-      let saturacionHtml = "-";
-      let sol = Number(r.Solicitado || 0);
-      let solAj = Number(r.Solicitado_redondeado || 0);
-      
+      // 3. Estilo para la columna Solicitado (Tachado si hubo recorte por acaparamiento)
+      let estiloSol = "";
       if (r.Acaparamiento) {
-         saturacionHtml = `<span style="color:#b71c1c; font-weight:900;">100% (Recorte)</span>`;
-      } else if (sol > 0 && sol <= solAj) {
-         saturacionHtml = `<span style="color:#2e7d32; font-weight:bold;">OK</span>`;
-      } else if (sol > 0 && solAj < sol) {
-         saturacionHtml = `<span style="color:#f57f17;">Ajuste Empaque</span>`;
+          estiloSol = "color:#d32f2f; font-weight:bold; text-decoration:underline;";
       }
 
       return `<tr>
@@ -502,9 +512,15 @@
         <td class="right">${r.Qty_Ultimo ? fmt(r.Qty_Ultimo) : "-"}</td>
         <td class="right" style="background:#f0f8ff;">${r.Promedio_Hist ? fmt(r.Promedio_Hist) : "-"}</td>
         
-        <td style="font-size:10px; color:#555;">${r.Estado || ""}</td>
-        <td class="center">${acapHtml}</td>
-        <td class="center" style="font-size:10px;">${saturacionHtml}</td>
+        <!-- COLUMNA 1: ESTADO CON COLOR -->
+        <td class="center" style="background:${stBg}; color:${stColor}; font-weight:bold; font-size:9px; border-radius:4px;">
+          ${stIcon} ${r.Estado}
+        </td>
+
+        <!-- COLUMNA 2: ALERTA / MOTIVO -->
+        <td class="center">
+            ${alertaMsg}
+        </td>
         <td class="center" style="font-size:10px; font-weight:bold;">${r.Factor_Riesgo ? r.Factor_Riesgo + 'x' : "-"}</td>
         <td class="right" style="font-size:10px;">${fmt(r.Cuota_Max)}</td>
         <td class="right" style="font-size:10px;">${fmt(r.Ejecucion_Previa)}</td>
