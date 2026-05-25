@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Asignación F8 — CEDIS Panamá</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:Arial,sans-serif;background:#f0f4f8;color:#222;font-size:13px;}
+    .topbar{background:linear-gradient(90deg,#0b1f3a,#133a74);color:#fff;padding:14px 20px;
+            display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:100;}
+    .topbar-title{flex:1;}
+    .topbar-title h1{font-size:15px;font-weight:700;}
+    .topbar-title p{font-size:11px;color:#94a3b8;margin-top:2px;}
+    .btn-print{background:#25D366;color:#fff;border:none;padding:8px 16px;border-radius:8px;
+               font-weight:700;cursor:pointer;font-size:12px;}
+    .btn-print:hover{background:#1da355;}
+    .container{max-width:960px;margin:20px auto;padding:0 16px;}
+
+    /* Estado cards */
+    .estado-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;}
+    .estado-card{background:#fff;border-radius:10px;padding:12px 18px;border:1px solid #e2e8f0;
+                 text-align:center;min-width:110px;}
+    .estado-card .val{font-size:22px;font-weight:800;color:#0b1f3a;}
+    .estado-card .lbl{font-size:10px;color:#666;margin-top:2px;}
+
+    /* Alerta acaparamiento */
+    .alerta-acap{background:#fff8e1;border:2px solid #f59e0b;border-radius:10px;
+                 padding:12px 16px;margin-bottom:18px;display:none;}
+    .alerta-acap.visible{display:block;}
+    .alerta-acap h3{color:#92400e;font-size:13px;margin-bottom:6px;}
+    .alerta-acap ul{margin-left:16px;font-size:12px;color:#78350f;line-height:1.7;}
+
+    /* Sección por F8 */
+    .seccion{background:#fff;border-radius:10px;border:1px solid #e2e8f0;
+             margin-bottom:20px;overflow:hidden;}
+    .sec-header{background:#f8fafc;border-bottom:2px solid #0b1f3a;padding:12px 16px;}
+    .sec-titulo{font-size:14px;font-weight:800;color:#0b1f3a;}
+    .sec-meta{font-size:11px;color:#555;margin-top:4px;display:flex;gap:16px;flex-wrap:wrap;}
+    .sec-meta span b{color:#0b1f3a;}
+    .sec-stats{margin-top:8px;display:flex;gap:12px;flex-wrap:wrap;font-size:11px;}
+    .stat-pill{background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:2px 8px;}
+
+    /* Tabla */
+    .tbl-wrap{overflow-x:auto;}
+    table{width:100%;border-collapse:collapse;font-size:11px;}
+    th{background:#0b1f3a;color:#fff;padding:6px 8px;text-align:left;white-space:nowrap;
+       font-weight:600;font-size:10px;}
+    th.num,td.num{text-align:right;}
+    td{padding:5px 8px;border-bottom:1px solid #f0f0f0;vertical-align:middle;}
+    tr:hover td{background:#fafafa;}
+    .badge-estado{font-size:9px;padding:2px 6px;border-radius:4px;font-weight:700;white-space:nowrap;}
+    .completo{background:#dcfce7;color:#166534;}
+    .parcial{background:#fef3c7;color:#92400e;}
+    .sin-stock{background:#fee2e2;color:#991b1b;}
+    .otro{background:#f3f4f6;color:#374151;}
+
+    /* Fila acaparamiento */
+    .fila-acap td{border-left:4px solid #f59e0b!important;}
+    .acap-badge{display:inline-block;background:#fef3c7;border:1px solid #f59e0b;color:#92400e;
+                font-size:9px;padding:1px 5px;border-radius:3px;margin-left:4px;font-weight:700;}
+
+    /* Loading / error */
+    .pantalla{text-align:center;padding:60px 20px;}
+    .pantalla .ico{font-size:48px;margin-bottom:16px;}
+    .pantalla h2{font-size:18px;color:#0b1f3a;margin-bottom:8px;}
+    .pantalla p{color:#666;font-size:13px;max-width:380px;margin:0 auto;}
+    .spinner{display:inline-block;width:36px;height:36px;border:4px solid #e2e8f0;
+             border-top-color:#0b1f3a;border-radius:50%;animation:spin .8s linear infinite;margin-bottom:16px;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+
+    /* Footer */
+    .footer{text-align:center;font-size:10px;color:#999;padding:20px;margin-top:8px;}
+
+    /* PRINT */
+    @media print{
+      body{background:#fff;}
+      .topbar .btn-print{display:none;}
+      .topbar{position:static;background:#0b1f3a!important;-webkit-print-color-adjust:exact;
+              print-color-adjust:exact;}
+      .container{margin:0;padding:0;max-width:100%;}
+      .seccion{break-inside:avoid;border:1px solid #ccc;}
+      .alerta-acap{break-inside:avoid;}
+      .estado-bar{break-inside:avoid;}
+      table{font-size:9px;}
+      th{font-size:8px;padding:4px 6px;}
+      td{padding:3px 6px;font-size:9px;}
+    }
+  </style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-title">
+    <h1>Hoja de Asignación F8 — CEDIS Panamá</h1>
+    <p id="sub-ue">Cargando...</p>
+  </div>
+  <button class="btn-print" onclick="window.print()">⬇ Descargar / Imprimir PDF</button>
+</div>
+
+<!-- CONTENIDO PRINCIPAL -->
+<div class="container" id="contenido">
+  <div class="pantalla" id="pantallaLoading">
+    <div class="spinner"></div>
+    <h2>Cargando asignación...</h2>
+    <p>Consultando el sistema de Torre de Control CEDIS.</p>
+  </div>
+  <div class="pantalla" id="pantallaError" style="display:none;">
+    <div class="ico">⚠️</div>
+    <h2>No se encontraron datos</h2>
+    <p id="errorMsg">No hay asignación activa para esta unidad ejecutora en el corte actual.</p>
+  </div>
+  <div id="reporte" style="display:none;">
+    <div class="estado-bar" id="estadoBar"></div>
+    <div class="alerta-acap" id="alertaAcap">
+      <h3>⚠️ Suministros con reserva activa sin despachar</h3>
+      <p style="font-size:11px;color:#78350f;margin-bottom:6px;">
+        Los siguientes suministros tienen inventario reservado de una asignación anterior
+        que el almacén aún no ha despachado, y aparecen nuevamente en este pedido.
+      </p>
+      <ul id="acapList"></ul>
+    </div>
+    <div id="secciones"></div>
+  </div>
+</div>
+
+<div class="footer">
+  Torre de Control CEDIS · CSS Panamá · Generado: <span id="fechaGen"></span>
+</div>
+
+<script>
+const GAS = 'https://script.google.com/macros/s/AKfycbyVHDQ8IuVHibz259AiEvZ-jUfVC7fxvSSqC-wfaiiq1_13C9_TK4dVtPK0SMW4sZoJ/exec';
+
+// ── Leer parámetros de URL ────────────────────────────────────────────────────
+const params  = new URLSearchParams(window.location.search);
+const UE_PARAM = (params.get('ue') || '').trim();
+const F8S_PARAM = (params.get('f8') || '').split(',').map(s => s.trim()).filter(Boolean);
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const esc  = s => s == null ? '' : String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const fmt0 = n => { const x = Number(n); return isNaN(x) ? '' : x.toLocaleString('en-US',{maximumFractionDigits:0}); };
+
+function normUE(v) {
+  return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[().\-_\/]/g,' ').toUpperCase().replace(/\s+/g,' ').trim();
+}
+
+function estadoBadge(e) {
+  const s = String(e||'').toUpperCase();
+  const cls = s === 'COMPLETO' ? 'completo' :
+              s.includes('PARCIAL') ? 'parcial' :
+              s === 'SIN STOCK' ? 'sin-stock' : 'otro';
+  return `<span class="badge-estado ${cls}">${esc(e)}</span>`;
+}
+
+function fmtBultos(ter, prim) {
+  const parts = [];
+  if (ter > 0)  parts.push(`${fmt0(ter)} Ter`);
+  if (prim > 0) parts.push(`${fmt0(prim)} Pri`);
+  return parts.join(' / ') || '-';
+}
+
+// ── JSONP loader ──────────────────────────────────────────────────────────────
+function loadJsonp(url) {
+  return new Promise((resolve, reject) => {
+    const cb = '_cb_' + Math.random().toString(36).slice(2);
+    const s  = document.createElement('script');
+    s.src    = `${url}&callback=${cb}&_ts=${Date.now()}`;
+    s.onerror = () => { reject(new Error('Error de red')); s.remove(); };
+    window[cb] = data => { resolve(data); delete window[cb]; s.remove(); };
+    document.body.appendChild(s);
+  });
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+document.getElementById('fechaGen').textContent = new Date().toLocaleString('es-PA');
+
+async function cargar() {
+  if (!UE_PARAM) {
+    mostrarError('No se especificó Unidad Ejecutora en el enlace. Contacte a Torre de Control CEDIS.');
+    return;
+  }
+
+  try {
+    const data = await loadJsonp(`${GAS}?file=allocation`);
+    if (!data || !data.length) { mostrarError('Sin datos en el corte actual.'); return; }
+
+    // Filtrar por UE (comparación normalizada para tolerar acentos/mayúsculas)
+    const ueNorm = normUE(UE_PARAM);
+    let filas = data.filter(r => normUE(r.Punto || '') === ueNorm);
+
+    // Si se especificaron F8s específicas, filtrar también
+    if (F8S_PARAM.length) {
+      filas = filas.filter(r => F8S_PARAM.includes(String(r.N_Doc || '').trim()));
+    }
+
+    if (!filas.length) {
+      mostrarError(`No se encontró asignación activa para: "${UE_PARAM}" en el corte actual.`);
+      return;
+    }
+
+    renderReporte(filas);
+  } catch(e) {
+    mostrarError('Error de conexión: ' + e.message);
+  }
+}
+
+function mostrarError(msg) {
+  document.getElementById('pantallaLoading').style.display = 'none';
+  document.getElementById('pantallaError').style.display  = 'block';
+  document.getElementById('errorMsg').textContent = msg;
+}
+
+function renderReporte(filas) {
+  document.getElementById('pantallaLoading').style.display = 'none';
+  document.getElementById('reporte').style.display = 'block';
+
+  const ueNombre = filas[0].Punto || UE_PARAM;
+  document.getElementById('sub-ue').textContent = ueNombre;
+  document.title = `Asignación F8 — ${ueNombre}`;
+
+  // ── KPIs globales ──────────────────────────────────────────────────────────
+  const totalSol  = filas.reduce((a,r) => a + Number(r.Solicitado_redondeado||0), 0);
+  const totalAsig = filas.reduce((a,r) => a + Number(r.Asignado||0), 0);
+  const fill      = totalSol > 0 ? (totalAsig/totalSol*100).toFixed(1) : '0.0';
+  const nF8s      = [...new Set(filas.map(r => r.N_Doc))].length;
+  const acapLineas = filas.filter(r => Number(r.Reservado||0) > 0);
+
+  const fillColor = fill >= 90 ? '#166534' : fill >= 50 ? '#92400e' : '#991b1b';
+  const fillBg    = fill >= 90 ? '#dcfce7' : fill >= 50 ? '#fef3c7' : '#fee2e2';
+
+  document.getElementById('estadoBar').innerHTML = `
+    <div class="estado-card">
+      <div class="val">${nF8s}</div>
+      <div class="lbl">Forma${nF8s!==1?'s':''} 8</div>
+    </div>
+    <div class="estado-card">
+      <div class="val">${filas.length}</div>
+      <div class="lbl">Renglones</div>
+    </div>
+    <div class="estado-card">
+      <div class="val">${fmt0(totalSol)}</div>
+      <div class="lbl">Solicitado</div>
+    </div>
+    <div class="estado-card">
+      <div class="val">${fmt0(totalAsig)}</div>
+      <div class="lbl">Asignado</div>
+    </div>
+    <div class="estado-card" style="border-color:${fillColor};">
+      <div class="val" style="color:${fillColor};background:${fillBg};padding:2px 8px;border-radius:6px;">${fill}%</div>
+      <div class="lbl">Fill Rate</div>
+    </div>
+    ${acapLineas.length ? `<div class="estado-card" style="border-color:#f59e0b;">
+      <div class="val" style="color:#92400e;">⚠️ ${acapLineas.length}</div>
+      <div class="lbl">Con reserva activa</div>
+    </div>` : ''}`;
+
+  // ── Alerta acaparamiento ───────────────────────────────────────────────────
+  if (acapLineas.length) {
+    const alertaEl = document.getElementById('alertaAcap');
+    alertaEl.classList.add('visible');
+    document.getElementById('acapList').innerHTML = acapLineas.map(r => {
+      const dias = r.Reservado_Dias > 0 ? ` — reservado hace <b>${r.Reservado_Dias} días</b>` : '';
+      const doc  = r.Reservado_Doc ? ` (Doc: ${r.Reservado_Doc})` : '';
+      return `<li><b>${esc(r.Suministro || r.Codigo)}</b>${doc}${dias}: 
+              ${fmt0(r.Reservado)} unidades en reserva sin despachar</li>`;
+    }).join('');
+  }
+
+  // ── Agrupar por F8 ────────────────────────────────────────────────────────
+  const porF8 = new Map();
+  filas.forEach(r => {
+    const f8 = r.N_Doc || 'SIN_DOC';
+    if (!porF8.has(f8)) {
+      porF8.set(f8, {
+        f8, fecha: r.Fecha || '', tipo: r.Tipo || '',
+        totalSol: 0, totalAsig: 0, items: []
+      });
+    }
+    const g = porF8.get(f8);
+    g.totalSol  += Number(r.Solicitado_redondeado||0);
+    g.totalAsig += Number(r.Asignado||0);
+    g.items.push(r);
+  });
+
+  // ── Renderizar secciones ──────────────────────────────────────────────────
+  const seccionesEl = document.getElementById('secciones');
+  seccionesEl.innerHTML = '';
+
+  porF8.forEach(g => {
+    g.items.sort((a,b) => String(a.Codigo||'').localeCompare(String(b.Codigo||'')));
+    const fillG = g.totalSol > 0 ? (g.totalAsig/g.totalSol*100).toFixed(1) : '0.0';
+
+    const filasTbl = g.items.map(r => {
+      const esAcap = Number(r.Reservado||0) > 0;
+      let rowClass = esAcap ? 'fila-acap' : '';
+      let rowStyle = '';
+      if (r.Frio && r.Importancia === 'VITAL') rowStyle = 'background:#e1f5fe;';
+      else if (r.Frio)                         rowStyle = 'background:#e3f2fd;';
+      else if (r.Importancia === 'VITAL')       rowStyle = 'background:#ffebee;';
+      else if (r.Importancia === 'ESENCIAL')    rowStyle = 'background:#e8f5e9;';
+
+      const icons = [
+        r.Frio      ? '❄️' : '',
+        r.Narcotico ? '💊' : '',
+        r.Importancia === 'VITAL'    ? '💓' : '',
+        r.Importancia === 'ESENCIAL' ? '✅' : ''
+      ].filter(Boolean).join(' ');
+
+      const acapCell = esAcap
+        ? `<span class="acap-badge" title="Tiene ${fmt0(r.Reservado)} uds. en reserva activa sin despachar">
+             ⚠️ Reserva activa${r.Reservado_Dias > 0 ? ' '+r.Reservado_Dias+'d' : ''}
+           </span>`
+        : '';
+
+      return `
+        <tr class="${rowClass}" style="${rowStyle}">
+          <td><b>${esc(r.Codigo)}</b>${icons ? `<div style="font-size:10px;">${icons}</div>` : ''}</td>
+          <td>
+            ${esc(r.Suministro||'')}
+            ${r.Importancia ? `<div style="font-size:9px;color:#555;font-weight:700;">[${r.Importancia}]</div>` : ''}
+            ${acapCell}
+          </td>
+          <td style="font-size:9px;color:#555;">${esc(r.Grupo||'-')}</td>
+          <td class="num">${fmt0(r.Solicitado)}</td>
+          <td class="num" style="${r.Acaparamiento?'color:#bf360c;font-weight:bold;':''}">${fmt0(r.Solicitado_redondeado)}</td>
+          <td class="num" style="font-weight:700;">${fmt0(r.Asignado)}</td>
+          <td class="num">${fmt0(r.Pendiente)}</td>
+          <td>${estadoBadge(r.Estado)}</td>
+          <td class="num" style="font-size:10px;">${fmtBultos(r.Bultos_Ter, r.Bultos_Prim)}</td>
+          <td style="font-size:9px;color:#555;">${esc(r.Lotes_Usados||'-')}</td>
+        </tr>`;
+    }).join('');
+
+    const div = document.createElement('div');
+    div.className = 'seccion';
+    div.innerHTML = `
+      <div class="sec-header">
+        <div class="sec-titulo">${esc(ueNombre)}</div>
+        <div class="sec-meta">
+          <span>Doc: <b>${esc(g.f8)}</b></span>
+          <span>Tipo: <b>${esc(g.tipo)}</b></span>
+          <span>Fecha F8: <b>${esc(g.fecha)}</b></span>
+        </div>
+        <div class="sec-stats">
+          <span class="stat-pill">Solicitado: <b>${fmt0(g.totalSol)}</b></span>
+          <span class="stat-pill">Asignado: <b>${fmt0(g.totalAsig)}</b></span>
+          <span class="stat-pill">Fill Rate: <b>${fillG}%</b></span>
+          <span class="stat-pill">${g.items.length} renglón${g.items.length!==1?'es':''}</span>
+        </div>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Suministro</th>
+              <th>Grp</th>
+              <th class="num">Solic.</th>
+              <th class="num">Red.</th>
+              <th class="num">Asig.</th>
+              <th class="num">Pend.</th>
+              <th>Estado</th>
+              <th class="num">Bultos</th>
+              <th>Lotes</th>
+            </tr>
+          </thead>
+          <tbody>${filasTbl}</tbody>
+        </table>
+      </div>`;
+    seccionesEl.appendChild(div);
+  });
+}
+
+cargar();
+</script>
+</body>
+</html>
