@@ -4,6 +4,8 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Asignación F8 — CEDIS Panamá</title>
+  <link rel="icon" href="./favicon.ico?v=1"/>
+  <link rel="shortcut icon" href="./favicon.ico?v=1"/>
   <style>
     *{box-sizing:border-box;margin:0;padding:0;}
     body{font-family:Arial,sans-serif;background:#f0f4f8;color:#222;font-size:13px;}
@@ -92,6 +94,9 @@
 
 <!-- TOPBAR -->
 <div class="topbar">
+  <img src="icons/icon-512.png" alt="Logo" width="40" height="40"
+       style="object-fit:contain;flex-shrink:0;background:transparent;"
+       onerror="this.style.display='none'">
   <div class="topbar-title">
     <h1>Hoja de Asignación F8 — CEDIS Panamá</h1>
     <p id="sub-ue">Cargando...</p>
@@ -221,11 +226,13 @@ function renderReporte(filas) {
   document.title = `Asignación F8 — ${ueNombre}`;
 
   // ── KPIs globales ──────────────────────────────────────────────────────────
-  const totalSol  = filas.reduce((a,r) => a + Number(r.Solicitado_redondeado||0), 0);
-  const totalAsig = filas.reduce((a,r) => a + Number(r.Asignado||0), 0);
-  const fill      = totalSol > 0 ? (totalAsig/totalSol*100).toFixed(1) : '0.0';
-  const nF8s      = [...new Set(filas.map(r => r.N_Doc))].length;
-  const acapLineas = filas.filter(r => Number(r.Reservado||0) > 0);
+  const totalSol    = filas.reduce((a,r) => a + Number(r.Solicitado_redondeado||0), 0);
+  const totalAsig   = filas.reduce((a,r) => a + Number(r.Asignado||0), 0);
+  const renglAtend  = filas.filter(r => Number(r.Asignado||0) > 0).length;
+  const renglSinStk = filas.filter(r => Number(r.Asignado||0) === 0).length;
+  const fill        = totalSol > 0 ? (totalAsig/totalSol*100).toFixed(1) : '0.0';
+  const nF8s        = [...new Set(filas.map(r => r.N_Doc))].length;
+  const acapLineas  = filas.filter(r => Number(r.Reservado||0) > 0);
 
   const fillColor = fill >= 90 ? '#166534' : fill >= 50 ? '#92400e' : '#991b1b';
   const fillBg    = fill >= 90 ? '#dcfce7' : fill >= 50 ? '#fef3c7' : '#fee2e2';
@@ -237,7 +244,15 @@ function renderReporte(filas) {
     </div>
     <div class="estado-card">
       <div class="val">${filas.length}</div>
-      <div class="lbl">Renglones</div>
+      <div class="lbl">Renglones totales</div>
+    </div>
+    <div class="estado-card" style="border-color:#1d6f42;">
+      <div class="val" style="color:#1d6f42;">${renglAtend}</div>
+      <div class="lbl">Renglones atendidos</div>
+    </div>
+    <div class="estado-card" style="border-color:#991b1b;">
+      <div class="val" style="color:#991b1b;">${renglSinStk}</div>
+      <div class="lbl">Sin despacho</div>
     </div>
     <div class="estado-card">
       <div class="val">${fmt0(totalSol)}</div>
@@ -252,7 +267,7 @@ function renderReporte(filas) {
       <div class="lbl">Fill Rate</div>
     </div>
     ${acapLineas.length ? `<div class="estado-card" style="border-color:#f59e0b;">
-      <div class="val" style="color:#92400e;">⚠️ ${acapLineas.length}</div>
+      <div class="val" style="color:#92400e;">&#9888; ${acapLineas.length}</div>
       <div class="lbl">Con reserva activa</div>
     </div>` : ''}`;
 
@@ -337,7 +352,17 @@ function renderReporte(filas) {
     div.className = 'seccion';
     div.innerHTML = `
       <div class="sec-header">
-        <div class="sec-titulo">${esc(ueNombre)}</div>
+        <div style="display:flex;gap:12px;align-items:center;margin-bottom:8px;">
+          <img src="icons/icon-512.png" alt="logo"
+               style="width:44px;height:44px;object-fit:contain;flex-shrink:0;"
+               onerror="this.style.display='none'">
+          <div style="flex:1;">
+            <div style="font-size:10px;color:#666;font-style:italic;">
+              HOJA DE ASIGNACIÓN F8 — CORTE DIARIO · Torre de Control CEDIS Panamá
+            </div>
+            <div class="sec-titulo">${esc(ueNombre)}</div>
+          </div>
+        </div>
         <div class="sec-meta">
           <span>Doc: <b>${esc(g.f8)}</b></span>
           <span>Tipo: <b>${esc(g.tipo)}</b></span>
