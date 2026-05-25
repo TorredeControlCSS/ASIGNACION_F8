@@ -1411,7 +1411,24 @@
       else {
         DATA = newData;
         populateFilters();
+        // Auto-filtrar por UE si viene en la URL (?ue=NOMBRE)
+        const urlUE = new URLSearchParams(window.location.search).get('ue');
+        if (urlUE) {
+          const sel = document.getElementById('ue');
+          if (sel) {
+            // Buscar opción que coincida exactamente o parcialmente
+            const opt = Array.from(sel.options).find(o => o.value === urlUE) ||
+                        Array.from(sel.options).find(o => o.value.toLowerCase().includes(urlUE.toLowerCase()));
+            if (opt) { sel.value = opt.value; }
+          }
+        }
         applyFilters();
+        // Scroll a la tabla si se aplicó filtro automático
+        if (urlUE) {
+          setTimeout(() => {
+            document.querySelector('.scroll')?.scrollIntoView({behavior:'smooth', block:'start'});
+          }, 300);
+        }
       }
     } catch (e) {
       console.error(e);
@@ -1820,29 +1837,41 @@ function _construirListaWA() {
     dirMap.set(key, d);
   });
 
-  // Agrupar DATA por UE + F8
+  // Agrupar DATA por UE — una entrada por UE, todos sus F8s consolidados
   const grupos = new Map();
   DATA.forEach(r => {
-    const ue  = r.Punto || '';
-    const f8  = r.N_Doc || '';
-    const key = ue + '||' + f8;
+    const ue = r.Punto || '';
+    const f8 = r.N_Doc || '';
     if (!ue || !f8) return;
-    if (!grupos.has(key)) {
-      grupos.set(key, {
-        ue, f8,
-        tipo     : r.Tipo     || '',
-        fecha    : r.Fecha    || '',
-        totalSol : 0, totalAsig: 0, items: 0,
+    if (!grupos.has(ue)) {
+      grupos.set(ue, {
+        ue,
+        f8s      : [],       // todos los docs de esta UE
+        totalSol : 0, totalAsig: 0,
+        itemsPorF8: new Map(), // f8 → [{nombre, codigo, sol, asig, estado}]
         contacto : dirMap.get(_waNorm(ue)) || null
       });
     }
-    const g = grupos.get(key);
-    g.totalSol  += Number(r.Solicitado_redondeado || 0);
-    g.totalAsig += Number(r.Asignado || 0);
-    g.items++;
+    const g = grupos.get(ue);
+    const asigR = Number(r.Asignado || 0);
+    const solR  = Number(r.Solicitado_redondeado || 0);
+    g.totalSol  += solR;
+    g.totalAsig += asigR;
+    if (!g.f8s.includes(f8)) g.f8s.push(f8);
+    if (!g.itemsPorF8.has(f8)) g.itemsPorF8.set(f8, []);
+    g.itemsPorF8.get(f8).push({
+      nombre : String(r.Suministro || r.Codigo || '').trim(),
+      codigo : String(r.Codigo || '').trim(),
+      sol    : solR,
+      asig   : asigR,
+      estado : String(r.Estado || '').trim()
+    });
   });
 
-  _waUEs = Array.from(grupos.values());
+  _waUEs = Array.from(grupos.values()).map(g => ({
+    ...g,
+    items: Array.from(g.itemsPorF8.values()).flat() // array plano de todos los items
+  }));
 
   // Separar: con teléfono / sin teléfono
   const conWA  = _waUEs.filter(g => g.contacto?.wa);
@@ -1874,7 +1903,7 @@ function _waNorm(v) {
 }
 
 function _waFilaHTML(g, idx, tieneWA) {
-  const fill = g.totalSol > 0 ? ((g.totalAsig / g.totalSol) * 100).toFixed(0) : '0';
+  const fill    = g.totalSol > 0 ? ((g.totalAsig / g.totalSol) * 100).toFixed(0) : '0';
   const fillCol = fill >= 90 ? '#1b5e20' : fill >= 50 ? '#e65100' : '#b71c1c';
   const fillBg  = fill >= 90 ? '#e8f5e9' : fill >= 50 ? '#fff3e0' : '#ffebee';
   const numMostrar = tieneWA
@@ -1882,6 +1911,13 @@ function _waFilaHTML(g, idx, tieneWA) {
     : `<span style="color:#aaa;">Sin número</span>`;
   const nomContacto = g.contacto?.nombre
     ? `<div style="font-size:10px;color:#555;margin-top:1px;">${g.contacto.nombre}${g.contacto.puesto ? ' · ' + g.contacto.puesto : ''}</div>`
+    : '';
+  const docsStr = g.f8s.join(', ');
+  const nAcap = (g.items || []).filter(it => Number(it.Reservado||0) > 0).length;
+  const acapBadge = nAcap > 0
+    ? `<div style="margin-top:2px;"><span style="background:#fef3c7;border:1px solid #f59e0b;
+        color:#92400e;font-size:9px;padding:1px 5px;border-radius:3px;font-weight:700;">
+        &#9888;&#65039; ${nAcap} suministro${nAcap!==1?'s':''} con reserva activa sin despachar</span></div>`
     : '';
 
   return `
@@ -1897,8 +1933,12 @@ function _waFilaHTML(g, idx, tieneWA) {
         </div>
         ${nomContacto}
         <div style="font-size:10px;color:#777;margin-top:2px;">
-          Doc: <b>${g.f8}</b> · ${g.items} renglón${g.items!==1?'es':''} · ${numMostrar}
+          ${g.f8s.length} doc${g.f8s.length!==1?'s':''}: <b>${docsStr.length > 50 ? docsStr.slice(0,48)+'...' : docsStr}</b>
         </div>
+        <div style="font-size:10px;color:#777;">
+          ${g.items.length} renglón${g.items.length!==1?'es':''} · ${numMostrar}
+        </div>
+        ${acapBadge}
       </div>
       <div style="text-align:right;flex-shrink:0;">
         <div style="background:${fillBg};color:${fillCol};border:1px solid ${fillCol};
@@ -1911,7 +1951,7 @@ function _waFilaHTML(g, idx, tieneWA) {
       <button onclick="_waCopiarLink(${idx})"
               style="font-size:10px;padding:4px 8px;border:1px solid #ddd;
                      border-radius:6px;background:#fff;cursor:pointer;flex-shrink:0;"
-              title="Copiar link de WhatsApp">🔗</button>` : ''}
+              title="Copiar link">&#128279;</button>` : ''}
     </div>`;
 }
 
@@ -1933,23 +1973,39 @@ function _waCopiarLink(idx) {
 // ── Construir URL de WhatsApp ─────────────────────────────────────────────────
 function _waBuildUrl(g) {
   const fill    = g.totalSol > 0 ? ((g.totalAsig / g.totalSol) * 100).toFixed(1) : '0.0';
-  const nombre  = g.contacto?.nombre ? `Estimado(a) *${g.contacto.nombre}*,\n\n` : '';
+  const saludo  = g.contacto?.nombre ? `Estimado(a) *${g.contacto.nombre}*,\n` : '';
+  const docs    = g.f8s.join(', ');
+  const nDocs   = g.f8s.length;
+
+  // Link a la página standalone de la UE (no al motor interno)
+  const baseUrl = window.location.origin + window.location.pathname.replace(/[^\/]*$/, '');
+  const linkUE  = `${baseUrl}asignacion_ue.html?ue=${encodeURIComponent(g.ue)}`;
+
+  // Detectar acaparamiento: items con Reservado > 0 en el corte actual
+  const itemsAcap = g.items.filter(it => it.Reservado > 0);
+  const notaAcap  = itemsAcap.length
+    ? `\n⚠️ *Nota:* ${itemsAcap.length} suministro${itemsAcap.length!==1?'s':''} con reserva activa sin despachar. Ver detalle en el enlace.`
+    : '';
+
   const msg = [
-    `✅ *Asignación F8 Confirmada — CEDIS*`,
+    `*[ F8 PROCESADA - TORRE CONTROL CEDIS ]*`,
     ``,
-    `${nombre}Se ha procesado la asignación del siguiente pedido:`,
+    `${saludo}`,
+    `Su${nDocs > 1 ? 's' : ''} Forma${nDocs > 1 ? 's' : ''} 8 ha${nDocs > 1 ? 'n' : ''} sido recibida${nDocs > 1 ? 's' : ''} y procesada${nDocs > 1 ? 's' : ''} en el sistema.`,
+    `El almacen continuara con el proceso de atencion.`,
     ``,
-    `📋 *Doc:* ${g.f8}`,
-    `🏥 *Unidad:* ${g.ue}`,
-    `📅 *Fecha:* ${g.fecha || new Date().toLocaleDateString('es-PA')}`,
-    `📦 *Renglones:* ${g.items}`,
-    `📊 *Fill Rate:* ${fill}%`,
+    `*Unidad:* ${g.ue}`,
+    `*Doc${nDocs > 1 ? 's' : ''}:* ${docs}`,
+    `*Renglones:* ${g.items.length}`,
+    `*Fill Rate:* ${fill}%`,
     ``,
-    `Por favor coordine el retiro del inventario con el almacén CEDIS.`,
-    `_Torre de Control · CSS Panamá_`
+    `Ver detalle completo de su asignacion:`,
+    linkUE,
+    notaAcap,
+    ``,
+    `_Para consultas contactar Torre de Control CEDIS._`
   ].join('\n');
 
-  // Limpiar número: quitar + al inicio si existe, wa.me no lo necesita
   const num = g.contacto.wa.replace(/^\+/, '');
   return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
 }
