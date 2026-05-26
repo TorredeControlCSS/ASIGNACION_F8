@@ -2094,7 +2094,7 @@ async function exportarReservasExcel() {
     alert('La librería ExcelJS no cargó. Verifica tu conexión e intenta de nuevo.');
     return;
   }
-
+try {
   const lista = await loadJsonp(`${WEBAPP_BASE}?file=reservas_detalle`);
     if (!lista || !lista.length) {
       alert('No hay reservas activas que superen el umbral configurado.');
