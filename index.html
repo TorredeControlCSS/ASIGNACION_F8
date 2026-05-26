@@ -104,7 +104,7 @@
       <div class="title-main">TORRE DE CONTROL — Motor de Asignación de Requisiciones F8 - CEDIS PANAMA</div>
       <div class="title-sub">
         <span id="currentDateTime">Cargando fecha...</span>
-        <span style="opacity:.8;margin-left:8px;"> | C1 Corte diario · v9.0 Modelo Determinista de Consumos y Redondeo Inteligente + Notificacion Automática</span>
+        <span style="opacity:.8;margin-left:8px;"> | C1 Corte diario · v8.0 Modelo Determinista de Consumos y Redondeo Inteligente</span>
       </div>
     </div>
     <div class="top-actions">
@@ -2013,25 +2013,32 @@ function _waBuildUrl(g) {
     `_Para consultas contactar Torre de Control CEDIS._`
   ].join('\n');
 
+  // web.whatsapp.com/send/ va directo a la sesión activa sin página intermedia
+  // (wa.me pasa por api.whatsapp.com que muestra el diálogo "Open WhatsApp?" y puede ser bloqueado por firewall)
   const num = g.contacto.wa.replace(/^\+/, '');
   return `https://web.whatsapp.com/send/?phone=${num}&text=${encodeURIComponent(msg)}`;
 }
 
-// ── Iniciar envío — flujo paso a paso ────────────────────────────────────────
-let _waCola = [];
-let _waActual = 0;
+// ── Iniciar envío — flujo paso a paso (evita bloqueo de popups del browser) ──
+let _waCola = [];     // cola de UEs pendientes
+let _waActual = 0;    // índice actual en la cola
 
 function iniciarEnvioWA() {
-  const conWA    = _waUEs.filter(g => g.contacto?.wa);
+  // Fix índices: usar mismo orden que el render [conWA..., sinWA...]
+  const conWA = _waUEs.filter(g => g.contacto?.wa);
   const ordenado = [...conWA, ..._waUEs.filter(g => !g.contacto?.wa)];
+
   const seleccionadas = ordenado.filter((g, i) => {
     const chk = document.getElementById(`waChk_${i}`);
     return chk && chk.checked && g.contacto?.wa;
   });
+
   if (!seleccionadas.length) {
     alert('No hay UEs seleccionadas con número de WhatsApp.');
     return;
   }
+
+  // Guardar cola y arrancar desde la primera
   _waCola   = seleccionadas;
   _waActual = 0;
   _abrirSiguienteWA();
@@ -2044,36 +2051,47 @@ function _abrirSiguienteWA() {
   const btnEnv  = document.getElementById('waBtnEnviar');
 
   if (_waActual >= _waCola.length) {
-    barra.style.display      = 'block';
+    // Terminamos
+    barra.style.display = 'block';
     progBar.style.width      = '100%';
     progBar.style.background = '#25D366';
-    progTxt.innerHTML        = `✅ Listo — ${_waCola.length} conversación(es) abiertas.`;
-    btnEnv.textContent       = '📱 Notificar seleccionadas';
-    btnEnv.style.background  = '#25D366';
-    btnEnv.onclick           = iniciarEnvioWA;
+    progTxt.innerHTML = `✅ Listo — ${_waCola.length} conversación(es) abiertas.`;
+    btnEnv.textContent      = '📱 Notificar seleccionadas';
+    btnEnv.style.background = '#25D366';
+    btnEnv.onclick          = iniciarEnvioWA;
     return;
   }
 
-  const g     = _waCola[_waActual];
+  const g    = _waCola[_waActual];
   const total = _waCola.length;
-  barra.style.display      = 'block';
-  progBar.style.width      = Math.round((_waActual / total) * 100) + '%';
-  progBar.style.background = '#25D366';
-  progTxt.innerHTML = `<b>${_waActual + 1} de ${total}:</b> ${g.ue}<br>
-    <span style="font-size:11px;color:#555;">Envía el mensaje en WhatsApp y haz clic en
-    <b style="color:#0b1f3a;">→ Siguiente</b> para continuar.</span>`;
+  const pct  = Math.round((_waActual / total) * 100);
 
-  window.open(_waBuildUrl(g), '_blank');
+  barra.style.display      = 'block';
+  progBar.style.width      = pct + '%';
+  progBar.style.background = '#25D366';
 
   const siguiente = _waActual + 1 < total ? _waCola[_waActual + 1].ue : null;
+
+  progTxt.innerHTML = `
+    <b>${_waActual + 1} de ${total}:</b> ${g.ue}<br>
+    <span style="font-size:11px;color:#555;">
+      Envía el mensaje en WhatsApp y luego haz clic en
+      <b style="color:#0b1f3a;">→ Siguiente</b> para continuar.
+    </span>`;
+
+  // Abrir WhatsApp — funciona porque es gesto directo del usuario
+  window.open(_waBuildUrl(g), '_blank');
+
+  // Cambiar botón a "Siguiente" para el próximo
   if (siguiente) {
-    btnEnv.textContent      = `→ Siguiente: ${siguiente.slice(0,28)}${siguiente.length>28?'…':''}`;
+    btnEnv.textContent      = `→ Siguiente: ${siguiente.slice(0, 28)}${siguiente.length > 28 ? '…' : ''}`;
     btnEnv.style.background = '#0b1f3a';
+    btnEnv.onclick          = () => { _waActual++; _abrirSiguienteWA(); };
   } else {
     btnEnv.textContent      = '✅ Finalizar';
     btnEnv.style.background = '#25D366';
+    btnEnv.onclick          = () => { _waActual++; _abrirSiguienteWA(); };
   }
-  btnEnv.onclick = () => { _waActual++; _abrirSiguienteWA(); };
 }
 
 // ── Cerrar panel ─────────────────────────────────────────────────────────────
@@ -2094,11 +2112,9 @@ async function exportarReservasExcel() {
     alert('La librería ExcelJS no cargó. Verifica tu conexión e intenta de nuevo.');
     return;
   }
-
   const btn = document.getElementById('btnExportReservas');
   btn.textContent = '⏳ Consultando GAS...';
   btn.disabled = true;
-
   try {
     const lista = await loadJsonp(`${WEBAPP_BASE}?file=reservas_detalle`);
     if (!lista || !lista.length) {
@@ -2106,108 +2122,374 @@ async function exportarReservasExcel() {
       return;
     }
     btn.textContent = '⏳ Generando Excel...';
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'Torre de Control CEDIS'; wb.created = new Date();
+    const thin  = { style:'thin', color:{ argb:'FFE5E7EB' } };
+    const arial = (sz,bold,argb) => ({name:'Arial',size:sz||9,bold:!!bold,color:{argb:argb||'FF111827'}});
+    const fill  = a => ({type:'pattern',pattern:'solid',fgColor:{argb:a}});
+    const applyHdr = row => {
+      row.height = 22;
+      row.eachCell(c => {
+        c.fill=fill('FF0B1F3A'); c.font=arial(10,true,'FFFFFFFF');
+        c.alignment={horizontal:'center',vertical:'middle'};
+        c.border={bottom:{style:'medium',color:{argb:'FF133A74'}}};
+      });
+    };
+
+    // HOJA 1: Detalle
+    const ws1 = wb.addWorksheet('Reservas por Suministro',{views:[{state:'frozen',ySplit:1}]});
+    ws1.columns = [
+      {key:'sku',width:14},{key:'nom',width:40},{key:'total',width:13},{key:'nf8s',width:7},
+      {key:'patron',width:20},{key:'ue',width:34},{key:'tipo',width:11},{key:'f8',width:20},
+      {key:'cant',width:12},{key:'fechaAsig',width:13},{key:'dias',width:10},{key:'nivel',width:10},
+    ];
+    applyHdr(ws1.addRow(['Código','Suministro','Total Resv.','# F8s',
+      'Patrón','Unidad Ejecutora','Tipo','Forma 8','Cant. Resv.','Fecha Asig.','Días','Nivel']));
+    lista.forEach((s,si) => {
+      const bw=s.f8s.length>=4, obs=s.f8s.length>=2&&!bw;
+      const patron=bw?'Efecto Bullwhip':obs?'Observar':'';
+      const skuBg=bw?'FFEDE9FE':si%2===0?'FFFAFAFA':'FFFFFFFF';
+      (s.subs||[]).forEach((sub,j) => {
+        const ec=sub.dias>7, ea=sub.dias>3;
+        const nivel=ec?'CRITICO':ea?'ALERTA':'AVISO';
+        const rBg=ec?'FFFEE2E2':ea?'FFFEF3C7':'FFDCFCE7';
+        const txD=ec?'FF991B1B':ea?'FF92400E':'FF166534';
+        const row=ws1.addRow([
+          j===0?s.sku:'',j===0?s.nombre:'',j===0?s.cantTotal:'',j===0?s.f8s.length:'',
+          j===0?patron:'',sub.ue,sub.tipo||'',sub.f8,sub.cant,sub.fechaAsig,sub.dias,nivel
+        ]);
+        row.height=17;
+        row.eachCell({includeEmpty:true},(c,col)=>{
+          if(col<=5){c.fill=fill(skuBg);c.font=arial(9,col===1&&j===0,bw&&col===5?'FF5B21B6':'FF111827');}
+          else{c.fill=fill(rBg);c.font=arial(9,col===12,col>=11?txD:'FF111827');}
+          c.alignment={vertical:'middle',horizontal:col>=3&&col!==6?'center':'left'};
+          c.border=j===0?{top:{style:bw?'medium':'thin',color:{argb:bw?'FF7C3AED':'FF6B7280'}},bottom:thin}:{bottom:thin};
+        });
+      });
+    });
+
+    // HOJA 2: Resumen
+    const ws2 = wb.addWorksheet('Resumen',{views:[{state:'frozen',ySplit:1}]});
+    ws2.columns=[
+      {key:'sku',width:14},{key:'nom',width:43},{key:'total',width:15},{key:'nf8s',width:7},
+      {key:'nues',width:7},{key:'dias',width:11},{key:'patron',width:20},
+    ];
+    applyHdr(ws2.addRow(['Código','Suministro','Total Reservado','# F8s','# UEs','Max Días','Patrón']));
+    lista.forEach(s => {
+      const bw=s.f8s.length>=4,obs=s.f8s.length>=2&&!bw;
+      const label=bw?'Efecto Bullwhip':obs?'Observar':'Normal';
+      const ec=s.diasMax>7,ea=s.diasMax>3;
+      const rBg=bw?'FFEDE9FE':ec?'FFFEE2E2':ea?'FFFEF3C7':'FFDCFCE7';
+      const txD=ec?'FF991B1B':ea?'FF92400E':'FF166534';
+      const nUEs=new Set((s.subs||[]).map(x=>x.ue)).size;
+      const row=ws2.addRow([s.sku,s.nombre,s.cantTotal,s.f8s.length,nUEs,s.diasMax,label]);
+      row.height=17;
+      row.eachCell({includeEmpty:true},(c,col)=>{
+        c.fill=fill(rBg);
+        c.font=arial(9,col===1||col===7,col===7?(bw?'FF5B21B6':'FF374151'):col===6?txD:'FF111827');
+        c.alignment={vertical:'middle',horizontal:col>=3?'center':'left'};
+        c.border={bottom:thin};
+      });
+    });
+
+    // HOJA 3: DASHBOARD
+    const ws3 = wb.addWorksheet('Dashboard');
+    ws3.views=[{showGridLines:false}];
+
+    // Calcular métricas
+    let totUnid=0; const allF8s=new Set(),allUEs=new Set();
+    let nCrit=0,nAlert=0,nAviso=0;
+    const ueMap=new Map(),tipoMap=new Map();
+    const rangos=[0,0,0,0,0];
+    let totalSubs=0;
+    lista.forEach(s => {
+      totUnid+=s.cantTotal;
+      (s.subs||[]).forEach(sub => {
+        allF8s.add(sub.f8); allUEs.add(sub.ue); totalSubs++;
+        if(sub.dias>7)nCrit++; else if(sub.dias>3)nAlert++; else nAviso++;
+        const d=sub.dias;
+        if(d<=7)rangos[0]++; else if(d<=30)rangos[1]++; else if(d<=60)rangos[2]++; else if(d<=90)rangos[3]++; else rangos[4]++;
+        if(!ueMap.has(sub.ue))ueMap.set(sub.ue,{f8s:new Set(),sums:new Set(),diasMax:0,cantTotal:0});
+        const um=ueMap.get(sub.ue);
+        um.f8s.add(sub.f8);um.sums.add(s.sku);if(sub.dias>um.diasMax)um.diasMax=sub.dias;um.cantTotal+=sub.cant;
+        const t=sub.tipo||'SIN TIPO';
+        if(!tipoMap.has(t))tipoMap.set(t,{f8s:new Set(),sums:new Set(),cant:0});
+        const tm=tipoMap.get(t);tm.f8s.add(sub.f8);tm.sums.add(s.sku);tm.cant+=sub.cant;
+      });
+    });
+    const topUEs=Array.from(ueMap.entries()).sort((a,b)=>b[1].f8s.size-a[1].f8s.size).slice(0,10);
+    const topSums=lista.slice(0,10);
+
+    // Helper dashboard
+    const dc=(row,col,val,bg,fg,bold,sz,center,border)=>{
+      const c=ws3.getCell(row,col);
+      c.value=val;
+      if(bg)c.fill=fill(bg);
+      c.font=arial(sz||10,!!bold,fg||'FF111827');
+      c.alignment={vertical:'middle',horizontal:center?'center':'left',wrapText:true};
+      if(border)c.border={top:thin,bottom:thin,left:thin,right:thin};
+      return c;
+    };
+    const mg=(r1,c1,r2,c2)=>{try{ws3.mergeCells(r1,c1,r2,c2);}catch(e){}};
+
+    // Título
+    ws3.getRow(1).height=34; mg(1,1,1,12);
+    dc(1,1,'DASHBOARD — Reservas F8 Activas · Torre de Control CEDIS','FF0B1F3A','FFFFFFFF',true,13,true);
+    ws3.getRow(2).height=14; mg(2,1,2,12);
+    dc(2,1,`Generado: ${new Date().toLocaleString('es-PA')} · Umbral mínimo: 3 días`,'FF1E3A5F','FF94A3B8',false,9,true);
+
+    // KPIs
+    ws3.getRow(3).height=8; ws3.getRow(4).height=14; mg(4,1,4,12);
+    dc(4,1,'INDICADORES GENERALES','FFE2E8F0','FF0B1F3A',true,10);
+    const kpis=[
+      ['Total F8s en Reserva',allF8s.size,'FFFEE2E2','FF991B1B'],
+      ['Suministros Afectados',lista.length,'FFFEF3C7','FF92400E'],
+      ['UEs Involucradas',allUEs.size,'FFDBEAFE','FF1D4ED8'],
+      ['Unidades Comprometidas',totUnid.toLocaleString('en-US'),'FFEDE9FE','FF5B21B6'],
+      ['% Renglones CRITICO',totalSubs>0?((nCrit/totalSubs)*100).toFixed(1)+'%':'0%','FFFEE2E2','FF991B1B'],
+      ['Efecto Bullwhip',lista.filter(s=>s.f8s.length>=4).length,'FFEDE9FE','FF5B21B6'],
+    ];
+    ws3.getRow(5).height=20; ws3.getRow(6).height=30;
+    kpis.forEach((k,i)=>{
+      const c=i*2+1;
+      mg(5,c,5,c+1);dc(5,c,k[0],k[2],k[3],true,9,true,true);
+      mg(6,c,6,c+1);dc(6,c,k[1],k[2],k[3],true,16,true,true);
+    });
+
+    // Semáforo + Rangos
+    ws3.getRow(7).height=8; ws3.getRow(8).height=14;
+    mg(8,1,8,6);dc(8,1,'POR NIVEL DE URGENCIA','FFE2E8F0','FF0B1F3A',true,10);
+    mg(8,7,8,12);dc(8,7,'POR RANGO DE DÍAS','FFE2E8F0','FF0B1F3A',true,10);
+    const sem=[['CRITICO (>7 días)',nCrit,'FFFEE2E2','FF991B1B'],['ALERTA (4-7 días)',nAlert,'FFFEF3C7','FF92400E'],['AVISO (3 días)',nAviso,'FFDCFCE7','FF166534']];
+    const rng=[['3-7 días',rangos[0],'FFDCFCE7'],['8-30 días',rangos[1],'FFFEF3C7'],['31-60 días',rangos[2],'FFFEE2E2'],['61-90 días',rangos[3],'FFFFE4E6'],['>90 días',rangos[4],'FFFFE4E6']];
+    const tot3=nCrit+nAlert+nAviso||1, totR=rangos.reduce((a,b)=>a+b,0)||1;
+    sem.forEach((s,i)=>{const r=9+i;ws3.getRow(r).height=18;mg(r,1,r,3);dc(r,1,s[0],s[2],s[3],true,9,false,true);mg(r,4,r,5);dc(r,4,s[1],s[2],s[3],true,11,true,true);mg(r,6,r,6);dc(r,6,((s[1]/tot3)*100).toFixed(1)+'%','FFFFFFFF',s[3],false,9,true,true);});
+    rng.forEach((r,i)=>{const row=9+i;ws3.getRow(row).height=18;mg(row,7,row,9);dc(row,7,r[0],r[2],'FF374151',false,9,false,true);mg(row,10,row,11);dc(row,10,r[1],r[2],'FF374151',true,11,true,true);mg(row,12,row,12);dc(row,12,((r[1]/totR)*100).toFixed(1)+'%','FFFFFFFF',r[2]==='FFDCFCE7'?'FF166534':'FF991B1B',false,9,true,true);});
+
+    // Por Tipo
+    let tr=15; ws3.getRow(tr).height=8; tr++; ws3.getRow(tr).height=14;
+    mg(tr,1,tr,12);dc(tr,1,'DISTRIBUCIÓN POR TIPO DE PEDIDO','FFE2E8F0','FF0B1F3A',true,10); tr++;
+    ws3.getRow(tr).height=18;
+    mg(tr,1,tr,3);dc(tr,1,'Tipo','FF0B1F3A','FFFFFFFF',true,9,true,true);
+    mg(tr,4,tr,6);dc(tr,4,'# F8s','FF0B1F3A','FFFFFFFF',true,9,true,true);
+    mg(tr,7,tr,9);dc(tr,7,'# Suministros','FF0B1F3A','FFFFFFFF',true,9,true,true);
+    mg(tr,10,tr,12);dc(tr,10,'Unidades Reservadas','FF0B1F3A','FFFFFFFF',true,9,true,true); tr++;
+    Array.from(tipoMap.entries()).sort((a,b)=>b[1].f8s.size-a[1].f8s.size).forEach(([tipo,td])=>{
+      ws3.getRow(tr).height=17;
+      mg(tr,1,tr,3);dc(tr,1,tipo,'FFF8FAFC','FF111827',true,9,false,true);
+      mg(tr,4,tr,6);dc(tr,4,td.f8s.size,'FFF8FAFC','FF374151',false,9,true,true);
+      mg(tr,7,tr,9);dc(tr,7,td.sums.size,'FFF8FAFC','FF374151',false,9,true,true);
+      mg(tr,10,tr,12);dc(tr,10,td.cant.toLocaleString('en-US'),'FFF8FAFC','FF374151',false,9,true,true); tr++;
+    });
+
+    // Top UEs
+    tr++; ws3.getRow(tr).height=14; mg(tr,1,tr,12);
+    dc(tr,1,'TOP 10 UNIDADES EJECUTORAS CON MÁS RESERVAS','FFE2E8F0','FF0B1F3A',true,10); tr++;
+    ws3.getRow(tr).height=18;
+    mg(tr,1,tr,5);dc(tr,1,'Unidad Ejecutora','FF0B1F3A','FFFFFFFF',true,9,false,true);
+    mg(tr,6,tr,7);dc(tr,6,'# F8s','FF0B1F3A','FFFFFFFF',true,9,true,true);
+    mg(tr,8,tr,9);dc(tr,8,'# Suministros','FF0B1F3A','FFFFFFFF',true,9,true,true);
+    mg(tr,10,tr,11);dc(tr,10,'Unidades Resv.','FF0B1F3A','FFFFFFFF',true,9,true,true);
+    dc(tr,12,'Máx. Días','FF0B1F3A','FFFFFFFF',true,9,true,true); tr++;
+    topUEs.forEach(([ue,ud],i)=>{
+      ws3.getRow(tr).height=17;
+      const bg=i%2===0?'FFFAFAFA':'FFFFFFFF';
+      const ec=ud.diasMax>7,ea=ud.diasMax>3;
+      const dBg=ec?'FFFEE2E2':ea?'FFFEF3C7':'FFDCFCE7';
+      mg(tr,1,tr,5);dc(tr,1,ue,bg,'FF111827',false,9,false,true);
+      mg(tr,6,tr,7);dc(tr,6,ud.f8s.size,bg,ec?'FF991B1B':'FF374151',true,9,true,true);
+      mg(tr,8,tr,9);dc(tr,8,ud.sums.size,bg,'FF374151',false,9,true,true);
+      mg(tr,10,tr,11);dc(tr,10,ud.cantTotal.toLocaleString('en-US'),bg,'FF374151',false,9,true,true);
+      dc(tr,12,ud.diasMax+'d',dBg,ec?'FF991B1B':ea?'FF92400E':'FF166534',true,9,true,true); tr++;
+    });
+
+    // Top Suministros
+    tr++; ws3.getRow(tr).height=14; mg(tr,1,tr,12);
+    dc(tr,1,'TOP 10 SUMINISTROS CON MÁS FORMAS 8 EN RESERVA','FFE2E8F0','FF0B1F3A',true,10); tr++;
+    ws3.getRow(tr).height=18;
+    dc(tr,1,'Código','FF0B1F3A','FFFFFFFF',true,9,true,true);
+    mg(tr,2,tr,6);dc(tr,2,'Suministro','FF0B1F3A','FFFFFFFF',true,9,false,true);
+    mg(tr,7,tr,8);dc(tr,7,'Total Resv.','FF0B1F3A','FFFFFFFF',true,9,true,true);
+    dc(tr,9,'# F8s','FF0B1F3A','FFFFFFFF',true,9,true,true);
+    dc(tr,10,'# UEs','FF0B1F3A','FFFFFFFF',true,9,true,true);
+    dc(tr,11,'Máx. Días','FF0B1F3A','FFFFFFFF',true,9,true,true);
+    dc(tr,12,'Patrón','FF0B1F3A','FFFFFFFF',true,9,true,true); tr++;
+    topSums.forEach((s,i)=>{
+      ws3.getRow(tr).height=17;
+      const bw=s.f8s.length>=4,obs=s.f8s.length>=2&&!bw;
+      const bg=bw?'FFEDE9FE':i%2===0?'FFFAFAFA':'FFFFFFFF';
+      const nUEs=new Set((s.subs||[]).map(x=>x.ue)).size;
+      dc(tr,1,s.sku,bg,'FF374151',false,8,true,true);
+      mg(tr,2,tr,6);dc(tr,2,s.nombre.slice(0,55),bg,'FF111827',bw,9,false,true);
+      mg(tr,7,tr,8);dc(tr,7,s.cantTotal.toLocaleString('en-US'),bg,'FF374151',false,9,true,true);
+      dc(tr,9,s.f8s.length,bg,bw?'FF5B21B6':'FF374151',true,9,true,true);
+      dc(tr,10,nUEs,bg,'FF374151',false,9,true,true);
+      dc(tr,11,s.diasMax+'d',bg,s.diasMax>7?'FF991B1B':s.diasMax>3?'FF92400E':'FF166534',true,9,true,true);
+      dc(tr,12,bw?'Bullwhip':obs?'Observar':'Normal',bw?'FFEDE9FE':obs?'FFFEF3C7':bg,bw?'FF5B21B6':obs?'FF92400E':'FF374151',bw,9,true,true);
+      tr++;
+    });
+
+    // Ancho columnas dashboard
+    [14,4,4,4,4,4,14,4,4,4,4,4].forEach((w,i)=>{ws3.getColumn(i+1).width=w;});
+
+    // Descargar
+    const buffer=await wb.xlsx.writeBuffer();
+    const blob=new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url; a.download=`CEDIS_Reservas_${new Date().toISOString().slice(0,10)}.xlsx`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch(e) {
+    alert('Error generando Excel: ' + e.message);
+  } finally {
+    btn.textContent = '📊 Reservas Excel';
+    btn.disabled    = false;
+  }
+}
+
+  const btn = document.getElementById('btnExportReservas');
+  btn.textContent = '⏳ Generando...';
+  btn.disabled = true;
+
+  try {
+    // ── Construir estructura por SKU ──────────────────────────────────────────
+    const porSku = new Map();
+    conReserva.forEach(r => {
+      const sku  = String(r.Codigo || '').trim();
+      const ue   = String(r.Punto  || '').trim();
+      const cant = Number(r.Reservado || 0);
+      const dias = Number(r.Reservado_Dias || 0);
+      const nom  = String(r.Suministro || '').trim();
+      const doc  = String(r.Reservado_Doc || '').trim();
+      if (!porSku.has(sku)) {
+        porSku.set(sku, { sku, nom, cantTotal:0, ues:new Set(), f8s:[], diasMax:0, subs:[] });
+      }
+      const s = porSku.get(sku);
+      s.cantTotal += cant;
+      s.ues.add(ue);
+      if (!s.f8s.includes(doc)) s.f8s.push(doc);
+      if (dias > s.diasMax) s.diasMax = dias;
+      s.subs.push({ ue, doc, cant, dias });
+    });
+
+    const lista = Array.from(porSku.values())
+      .sort((a, b) => b.f8s.length - a.f8s.length || b.diasMax - a.diasMax);
+    lista.forEach(s => s.subs.sort((a, b) => a.ue.localeCompare(b.ue) || b.dias - a.dias));
 
     const wb = new ExcelJS.Workbook();
     wb.creator = 'Torre de Control CEDIS';
     wb.created = new Date();
 
-    const thin  = { style:'thin', color:{ argb:'FFE5E7EB' } };
-    const arial = (sz, bold, argb) => ({ name:'Arial', size:sz||9, bold:!!bold, color:{ argb: argb||'FF111827' } });
+    const thin   = { style:'thin',   color:{ argb:'FFE5E7EB' } };
+    const medium = { style:'medium',  color:{ argb:'FF6B7280' } };
+    const arial  = (sz, bold, argb) => ({ name:'Arial', size:sz||9, bold:!!bold, color:{ argb: argb||'FF111827' } });
 
-    const applyHdr = row => {
+    const applyHdr = (row, bg) => {
       row.height = 22;
       row.eachCell(c => {
-        c.fill      = { type:'pattern', pattern:'solid', fgColor:{ argb:'FF0B1F3A' } };
+        c.fill      = { type:'pattern', pattern:'solid', fgColor:{ argb: bg||'FF0B1F3A' } };
         c.font      = arial(10, true, 'FFFFFFFF');
         c.alignment = { horizontal:'center', vertical:'middle' };
         c.border    = { bottom:{ style:'medium', color:{ argb:'FF133A74' } } };
       });
     };
 
+    // ── HOJA 1: Detalle expandido (Suministro → UE → F8) ─────────────────────
     const ws1 = wb.addWorksheet('Reservas por Suministro', {
       views: [{ state:'frozen', ySplit:1 }]
     });
     ws1.columns = [
-      { key:'sku',       width:14 }, { key:'nom',      width:42 },
-      { key:'total',     width:14 }, { key:'nf8s',     width:8  },
-      { key:'patron',    width:22 }, { key:'ue',       width:36 },
-      { key:'f8',        width:20 }, { key:'cant',     width:13 },
-      { key:'fechaAsig', width:14 }, { key:'dias',     width:12 },
-      { key:'nivel',     width:12 },
+      { key:'sku',   width:14 }, { key:'nom',   width:42 },
+      { key:'total', width:14 }, { key:'nf8s',  width:8  },
+      { key:'bw',    width:22 }, { key:'ue',    width:36 },
+      { key:'f8',    width:20 }, { key:'cant',  width:13 },
+      { key:'dias',  width:13 }, { key:'nivel', width:12 },
     ];
     applyHdr(ws1.addRow(['Código','Suministro','Total Resv.','# F8s',
                           'Patrón','Unidad Ejecutora','Forma 8',
-                          'Cant. Resv.','Fecha Asig.','Días','Nivel']));
+                          'Cant. F8','Días Asignado','Nivel']));
 
     lista.forEach((s, skuIdx) => {
-      const bw     = s.f8s.length >= 4, obs = s.f8s.length >= 2 && !bw;
-      const patron = bw ? 'Efecto Bullwhip' : obs ? 'Observar' : '';
-      const skuBg  = bw ? 'FFEDE9FE' : skuIdx % 2 === 0 ? 'FFFAFAFA' : 'FFFFFFFF';
-      (s.subs || []).forEach((sub, si) => {
-        const esCrit = sub.dias > 7, esAl = sub.dias > 3;
+      const bw      = s.f8s.length >= 4;
+      const obs     = s.f8s.length >= 2 && !bw;
+      const bwLabel = bw ? 'Efecto Bullwhip' : obs ? 'Observar' : '';
+      const skuBg   = bw ? 'FFEDE9FE' : skuIdx % 2 === 0 ? 'FFFAFAFA' : 'FFFFFFFF';
+
+      s.subs.forEach((sub, si) => {
+        const esCrit = sub.dias > 7;
+        const esAl   = sub.dias > 3;
         const nivel  = esCrit ? 'CRITICO' : esAl ? 'ALERTA' : 'AVISO';
         const rowBg  = esCrit ? 'FFFEE2E2' : esAl ? 'FFFEF3C7' : 'FFDCFCE7';
         const txtD   = esCrit ? 'FF991B1B' : esAl ? 'FF92400E' : 'FF166534';
+
         const row = ws1.addRow([
           si===0 ? s.sku       : '',
-          si===0 ? s.nombre    : '',
+          si===0 ? s.nom       : '',
           si===0 ? s.cantTotal : '',
           si===0 ? s.f8s.length: '',
-          si===0 ? patron      : '',
-          sub.ue, sub.f8, sub.cant, sub.fechaAsig, sub.dias, nivel
+          si===0 ? bwLabel     : '',
+          sub.ue, sub.doc, sub.cant, sub.dias, nivel
         ]);
         row.height = 17;
+
         row.eachCell({ includeEmpty:true }, (c, col) => {
           if (col <= 5) {
             c.fill = { type:'pattern', pattern:'solid', fgColor:{ argb: skuBg } };
-            c.font = arial(9, col===1&&si===0, bw&&col===5?'FF5B21B6':'FF111827');
+            c.font = arial(9, col===1&&si===0, bw&&col===5 ? 'FF5B21B6' : 'FF111827');
           } else {
             c.fill = { type:'pattern', pattern:'solid', fgColor:{ argb: rowBg } };
-            c.font = arial(9, col===11, col>=10?txtD:'FF111827');
+            c.font = arial(9, col===10, col>=9 ? txtD : 'FF111827');
           }
-          c.alignment = { vertical:'middle', horizontal: col>=3&&col!==6?'center':'left' };
+          c.alignment = { vertical:'middle', horizontal: col>=3&&col!==6 ? 'center':'left' };
           c.border    = { bottom: thin };
-          if (si===0) c.border = {
-            top: { style: bw?'medium':'thin', color:{ argb: bw?'FF7C3AED':'FF6B7280' } },
-            bottom: thin
-          };
+          if (si===0) {
+            c.border = { top: si===0 ? { style: bw?'medium':'thin',
+                         color:{ argb: bw?'FF7C3AED':'FF6B7280' } } : undefined,
+                         bottom: thin };
+          }
         });
       });
     });
 
+    // ── HOJA 2: Resumen por suministro ────────────────────────────────────────
     const ws2 = wb.addWorksheet('Resumen', { views:[{ state:'frozen', ySplit:1 }] });
     ws2.columns = [
-      { key:'sku',    width:14 }, { key:'nom',    width:45 },
-      { key:'total',  width:16 }, { key:'nf8s',   width:8  },
-      { key:'nues',   width:8  }, { key:'dias',   width:12 },
-      { key:'patron', width:22 },
+      { key:'sku',   width:14 }, { key:'nom',   width:45 },
+      { key:'total', width:16 }, { key:'nf8s',  width:8  },
+      { key:'nues',  width:8  }, { key:'dias',  width:13 },
+      { key:'bw',    width:22 },
     ];
     applyHdr(ws2.addRow(['Código','Suministro','Total Reservado',
                           '# F8s','# UEs','Max Días','Patrón']));
+
     lista.forEach(s => {
-      const bw    = s.f8s.length >= 4, obs = s.f8s.length >= 2 && !bw;
+      const bw    = s.f8s.length >= 4;
+      const obs   = s.f8s.length >= 2 && !bw;
       const label = bw ? 'Efecto Bullwhip' : obs ? 'Observar' : 'Normal';
       const esCrit= s.diasMax > 7, esAl = s.diasMax > 3;
-      const rowBg = bw?'FFEDE9FE':esCrit?'FFFEE2E2':esAl?'FFFEF3C7':'FFDCFCE7';
-      const txtD  = esCrit?'FF991B1B':esAl?'FF92400E':'FF166534';
-      const nUEs  = new Set((s.subs||[]).map(x => x.ue)).size;
-      const row   = ws2.addRow([s.sku, s.nombre, s.cantTotal, s.f8s.length, nUEs, s.diasMax, label]);
-      row.height  = 17;
+      const rowBg = bw  ? 'FFEDE9FE' : esCrit ? 'FFFEE2E2' : esAl ? 'FFFEF3C7' : 'FFDCFCE7';
+      const txtD  = esCrit ? 'FF991B1B' : esAl ? 'FF92400E' : 'FF166534';
+
+      const row = ws2.addRow([s.sku, s.nom, s.cantTotal, s.f8s.length, s.ues.size, s.diasMax, label]);
+      row.height = 17;
       row.eachCell({ includeEmpty:true }, (c, col) => {
         c.fill = { type:'pattern', pattern:'solid', fgColor:{ argb: rowBg } };
-        c.font = arial(9, col===1||col===7, col===7?(bw?'FF5B21B6':'FF374151'):col===6?txtD:'FF111827');
+        c.font = arial(9, col===1||col===7, col===7 ? (bw?'FF5B21B6':'FF374151') : col===6 ? txtD : 'FF111827');
         c.alignment = { vertical:'middle', horizontal: col>=3?'center':'left' };
         c.border    = { bottom: thin };
       });
     });
 
+    // ── Descargar ─────────────────────────────────────────────────────────────
     const buffer = await wb.xlsx.writeBuffer();
     const blob   = new Blob([buffer], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const url    = URL.createObjectURL(blob);
     const a      = document.createElement('a');
     a.href       = url;
     a.download   = `CEDIS_Reservas_${new Date().toISOString().slice(0,10)}.xlsx`;
-    document.body.appendChild(a); a.click();
+    document.body.appendChild(a);
+    a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
@@ -2218,6 +2500,7 @@ async function exportarReservasExcel() {
     btn.disabled    = false;
   }
 }
+
 </script>
 <div id="modalWA" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);
      z-index:99999;overflow-y:auto;padding:20px;box-sizing:border-box;">
