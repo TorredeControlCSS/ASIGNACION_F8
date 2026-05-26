@@ -2007,7 +2007,7 @@ function _waBuildUrl(g) {
   ].join('\n');
 
   const num = g.contacto.wa.replace(/^\+/, '');
-  return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
+  return `https://web.whatsapp.com/send/?phone=${num}&text=${encodeURIComponent(msg)}`;
 }
 
 // ── Iniciar envío secuencial ─────────────────────────────────────────────────
