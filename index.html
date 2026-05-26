@@ -2094,7 +2094,7 @@ async function exportarReservasExcel() {
     alert('La librería ExcelJS no cargó. Verifica tu conexión e intenta de nuevo.');
     return;
   }
-try {
+
   const btn = document.getElementById('btnExportReservas');
   btn.textContent = '⏳ Consultando GAS...';
   btn.disabled = true;
