@@ -2010,65 +2010,63 @@ function _waBuildUrl(g) {
   return `https://web.whatsapp.com/send/?phone=${num}&text=${encodeURIComponent(msg)}`;
 }
 
-// ── Iniciar envío secuencial ─────────────────────────────────────────────────
-async function iniciarEnvioWA() {
-  if (_waEnviando) { _waStopFlag = true; return; }
+// ── Iniciar envío — flujo paso a paso ────────────────────────────────────────
+let _waCola = [];
+let _waActual = 0;
 
-  const seleccionadas = _waUEs.filter((g, i) => {
+function iniciarEnvioWA() {
+  const conWA    = _waUEs.filter(g => g.contacto?.wa);
+  const ordenado = [...conWA, ..._waUEs.filter(g => !g.contacto?.wa)];
+  const seleccionadas = ordenado.filter((g, i) => {
     const chk = document.getElementById(`waChk_${i}`);
     return chk && chk.checked && g.contacto?.wa;
   });
-
   if (!seleccionadas.length) {
     alert('No hay UEs seleccionadas con número de WhatsApp.');
     return;
   }
+  _waCola   = seleccionadas;
+  _waActual = 0;
+  _abrirSiguienteWA();
+}
 
-  const autoNext = document.getElementById('waAutoNext').checked;
-  const btn      = document.getElementById('waBtnEnviar');
-  const barra    = document.getElementById('waBarra');
-  const progTxt  = document.getElementById('waProgTxt');
-  const progBar  = document.getElementById('waProgBar');
+function _abrirSiguienteWA() {
+  const barra   = document.getElementById('waBarra');
+  const progTxt = document.getElementById('waProgTxt');
+  const progBar = document.getElementById('waProgBar');
+  const btnEnv  = document.getElementById('waBtnEnviar');
 
-  _waEnviando  = true;
-  _waStopFlag  = false;
-  barra.style.display = 'block';
-  btn.textContent = '⏹ Detener';
-  btn.style.background = '#e53935';
-
-  for (let i = 0; i < seleccionadas.length; i++) {
-    if (_waStopFlag) break;
-
-    const g    = seleccionadas[i];
-    const pct  = Math.round(((i + 1) / seleccionadas.length) * 100);
-    progTxt.textContent = `Abriendo ${i + 1} de ${seleccionadas.length}: ${g.ue}`;
-    progBar.style.width = pct + '%';
-
-    // Abrir WhatsApp en nueva pestaña
-    window.open(_waBuildUrl(g), '_blank');
-
-    // Esperar antes de abrir la siguiente (excepto en la última)
-    if (autoNext && i < seleccionadas.length - 1) {
-      await new Promise(r => setTimeout(r, 4000));
-    } else if (!autoNext && i < seleccionadas.length - 1) {
-      // Modo manual: esperar confirmación del usuario
-      const cont = confirm(
-        `✅ WhatsApp abierto para:\n${g.ue}\n\n` +
-        `¿Abrir la siguiente UE?\n(${i + 2} de ${seleccionadas.length}: ${seleccionadas[i+1].ue})`
-      );
-      if (!cont) break;
-    }
+  if (_waActual >= _waCola.length) {
+    barra.style.display      = 'block';
+    progBar.style.width      = '100%';
+    progBar.style.background = '#25D366';
+    progTxt.innerHTML        = `✅ Listo — ${_waCola.length} conversación(es) abiertas.`;
+    btnEnv.textContent       = '📱 Notificar seleccionadas';
+    btnEnv.style.background  = '#25D366';
+    btnEnv.onclick           = iniciarEnvioWA;
+    return;
   }
 
-  progTxt.textContent = _waStopFlag
-    ? `⏹ Detenido — se abrieron ${seleccionadas.findIndex((_, i) => _waStopFlag && i > 0)} conversaciones`
-    : `✅ Listo — ${seleccionadas.length} conversación(es) abiertas`;
-  progBar.style.width = '100%';
-  progBar.style.background = _waStopFlag ? '#e53935' : '#25D366';
+  const g     = _waCola[_waActual];
+  const total = _waCola.length;
+  barra.style.display      = 'block';
+  progBar.style.width      = Math.round((_waActual / total) * 100) + '%';
+  progBar.style.background = '#25D366';
+  progTxt.innerHTML = `<b>${_waActual + 1} de ${total}:</b> ${g.ue}<br>
+    <span style="font-size:11px;color:#555;">Envía el mensaje en WhatsApp y haz clic en
+    <b style="color:#0b1f3a;">→ Siguiente</b> para continuar.</span>`;
 
-  _waEnviando = false;
-  btn.textContent = '📱 Notificar seleccionadas';
-  btn.style.background = '#25D366';
+  window.open(_waBuildUrl(g), '_blank');
+
+  const siguiente = _waActual + 1 < total ? _waCola[_waActual + 1].ue : null;
+  if (siguiente) {
+    btnEnv.textContent      = `→ Siguiente: ${siguiente.slice(0,28)}${siguiente.length>28?'…':''}`;
+    btnEnv.style.background = '#0b1f3a';
+  } else {
+    btnEnv.textContent      = '✅ Finalizar';
+    btnEnv.style.background = '#25D366';
+  }
+  btnEnv.onclick = () => { _waActual++; _abrirSiguienteWA(); };
 }
 
 // ── Cerrar panel ─────────────────────────────────────────────────────────────
