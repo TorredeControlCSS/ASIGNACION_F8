@@ -2137,13 +2137,13 @@ async function exportarReservasExcel() {
     };
 
     // HOJA 1: Detalle
-    const ws1 = wb.addWorksheet('Reservas por Suministro',{views:[{state:'frozen',ySplit:1}]});
+    const ws1 = wb.addWorksheet('Reservas por Renglón',{views:[{state:'frozen',ySplit:1}]});
     ws1.columns = [
       {key:'sku',width:14},{key:'nom',width:40},{key:'total',width:13},{key:'nf8s',width:7},
       {key:'patron',width:20},{key:'ue',width:34},{key:'tipo',width:11},{key:'f8',width:20},
       {key:'cant',width:12},{key:'fechaAsig',width:13},{key:'dias',width:10},{key:'nivel',width:10},
     ];
-    applyHdr(ws1.addRow(['Código','Suministro','Total Resv.','# F8s',
+    applyHdr(ws1.addRow(['Código','Renglón','Total Resv.','# F8s',
       'Patrón','Unidad Ejecutora','Tipo','Forma 8','Cant. Resv.','Fecha Asig.','Días','Nivel']));
     lista.forEach((s,si) => {
       const bw=s.f8s.length>=4, obs=s.f8s.length>=2&&!bw;
@@ -2174,7 +2174,7 @@ async function exportarReservasExcel() {
       {key:'sku',width:14},{key:'nom',width:43},{key:'total',width:15},{key:'nf8s',width:7},
       {key:'nues',width:7},{key:'dias',width:11},{key:'patron',width:20},
     ];
-    applyHdr(ws2.addRow(['Código','Suministro','Total Reservado','# F8s','# UEs','Max Días','Patrón']));
+    applyHdr(ws2.addRow(['Código','Renglón','Total Reservado','# F8s','# UEs','Max Días','Patrón']));
     lista.forEach(s => {
       const bw=s.f8s.length>=4,obs=s.f8s.length>=2&&!bw;
       const label=bw?'Efecto Bullwhip':obs?'Observar':'Normal';
@@ -2243,7 +2243,7 @@ async function exportarReservasExcel() {
     dc(4,1,'INDICADORES GENERALES','FFE2E8F0','FF0B1F3A',true,10);
     const kpis=[
       ['Total F8s en Reserva',allF8s.size,'FFFEE2E2','FF991B1B'],
-      ['Suministros Afectados',lista.length,'FFFEF3C7','FF92400E'],
+      ['Renglones Afectados',lista.length,'FFFEF3C7','FF92400E'],
       ['UEs Involucradas',allUEs.size,'FFDBEAFE','FF1D4ED8'],
       ['Unidades Comprometidas',totUnid.toLocaleString('en-US'),'FFEDE9FE','FF5B21B6'],
       ['% Renglones CRITICO',totalSubs>0?((nCrit/totalSubs)*100).toFixed(1)+'%':'0%','FFFEE2E2','FF991B1B'],
@@ -2258,8 +2258,8 @@ async function exportarReservasExcel() {
 
     // Semáforo + Rangos
     ws3.getRow(7).height=8; ws3.getRow(8).height=14;
-    mg(8,1,8,6);dc(8,1,'POR NIVEL DE URGENCIA','FFE2E8F0','FF0B1F3A',true,10);
-    mg(8,7,8,12);dc(8,7,'POR RANGO DE DÍAS','FFE2E8F0','FF0B1F3A',true,10);
+    mg(8,1,8,6);dc(8,1,'RENGLONES POR NIVEL DE URGENCIA','FFE2E8F0','FF0B1F3A',true,10);
+    mg(8,7,8,12);dc(8,7,'RENGLONES POR RANGO DE DÍAS','FFE2E8F0','FF0B1F3A',true,10);
     const sem=[['CRITICO (>7 días)',nCrit,'FFFEE2E2','FF991B1B'],['ALERTA (4-7 días)',nAlert,'FFFEF3C7','FF92400E'],['AVISO (3 días)',nAviso,'FFDCFCE7','FF166534']];
     const rng=[['3-7 días',rangos[0],'FFDCFCE7'],['8-30 días',rangos[1],'FFFEF3C7'],['31-60 días',rangos[2],'FFFEE2E2'],['61-90 días',rangos[3],'FFFFE4E6'],['>90 días',rangos[4],'FFFFE4E6']];
     const tot3=nCrit+nAlert+nAviso||1, totR=rangos.reduce((a,b)=>a+b,0)||1;
@@ -2272,7 +2272,7 @@ async function exportarReservasExcel() {
     ws3.getRow(tr).height=18;
     mg(tr,1,tr,3);dc(tr,1,'Tipo','FF0B1F3A','FFFFFFFF',true,9,true,true);
     mg(tr,4,tr,6);dc(tr,4,'# F8s','FF0B1F3A','FFFFFFFF',true,9,true,true);
-    mg(tr,7,tr,9);dc(tr,7,'# Suministros','FF0B1F3A','FFFFFFFF',true,9,true,true);
+    mg(tr,7,tr,9);dc(tr,7,'# Renglones','FF0B1F3A','FFFFFFFF',true,9,true,true);
     mg(tr,10,tr,12);dc(tr,10,'Unidades Reservadas','FF0B1F3A','FFFFFFFF',true,9,true,true); tr++;
     Array.from(tipoMap.entries()).sort((a,b)=>b[1].f8s.size-a[1].f8s.size).forEach(([tipo,td])=>{
       ws3.getRow(tr).height=17;
@@ -2288,7 +2288,7 @@ async function exportarReservasExcel() {
     ws3.getRow(tr).height=18;
     mg(tr,1,tr,5);dc(tr,1,'Unidad Ejecutora','FF0B1F3A','FFFFFFFF',true,9,false,true);
     mg(tr,6,tr,7);dc(tr,6,'# F8s','FF0B1F3A','FFFFFFFF',true,9,true,true);
-    mg(tr,8,tr,9);dc(tr,8,'# Suministros','FF0B1F3A','FFFFFFFF',true,9,true,true);
+    mg(tr,8,tr,9);dc(tr,8,'# Renglones','FF0B1F3A','FFFFFFFF',true,9,true,true);
     mg(tr,10,tr,11);dc(tr,10,'Unidades Resv.','FF0B1F3A','FFFFFFFF',true,9,true,true);
     dc(tr,12,'Máx. Días','FF0B1F3A','FFFFFFFF',true,9,true,true); tr++;
     topUEs.forEach(([ue,ud],i)=>{
