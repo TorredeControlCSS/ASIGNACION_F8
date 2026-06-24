@@ -187,21 +187,38 @@ async function cargar() {
     return;
   }
 
-  try {
-    const data = await loadJsonp(`${GAS}?file=allocation`);
-    if (!data || !data.length) { mostrarError('Sin datos en el corte actual.'); return; }
+  const ueNorm = normUE(UE_PARAM);
 
-    // Filtrar por UE (comparación normalizada para tolerar acentos/mayúsculas)
-    const ueNorm = normUE(UE_PARAM);
-    let filas = data.filter(r => normUE(r.Punto || '') === ueNorm);
-
-    // Si se especificaron F8s específicas, filtrar también
+  // Filtro por UE (+ F8 si vienen en el link)
+  const filtrar = (data) => {
+    let filas = (data || []).filter(r => normUE(r.Punto || '') === ueNorm);
     if (F8S_PARAM.length) {
       filas = filas.filter(r => F8S_PARAM.includes(String(r.N_Doc || '').trim()));
     }
+    return filas;
+  };
+
+  try {
+    // 1) Intento LIVE (corte actual)
+    let filas = [];
+    try {
+      const live = await loadJsonp(`${GAS}?file=allocation`);
+      filas = filtrar(live);
+    } catch (e1) {
+      // Si falla la red en live, seguimos al histórico igual
+      filas = [];
+    }
+
+    // 2) FALLBACK a HISTÓRICO si live no tuvo resultados (ya se sobreescribió la corrida)
+    if (!filas.length) {
+      const qF8 = F8S_PARAM.length ? `&f8=${encodeURIComponent(F8S_PARAM.join(','))}` : '';
+      const hist = await loadJsonp(`${GAS}?file=history${qF8}`);
+      filas = filtrar(hist);
+    }
 
     if (!filas.length) {
-      mostrarError(`No se encontró asignación activa para: "${UE_PARAM}" en el corte actual.`);
+      mostrarError(`No se encontró asignación para: "${UE_PARAM}"${F8S_PARAM.length ? ' (Doc: ' + F8S_PARAM.join(', ') + ')' : ''}. ` +
+                   `Es posible que el documento aún no haya sido archivado o que el enlace sea incorrecto. Contacte a Torre de Control CEDIS.`);
       return;
     }
 
