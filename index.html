@@ -203,16 +203,13 @@
                     onclick="exportarReservasExcel()">
               📊 Reservas Excel
             </button>
-            <button id="btnExportXlsx" style="font-size:11px; padding:6px 10px;">Exportar Excel Full</button>
-            <button id="btnExportCsv" style="font-size:11px; padding:6px 10px;">Exportar CSV</button>
+            <button id="btnExportXlsx" style="font-size:11px; padding:6px 10px;">📊 Detalle Asignación (Excel)</button>
             <button id="btnExportCuotas" style="background:#f57c00; color:white; font-size:11px; padding:6px 10px; border:none; border-radius:10px; cursor:pointer;">📊 Tablero Llenado</button>
             
             <div style="flex:1;"></div>
             
             <button id="btnLoadDaily" class="btn-daily" style="font-size:11px; padding:6px 10px;">🔄 Ver Corte Diario</button>
             <button id="btnLoadHistory" class="btn-history" style="font-size:11px; padding:6px 10px;">📂 Ver Histórico</button>
-            <button id="btnLoadLocal" class="btn-secondary" style="font-size:11px; padding:6px 10px;">Cargar Local</button>
-            <input id="fileLoad" type="file" multiple accept=".json" style="display:none"/>
         </div>
       </div>
 
@@ -1533,7 +1530,6 @@
       applyFilters();
     });
 
-    document.getElementById('btnExportCsv').addEventListener('click', exportCsv);
     document.getElementById('btnExportPdf').addEventListener('click', exportPdfAsignacion);
     document.getElementById('btnExportPdfManager').addEventListener('click', exportPdfGerencial);
         // NUEVO BOTÓN
@@ -1595,34 +1591,8 @@
     document.querySelectorAll('.tab').forEach(el => el.addEventListener('click', () => showTab(el.dataset.tab)));
   }
 
-  const btnLoad = document.getElementById('btnLoadLocal');
-  const fileLoad = document.getElementById('fileLoad');
-  if (btnLoad && fileLoad) {
-    btnLoad.addEventListener('click', () => fileLoad.click());
-    fileLoad.addEventListener('change', async (ev) => {
-      const files = Array.from(ev.target.files || []);
-      if (!files.length) return;
-      const byName = Object.fromEntries(files.map(f => [f.name.toLowerCase(), f]));
-      
-      async function readJson(file) {
-        const txt = await file.text();
-        return JSON.parse(txt);
-      }
-      
-      try {
-        if (byName['allocation.json']) DATA = await readJson(byName['allocation.json']);
-        if (byName['params.json']) PARAMS = await readJson(byName['params.json']);
-        populateFilters();
-        applyFilters();
-        alert('Datos locales cargados.');
-      } catch (e) {
-        console.error(e);
-        alert('No se pudo cargar uno de los JSON.');
-      } finally {
-        fileLoad.value = '';
-      }
-    });
-  }
+  // [Removido] Botón "Cargar Local" (carga de JSON manual / debug) — retirado por limpieza de UI.
+
    // --- REPORTE TABLERO DE LLENADO (FINAL VERIFICADO) ---
   // --- REPORTE TABLERO DE LLENADO (FINAL: LOGO + NOMBRE ARCHIVO DINÁMICO) ---
   async function exportPdfCuotas() {
@@ -2369,15 +2339,23 @@ async function abrirPanelCorreo() {
     return;
   }
 
+  // Respetar SIEMPRE lo que el usuario tiene filtrado en pantalla (UE/fecha/documento).
+  // _pickingRows() devuelve LAST_FILTERED (las filas visibles tras aplicar filtros).
+  const filas = _pickingRows();
+  if (!filas || !filas.length) {
+    alert('No hay renglones en la vista actual. Ajusta los filtros y aplica antes de notificar.');
+    return;
+  }
+
   const ueSel = document.getElementById('ue');
   const ueFiltrada = ueSel && ueSel.value && ueSel.value !== 'ALL' ? ueSel.value : null;
 
+  // Agrupar por UE, tomando solo los F8 efectivamente visibles/filtrados
   const setUE = new Map(); // ueNorm -> { ue, f8s:Set }
-  DATA.forEach(r => {
+  filas.forEach(r => {
     const ue = r.Punto || '';
     const f8 = r.N_Doc || '';
     if (!ue || !f8) return;
-    if (ueFiltrada && ue !== ueFiltrada) return;
     const k = _emNorm(ue);
     if (!setUE.has(k)) setUE.set(k, { ue, f8s: new Set() });
     setUE.get(k).f8s.add(f8);
@@ -2386,7 +2364,7 @@ async function abrirPanelCorreo() {
   const ues = Array.from(setUE.values()).map(g => ({ ue: g.ue, f8s: Array.from(g.f8s) }));
 
   if (!ues.length) {
-    alert('No hay UEs con documentos en la vista actual.');
+    alert('No hay UEs con documentos en la vista filtrada actual.');
     return;
   }
 
@@ -2456,42 +2434,52 @@ async function _ejecutarEnvioCorreo(ues) {
   const btn   = document.getElementById('corBtnEnviar');
 
   if (barra) { barra.style.display = 'block'; }
-  if (txt)   { txt.textContent = `Enviando ${ues.length} constancia(s)... esto puede tardar unos segundos.`; }
   if (btn)   { btn.disabled = true; btn.textContent = 'Enviando...'; }
 
-  const uesParam = ues.map(g => g.ue).join('||');
-  const f8sSet = new Set();
-  ues.forEach(g => g.f8s.forEach(f => f8sSet.add(f)));
-  const f8sParam = Array.from(f8sSet).join(',');
+  let totalEnviados = 0, totalSinC = 0, totalErr = 0;
+  const fallidas = [];
 
-  const url = `${WEBAPP_BASE}?file=notificar` +
-    `&modo=${encodeURIComponent(modo)}` +
-    `&ues=${encodeURIComponent(uesParam)}` +
-    `&f8s=${encodeURIComponent(f8sParam)}`;
+  // Enviar UE por UE: cada petición lleva SOLO los F8 de esa UE (evita URLs gigantes)
+  for (let i = 0; i < ues.length; i++) {
+    const g = ues[i];
+    if (txt) txt.textContent = `Enviando ${i+1} de ${ues.length}: ${g.ue}...`;
 
-  try {
-    const res = await loadJsonp(url);
-    const enviados = res && res.enviados || 0;
-    const sinC     = res && res.sinContacto || 0;
-    const errs     = res && res.errores || 0;
+    const url = `${WEBAPP_BASE}?file=notificar` +
+      `&modo=${encodeURIComponent(modo)}` +
+      `&ues=${encodeURIComponent(g.ue)}` +
+      `&f8s=${encodeURIComponent((g.f8s || []).join(','))}`;
 
-    let msg = `✅ Enviados: ${enviados}`;
-    if (sinC) msg += `\n⚠️ Sin correo registrado: ${sinC}`;
-    if (errs) msg += `\n❌ Errores: ${errs}`;
+    // Salvaguarda: si la URL aún resultara enorme, avisamos y omitimos esa UE
+    if (url.length > 7500) {
+      totalErr++;
+      fallidas.push(g.ue + ' (demasiados documentos filtrados; acota por fecha o documento)');
+      continue;
+    }
 
-    if (txt) txt.textContent = msg.replace(/\n/g, ' · ');
-    if (btn) { btn.disabled = false; btn.textContent = '📧 Notificar seleccionadas'; }
-
-    alert(msg + '\n\nLas unidades sin correo aparecen en DIRECTORIO_UE sin EMAIL_TO.');
-
-    const modal = document.getElementById('modalCorreo');
-    if (modal && modal.style.display === 'block') setTimeout(cerrarPanelCorreo, 600);
-
-  } catch (e) {
-    if (txt) txt.textContent = 'Error: ' + e.message;
-    if (btn) { btn.disabled = false; btn.textContent = '📧 Notificar seleccionadas'; }
-    alert('Error al enviar: ' + e.message + '\n\nVerifica que el backend tenga el bloque file=notificar y esté re-desplegado.');
+    try {
+      const res = await loadJsonp(url);
+      totalEnviados += (res && res.enviados) || 0;
+      totalSinC     += (res && res.sinContacto) || 0;
+      totalErr      += (res && res.errores) || 0;
+      if (res && res.sinContacto && !res.enviados) fallidas.push(g.ue + ' (sin correo en DIRECTORIO_UE)');
+    } catch (e) {
+      totalErr++;
+      fallidas.push(g.ue + ' (error de conexión)');
+    }
   }
+
+  let msg = `✅ Enviados: ${totalEnviados}`;
+  if (totalSinC) msg += `\n⚠️ Sin correo registrado: ${totalSinC}`;
+  if (totalErr)  msg += `\n❌ Con error: ${totalErr}`;
+  if (fallidas.length) msg += `\n\nPendientes:\n• ` + fallidas.slice(0, 10).join('\n• ');
+
+  if (txt) txt.textContent = `Listo — Enviados: ${totalEnviados} · Sin correo: ${totalSinC} · Errores: ${totalErr}`;
+  if (btn) { btn.disabled = false; btn.textContent = '📧 Notificar seleccionadas'; }
+
+  alert(msg);
+
+  const modal = document.getElementById('modalCorreo');
+  if (modal && modal.style.display === 'block') setTimeout(cerrarPanelCorreo, 800);
 }
 
 document.addEventListener('keydown', e => {
