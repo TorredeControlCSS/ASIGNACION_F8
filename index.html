@@ -174,6 +174,14 @@
                 <input id="allocDateTo" type="date"/>
             </div>
 
+            <!-- FILTRO: SOLO UE EN CERO (saldo en línea) -->
+            <div style="display:flex; align-items:flex-end;">
+              <label style="display:flex; align-items:center; gap:5px; cursor:pointer; background:#fff3f3; border:1px solid #f0c0c0; border-radius:6px; padding:6px 8px; white-space:nowrap;">
+                <input type="checkbox" id="soloCero" style="width:15px; height:15px;">
+                <span style="font-size:11px; color:#b71c1c; font-weight:bold;">🔴 Solo UE en cero</span>
+              </label>
+            </div>
+
             <!-- Botones Aplicar -->
             <div style="display:flex; gap:5px;">
                  <button id="btnApply" class="btn-main" style="flex:1;">Aplicar</button>
@@ -419,6 +427,10 @@
     if (tipo !== "ALL") rows = rows.filter(r => r.Tipo === tipo);
     if (estado !== "ALL") rows = rows.filter(r => coverage(r) === estado);
 
+    // Filtro: solo renglones donde la UE destino está en cero (saldo en línea)
+    const soloCero = document.getElementById('soloCero');
+    if (soloCero && soloCero.checked) rows = rows.filter(r => r.En_Cero === true);
+
     LAST_FILTERED = rows;
     renderKPIs(rows);
     renderActiveTab(rows);
@@ -464,6 +476,10 @@
       let iconos = "";
       if(r.Frio) iconos += "❄️ ";
       if(r.Narcotico) iconos += "💊 "; 
+      // Badge de saldo en línea de la UE destino (reemplaza el conteo manual de ceros)
+      if(r.En_Cero === true) {
+        iconos += `<span style="background:#b71c1c; color:#fff; font-size:8px; font-weight:bold; padding:1px 4px; border-radius:3px; white-space:nowrap;" title="La UE destino tiene saldo 0 de este renglón (saldo en línea)">🔴 UE EN CERO</span> `;
+      }
 
       // --- NUEVA LÓGICA VISUAL UNIFICADA ---
             // --- NUEVA LÓGICA VISUAL UNIFICADA (CORREGIDA) ---
@@ -1527,8 +1543,12 @@
       document.getElementById('estado').value = "ALL";
       document.getElementById('allocDateFrom').value = "";
       document.getElementById('allocDateTo').value = "";
+      var _sc = document.getElementById('soloCero'); if (_sc) _sc.checked = false;
       applyFilters();
     });
+
+    var _soloCeroChk = document.getElementById('soloCero');
+    if (_soloCeroChk) _soloCeroChk.addEventListener('change', applyFilters);
 
     document.getElementById('btnExportPdf').addEventListener('click', exportPdfAsignacion);
     document.getElementById('btnExportPdfManager').addEventListener('click', exportPdfGerencial);
