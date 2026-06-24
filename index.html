@@ -189,6 +189,12 @@
                     onclick="abrirPanelWA()">
               📱 Notificar UEs por WhatsApp
             </button>
+            <button id="btnEmailNotif"
+                    style="background:#1565c0;color:#fff;border:none;font-size:11px;
+                           padding:6px 10px;border-radius:10px;cursor:pointer;font-weight:700;"
+                    onclick="abrirPanelCorreo()">
+              📧 Notificar por correo (constancia)
+            </button>
             <button id="btnExportPdf" class="btn-main" style="font-size:11px; padding:6px 10px;">📄 Exportar PDF (Hoja de Asignación)</button>
             <button id="btnExportPdfManager" style="background:#37474f; color:white; font-size:11px; padding:6px 10px;">📊 Informe Gerencial</button>
             <button id="btnExportReservas"
@@ -1417,6 +1423,7 @@
       if (!newData || newData.length === 0) alert("No se encontraron datos.");
       else {
         DATA = newData;
+        window._MODO_ACTUAL = (type === 'history') ? 'history' : 'live';
         populateFilters();
         // Auto-filtrar por UE si viene en la URL (?ue=NOMBRE)
         const urlUE = new URLSearchParams(window.location.search).get('ue');
@@ -2348,6 +2355,152 @@ async function exportarReservasExcel() {
   }
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+// NOTIFICACIÓN POR CORREO (constancia F8: PDF + link perdurable + QR)
+// ════════════════════════════════════════════════════════════════════════════
+function _emNorm(v) {
+  return String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[().\-_\/]/g,' ').toUpperCase().replace(/\s+/g,' ').trim();
+}
+
+async function abrirPanelCorreo() {
+  if (!DATA || !DATA.length) {
+    alert('No hay datos cargados. Carga el Corte Diario o el Histórico primero.');
+    return;
+  }
+
+  const ueSel = document.getElementById('ue');
+  const ueFiltrada = ueSel && ueSel.value && ueSel.value !== 'ALL' ? ueSel.value : null;
+
+  const setUE = new Map(); // ueNorm -> { ue, f8s:Set }
+  DATA.forEach(r => {
+    const ue = r.Punto || '';
+    const f8 = r.N_Doc || '';
+    if (!ue || !f8) return;
+    if (ueFiltrada && ue !== ueFiltrada) return;
+    const k = _emNorm(ue);
+    if (!setUE.has(k)) setUE.set(k, { ue, f8s: new Set() });
+    setUE.get(k).f8s.add(f8);
+  });
+
+  const ues = Array.from(setUE.values()).map(g => ({ ue: g.ue, f8s: Array.from(g.f8s) }));
+
+  if (!ues.length) {
+    alert('No hay UEs con documentos en la vista actual.');
+    return;
+  }
+
+  if (ueFiltrada && ues.length === 1) {
+    const g = ues[0];
+    const ok = confirm(
+      `¿Enviar constancia por correo a:\n\n${g.ue}\nDoc(s): ${g.f8s.join(', ')}?\n\n` +
+      `El correo incluye PDF adjunto, enlace de seguimiento y QR.`
+    );
+    if (ok) _ejecutarEnvioCorreo([g]);
+    return;
+  }
+
+  _mostrarPanelCorreo(ues);
+}
+
+function _mostrarPanelCorreo(ues) {
+  const modal = document.getElementById('modalCorreo');
+  const lista = document.getElementById('corLista');
+  const sub   = document.getElementById('corSubtitulo');
+  const modo  = window._MODO_ACTUAL === 'history' ? 'Histórico' : 'Corte actual';
+
+  sub.textContent = `${ues.length} unidad(es) en ${modo} — selecciona a quién notificar`;
+
+  lista.innerHTML = ues.map((g, i) => `
+    <label style="display:flex;align-items:center;gap:10px;padding:9px 0;
+                  border-bottom:1px solid #f0f0f0;cursor:pointer;">
+      <input type="checkbox" checked id="corChk_${i}" data-idx="${i}"
+             style="width:16px;height:16px;flex-shrink:0;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12px;font-weight:700;color:#0b1f3a;
+                    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${g.ue}</div>
+        <div style="font-size:10px;color:#777;margin-top:2px;">
+          ${g.f8s.length} doc${g.f8s.length!==1?'s':''}: <b>${g.f8s.join(', ')}</b>
+        </div>
+      </div>
+    </label>`).join('');
+
+  window._corUEs = ues;
+  modal.style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+
+function corSelAll(val) {
+  document.querySelectorAll('[id^="corChk_"]').forEach(c => c.checked = val);
+}
+
+function cerrarPanelCorreo() {
+  document.getElementById('modalCorreo').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function confirmarEnvioCorreo() {
+  const ues = window._corUEs || [];
+  const sel = ues.filter((g, i) => {
+    const chk = document.getElementById(`corChk_${i}`);
+    return chk && chk.checked;
+  });
+  if (!sel.length) { alert('No hay unidades seleccionadas.'); return; }
+  _ejecutarEnvioCorreo(sel);
+}
+
+async function _ejecutarEnvioCorreo(ues) {
+  const modo = window._MODO_ACTUAL === 'history' ? 'history' : 'live';
+  const barra = document.getElementById('corBarra');
+  const txt   = document.getElementById('corProgTxt');
+  const btn   = document.getElementById('corBtnEnviar');
+
+  if (barra) { barra.style.display = 'block'; }
+  if (txt)   { txt.textContent = `Enviando ${ues.length} constancia(s)... esto puede tardar unos segundos.`; }
+  if (btn)   { btn.disabled = true; btn.textContent = 'Enviando...'; }
+
+  const uesParam = ues.map(g => g.ue).join('||');
+  const f8sSet = new Set();
+  ues.forEach(g => g.f8s.forEach(f => f8sSet.add(f)));
+  const f8sParam = Array.from(f8sSet).join(',');
+
+  const url = `${WEBAPP_BASE}?file=notificar` +
+    `&modo=${encodeURIComponent(modo)}` +
+    `&ues=${encodeURIComponent(uesParam)}` +
+    `&f8s=${encodeURIComponent(f8sParam)}`;
+
+  try {
+    const res = await loadJsonp(url);
+    const enviados = res && res.enviados || 0;
+    const sinC     = res && res.sinContacto || 0;
+    const errs     = res && res.errores || 0;
+
+    let msg = `✅ Enviados: ${enviados}`;
+    if (sinC) msg += `\n⚠️ Sin correo registrado: ${sinC}`;
+    if (errs) msg += `\n❌ Errores: ${errs}`;
+
+    if (txt) txt.textContent = msg.replace(/\n/g, ' · ');
+    if (btn) { btn.disabled = false; btn.textContent = '📧 Notificar seleccionadas'; }
+
+    alert(msg + '\n\nLas unidades sin correo aparecen en DIRECTORIO_UE sin EMAIL_TO.');
+
+    const modal = document.getElementById('modalCorreo');
+    if (modal && modal.style.display === 'block') setTimeout(cerrarPanelCorreo, 600);
+
+  } catch (e) {
+    if (txt) txt.textContent = 'Error: ' + e.message;
+    if (btn) { btn.disabled = false; btn.textContent = '📧 Notificar seleccionadas'; }
+    alert('Error al enviar: ' + e.message + '\n\nVerifica que el backend tenga el bloque file=notificar y esté re-desplegado.');
+  }
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    const m = document.getElementById('modalCorreo');
+    if (m && m.style.display === 'block') cerrarPanelCorreo();
+  }
+});
+
 </script>
 <div id="modalWA" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);
      z-index:99999;overflow-y:auto;padding:20px;box-sizing:border-box;">
@@ -2425,6 +2578,50 @@ async function exportarReservasExcel() {
       </button>
     </div>
 
+  </div>
+</div>
+
+<!-- ═══ MODAL NOTIFICACIÓN POR CORREO ═══ -->
+<div id="modalCorreo" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);
+     z-index:99999;overflow-y:auto;padding:20px;box-sizing:border-box;">
+  <div style="background:#fff;border-radius:14px;max-width:640px;margin:auto;
+              box-shadow:0 8px 40px rgba(0,0,0,.25);overflow:hidden;">
+    <div style="background:linear-gradient(90deg,#0b1f3a,#133a74);
+                padding:16px 20px;display:flex;align-items:center;gap:12px;">
+      <div style="font-size:22px;">📧</div>
+      <div style="flex:1;">
+        <div style="color:#fff;font-size:15px;font-weight:700;">Notificar por correo (constancia F8)</div>
+        <div style="color:#cbd5e1;font-size:11px;margin-top:2px;" id="corSubtitulo">Cargando...</div>
+      </div>
+      <button onclick="cerrarPanelCorreo()"
+              style="background:rgba(255,255,255,.15);border:none;color:#fff;
+                     border-radius:50%;width:30px;height:30px;font-size:16px;cursor:pointer;line-height:1;">✕</button>
+    </div>
+
+    <div id="corBarra" style="display:none;padding:10px 20px;background:#e3f2fd;border-bottom:1px solid #bbdefb;">
+      <div style="font-size:12px;font-weight:700;color:#0d47a1;" id="corProgTxt">Preparando...</div>
+    </div>
+
+    <div style="padding:12px 20px;border-bottom:1px solid #eee;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <button onclick="corSelAll(true)" style="font-size:11px;padding:4px 10px;border:1px solid #ddd;border-radius:8px;background:#f9f9f9;cursor:pointer;">✅ Todas</button>
+      <button onclick="corSelAll(false)" style="font-size:11px;padding:4px 10px;border:1px solid #ddd;border-radius:8px;background:#f9f9f9;cursor:pointer;">⬜ Ninguna</button>
+    </div>
+
+    <div id="corLista" style="padding:12px 20px;max-height:45vh;overflow-y:auto;"></div>
+
+    <div style="padding:8px 20px;background:#f8fbff;border-top:1px solid #e3f2fd;font-size:10px;color:#555;line-height:1.6;">
+      💡 Cada correo incluye <strong>PDF adjunto</strong>, <strong>enlace de seguimiento</strong> perdurable y <strong>QR</strong>.
+      El enlace funciona aunque se vuelva a correr el motor (lee del corte actual y, si no está, del histórico).
+      Las unidades sin EMAIL_TO en DIRECTORIO_UE se omiten.
+    </div>
+
+    <div style="padding:14px 20px;display:flex;gap:10px;justify-content:flex-end;border-top:1px solid #eee;flex-wrap:wrap;">
+      <button onclick="cerrarPanelCorreo()" style="padding:8px 16px;border:1px solid #ccc;border-radius:10px;background:#f5f5f5;cursor:pointer;font-size:12px;">Cerrar</button>
+      <button id="corBtnEnviar" onclick="confirmarEnvioCorreo()"
+              style="padding:8px 20px;border:none;border-radius:10px;background:#1565c0;color:#fff;font-weight:700;cursor:pointer;font-size:12px;">
+        📧 Notificar seleccionadas
+      </button>
+    </div>
   </div>
 </div>
 </body>
