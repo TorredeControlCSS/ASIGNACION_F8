@@ -1050,7 +1050,18 @@
             </thead>
             <tbody>${rowsHtml}</tbody>
           </table>
-          <div class="sign"><div>Preparado por: __________________</div><div>Recibido por: __________________</div><div>Fecha: __________________</div></div>
+          <div class="sign">
+            <div style="text-align:center;">
+              <img src="./icons/Firma_Ildemaro.png" alt="Firma" style="height:45px; object-fit:contain; display:block; margin:0 auto -6px;"/>
+              <div style="border-top:1px solid #333; padding-top:3px; min-width:200px;">Lic. Ildemaro Vásquez<br><span style="font-size:9px; color:#555;">Jefe de Torre de Control · Sub Unidad del Almacén</span></div>
+            </div>
+            <div style="text-align:center; align-self:flex-end;">
+              <div style="border-top:1px solid #333; padding-top:3px; min-width:160px;">Recibido por</div>
+            </div>
+            <div style="text-align:center; align-self:flex-end;">
+              <div style="border-top:1px solid #333; padding-top:3px; min-width:120px;">Fecha</div>
+            </div>
+          </div>
           <div style="text-align:center; font-size:9px; color:#999; margin-top:5px; border-top:1px dashed #ccc; padding-top:2px;">Fin del Documento ${esc(g.doc)}</div>
         </div>`;
     }).join("");
@@ -2456,23 +2467,49 @@ async function _ejecutarEnvioCorreo(ues) {
   if (barra) { barra.style.display = 'block'; }
   if (btn)   { btn.disabled = true; btn.textContent = 'Enviando...'; }
 
+  // Tamaño de lote: máximo de DOCUMENTOS (Forma 8) completos por correo.
+  // NUNCA parte un F8 a la mitad: el corte es entre documentos, no entre renglones.
+  // Cada F8 (máx ~20 renglones) viaja entero. 10 docs × 20 = 200 renglones máx por
+  // PDF, muy por debajo del límite de 6 min de Apps Script.
+  const LOTE_DOCS = 10;
+
+  // Expandir UEs en "tareas": cada UE con muchos docs se parte en varios lotes.
+  const tareas = [];
+  ues.forEach(g => {
+    const f8s = g.f8s || [];
+    if (f8s.length <= LOTE_DOCS) {
+      tareas.push({ ue: g.ue, f8s: f8s, parte: 1, total: 1 });
+    } else {
+      const totalPartes = Math.ceil(f8s.length / LOTE_DOCS);
+      for (let p = 0; p < totalPartes; p++) {
+        tareas.push({
+          ue: g.ue,
+          f8s: f8s.slice(p * LOTE_DOCS, (p + 1) * LOTE_DOCS),
+          parte: p + 1,
+          total: totalPartes
+        });
+      }
+    }
+  });
+
   let totalEnviados = 0, totalSinC = 0, totalErr = 0;
   const fallidas = [];
 
-  // Enviar UE por UE: cada petición lleva SOLO los F8 de esa UE (evita URLs gigantes)
-  for (let i = 0; i < ues.length; i++) {
-    const g = ues[i];
-    if (txt) txt.textContent = `Enviando ${i+1} de ${ues.length}: ${g.ue}...`;
+  for (let i = 0; i < tareas.length; i++) {
+    const t = tareas[i];
+    const etiqueta = t.total > 1 ? `${t.ue} (parte ${t.parte}/${t.total})` : t.ue;
+    if (txt) txt.textContent = `Enviando ${i+1} de ${tareas.length}: ${etiqueta}...`;
 
     const url = `${WEBAPP_BASE}?file=notificar` +
       `&modo=${encodeURIComponent(modo)}` +
-      `&ues=${encodeURIComponent(g.ue)}` +
-      `&f8s=${encodeURIComponent((g.f8s || []).join(','))}`;
+      `&ues=${encodeURIComponent(t.ue)}` +
+      `&f8s=${encodeURIComponent(t.f8s.join(','))}` +
+      `&parte=${t.parte}&total=${t.total}`;
 
-    // Salvaguarda: si la URL aún resultara enorme, avisamos y omitimos esa UE
+    // Salvaguarda de longitud de URL (15 docs nunca debería acercarse, pero por si acaso)
     if (url.length > 7500) {
       totalErr++;
-      fallidas.push(g.ue + ' (demasiados documentos filtrados; acota por fecha o documento)');
+      fallidas.push(etiqueta + ' (lote demasiado grande; reduce LOTE_DOCS)');
       continue;
     }
 
@@ -2481,17 +2518,18 @@ async function _ejecutarEnvioCorreo(ues) {
       totalEnviados += (res && res.enviados) || 0;
       totalSinC     += (res && res.sinContacto) || 0;
       totalErr      += (res && res.errores) || 0;
-      if (res && res.sinContacto && !res.enviados) fallidas.push(g.ue + ' (sin correo en DIRECTORIO_UE)');
+      if (res && res.sinContacto && !res.enviados) fallidas.push(etiqueta + ' (sin correo en DIRECTORIO_UE)');
+      if (res && res.errores) fallidas.push(etiqueta + ' (' + ((res.detalle && res.detalle[0] && res.detalle[0].msg) || 'error en backend') + ')');
     } catch (e) {
       totalErr++;
-      fallidas.push(g.ue + ' (error de conexión)');
+      fallidas.push(etiqueta + ' (error de conexión o timeout)');
     }
   }
 
   let msg = `✅ Enviados: ${totalEnviados}`;
   if (totalSinC) msg += `\n⚠️ Sin correo registrado: ${totalSinC}`;
   if (totalErr)  msg += `\n❌ Con error: ${totalErr}`;
-  if (fallidas.length) msg += `\n\nPendientes:\n• ` + fallidas.slice(0, 10).join('\n• ');
+  if (fallidas.length) msg += `\n\nPendientes:\n• ` + fallidas.slice(0, 12).join('\n• ');
 
   if (txt) txt.textContent = `Listo — Enviados: ${totalEnviados} · Sin correo: ${totalSinC} · Errores: ${totalErr}`;
   if (btn) { btn.disabled = false; btn.textContent = '📧 Notificar seleccionadas'; }
