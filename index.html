@@ -1052,7 +1052,7 @@
           </table>
           <div class="sign">
             <div style="text-align:center;">
-              <img src="./icons/Firma_Ildemaro.png" alt="Firma" style="height:90px; object-fit:contain; display:block; margin:0 auto 0px;"/>
+              <img src="./icons/Firma_Ildemaro.png" alt="Firma" style="height:90px; object-fit:contain; display:block; margin:0 auto 0;"/>
               <div style="border-top:1px solid #333; padding-top:3px; min-width:200px;">Lic. Ildemaro Vásquez<br><span style="font-size:9px; color:#555;">Jefe de Torre de Control · Sub Unidad del Almacén</span></div>
             </div>
             <div style="text-align:center; align-self:flex-end;">
@@ -1405,16 +1405,35 @@
   // --- LÓGICA DE CARGA ---
   const WEBAPP_BASE = "https://script.google.com/macros/s/AKfycbyVHDQ8IuVHibz259AiEvZ-jUfVC7fxvSSqC-wfaiiq1_13C9_TK4dVtPK0SMW4sZoJ/exec";
 
-  function loadJsonp(url) {
+  function loadJsonp(url, timeoutMs) {
     return new Promise((resolve, reject) => {
       const cb = 'cb_' + Math.random().toString(36).slice(2);
       const script = document.createElement('script');
+      let done = false;
+      const cleanup = () => {
+        try { delete window[cb]; } catch(e) { window[cb] = undefined; }
+        if (script.parentNode) script.remove();
+      };
+      const timer = setTimeout(() => {
+        if (done) return;
+        done = true;
+        cleanup();
+        reject(new Error('Timeout: la petición tardó demasiado'));
+      }, timeoutMs || 90000);
       script.src = `${url}&callback=${cb}&_ts=${Date.now()}`;
-      script.onerror = () => reject(new Error('Script error'));
+      script.onerror = () => {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        cleanup();
+        reject(new Error('Script error'));
+      };
       window[cb] = (data) => {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        cleanup();
         resolve(data);
-        delete window[cb];
-        script.remove();
       };
       document.body.appendChild(script);
     });
@@ -2514,7 +2533,7 @@ async function _ejecutarEnvioCorreo(ues) {
     }
 
     try {
-      const res = await loadJsonp(url);
+      const res = await loadJsonp(url, 120000); // timeout 2 min por parte
       totalEnviados += (res && res.enviados) || 0;
       totalSinC     += (res && res.sinContacto) || 0;
       totalErr      += (res && res.errores) || 0;
@@ -2522,8 +2541,12 @@ async function _ejecutarEnvioCorreo(ues) {
       if (res && res.errores) fallidas.push(etiqueta + ' (' + ((res.detalle && res.detalle[0] && res.detalle[0].msg) || 'error en backend') + ')');
     } catch (e) {
       totalErr++;
-      fallidas.push(etiqueta + ' (error de conexión o timeout)');
+      fallidas.push(etiqueta + ' (' + (e.message || 'error de conexión') + ')');
     }
+
+    // Pausa entre peticiones: evita saturar el navegador (ERR_NETWORK_IO_SUSPENDED)
+    // y respeta los límites de Google Apps Script.
+    await new Promise(r => setTimeout(r, 400));
   }
 
   let msg = `✅ Enviados: ${totalEnviados}`;
