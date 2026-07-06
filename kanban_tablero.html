@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Kanban de Seguimiento — Tablero Maestro por Unidad Ejecutora</title>
+<link rel="icon" href="./favicon.ico?v=1"/>
+<link rel="shortcut icon" href="./favicon.ico?v=1"/>
+<style>
+  :root{
+    --azul:#1e5a9e; --azul2:#0C447C; --deg1:#0b1f3a; --deg2:#133a74;
+    --bg:#ececec; --bord:#a8a8a8; --txt:#20303f; --sub:#6b7684;
+    --e-asig:#888780; --e-pick:#BA7517; --e-val:#EF9F27; --e-hand:#378ADD;
+    --e-fact:#639922; --e-desp:#1D9E75; --e-dist:#0F6E56;
+    --rojo:#a12626; --verde:#1c7c3a;
+  }
+  *{box-sizing:border-box;}
+  body{font-family:Arial,Helvetica,sans-serif;margin:0;background:var(--bg);color:var(--txt);}
+  .num{font-family:Consolas,"Courier New",monospace;}
+
+  .topbar{display:flex;align-items:center;gap:14px;padding:9px 18px;
+    background:linear-gradient(90deg,var(--deg1),var(--deg2));color:#fff;
+    position:sticky;top:0;z-index:9999;box-shadow:0 2px 4px rgba(0,0,0,.2);}
+  .topbar img{width:40px;height:40px;object-fit:contain;}
+  .topbar h1{font-size:15px;margin:0;font-weight:700;}
+  .topbar .sub{font-size:11px;opacity:.85;margin-top:2px;}
+  .topbar .spacer{flex:1;}
+  .topbar .gen{font-size:11px;opacity:.8;}
+
+  .wrap{max-width:1340px;margin:0 auto;padding:14px;}
+
+  /* KPIs de etapa */
+  .kpis{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:12px;}
+  .kpi{background:#fff;border:1px solid var(--bord);padding:8px 10px;border-top:3px solid var(--azul2);}
+  .kpi .lbl{font-size:9px;color:var(--sub);text-transform:uppercase;letter-spacing:.3px;min-height:22px;}
+  .kpi .val{font-size:22px;font-weight:700;font-family:Consolas,monospace;}
+  .kpi.asig{border-top-color:var(--e-asig);} .kpi.asig .val{color:var(--e-asig);}
+  .kpi.pick{border-top-color:var(--e-pick);} .kpi.pick .val{color:var(--e-pick);}
+  .kpi.val_{border-top-color:var(--e-val);} .kpi.val_ .val{color:var(--e-val);}
+  .kpi.hand{border-top-color:var(--e-hand);} .kpi.hand .val{color:var(--e-hand);}
+  .kpi.fact{border-top-color:var(--e-fact);} .kpi.fact .val{color:var(--e-fact);}
+  .kpi.desp{border-top-color:var(--e-desp);} .kpi.desp .val{color:var(--e-desp);}
+  .kpi.dist{border-top-color:var(--e-dist);} .kpi.dist .val{color:var(--e-dist);}
+
+  /* Banner de latencia hacia facturación */
+  .lat{display:flex;align-items:center;gap:16px;background:#fff;border:1px solid var(--bord);
+    border-left:4px solid var(--rojo);padding:11px 16px;margin-bottom:12px;}
+  .lat .big{font-size:26px;font-weight:700;font-family:Consolas,monospace;color:var(--rojo);}
+  .lat .desc{font-size:12px;color:var(--sub);}
+  .lat .desc b{color:var(--txt);}
+
+  .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:#fff;
+    border:1px solid var(--bord);padding:9px 11px;margin-bottom:10px;}
+  .toolbar label{font-size:11px;color:var(--sub);}
+  .toolbar select,.toolbar input[type=text]{padding:5px 7px;border:1px solid var(--bord);font-size:12px;}
+  .toolbar .btn{padding:6px 12px;border:1px solid var(--azul2);background:var(--azul);color:#fff;cursor:pointer;font-size:12px;font-weight:600;}
+  .toolbar .btn.sec{background:#fff;color:var(--azul2);}
+  .toolbar .spacer{flex:1;}
+  .toolbar .count{font-size:11px;color:var(--sub);}
+  .toolbar .chip{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700;}
+  .chip-hoy{background:#fcebeb;color:var(--rojo);}
+  .chip-man{background:#faeeda;color:#854F0B;}
+
+  /* Tabla de UE */
+  table.ue{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--bord);font-size:12px;}
+  table.ue th{background:var(--azul2);color:#fff;padding:7px 8px;text-align:left;font-size:10px;
+    text-transform:uppercase;letter-spacing:.3px;position:sticky;top:56px;cursor:pointer;user-select:none;}
+  table.ue th.r{text-align:right;} table.ue th.c{text-align:center;}
+  table.ue td{padding:6px 8px;border-top:1px solid #eee;}
+  table.ue tr:hover td{background:#f4f7fb;}
+  .ue-name{font-weight:700;color:var(--azul2);}
+  .ue-meta{font-size:10px;color:var(--sub);}
+  .badge-hoy{display:inline-block;font-size:9px;font-weight:700;padding:1px 6px;background:#fcebeb;color:var(--rojo);margin-left:5px;}
+  .badge-man{display:inline-block;font-size:9px;font-weight:700;padding:1px 6px;background:#faeeda;color:#854F0B;margin-left:5px;}
+  td.n{font-family:Consolas,monospace;text-align:right;}
+  /* mini barra de progreso por etapas */
+  .prog{display:flex;height:16px;width:150px;border:1px solid #ddd;overflow:hidden;}
+  .prog span{display:block;height:100%;}
+  .p-asig{background:var(--e-asig);} .p-pick{background:var(--e-pick);} .p-val{background:var(--e-val);}
+  .p-hand{background:var(--e-hand);} .p-fact{background:var(--e-fact);} .p-desp{background:var(--e-desp);} .p-dist{background:var(--e-dist);}
+  .pend-alert{color:var(--rojo);font-weight:700;}
+
+  .empty{padding:36px;text-align:center;color:var(--sub);background:#fff;border:1px solid var(--bord);}
+  .loading{padding:26px;text-align:center;color:var(--sub);}
+  .leyenda{display:flex;flex-wrap:wrap;gap:14px;margin:8px 2px;font-size:10px;color:var(--sub);}
+  .leyenda .dot{display:inline-block;width:9px;height:9px;margin-right:4px;vertical-align:middle;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <img src="./icons/icon-512.png" alt="logo"/>
+  <div>
+    <h1>Kanban de Seguimiento — Tablero Maestro por Unidad Ejecutora</h1>
+    <div class="sub">Torre de Control · DINALOG / CEDIS</div>
+  </div>
+  <div class="spacer"></div>
+  <div class="gen" id="gen"></div>
+</div>
+
+<div class="wrap">
+
+  <div class="kpis">
+    <div class="kpi asig"><div class="lbl">Asignadas</div><div class="val num" id="k_asig">–</div></div>
+    <div class="kpi pick"><div class="lbl">En picking</div><div class="val num" id="k_pick">–</div></div>
+    <div class="kpi val_"><div class="lbl">Validadas</div><div class="val num" id="k_val">–</div></div>
+    <div class="kpi hand"><div class="lbl">Hand-off Cómputo</div><div class="val num" id="k_hand">–</div></div>
+    <div class="kpi fact"><div class="lbl">Facturadas</div><div class="val num" id="k_fact">–</div></div>
+    <div class="kpi desp"><div class="lbl">Despachadas</div><div class="val num" id="k_desp">–</div></div>
+    <div class="kpi dist"><div class="lbl">Distribuidas</div><div class="val num" id="k_dist">–</div></div>
+  </div>
+
+  <div class="lat" id="latBanner" style="display:none">
+    <div class="big" id="latVal">–</div>
+    <div class="desc">días promedio entre <b>hand-off a Cómputo</b> y <b>facturación efectiva</b><br>
+      <span id="latN"></span> · esta es la latencia del cuello de botella de facturación</div>
+  </div>
+
+  <div class="toolbar">
+    <label>CEDIS:</label><select id="fCedis"><option value="TODOS">— Todos —</option></select>
+    <label>Región:</label><select id="fRegion"><option value="">— Todas —</option></select>
+    <input type="text" id="fBuscar" placeholder="Buscar Unidad Ejecutora..."/>
+    <label><input type="checkbox" id="fHoyMan"/> Solo entregas hoy/mañana</label>
+    <button class="btn sec" id="btnRefresh">↻ Actualizar</button>
+    <div class="spacer"></div>
+    <span class="count" id="cnt"></span>
+  </div>
+
+  <div class="leyenda">
+    <span><span class="dot p-asig"></span>Asignada</span>
+    <span><span class="dot p-pick"></span>Picking</span>
+    <span><span class="dot p-val"></span>Validada</span>
+    <span><span class="dot p-hand"></span>Hand-off</span>
+    <span><span class="dot p-fact"></span>Facturada</span>
+    <span><span class="dot p-desp"></span>Despachada</span>
+    <span><span class="dot p-dist"></span>Distribuida</span>
+  </div>
+
+  <div id="tabla"><div class="loading">Cargando tablero…</div></div>
+</div>
+
+<script>
+const WEBAPP_BASE = "https://script.google.com/macros/s/AKfycbyVHDQ8IuVHibz259AiEvZ-jUfVC7fxvSSqC-wfaiiq1_13C9_TK4dVtPK0SMW4sZoJ/exec";
+
+let DATA = null;
+let UES = [];
+let sortCol = null, sortDir = 1;
+
+function loadJsonp(url, timeoutMs){
+  return new Promise((resolve,reject)=>{
+    const cb='cb_'+Math.random().toString(36).slice(2);
+    const s=document.createElement('script'); let done=false;
+    const cleanup=()=>{try{delete window[cb];}catch(e){window[cb]=undefined;} if(s.parentNode)s.remove();};
+    const t=setTimeout(()=>{if(done)return;done=true;cleanup();reject(new Error('Timeout'));},timeoutMs||90000);
+    s.src=`${url}&callback=${cb}&_ts=${Date.now()}`;
+    s.onerror=()=>{if(done)return;done=true;clearTimeout(t);cleanup();reject(new Error('Script error'));};
+    window[cb]=(d)=>{if(done)return;done=true;clearTimeout(t);cleanup();resolve(d);};
+    document.body.appendChild(s);
+  });
+}
+
+async function cargar(){
+  document.getElementById('tabla').innerHTML='<div class="loading">Cargando tablero…</div>';
+  try{
+    const res=await loadJsonp(`${WEBAPP_BASE}?file=kanban_tablero&cedis=TODOS`);
+    DATA=res; UES=res.ues||[];
+    document.getElementById('gen').textContent='Actualizado: '+(res.generado||'')+' · Hoy: '+(res.diaHoy||'');
+    pintarKPIs(res.resumen);
+    pintarLatencia(res);
+    poblarFiltros();
+    render();
+  }catch(err){
+    document.getElementById('tabla').innerHTML='<div class="empty">Error al cargar: '+err.message+'</div>';
+  }
+}
+
+function pintarKPIs(r){
+  if(!r)return;
+  const set=(id,v)=>document.getElementById(id).textContent=(v||0).toLocaleString();
+  set('k_asig',r.ASIGNADO); set('k_pick',r.PICKING); set('k_val',r.VALIDADO);
+  set('k_hand',r.HANDOFF); set('k_fact',r.FACTURADO); set('k_desp',r.DESPACHADO); set('k_dist',r.DISTRIBUIDO);
+}
+function pintarLatencia(res){
+  const b=document.getElementById('latBanner');
+  if(res.latenciaFacturacion!=null){
+    b.style.display='flex';
+    document.getElementById('latVal').textContent=res.latenciaFacturacion.toFixed(1);
+    document.getElementById('latN').textContent='basado en '+res.latenciaN+' documentos con ambas marcas';
+  } else { b.style.display='none'; }
+}
+function poblarFiltros(){
+  const cedis=[...new Set(UES.map(u=>u.cedis))].sort();
+  const regs=[...new Set(UES.map(u=>u.region).filter(Boolean))].sort();
+  const sc=document.getElementById('fCedis'), sr=document.getElementById('fRegion');
+  const cc=sc.value, cr=sr.value;
+  sc.innerHTML='<option value="TODOS">— Todos —</option>'+cedis.map(c=>`<option>${c}</option>`).join('');
+  sr.innerHTML='<option value="">— Todas —</option>'+regs.map(r=>`<option>${r}</option>`).join('');
+  sc.value=cc||'TODOS'; sr.value=cr;
+}
+
+function filtrados(){
+  const fc=document.getElementById('fCedis').value;
+  const fr=document.getElementById('fRegion').value;
+  const q=document.getElementById('fBuscar').value.trim().toLowerCase();
+  const hm=document.getElementById('fHoyMan').checked;
+  let arr=UES.filter(u=>{
+    if(fc && fc!=='TODOS' && u.cedis!==fc) return false;
+    if(fr && u.region!==fr) return false;
+    if(q && !u.ue.toLowerCase().includes(q)) return false;
+    if(hm && !(u.entregaHoy||u.entregaManana)) return false;
+    return true;
+  });
+  if(sortCol){
+    arr=arr.slice().sort((a,b)=>{
+      let va,vb;
+      if(sortCol==='ue'){va=a.ue;vb=b.ue;}
+      else if(sortCol==='total'){va=a.total;vb=b.total;}
+      else if(sortCol==='pend'){va=(a.etapas.ASIGNADO+a.etapas.PICKING);vb=(b.etapas.ASIGNADO+b.etapas.PICKING);}
+      else {va=a.etapas[sortCol]||0;vb=b.etapas[sortCol]||0;}
+      if(va<vb)return -1*sortDir; if(va>vb)return 1*sortDir; return 0;
+    });
+  }
+  return arr;
+}
+
+function progBar(u){
+  const e=u.etapas, t=u.total||1;
+  const seg=(v,cls)=>v>0?`<span class="${cls}" style="width:${(v/t*100)}%" title="${v}"></span>`:'';
+  return `<div class="prog">${seg(e.ASIGNADO,'p-asig')}${seg(e.PICKING,'p-pick')}${seg(e.VALIDADO,'p-val')}${seg(e.HANDOFF,'p-hand')}${seg(e.FACTURADO,'p-fact')}${seg(e.DESPACHADO,'p-desp')}${seg(e.DISTRIBUIDO,'p-dist')}</div>`;
+}
+
+function render(){
+  const arr=filtrados();
+  document.getElementById('cnt').textContent=arr.length+' UE';
+  const cont=document.getElementById('tabla');
+  if(!arr.length){cont.innerHTML='<div class="empty">No hay UE con este filtro.</div>';return;}
+  const th=(lbl,col,cls)=>`<th class="${cls||''}" onclick="setSort('${col}')">${lbl}${sortCol===col?(sortDir>0?' ▲':' ▼'):''}</th>`;
+  let html=`<table class="ue"><thead><tr>
+    ${th('Unidad Ejecutora','ue')}
+    <th>Entrega</th>
+    ${th('Total','total','r')}
+    ${th('Pend.','pend','r')}
+    <th class="c">Progreso etapas</th>
+    ${th('Asig','ASIGNADO','r')}${th('Pick','PICKING','r')}${th('Val','VALIDADO','r')}
+    ${th('H-off','HANDOFF','r')}${th('Fact','FACTURADO','r')}${th('Dist','DISTRIBUIDO','r')}
+  </tr></thead><tbody>`;
+  arr.forEach(u=>{
+    const e=u.etapas;
+    const pend=e.ASIGNADO+e.PICKING;
+    let badge='';
+    if(u.entregaHoy) badge='<span class="badge-hoy">HOY</span>';
+    else if(u.entregaManana) badge='<span class="badge-man">MAÑANA</span>';
+    html+=`<tr>
+      <td><span class="ue-name">${u.ue}</span>${badge}<div class="ue-meta">${u.cedis} · ${u.categ||''}</div></td>
+      <td style="font-size:11px">${u.dias||'—'}</td>
+      <td class="n">${u.total}</td>
+      <td class="n ${pend>0?'pend-alert':''}">${pend}</td>
+      <td>${progBar(u)}</td>
+      <td class="n">${e.ASIGNADO}</td><td class="n">${e.PICKING}</td><td class="n">${e.VALIDADO}</td>
+      <td class="n">${e.HANDOFF}</td><td class="n">${e.FACTURADO}</td><td class="n">${e.DISTRIBUIDO}</td>
+    </tr>`;
+  });
+  html+='</tbody></table>';
+  cont.innerHTML=html;
+}
+
+function setSort(col){
+  if(sortCol===col) sortDir*=-1; else {sortCol=col; sortDir=1;}
+  render();
+}
+
+document.getElementById('btnRefresh').onclick=cargar;
+['fCedis','fRegion'].forEach(id=>document.getElementById(id).onchange=render);
+document.getElementById('fHoyMan').onchange=render;
+document.getElementById('fBuscar').oninput=render;
+
+cargar();
+</script>
+</body>
+</html>
