@@ -109,6 +109,32 @@
   .toast{position:fixed;top:66px;right:16px;background:var(--verde);color:#fff;padding:11px 16px;
     box-shadow:0 3px 10px rgba(0,0,0,.25);font-size:13px;z-index:99999;max-width:340px;}
   .toast.err{background:var(--rojo);}
+
+  /* Pestañas */
+  .tabs{display:flex;gap:2px;margin-bottom:12px;border-bottom:2px solid var(--azul2);}
+  .tab{padding:8px 18px;background:#dfe4ea;color:var(--azul2);cursor:pointer;font-size:13px;
+    font-weight:600;border:1px solid var(--bord);border-bottom:none;}
+  .tab.active{background:var(--azul2);color:#fff;}
+  .tabpane{display:none;}
+  .tabpane.active{display:block;}
+
+  /* Formulario captura manual */
+  .manual-box{background:#fff;border:1px solid var(--bord);padding:18px 20px;max-width:760px;}
+  .manual-box h2{font-size:14px;color:var(--azul2);margin:0 0 4px;}
+  .manual-box .hint{font-size:12px;color:var(--sub);margin:0 0 16px;}
+  .mform{display:grid;grid-template-columns:1fr 1fr;gap:12px 16px;}
+  .mfield{display:flex;flex-direction:column;gap:4px;}
+  .mfield.full{grid-column:1 / -1;}
+  .mfield label{font-size:11px;color:var(--sub);text-transform:uppercase;letter-spacing:.3px;}
+  .mfield input,.mfield select{padding:7px 9px;border:1px solid var(--bord);font-size:13px;}
+  .mfield .warn{font-size:11px;color:var(--ambar);min-height:14px;}
+  .grupos-pick{display:flex;flex-wrap:wrap;gap:6px;}
+  .gpick{font-size:11px;padding:4px 9px;border:1px solid var(--bord);cursor:pointer;background:#f4f4f4;user-select:none;}
+  .gpick.on{background:var(--azul);color:#fff;border-color:var(--azul2);}
+  .manual-actions{grid-column:1 / -1;display:flex;gap:10px;align-items:center;margin-top:6px;}
+  .manual-actions button{padding:9px 20px;background:var(--verde);color:#fff;border:none;font-weight:700;cursor:pointer;font-size:14px;}
+  .manual-actions button.sec{background:#fff;color:var(--azul2);border:1px solid var(--azul2);}
+  .origen-tag{font-size:8px;font-weight:700;padding:1px 5px;background:#faeeda;color:#854F0B;margin-left:6px;vertical-align:middle;}
 </style>
 </head>
 <body>
@@ -122,6 +148,13 @@
 </div>
 
 <div class="wrap">
+
+  <div class="tabs">
+    <div class="tab active" id="tabRecepcion" onclick="switchTab('recepcion')">Recepción</div>
+    <div class="tab" id="tabManual" onclick="switchTab('manual')">Captura Manual</div>
+  </div>
+
+  <div class="tabpane active" id="paneRecepcion">
 
   <div class="kpis">
     <div class="kpi"><div class="lbl">F8 Emitidas a la fecha</div><div class="val num" id="k_total">–</div></div>
@@ -154,9 +187,54 @@
   </div>
 
   <div id="lista"><div class="loading">Cargando documentos…</div></div>
+
+  </div><!-- fin paneRecepcion -->
+
+  <div class="tabpane" id="paneManual">
+    <div class="manual-box">
+      <h2>Captura Manual de Formas 8 no presentes en el sistema</h2>
+      <p class="hint">Para F8 que llegan físicamente pero no están en el WMS (típicamente Grupo 9 y 10, o UE pendientes de instalación). Se registran en el buffer como resumen, sin detalle de renglón.</p>
+      <div class="mform">
+        <div class="mfield">
+          <label>Nº Doc</label>
+          <input type="text" id="mNdoc" placeholder="Ej: 8085-2026-1-305" autocomplete="off"/>
+          <span class="warn" id="mWarn"></span>
+        </div>
+        <div class="mfield">
+          <label>Tipo</label>
+          <select id="mTipo">
+            <option>Urgencia</option>
+            <option>Mensual</option>
+            <option>Otro</option>
+          </select>
+        </div>
+        <div class="mfield">
+          <label>Fecha del documento (generado)</label>
+          <input type="date" id="mFecha"/>
+        </div>
+        <div class="mfield">
+          <label>Solicitado (total, opcional)</label>
+          <input type="text" id="mSol" placeholder="0" inputmode="numeric"/>
+        </div>
+        <div class="mfield full">
+          <label>Unidad Ejecutora</label>
+          <select id="mUE"><option value="">— Seleccione —</option></select>
+        </div>
+        <div class="mfield full">
+          <label>Grupo(s) — seleccione uno o varios</label>
+          <div class="grupos-pick" id="mGrupos"></div>
+        </div>
+        <div class="manual-actions">
+          <button id="btnManualSave">✔ Registrar en buffer</button>
+          <button class="sec" id="btnManualClear">Limpiar</button>
+        </div>
+      </div>
+    </div>
+  </div><!-- fin paneManual -->
+
 </div>
 
-<div class="actionbar">
+<div class="actionbar" id="actionbar">
   <div class="info">Seleccionados: <b id="selCount">0</b> Forma(s) 8</div>
   <button class="btn-conf" id="btnConfirmar" disabled>✔ Confirmar recepción en ventanilla</button>
 </div>
@@ -304,7 +382,7 @@ function render(){
       const grupos=d.grupos.map(g=>`<span class="gchip">${g.grupo} <span class="n">${g.renglones}</span></span>`).join('');
       html+=`<div class="doc-row${sel?' sel':''}" data-doc="${d.nDoc}" onclick="toggleSel('${d.nDoc}')">
         <span><input type="checkbox" class="chk" ${sel?'checked':''} onclick="event.stopPropagation();toggleSel('${d.nDoc}')"/></span>
-        <span class="ndoc">${d.nDoc}</span>
+        <span class="ndoc">${d.nDoc}${d.origen==='MANUAL'?'<span class="origen-tag">MANUAL</span>':''}</span>
         <span>${tipoTag(d.tipo)}</span>
         <span class="c num" style="font-size:11px">${d.fecha}</span>
         <span class="rgl">${d.renglones}</span>
@@ -345,20 +423,103 @@ document.getElementById('btnConfirmar').onclick=async ()=>{
     OPERATIVO=nom.trim();
   }
   const docs=[...SEL];
-  if(!confirm(`Confirmar recepción de ${docs.length} Forma(s) 8?\nOperativo: ${OPERATIVO}\nSe copiarán al BUFFER_F8.`))return;
   const btn=document.getElementById('btnConfirmar');
   btn.disabled=true;btn.textContent='Confirmando…';
+  // Quitar de la vista al instante (no esperar la recarga del panel completo)
+  DOCS=DOCS.filter(d=>!SEL.has(d.nDoc));
+  SEL.clear();
+  render();
   try{
     const url=`${WEBAPP_BASE}?file=buffer_confirmar&docs=${encodeURIComponent(docs.join(','))}&quien=${encodeURIComponent(OPERATIVO)}`;
-    const res=await loadJsonp(url);
+    const res=await loadJsonp(url, 45000);
     if(res&&res.ok){
       let msg=`✔ ${res.confirmados.length} F8 confirmadas (${res.renglones_insertados} renglones).`;
       if(res.omitidos_ya_asignados&&res.omitidos_ya_asignados.length)msg+=` ${res.omitidos_ya_asignados.length} ya asignadas.`;
       if(res.omitidos_ya_en_buffer&&res.omitidos_ya_en_buffer.length)msg+=` ${res.omitidos_ya_en_buffer.length} ya en buffer.`;
-      toast(msg);SEL.clear();await cargar();
-    }else{toast('No se pudo confirmar: '+((res&&res.msg)||'error'),true);}
-  }catch(err){toast('Error de red: '+err.message,true);}
+      toast(msg);
+    }else{
+      toast('No se pudo confirmar: '+((res&&res.msg)||'error')+' — actualice para reintentar',true);
+    }
+  }catch(err){
+    toast('Conexión lenta: se envió, verifique al actualizar. ('+err.message+')',true);
+  }
   finally{btn.textContent='✔ Confirmar recepción en ventanilla';syncBar();}
+};
+
+/* ===== Pestañas ===== */
+function switchTab(which){
+  const rec=which==='recepcion';
+  document.getElementById('tabRecepcion').classList.toggle('active',rec);
+  document.getElementById('tabManual').classList.toggle('active',!rec);
+  document.getElementById('paneRecepcion').classList.toggle('active',rec);
+  document.getElementById('paneManual').classList.toggle('active',!rec);
+  document.getElementById('actionbar').style.display=rec?'flex':'none';
+  if(!rec) poblarFormularioManual();
+}
+
+/* ===== Captura manual ===== */
+let GRUPOS_SEL = new Set();
+function poblarFormularioManual(){
+  const ues=[...new Set(DOCS.map(d=>d.puntoInfo))].sort();
+  const selUE=document.getElementById('mUE');
+  if(selUE.options.length<=1 && ues.length){
+    selUE.innerHTML='<option value="">— Seleccione —</option>'+ues.map(u=>`<option>${u}</option>`).join('');
+  }
+  const grupos=(PANEL&&PANEL.grupos)?PANEL.grupos:[];
+  const cont=document.getElementById('mGrupos');
+  if(!cont.dataset.filled && grupos.length){
+    cont.innerHTML=grupos.map(g=>`<span class="gpick" data-g="${g}" onclick="toggleGrupo('${g}',this)">${g}</span>`).join('');
+    cont.dataset.filled='1';
+  }
+}
+function toggleGrupo(g,el){
+  if(GRUPOS_SEL.has(g)){GRUPOS_SEL.delete(g);el.classList.remove('on');}
+  else {GRUPOS_SEL.add(g);el.classList.add('on');}
+}
+document.getElementById('mNdoc').oninput=function(){
+  const v=this.value.trim();
+  const w=document.getElementById('mWarn');
+  if(!v){w.textContent='';return;}
+  const patron=/^\d{3,4}-20\d{2}-\d-\d+$/;
+  w.textContent=patron.test(v)?'':'Formato inusual (se esperaría NNNN-2026-T-NNN). Puede guardar igual si es correcto.';
+};
+document.getElementById('btnManualClear').onclick=function(){
+  ['mNdoc','mSol'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('mFecha').value='';
+  document.getElementById('mUE').value='';
+  GRUPOS_SEL.clear();
+  document.querySelectorAll('#mGrupos .gpick.on').forEach(e=>e.classList.remove('on'));
+  document.getElementById('mWarn').textContent='';
+};
+document.getElementById('btnManualSave').onclick=async function(){
+  const ndoc=document.getElementById('mNdoc').value.trim();
+  const tipo=document.getElementById('mTipo').value;
+  const fecha=document.getElementById('mFecha').value;
+  const ue=document.getElementById('mUE').value;
+  const sol=document.getElementById('mSol').value.replace(/[^0-9.]/g,'')||'0';
+  const grupos=[...GRUPOS_SEL];
+  if(!ndoc){toast('Indique el Nº Doc.',true);return;}
+  if(!ue){toast('Seleccione la Unidad Ejecutora.',true);return;}
+  if(!grupos.length){toast('Seleccione al menos un grupo.',true);return;}
+  let quien=OPERATIVO;
+  if(!quien){const n=prompt('Nombre del operativo que captura:');if(!n||!n.trim()){toast('Cancelado: falta operativo.',true);return;}OPERATIVO=quien=n.trim();}
+  const btn=this; btn.disabled=true; btn.textContent='Registrando…';
+  // Guardar y liberar de inmediato: NO se recarga el panel (ventanilla de alto trafico).
+  const url=`${WEBAPP_BASE}?file=buffer_manual&ndoc=${encodeURIComponent(ndoc)}&tipo=${encodeURIComponent(tipo)}`
+    +`&fecha=${encodeURIComponent(fecha)}&ue=${encodeURIComponent(ue)}&grupos=${encodeURIComponent(grupos.join(','))}`
+    +`&solicitado=${encodeURIComponent(sol)}&quien=${encodeURIComponent(quien)}`;
+  try{
+    const res=await loadJsonp(url, 30000);
+    if(res&&res.ok){
+      toast(`✔ ${ndoc} registrada (${res.filas_insertadas} grupo/s)`);
+      document.getElementById('btnManualClear').click();
+      document.getElementById('mNdoc').focus();  // listo para la siguiente
+    }else{
+      toast('No se registró: '+((res&&res.msg)||'error'),true);
+    }
+  }catch(err){
+    toast('Conexión lenta: reintente. ('+err.message+')',true);
+  }finally{btn.disabled=false;btn.textContent='✔ Registrar en buffer';}
 };
 
 cargar();
