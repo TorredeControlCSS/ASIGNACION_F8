@@ -405,11 +405,6 @@ document.getElementById('btnSelNone').onclick=()=>{SEL.clear();render();};
 
 document.getElementById('btnConfirmar').onclick=async ()=>{
   if(!SEL.size)return;
-  if(!OPERATIVO){
-    const nom=prompt('Nombre del operativo que confirma la recepción:');
-    if(!nom||!nom.trim()){toast('Confirmación cancelada: falta el operativo.',true);return;}
-    OPERATIVO=nom.trim();
-  }
   const docs=[...SEL];
   const btn=document.getElementById('btnConfirmar');
   btn.disabled=true;btn.textContent='Confirmando…';
@@ -487,7 +482,6 @@ async function registrarManual(){
   if(!ue){toast('Seleccione la Unidad Ejecutora.',true);return;}
   if(!grupo){toast('Seleccione el grupo.',true);return;}
   let quien=OPERATIVO;
-  if(!quien){const n=prompt('Nombre del operativo que captura:');if(!n||!n.trim()){toast('Cancelado: falta operativo.',true);return;}OPERATIVO=quien=n.trim();}
   const btn=document.getElementById('btnManualSave');
   btn.disabled=true; btn.textContent='…';
   const url=`${WEBAPP_BASE}?file=buffer_manual&ndoc=${encodeURIComponent(ndoc)}&tipo=${encodeURIComponent(tipo)}`
