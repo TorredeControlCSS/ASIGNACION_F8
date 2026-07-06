@@ -6,7 +6,6 @@
 <title>Panel de Confirmación de Recepción — Formas 8</title>
 <link rel="icon" href="./favicon.ico?v=1"/>
 <link rel="shortcut icon" href="./favicon.ico?v=1"/>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
   :root{
     --azul:#1e5a9e; --azul2:#0C447C; --deg1:#0b1f3a; --deg2:#133a74;
@@ -23,41 +22,26 @@
   .topbar img{width:40px;height:40px;object-fit:contain;}
   .topbar h1{font-size:15px;margin:0;font-weight:700;}
   .topbar .sub{font-size:11px;opacity:.85;margin-top:2px;}
-  .topbar .spacer{flex:1;}
-  .topbar .quien{font-size:12px;}
-  .topbar .quien input{padding:5px 8px;border:1px solid rgba(255,255,255,.3);
-    background:rgba(255,255,255,.08);color:#fff;border-radius:3px;width:150px;}
-  .topbar .quien input::placeholder{color:rgba(255,255,255,.55);}
 
-  .wrap{max-width:1300px;margin:0 auto;padding:14px;}
+  .wrap{max-width:1200px;margin:0 auto;padding:14px;}
 
-  /* KPIs compactos */
   .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px;}
-  .kpi{background:#fff;border:1px solid var(--bord);padding:9px 12px;}
-  .kpi .lbl{font-size:10px;color:var(--sub);text-transform:uppercase;letter-spacing:.4px;}
+  .kpi{background:#fff;border:1px solid var(--bord);padding:9px 12px;border-left:4px solid var(--azul2);}
+  .kpi .lbl{font-size:10px;color:var(--sub);text-transform:uppercase;letter-spacing:.4px;min-height:24px;}
   .kpi .val{font-size:24px;font-weight:700;font-family:Consolas,monospace;color:var(--azul2);}
+  .kpi.pend{border-left-color:var(--ambar);} .kpi.pend .val{color:var(--ambar);}
+  .kpi.buf{border-left-color:var(--azul);} .kpi.buf .val{color:var(--azul);}
+  .kpi.asig{border-left-color:var(--verde);} .kpi.asig .val{color:var(--verde);}
 
-  /* Barra de llenado de estados */
   .flow{background:#fff;border:1px solid var(--bord);padding:12px 14px;margin-bottom:12px;}
   .flow h3{margin:0 0 10px;font-size:12px;color:var(--azul2);text-transform:uppercase;letter-spacing:.4px;}
-  .flow-bar{display:flex;height:34px;border:1px solid var(--bord);overflow:hidden;background:#f4f4f4;}
+  .flow-bar{display:flex;height:30px;border:1px solid var(--bord);overflow:hidden;background:#f4f4f4;}
   .flow-seg{display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;
-    font-weight:700;font-family:Consolas,monospace;min-width:2px;transition:width .4s;white-space:nowrap;overflow:hidden;}
-  .seg-pend{background:var(--ambar);}
-  .seg-buf{background:var(--azul);}
-  .seg-asig{background:var(--verde);}
+    font-weight:700;font-family:Consolas,monospace;min-width:2px;transition:width .4s;overflow:hidden;}
+  .seg-pend{background:var(--ambar);} .seg-buf{background:var(--azul);} .seg-asig{background:var(--verde);}
   .flow-leg{display:flex;gap:18px;margin-top:8px;font-size:11px;color:var(--sub);flex-wrap:wrap;}
   .flow-leg .dot{display:inline-block;width:10px;height:10px;margin-right:5px;vertical-align:middle;}
 
-  /* Layout: lista + panel grupos lateral */
-  .cols{display:grid;grid-template-columns:1fr 260px;gap:12px;align-items:start;}
-  @media(max-width:900px){.cols{grid-template-columns:1fr;}}
-
-  .grupo-side{background:#fff;border:1px solid var(--bord);padding:10px;position:sticky;top:64px;}
-  .grupo-side h3{margin:0 0 8px;font-size:12px;color:var(--azul2);text-transform:uppercase;letter-spacing:.4px;}
-  .grupo-side canvas{max-height:200px;}
-
-  /* Toolbar */
   .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:#fff;
     border:1px solid var(--bord);padding:9px 11px;margin-bottom:10px;}
   .toolbar label{font-size:11px;color:var(--sub);}
@@ -70,25 +54,30 @@
   .toolbar .spacer{flex:1;}
   .toolbar .count{font-size:11px;color:var(--sub);}
 
-  /* Acordeón por UE */
+  /* Acordeon por UE con barra de llenado en el encabezado */
   .ue-group{border:1px solid var(--bord);margin-bottom:8px;background:#fff;}
-  .ue-head{background:var(--azul2);color:#fff;padding:8px 12px;font-size:13px;font-weight:700;
-    display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;}
-  .ue-head .cnt{font-size:11px;font-weight:400;opacity:.9;font-family:Consolas,monospace;}
+  .ue-head{position:relative;color:#fff;padding:8px 12px;font-size:13px;font-weight:700;
+    display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;
+    background:var(--azul2);overflow:hidden;}
+  /* capa de llenado (se pinta por gradiente inline) */
+  .ue-fill{position:absolute;inset:0;z-index:0;opacity:.9;}
+  .ue-head > *{position:relative;z-index:1;}
+  .ue-head .cnt{font-size:11px;font-weight:400;font-family:Consolas,monospace;
+    background:rgba(0,0,0,.28);padding:2px 8px;border-radius:2px;}
   .ue-head .chev{font-size:10px;transition:transform .15s;margin-right:8px;}
   .ue-group.open .ue-head .chev{transform:rotate(90deg);}
   .ue-body{display:none;}
   .ue-group.open .ue-body{display:block;}
+  .ue-mini{font-size:10px;font-weight:400;opacity:.95;margin-left:10px;}
 
   .doc-headrow,.doc-row{display:grid;
-    grid-template-columns:34px 150px 110px 90px 70px 90px 1fr;gap:8px;align-items:center;}
+    grid-template-columns:34px 150px 100px 90px 60px 90px 1fr;gap:8px;align-items:center;}
   .doc-headrow{padding:5px 12px;font-size:10px;text-transform:uppercase;color:var(--sub);
     background:#fafafa;border-top:1px solid #eee;letter-spacing:.3px;}
   .doc-headrow .r{text-align:right;} .doc-headrow .c{text-align:center;}
   .doc-row{padding:6px 12px;border-top:1px solid #eee;font-size:12px;cursor:pointer;}
   .doc-row:hover{background:#f4f7fb;}
   .doc-row.sel{background:#eaf3ff;}
-  .doc-row.locked{opacity:.6;cursor:default;background:#fafafa;}
   .doc-row .chk{width:16px;height:16px;cursor:pointer;}
   .doc-row .ndoc{font-family:Consolas,monospace;font-weight:700;color:var(--azul2);}
   .doc-row .tag{font-size:9px;font-weight:700;padding:1px 6px;text-align:center;text-transform:uppercase;}
@@ -99,9 +88,6 @@
   .doc-row .grupos{display:flex;flex-wrap:wrap;gap:3px;}
   .gchip{background:#eef2f6;border:1px solid #d5dde5;padding:1px 5px;font-size:9px;color:var(--azul2);}
   .gchip .n{color:var(--sub);font-family:Consolas,monospace;}
-  .flag{font-size:9px;font-weight:700;padding:1px 5px;}
-  .flag-asig{background:#fdeaea;color:var(--rojo);}
-  .flag-buf{background:#eef7ee;color:var(--verde);}
 
   .empty{padding:36px;text-align:center;color:var(--sub);background:#fff;border:1px solid var(--bord);}
   .loading{padding:26px;text-align:center;color:var(--sub);}
@@ -127,42 +113,31 @@
     <h1>Panel de Confirmación de Recepción — Formas 8</h1>
     <div class="sub">Torre de Control · DINALOG / CEDIS · Ventanilla</div>
   </div>
-  <div class="spacer"></div>
-  <div class="quien"><span style="margin-right:6px;">Operativo:</span>
-    <input id="quien" type="text" placeholder="Su nombre / usuario"/></div>
 </div>
 
 <div class="wrap">
 
   <div class="kpis">
-    <div class="kpi"><div class="lbl">Documentos (sin transferencias)</div><div class="val num" id="k_total">–</div></div>
-    <div class="kpi"><div class="lbl">Pendientes de recibir</div><div class="val num" id="k_pend">–</div></div>
-    <div class="kpi"><div class="lbl">En Buffer (confirmados)</div><div class="val num" id="k_buf">–</div></div>
-    <div class="kpi"><div class="lbl">Ya asignados</div><div class="val num" id="k_asig">–</div></div>
+    <div class="kpi"><div class="lbl">F8 Emitidas a la fecha</div><div class="val num" id="k_total">–</div></div>
+    <div class="kpi pend"><div class="lbl">F8 Pendientes por recibir</div><div class="val num" id="k_pend">–</div></div>
+    <div class="kpi buf"><div class="lbl">F8 en Buffer (pend. asignación)</div><div class="val num" id="k_buf">–</div></div>
+    <div class="kpi asig"><div class="lbl">F8 Asignadas</div><div class="val num" id="k_asig">–</div></div>
   </div>
 
   <div class="flow">
-    <h3>Flujo de documentos por estado</h3>
+    <h3>Flujo de Formas 8 por estado</h3>
     <div class="flow-bar" id="flowBar"></div>
     <div class="flow-leg">
-      <span><span class="dot seg-pend"></span>Pendiente de recibir</span>
-      <span><span class="dot seg-buf"></span>Confirmado en buffer</span>
-      <span><span class="dot seg-asig"></span>Asignado (corte/histórico)</span>
+      <span><span class="dot seg-pend"></span>Pendiente por recibir</span>
+      <span><span class="dot seg-buf"></span>En buffer (pend. asignación)</span>
+      <span><span class="dot seg-asig"></span>Asignada</span>
     </div>
   </div>
 
   <div class="toolbar">
-    <label>CEDIS:</label>
-    <select id="fCedis"></select>
-    <label>Ver:</label>
-    <select id="fVer">
-      <option value="pendientes">Solo pendientes</option>
-      <option value="todos">Todos</option>
-    </select>
-    <label>Unidad Ejecutora:</label>
-    <select id="fUE"><option value="">— Todas —</option></select>
-    <label>Grupo:</label>
-    <select id="fGrupo"><option value="">— Todos —</option></select>
+    <label>CEDIS:</label><select id="fCedis"></select>
+    <label>Unidad Ejecutora:</label><select id="fUE"><option value="">— Todas —</option></select>
+    <label>Grupo:</label><select id="fGrupo"><option value="">— Todos —</option></select>
     <input type="text" id="fBuscar" placeholder="Buscar Nº Doc..."/>
     <button class="btn sec" id="btnRefresh">↻ Actualizar</button>
     <div class="spacer"></div>
@@ -172,35 +147,31 @@
     <span class="count" id="cnt"></span>
   </div>
 
-  <div class="cols">
-    <div id="lista"><div class="loading">Cargando documentos…</div></div>
-    <div class="grupo-side">
-      <h3>Documentos por Grupo</h3>
-      <canvas id="chGrupo"></canvas>
-    </div>
-  </div>
+  <div id="lista"><div class="loading">Cargando documentos…</div></div>
 </div>
 
 <div class="actionbar">
-  <div class="info">Seleccionados: <b id="selCount">0</b> documento(s)</div>
+  <div class="info">Seleccionados: <b id="selCount">0</b> Forma(s) 8</div>
   <button class="btn-conf" id="btnConfirmar" disabled>✔ Confirmar recepción en ventanilla</button>
 </div>
 
 <script>
 const WEBAPP_BASE = "https://script.google.com/macros/s/AKfycbyVHDQ8IuVHibz259AiEvZ-jUfVC7fxvSSqC-wfaiiq1_13C9_TK4dVtPK0SMW4sZoJ/exec";
 
-let DOCS = [];
+let PANEL = null;          // respuesta completa de buffer_panel
+let DOCS = [];             // docs pendientes a listar
+let POR_UE = {};           // metricas por UE (para colorear encabezados)
 const SEL = new Set();
-let chGrupo = null;
 let CEDIS_ACTUAL = "CEDIS PANAMA";
 let expandAll = false;
+let OPERATIVO = "";        // se pide al confirmar, se recuerda en sesion
 
 function loadJsonp(url, timeoutMs){
   return new Promise((resolve,reject)=>{
     const cb='cb_'+Math.random().toString(36).slice(2);
     const s=document.createElement('script'); let done=false;
     const cleanup=()=>{try{delete window[cb];}catch(e){window[cb]=undefined;} if(s.parentNode)s.remove();};
-    const t=setTimeout(()=>{if(done)return;done=true;cleanup();reject(new Error('Timeout'));},timeoutMs||60000);
+    const t=setTimeout(()=>{if(done)return;done=true;cleanup();reject(new Error('Timeout'));},timeoutMs||90000);
     s.src=`${url}&callback=${cb}&_ts=${Date.now()}`;
     s.onerror=()=>{if(done)return;done=true;clearTimeout(t);cleanup();reject(new Error('Script error'));};
     window[cb]=(d)=>{if(done)return;done=true;clearTimeout(t);cleanup();resolve(d);};
@@ -214,34 +185,29 @@ function tipoTag(tipo){const tl=(tipo||'').toLowerCase();
   return '<span class="tag tag-otr">'+(tipo||'—')+'</span>';}
 
 async function cargar(){
-  document.getElementById('lista').innerHTML='<div class="loading">Cargando documentos…</div>';
-  const ver=document.getElementById('fVer').value;
+  document.getElementById('lista').innerHTML='<div class="loading">Cargando… (la primera carga puede tardar unos segundos; luego queda en caché)</div>';
   const cedis=encodeURIComponent(CEDIS_ACTUAL);
   try{
-    const [pend, met] = await Promise.all([
-      loadJsonp(`${WEBAPP_BASE}?file=buffer_pendientes&ver=${ver}&cedis=${cedis}`),
-      loadJsonp(`${WEBAPP_BASE}?file=buffer_metricas&cedis=${cedis}`)
-    ]);
-    DOCS = (pend && pend.docs) ? pend.docs : [];
-    poblarCedis(met.cedisDisponibles || pend.cedisDisponibles);
-    poblarGrupos(pend.grupos || []);
-    pintarKPIs(met);
-    pintarFlow(met);
-    pintarGrupoChart(met);
+    const res = await loadJsonp(`${WEBAPP_BASE}?file=buffer_panel&ver=pendientes&cedis=${cedis}`);
+    PANEL = res;
+    DOCS = res.docs || [];
+    POR_UE = res.porUE || {};
+    poblarCedis(res.cedisDisponibles);
+    poblarGrupos(res.grupos || []);
     poblarUE();
+    pintarKPIs(res.resumen);
+    pintarFlow(res.resumen);
     render();
   }catch(err){
     document.getElementById('lista').innerHTML='<div class="empty">Error al cargar: '+err.message+'</div>';
-    toast('Error al cargar: '+err.message, true);
+    toast('Error: '+err.message, true);
   }
 }
 
 function poblarCedis(lista){
   const sel=document.getElementById('fCedis');
-  if(sel.options.length>0 && sel.dataset.filled) return; // solo una vez
-  const opts=['CEDIS PANAMA','CEDIS DIVISA','CEDIS CHIRIQUÍ','TODOS'];
-  // usar los que realmente existan + siempre TODOS
-  const disp=(lista&&lista.length)?lista.slice():[];
+  if(sel.dataset.filled) return;
+  const disp=(lista&&lista.length)?lista.slice():['CEDIS PANAMA'];
   if(disp.indexOf('TODOS')<0) disp.push('TODOS');
   sel.innerHTML=disp.map(c=>`<option value="${c}"${c===CEDIS_ACTUAL?' selected':''}>${c}</option>`).join('');
   sel.dataset.filled='1';
@@ -257,31 +223,32 @@ function poblarUE(){
   sel.innerHTML='<option value="">— Todas —</option>'+ues.map(u=>`<option>${u}</option>`).join('');
   sel.value=cur;
 }
-
-function pintarKPIs(met){
-  if(!met||!met.resumen)return; const r=met.resumen;
+function pintarKPIs(r){
+  if(!r)return;
   document.getElementById('k_total').textContent=r.docsTotal;
   document.getElementById('k_pend').textContent=r.pendientes;
   document.getElementById('k_buf').textContent=r.enBuffer;
   document.getElementById('k_asig').textContent=r.asignados;
 }
-function pintarFlow(met){
-  if(!met||!met.resumen)return; const r=met.resumen;
+function pintarFlow(r){
+  if(!r)return;
   const tot=r.pendientes+r.enBuffer+r.asignados || 1;
-  const bar=document.getElementById('flowBar');
   const seg=(v,cls,lbl)=>{const pct=(v/tot*100);return `<div class="flow-seg ${cls}" style="width:${pct}%" title="${lbl}: ${v}">${pct>7?v:''}</div>`;};
-  bar.innerHTML=seg(r.pendientes,'seg-pend','Pendientes')+seg(r.enBuffer,'seg-buf','Buffer')+seg(r.asignados,'seg-asig','Asignados');
+  document.getElementById('flowBar').innerHTML=
+    seg(r.pendientes,'seg-pend','Pendientes')+seg(r.enBuffer,'seg-buf','Buffer')+seg(r.asignados,'seg-asig','Asignadas');
 }
-function pintarGrupoChart(met){
-  const g=(met.porGrupo||[]).slice(0,12);
-  if(chGrupo) chGrupo.destroy();
-  chGrupo=new Chart(document.getElementById('chGrupo'),{
-    type:'bar',
-    data:{labels:g.map(x=>x.grupo),datasets:[{data:g.map(x=>x.docs),backgroundColor:'#1e5a9e'}]},
-    options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false},
-      tooltip:{callbacks:{label:c=>c.parsed.x+' docs'}}},
-      scales:{x:{ticks:{precision:0,font:{size:9}}},y:{ticks:{font:{size:9}}}}}
-  });
+
+/* Gradiente de llenado para el encabezado de UE segun proporcion de estados.
+   Orden: pendiente (ambar) -> buffer (azul) -> asignado (verde) */
+function ueFillStyle(u){
+  if(!u||!u.total) return 'background:var(--azul2)';
+  const p=u.pend/u.total*100, b=u.buf/u.total*100, a=u.asig/u.total*100;
+  const amb='#b5820a', azu='#1e5a9e', ver='#1c7c3a';
+  const s1=p, s2=p+b;
+  return `background:linear-gradient(90deg,`+
+    `${amb} 0%,${amb} ${s1}%,`+
+    `${azu} ${s1}%,${azu} ${s2}%,`+
+    `${ver} ${s2}%,${ver} 100%)`;
 }
 
 function filtrados(){
@@ -298,9 +265,9 @@ function filtrados(){
 
 function render(){
   const rows=filtrados();
-  document.getElementById('cnt').textContent=rows.length+' doc';
+  document.getElementById('cnt').textContent=rows.length+' F8 pendientes';
   const cont=document.getElementById('lista');
-  if(!rows.length){cont.innerHTML='<div class="empty">No hay documentos con este filtro.</div>';syncBar();return;}
+  if(!rows.length){cont.innerHTML='<div class="empty">No hay Formas 8 pendientes con este filtro.</div>';syncBar();return;}
 
   const byUE=new Map();
   rows.forEach(d=>{if(!byUE.has(d.puntoInfo))byUE.set(d.puntoInfo,[]);byUE.get(d.puntoInfo).push(d);});
@@ -309,23 +276,22 @@ function render(){
   [...byUE.keys()].sort().forEach((ue,gi)=>{
     const list=byUE.get(ue);
     const open=expandAll||gi===0;
+    const u=POR_UE[ue]||{pend:list.length,buf:0,asig:0,total:list.length};
+    const mini=`<span class="ue-mini">P:${u.pend} · B:${u.buf} · A:${u.asig}</span>`;
     html+=`<div class="ue-group${open?' open':''}">
       <div class="ue-head" onclick="this.parentNode.classList.toggle('open')">
-        <span><span class="chev">▶</span>${ue||'SIN UE'}</span>
-        <span class="cnt">${list.length} doc</span>
+        <div class="ue-fill" style="${ueFillStyle(u)}"></div>
+        <span><span class="chev">▶</span>${ue||'SIN UE'}${mini}</span>
+        <span class="cnt">${list.length} pend · ${u.total} total</span>
       </div>
       <div class="ue-body">
         <div class="doc-headrow"><span></span><span>Nº Doc</span><span>Tipo</span>
           <span class="c">Fecha</span><span class="r">Rgl</span><span class="r">Solicitado</span><span>Grupos</span></div>`;
     list.forEach(d=>{
       const sel=SEL.has(d.nDoc);
-      const locked=d.yaAsignado||d.yaBuffer;
       const grupos=d.grupos.map(g=>`<span class="gchip">${g.grupo} <span class="n">${g.renglones}</span></span>`).join('');
-      let flag='';
-      if(d.yaAsignado)flag='<span class="flag flag-asig">ASIGNADO</span>';
-      else if(d.yaBuffer)flag='<span class="flag flag-buf">BUFFER</span>';
-      html+=`<div class="doc-row${sel?' sel':''}${locked?' locked':''}" data-doc="${d.nDoc}" ${locked?'':`onclick="toggleSel('${d.nDoc}')"`}>
-        <span>${locked?flag:`<input type="checkbox" class="chk" ${sel?'checked':''} onclick="event.stopPropagation();toggleSel('${d.nDoc}')"/>`}</span>
+      html+=`<div class="doc-row${sel?' sel':''}" data-doc="${d.nDoc}" onclick="toggleSel('${d.nDoc}')">
+        <span><input type="checkbox" class="chk" ${sel?'checked':''} onclick="event.stopPropagation();toggleSel('${d.nDoc}')"/></span>
         <span class="ndoc">${d.nDoc}</span>
         <span>${tipoTag(d.tipo)}</span>
         <span class="c num" style="font-size:11px">${d.fecha}</span>
@@ -341,8 +307,6 @@ function render(){
 }
 
 function toggleSel(doc){
-  const d=DOCS.find(x=>x.nDoc===doc);
-  if(d && (d.yaAsignado||d.yaBuffer)) return;
   if(SEL.has(doc))SEL.delete(doc); else SEL.add(doc);
   const row=document.querySelector(`.doc-row[data-doc="${CSS.escape(doc)}"]`);
   if(row){row.classList.toggle('sel',SEL.has(doc));const c=row.querySelector('.chk');if(c)c.checked=SEL.has(doc);}
@@ -354,28 +318,30 @@ function syncBar(){
 }
 
 document.getElementById('fCedis').onchange=e=>{CEDIS_ACTUAL=e.target.value;SEL.clear();cargar();};
-document.getElementById('fVer').onchange=cargar;
 document.getElementById('btnRefresh').onclick=cargar;
 ['fUE','fGrupo'].forEach(id=>document.getElementById(id).onchange=render);
 document.getElementById('fBuscar').oninput=render;
 document.getElementById('btnExpand').onclick=function(){expandAll=!expandAll;this.textContent=expandAll?'Colapsar todo':'Expandir todo';render();};
-document.getElementById('btnSelAll').onclick=()=>{filtrados().forEach(d=>{if(!d.yaAsignado&&!d.yaBuffer)SEL.add(d.nDoc);});render();};
+document.getElementById('btnSelAll').onclick=()=>{filtrados().forEach(d=>SEL.add(d.nDoc));render();};
 document.getElementById('btnSelNone').onclick=()=>{SEL.clear();render();};
 
 document.getElementById('btnConfirmar').onclick=async ()=>{
   if(!SEL.size)return;
-  const quien=document.getElementById('quien').value.trim();
-  if(!quien){toast('Indique el nombre del operativo.',true);document.getElementById('quien').focus();return;}
+  if(!OPERATIVO){
+    const nom=prompt('Nombre del operativo que confirma la recepción:');
+    if(!nom||!nom.trim()){toast('Confirmación cancelada: falta el operativo.',true);return;}
+    OPERATIVO=nom.trim();
+  }
   const docs=[...SEL];
-  if(!confirm(`Confirmar recepción de ${docs.length} documento(s)?\nSe copiarán al BUFFER_F8.`))return;
+  if(!confirm(`Confirmar recepción de ${docs.length} Forma(s) 8?\nOperativo: ${OPERATIVO}\nSe copiarán al BUFFER_F8.`))return;
   const btn=document.getElementById('btnConfirmar');
   btn.disabled=true;btn.textContent='Confirmando…';
   try{
-    const url=`${WEBAPP_BASE}?file=buffer_confirmar&docs=${encodeURIComponent(docs.join(','))}&quien=${encodeURIComponent(quien)}`;
+    const url=`${WEBAPP_BASE}?file=buffer_confirmar&docs=${encodeURIComponent(docs.join(','))}&quien=${encodeURIComponent(OPERATIVO)}`;
     const res=await loadJsonp(url);
     if(res&&res.ok){
-      let msg=`✔ ${res.confirmados.length} doc confirmados (${res.renglones_insertados} renglones).`;
-      if(res.omitidos_ya_asignados&&res.omitidos_ya_asignados.length)msg+=` ${res.omitidos_ya_asignados.length} ya asignados.`;
+      let msg=`✔ ${res.confirmados.length} F8 confirmadas (${res.renglones_insertados} renglones).`;
+      if(res.omitidos_ya_asignados&&res.omitidos_ya_asignados.length)msg+=` ${res.omitidos_ya_asignados.length} ya asignadas.`;
       if(res.omitidos_ya_en_buffer&&res.omitidos_ya_en_buffer.length)msg+=` ${res.omitidos_ya_en_buffer.length} ya en buffer.`;
       toast(msg);SEL.clear();await cargar();
     }else{toast('No se pudo confirmar: '+((res&&res.msg)||'error'),true);}
