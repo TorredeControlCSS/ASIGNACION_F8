@@ -29,7 +29,7 @@
   .kpi{background:#fff;border:1px solid var(--bord);padding:9px 12px;border-left:4px solid var(--azul2);}
   .kpi .lbl{font-size:10px;color:var(--sub);text-transform:uppercase;letter-spacing:.4px;min-height:24px;}
   .kpi .val{font-size:24px;font-weight:700;font-family:Consolas,monospace;color:var(--azul2);}
-  .kpi.pend{border-left-color:var(--ambar);} .kpi.pend .val{color:var(--ambar);}
+  .kpi.pend{border-left-color:var(--rojo);} .kpi.pend .val{color:var(--rojo);}
   .kpi.buf{border-left-color:var(--azul);} .kpi.buf .val{color:var(--azul);}
   .kpi.asig{border-left-color:var(--verde);} .kpi.asig .val{color:var(--verde);}
 
@@ -38,7 +38,7 @@
   .flow-bar{display:flex;height:30px;border:1px solid var(--bord);overflow:hidden;background:#f4f4f4;}
   .flow-seg{display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;
     font-weight:700;font-family:Consolas,monospace;min-width:2px;transition:width .4s;overflow:hidden;}
-  .seg-pend{background:var(--ambar);} .seg-buf{background:var(--azul);} .seg-asig{background:var(--verde);}
+  .seg-pend{background:var(--rojo);} .seg-buf{background:var(--azul);} .seg-asig{background:var(--verde);}
   .flow-leg{display:flex;gap:18px;margin-top:8px;font-size:11px;color:var(--sub);flex-wrap:wrap;}
   .flow-leg .dot{display:inline-block;width:10px;height:10px;margin-right:5px;vertical-align:middle;}
 
@@ -57,18 +57,24 @@
   /* Acordeon por UE con barra de llenado en el encabezado */
   .ue-group{border:1px solid var(--bord);margin-bottom:8px;background:#fff;}
   .ue-head{position:relative;color:#fff;padding:8px 12px;font-size:13px;font-weight:700;
-    display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;
+    display:flex;justify-content:flex-start;align-items:center;cursor:pointer;user-select:none;
     background:var(--azul2);overflow:hidden;}
   /* capa de llenado (se pinta por gradiente inline) */
   .ue-fill{position:absolute;inset:0;z-index:0;opacity:.9;}
   .ue-head > *{position:relative;z-index:1;}
-  .ue-head .cnt{font-size:11px;font-weight:400;font-family:Consolas,monospace;
-    background:rgba(0,0,0,.28);padding:2px 8px;border-radius:2px;}
+  .ue-head .ue-name{text-align:left;}
+  .ue-head .spacer{flex:1;}
   .ue-head .chev{font-size:10px;transition:transform .15s;margin-right:8px;}
   .ue-group.open .ue-head .chev{transform:rotate(90deg);}
   .ue-body{display:none;}
   .ue-group.open .ue-body{display:block;}
-  .ue-mini{font-size:10px;font-weight:400;opacity:.95;margin-left:10px;}
+  /* Chips de estado por UE (con color) */
+  .ue-stats{display:flex;gap:6px;align-items:center;font-family:Consolas,monospace;font-weight:700;font-size:11px;}
+  .ue-stat{padding:2px 8px;border-radius:2px;color:#fff;white-space:nowrap;}
+  .ue-stat.p{background:var(--rojo);}
+  .ue-stat.b{background:var(--azul);}
+  .ue-stat.a{background:var(--verde);}
+  .ue-stat.t{background:rgba(0,0,0,.32);}
 
   .doc-headrow,.doc-row{display:grid;
     grid-template-columns:34px 150px 100px 90px 60px 90px 1fr;gap:8px;align-items:center;}
@@ -185,7 +191,7 @@ function tipoTag(tipo){const tl=(tipo||'').toLowerCase();
   return '<span class="tag tag-otr">'+(tipo||'—')+'</span>';}
 
 async function cargar(){
-  document.getElementById('lista').innerHTML='<div class="loading">Cargando… (la primera carga puede tardar unos segundos; luego queda en caché)</div>';
+  document.getElementById('lista').innerHTML='<div class="loading">Cargando documentos…</div>';
   const cedis=encodeURIComponent(CEDIS_ACTUAL);
   try{
     const res = await loadJsonp(`${WEBAPP_BASE}?file=buffer_panel&ver=pendientes&cedis=${cedis}`);
@@ -242,11 +248,11 @@ function pintarFlow(r){
    Orden: pendiente (ambar) -> buffer (azul) -> asignado (verde) */
 function ueFillStyle(u){
   if(!u||!u.total) return 'background:var(--azul2)';
-  const p=u.pend/u.total*100, b=u.buf/u.total*100, a=u.asig/u.total*100;
-  const amb='#b5820a', azu='#1e5a9e', ver='#1c7c3a';
+  const p=u.pend/u.total*100, b=u.buf/u.total*100;
+  const roj='#a12626', azu='#1e5a9e', ver='#1c7c3a';
   const s1=p, s2=p+b;
   return `background:linear-gradient(90deg,`+
-    `${amb} 0%,${amb} ${s1}%,`+
+    `${roj} 0%,${roj} ${s1}%,`+
     `${azu} ${s1}%,${azu} ${s2}%,`+
     `${ver} ${s2}%,${ver} 100%)`;
 }
@@ -277,12 +283,18 @@ function render(){
     const list=byUE.get(ue);
     const open=expandAll||gi===0;
     const u=POR_UE[ue]||{pend:list.length,buf:0,asig:0,total:list.length};
-    const mini=`<span class="ue-mini">P:${u.pend} · B:${u.buf} · A:${u.asig}</span>`;
     html+=`<div class="ue-group${open?' open':''}">
       <div class="ue-head" onclick="this.parentNode.classList.toggle('open')">
         <div class="ue-fill" style="${ueFillStyle(u)}"></div>
-        <span><span class="chev">▶</span>${ue||'SIN UE'}${mini}</span>
-        <span class="cnt">${list.length} pend · ${u.total} total</span>
+        <span class="chev">▶</span>
+        <span class="ue-name">${ue||'SIN UE'}</span>
+        <span class="spacer"></span>
+        <span class="ue-stats">
+          <span class="ue-stat p" title="Pendientes de recepción en ventanilla">PEND ${u.pend}</span>
+          <span class="ue-stat b" title="En buffer">BUF ${u.buf}</span>
+          <span class="ue-stat a" title="Asignadas">ASIG ${u.asig}</span>
+          <span class="ue-stat t" title="Total F8 emitidas">TOTAL ${u.total}</span>
+        </span>
       </div>
       <div class="ue-body">
         <div class="doc-headrow"><span></span><span>Nº Doc</span><span>Tipo</span>
