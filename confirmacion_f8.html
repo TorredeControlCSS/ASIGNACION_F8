@@ -413,10 +413,10 @@ document.getElementById('btnConfirmar').onclick=async ()=>{
   SEL.clear();
   render();
   try{
-    const url=`${WEBAPP_BASE}?file=buffer_confirmar&docs=${encodeURIComponent(docs.join(','))}&quien=${encodeURIComponent(OPERATIVO)}`;
+    const url=`${WEBAPP_BASE}?file=buffer_confirmar&docs=${encodeURIComponent(docs.join(','))}&quien=VENTANILLA`;
     const res=await loadJsonp(url, 45000);
     if(res&&res.ok){
-      let msg=`✔ ${res.confirmados.length} F8 confirmadas (${res.renglones_insertados} renglones).`;
+      let msg=`✔ ${res.confirmados.length} F8 confirmadas.`;
       if(res.omitidos_ya_asignados&&res.omitidos_ya_asignados.length)msg+=` ${res.omitidos_ya_asignados.length} ya asignadas.`;
       if(res.omitidos_ya_en_buffer&&res.omitidos_ya_en_buffer.length)msg+=` ${res.omitidos_ya_en_buffer.length} ya en buffer.`;
       toast(msg);
@@ -481,7 +481,7 @@ async function registrarManual(){
   if(!ndoc){toast('Indique el Nº Doc.',true);document.getElementById('mNdoc').focus();return;}
   if(!ue){toast('Seleccione la Unidad Ejecutora.',true);return;}
   if(!grupo){toast('Seleccione el grupo.',true);return;}
-  let quien=OPERATIVO;
+  let quien='VENTANILLA';
   const btn=document.getElementById('btnManualSave');
   btn.disabled=true; btn.textContent='…';
   const url=`${WEBAPP_BASE}?file=buffer_manual&ndoc=${encodeURIComponent(ndoc)}&tipo=${encodeURIComponent(tipo)}`
