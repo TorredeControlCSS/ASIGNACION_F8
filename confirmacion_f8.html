@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Panel de Confirmación de Recepción — Formas 8</title>
+<link rel="icon" href="./favicon.ico?v=1"/>
+<link rel="shortcut icon" href="./favicon.ico?v=1"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --azul:#1e5a9e; --azul-osc:#0C447C; --azul-deg1:#0b1f3a; --azul-deg2:#133a74;
+    --bg:#ececec; --linea:#a8a8a8; --txt:#20303f;
+    --verde:#1c7c3a; --ambar:#b5820a; --rojo:#a12626; --gris:#6b7684;
+  }
+  *{box-sizing:border-box;}
+  body{font-family:Arial,Helvetica,sans-serif;margin:0;background:var(--bg);color:var(--txt);}
+  .num{font-family:Consolas,"Courier New",monospace;}
+
+  /* Topbar institucional */
+  .topbar{display:flex;align-items:center;gap:14px;padding:10px 18px;
+    background:linear-gradient(90deg,var(--azul-deg1),var(--azul-deg2));
+    color:#fff;position:sticky;top:0;z-index:9999;box-shadow:0 2px 4px rgba(0,0,0,.2);}
+  .topbar img{width:42px;height:42px;object-fit:contain;background:transparent;}
+  .topbar h1{font-size:16px;margin:0;font-weight:700;letter-spacing:.3px;}
+  .topbar .sub{font-size:11px;opacity:.85;margin-top:2px;}
+  .topbar .spacer{flex:1;}
+  .topbar .quien{font-size:12px;}
+  .topbar .quien input{padding:5px 8px;border:1px solid rgba(255,255,255,.3);
+    background:rgba(255,255,255,.08);color:#fff;border-radius:4px;width:150px;}
+  .topbar .quien input::placeholder{color:rgba(255,255,255,.6);}
+
+  .wrap{max-width:1400px;margin:0 auto;padding:16px;}
+
+  /* KPIs */
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px;}
+  .kpi{background:#fff;border:1px solid var(--linea);border-radius:4px;padding:12px 14px;}
+  .kpi .lbl{font-size:11px;color:var(--gris);text-transform:uppercase;letter-spacing:.5px;}
+  .kpi .val{font-size:28px;font-weight:700;font-family:Consolas,monospace;color:var(--azul-osc);margin-top:2px;}
+  .kpi .per{font-size:10px;color:var(--gris);}
+
+  /* Toolbar */
+  .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;background:#fff;
+    border:1px solid var(--linea);border-radius:4px;padding:10px 12px;margin-bottom:14px;}
+  .toolbar label{font-size:12px;color:var(--gris);}
+  .toolbar select,.toolbar input[type=text]{padding:6px 8px;border:1px solid var(--linea);
+    border-radius:4px;font-size:13px;min-width:150px;}
+  .toolbar .btn{padding:7px 14px;border:1px solid var(--azul-osc);background:var(--azul);
+    color:#fff;border-radius:4px;cursor:pointer;font-size:13px;font-weight:600;}
+  .toolbar .btn.sec{background:#fff;color:var(--azul-osc);}
+  .toolbar .btn:disabled{opacity:.5;cursor:not-allowed;}
+  .toolbar .spacer{flex:1;}
+  .toolbar .count{font-size:12px;color:var(--gris);}
+
+  /* Grupos por UE */
+  .ue-block{background:#fff;border:1px solid var(--linea);border-radius:4px;margin-bottom:14px;overflow:hidden;}
+  .ue-head{display:flex;align-items:center;gap:10px;padding:9px 14px;
+    background:var(--azul-osc);color:#fff;cursor:pointer;user-select:none;}
+  .ue-head .ue-name{font-weight:700;font-size:14px;flex:1;}
+  .ue-head .ue-badge{background:rgba(255,255,255,.2);padding:2px 9px;border-radius:10px;
+    font-size:12px;font-family:Consolas,monospace;}
+  .ue-head .chevron{transition:transform .15s;font-size:12px;}
+  .ue-head.collapsed .chevron{transform:rotate(-90deg);}
+
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;padding:12px;}
+  .doc-card{border:1px solid var(--linea);border-radius:4px;padding:10px 12px;
+    background:#fdfdfd;position:relative;transition:box-shadow .12s,border-color .12s;}
+  .doc-card.sel{border-color:var(--azul);box-shadow:0 0 0 2px rgba(30,90,158,.25);background:#f2f8ff;}
+  .doc-card .chk{position:absolute;top:10px;right:10px;width:18px;height:18px;cursor:pointer;}
+  .doc-card .ndoc{font-weight:700;font-size:14px;font-family:Consolas,monospace;color:var(--azul-osc);}
+  .doc-card .meta{font-size:11px;color:var(--gris);margin:3px 0 8px;}
+  .doc-card .meta .tag{display:inline-block;padding:1px 7px;border-radius:8px;font-size:10px;
+    font-weight:700;margin-right:5px;text-transform:uppercase;}
+  .tag.urg{background:#fbe3e3;color:var(--rojo);}
+  .tag.tra{background:#e3eefb;color:var(--azul-osc);}
+  .tag.otr{background:#eee;color:var(--gris);}
+  .doc-card .stats{display:flex;gap:14px;font-size:11px;color:var(--txt);margin-bottom:8px;}
+  .doc-card .stats b{font-family:Consolas,monospace;}
+  .doc-card .grupos{display:flex;flex-wrap:wrap;gap:4px;}
+  .doc-card .gchip{background:#eef2f6;border:1px solid #d5dde5;border-radius:3px;
+    padding:1px 6px;font-size:10px;color:var(--azul-osc);}
+  .doc-card .gchip .n{color:var(--gris);font-family:Consolas,monospace;}
+  .doc-card .flag{font-size:10px;font-weight:700;padding:2px 6px;border-radius:3px;margin-top:6px;display:inline-block;}
+  .flag.asig{background:#fdeaea;color:var(--rojo);}
+  .flag.buf{background:#eef7ee;color:var(--verde);}
+
+  /* Charts */
+  .charts{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;}
+  .chart-box{background:#fff;border:1px solid var(--linea);border-radius:4px;padding:12px;}
+  .chart-box h3{margin:0 0 10px;font-size:13px;color:var(--azul-osc);
+    border-bottom:1px solid #e5e5e5;padding-bottom:6px;}
+  .chart-box canvas{max-height:240px;}
+
+  .empty{padding:40px;text-align:center;color:var(--gris);background:#fff;border:1px solid var(--linea);border-radius:4px;}
+  .loading{padding:30px;text-align:center;color:var(--gris);}
+
+  /* Barra de acción flotante */
+  .actionbar{position:sticky;bottom:0;background:#fff;border-top:2px solid var(--azul);
+    padding:10px 16px;display:flex;align-items:center;gap:14px;box-shadow:0 -2px 6px rgba(0,0,0,.1);
+    z-index:900;}
+  .actionbar .info{font-size:13px;flex:1;}
+  .actionbar .info b{color:var(--azul-osc);font-family:Consolas,monospace;}
+  .actionbar .btn-conf{padding:9px 22px;background:var(--verde);color:#fff;border:none;
+    border-radius:4px;font-weight:700;cursor:pointer;font-size:14px;}
+  .actionbar .btn-conf:disabled{opacity:.4;cursor:not-allowed;}
+
+  @media(max-width:800px){.charts{grid-template-columns:1fr;}}
+  .toast{position:fixed;top:70px;right:16px;background:var(--verde);color:#fff;padding:12px 18px;
+    border-radius:4px;box-shadow:0 3px 10px rgba(0,0,0,.25);font-size:13px;z-index:99999;max-width:340px;}
+  .toast.err{background:var(--rojo);}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <img src="./icons/icon-512.png" alt="logo"/>
+  <div>
+    <h1>Panel de Confirmación de Recepción — Formas 8</h1>
+    <div class="sub">Torre de Control · DINALOG / CEDIS · Ventanilla</div>
+  </div>
+  <div class="spacer"></div>
+  <div class="quien">
+    <span style="margin-right:6px;">Operativo:</span>
+    <input id="quien" type="text" placeholder="Su nombre / usuario"/>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="kpis" id="kpis">
+    <div class="kpi"><div class="lbl">Docs. en Requisiciones</div><div class="val num" id="k_total">–</div><div class="per">Total descargado del WMS</div></div>
+    <div class="kpi"><div class="lbl">Pendientes de recibir</div><div class="val num" id="k_pend">–</div><div class="per">No confirmados / no asignados</div></div>
+    <div class="kpi"><div class="lbl">En Buffer (confirmados)</div><div class="val num" id="k_buf">–</div><div class="per">Listos para F8_DETALLE</div></div>
+    <div class="kpi"><div class="lbl">Ya asignados</div><div class="val num" id="k_asig">–</div><div class="per">En corte / histórico</div></div>
+  </div>
+
+  <div class="charts">
+    <div class="chart-box"><h3>Pendientes por Unidad Ejecutora (Top 12)</h3><canvas id="chUE"></canvas></div>
+    <div class="chart-box"><h3>Documentos por Grupo (dominante)</h3><canvas id="chGrupo"></canvas></div>
+  </div>
+
+  <div class="toolbar">
+    <label>Ver:</label>
+    <select id="fVer">
+      <option value="pendientes">Solo pendientes</option>
+      <option value="todos">Todos (incluye buffer/asignados)</option>
+    </select>
+    <label>Unidad Ejecutora:</label>
+    <select id="fUE"><option value="">— Todas —</option></select>
+    <label>Tipo:</label>
+    <select id="fTipo"><option value="">— Todos —</option></select>
+    <input type="text" id="fBuscar" placeholder="Buscar Nº Doc..."/>
+    <button class="btn sec" id="btnRefresh">↻ Actualizar</button>
+    <div class="spacer"></div>
+    <button class="btn sec" id="btnSelAll">Sel. visibles</button>
+    <button class="btn sec" id="btnSelNone">Limpiar</button>
+    <span class="count" id="cnt"></span>
+  </div>
+
+  <div id="lista"><div class="loading">Cargando documentos…</div></div>
+</div>
+
+<div class="actionbar">
+  <div class="info">Seleccionados: <b id="selCount">0</b> documento(s)</div>
+  <button class="btn-conf" id="btnConfirmar" disabled>✔ Confirmar recepción en ventanilla</button>
+</div>
+
+<script>
+/* ============================================================
+   CONFIGURACIÓN — misma WebApp del Motor de Asignaciones
+   ============================================================ */
+const WEBAPP_BASE = "https://script.google.com/macros/s/AKfycbyVHDQ8IuVHibz259AiEvZ-jUfVC7fxvSSqC-wfaiiq1_13C9_TK4dVtPK0SMW4sZoJ/exec";
+
+let DOCS = [];              // documentos crudos del endpoint
+const SEL = new Set();      // Nº Doc seleccionados
+let chUE = null, chGrupo = null;
+
+/* --- JSONP idéntico al patrón del index --- */
+function loadJsonp(url, timeoutMs){
+  return new Promise((resolve,reject)=>{
+    const cb='cb_'+Math.random().toString(36).slice(2);
+    const s=document.createElement('script');
+    let done=false;
+    const cleanup=()=>{try{delete window[cb];}catch(e){window[cb]=undefined;} if(s.parentNode)s.remove();};
+    const t=setTimeout(()=>{if(done)return;done=true;cleanup();reject(new Error('Timeout'));},timeoutMs||60000);
+    s.src=`${url}&callback=${cb}&_ts=${Date.now()}`;
+    s.onerror=()=>{if(done)return;done=true;clearTimeout(t);cleanup();reject(new Error('Script error'));};
+    window[cb]=(d)=>{if(done)return;done=true;clearTimeout(t);cleanup();resolve(d);};
+    document.body.appendChild(s);
+  });
+}
+
+function toast(msg, isErr){
+  const t=document.createElement('div');
+  t.className='toast'+(isErr?' err':'');
+  t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),4500);
+}
+
+function tipoTag(tipo){
+  const tl=(tipo||'').toLowerCase();
+  if(tl.includes('urgen')) return '<span class="tag urg">Urgencia</span>';
+  if(tl.includes('trasf')||tl.includes('transf')) return '<span class="tag tra">Transferencia</span>';
+  return '<span class="tag otr">'+(tipo||'—')+'</span>';
+}
+
+/* ============================================================
+   CARGA DE DATOS
+   ============================================================ */
+async function cargar(){
+  document.getElementById('lista').innerHTML='<div class="loading">Cargando documentos…</div>';
+  const ver=document.getElementById('fVer').value;
+  try{
+    const [pend, met] = await Promise.all([
+      loadJsonp(`${WEBAPP_BASE}?file=buffer_pendientes&ver=${ver}`),
+      loadJsonp(`${WEBAPP_BASE}?file=buffer_metricas`)
+    ]);
+    DOCS = (pend && pend.docs) ? pend.docs : [];
+    pintarKPIs(met);
+    pintarCharts(met);
+    poblarFiltros();
+    render();
+  }catch(err){
+    document.getElementById('lista').innerHTML='<div class="empty">Error al cargar: '+err.message+'</div>';
+    toast('Error al cargar datos: '+err.message, true);
+  }
+}
+
+function pintarKPIs(met){
+  if(!met||!met.resumen) return;
+  const r=met.resumen;
+  document.getElementById('k_total').textContent=r.docsTotal;
+  document.getElementById('k_pend').textContent=r.pendientes;
+  document.getElementById('k_buf').textContent=r.enBuffer;
+  document.getElementById('k_asig').textContent=r.asignados;
+}
+
+function pintarCharts(met){
+  if(!met) return;
+  // Top 12 UE por pendientes
+  const ue=(met.porUE||[]).filter(u=>u.pendientes>0).slice(0,12);
+  const uLabels=ue.map(u=>u.ue.length>28?u.ue.slice(0,28)+'…':u.ue);
+  const uData=ue.map(u=>u.pendientes);
+  if(chUE) chUE.destroy();
+  chUE=new Chart(document.getElementById('chUE'),{
+    type:'bar',
+    data:{labels:uLabels,datasets:[{label:'Pendientes',data:uData,backgroundColor:'#1e5a9e'}]},
+    options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false}},
+      scales:{x:{ticks:{precision:0}}}}
+  });
+  // Grupos
+  const g=(met.porGrupo||[]).slice(0,10);
+  if(chGrupo) chGrupo.destroy();
+  chGrupo=new Chart(document.getElementById('chGrupo'),{
+    type:'bar',
+    data:{labels:g.map(x=>x.grupo),datasets:[{label:'Documentos',data:g.map(x=>x.docs),backgroundColor:'#0C447C'}]},
+    options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{ticks:{precision:0}}}}
+  });
+}
+
+function poblarFiltros(){
+  const ues=[...new Set(DOCS.map(d=>d.puntoInfo))].sort();
+  const tipos=[...new Set(DOCS.map(d=>d.tipo))].sort();
+  const selUE=document.getElementById('fUE'), selT=document.getElementById('fTipo');
+  const curUE=selUE.value, curT=selT.value;
+  selUE.innerHTML='<option value="">— Todas —</option>'+ues.map(u=>`<option>${u}</option>`).join('');
+  selT.innerHTML='<option value="">— Todos —</option>'+tipos.map(t=>`<option>${t}</option>`).join('');
+  selUE.value=curUE; selT.value=curT;
+}
+
+/* ============================================================
+   RENDER (agrupado por UE, colapsable)
+   ============================================================ */
+function filtrados(){
+  const fUE=document.getElementById('fUE').value;
+  const fT=document.getElementById('fTipo').value;
+  const q=document.getElementById('fBuscar').value.trim().toLowerCase();
+  return DOCS.filter(d=>{
+    if(fUE && d.puntoInfo!==fUE) return false;
+    if(fT && d.tipo!==fT) return false;
+    if(q && !d.nDoc.toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+
+function render(){
+  const rows=filtrados();
+  document.getElementById('cnt').textContent=rows.length+' documento(s)';
+  const cont=document.getElementById('lista');
+  if(!rows.length){ cont.innerHTML='<div class="empty">No hay documentos que coincidan con el filtro.</div>'; syncActionbar(); return; }
+
+  // agrupar por UE
+  const byUE=new Map();
+  rows.forEach(d=>{ if(!byUE.has(d.puntoInfo)) byUE.set(d.puntoInfo,[]); byUE.get(d.puntoInfo).push(d); });
+
+  let html='';
+  [...byUE.keys()].sort().forEach(ue=>{
+    const list=byUE.get(ue);
+    html+=`<div class="ue-block">
+      <div class="ue-head" onclick="this.classList.toggle('collapsed');this.nextElementSibling.style.display=this.classList.contains('collapsed')?'none':'grid';">
+        <span class="chevron">▼</span>
+        <span class="ue-name">${ue||'SIN UE'}</span>
+        <span class="ue-badge num">${list.length} doc</span>
+      </div>
+      <div class="cards">`;
+    list.forEach(d=>{
+      const sel=SEL.has(d.nDoc);
+      const bloqueado=d.yaAsignado||d.yaBuffer;
+      const grupos=d.grupos.map(g=>`<span class="gchip">${g.grupo} <span class="n">${g.renglones}</span></span>`).join('');
+      let flag='';
+      if(d.yaAsignado) flag='<span class="flag asig">YA ASIGNADO</span>';
+      else if(d.yaBuffer) flag='<span class="flag buf">EN BUFFER</span>';
+      html+=`<div class="doc-card ${sel?'sel':''}" data-doc="${d.nDoc}">
+        ${bloqueado?'':`<input type="checkbox" class="chk" ${sel?'checked':''} onchange="toggleSel('${d.nDoc}',this.checked)"/>`}
+        <div class="ndoc">${d.nDoc}</div>
+        <div class="meta">${tipoTag(d.tipo)} · ${d.fecha}</div>
+        <div class="stats"><span>Renglones: <b>${d.renglones}</b></span><span>Solicitado: <b>${d.cantidad.toLocaleString()}</b></span></div>
+        <div class="grupos">${grupos}</div>
+        ${flag}
+      </div>`;
+    });
+    html+=`</div></div>`;
+  });
+  cont.innerHTML=html;
+  syncActionbar();
+}
+
+function toggleSel(doc, on){
+  if(on) SEL.add(doc); else SEL.delete(doc);
+  const card=document.querySelector(`.doc-card[data-doc="${CSS.escape(doc)}"]`);
+  if(card) card.classList.toggle('sel', on);
+  syncActionbar();
+}
+
+function syncActionbar(){
+  document.getElementById('selCount').textContent=SEL.size;
+  document.getElementById('btnConfirmar').disabled=SEL.size===0;
+}
+
+/* ============================================================
+   ACCIONES
+   ============================================================ */
+document.getElementById('btnSelAll').onclick=()=>{
+  filtrados().forEach(d=>{ if(!d.yaAsignado && !d.yaBuffer) SEL.add(d.nDoc); });
+  render();
+};
+document.getElementById('btnSelNone').onclick=()=>{ SEL.clear(); render(); };
+document.getElementById('btnRefresh').onclick=cargar;
+document.getElementById('fVer').onchange=cargar;
+['fUE','fTipo'].forEach(id=>document.getElementById(id).onchange=render);
+document.getElementById('fBuscar').oninput=render;
+
+document.getElementById('btnConfirmar').onclick=async ()=>{
+  if(!SEL.size) return;
+  const quien=document.getElementById('quien').value.trim();
+  if(!quien){ toast('Indique el nombre del operativo de ventanilla.', true); document.getElementById('quien').focus(); return; }
+  const docs=[...SEL];
+  if(!confirm(`Confirmar recepción de ${docs.length} documento(s) en ventanilla?\nSe copiarán al BUFFER_F8.`)) return;
+
+  const btn=document.getElementById('btnConfirmar');
+  btn.disabled=true; btn.textContent='Confirmando…';
+  try{
+    const url=`${WEBAPP_BASE}?file=buffer_confirmar&docs=${encodeURIComponent(docs.join(','))}&quien=${encodeURIComponent(quien)}`;
+    const res=await loadJsonp(url);
+    if(res && res.ok){
+      let msg=`✔ ${res.confirmados.length} doc confirmados (${res.renglones_insertados} renglones al buffer).`;
+      if(res.omitidos_ya_asignados && res.omitidos_ya_asignados.length) msg+=` ${res.omitidos_ya_asignados.length} omitidos (ya asignados).`;
+      if(res.omitidos_ya_en_buffer && res.omitidos_ya_en_buffer.length) msg+=` ${res.omitidos_ya_en_buffer.length} ya en buffer.`;
+      toast(msg);
+      SEL.clear();
+      await cargar();
+    }else{
+      toast('No se pudo confirmar: '+((res&&res.msg)||'error'), true);
+    }
+  }catch(err){
+    toast('Error de red: '+err.message, true);
+  }finally{
+    btn.textContent='✔ Confirmar recepción en ventanilla';
+    syncActionbar();
+  }
+};
+
+/* Persistir nombre del operativo en memoria de sesión (sin storage de navegador) */
+cargar();
+</script>
+</body>
+</html>
