@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Confirmación de Recepción de Formas 8</title>
+<title>Panel de Confirmación de Recepción de Formas 8</title>
 <link rel="icon" href="./favicon.ico?v=1"/>
 <link rel="shortcut icon" href="./favicon.ico?v=1"/>
 <style>
@@ -405,19 +405,24 @@ document.getElementById('btnSelNone').onclick=()=>{SEL.clear();render();};
 
 document.getElementById('btnConfirmar').onclick=async ()=>{
   if(!SEL.size)return;
-  const docs=[...SEL];
+  // Construir payload con los datos que ya tenemos de cada doc (evita lectura en backend)
+  const seleccionados=DOCS.filter(d=>SEL.has(d.nDoc)).map(d=>({
+    nDoc:d.nDoc, tipo:d.tipo, fecha:d.fecha, ue:d.puntoInfo,
+    cedis:d.cedis, cantidad:d.cantidad,
+    grupos:(d.grupos||[]).map(g=>g.grupo)
+  }));
   const btn=document.getElementById('btnConfirmar');
   btn.disabled=true;btn.textContent='Confirmando…';
-  // Quitar de la vista al instante (no esperar la recarga del panel completo)
+  // Quitar de la vista al instante
   DOCS=DOCS.filter(d=>!SEL.has(d.nDoc));
   SEL.clear();
   render();
   try{
-    const url=`${WEBAPP_BASE}?file=buffer_confirmar&docs=${encodeURIComponent(docs.join(','))}&quien=VENTANILLA`;
+    const payload=encodeURIComponent(JSON.stringify(seleccionados));
+    const url=`${WEBAPP_BASE}?file=buffer_confirmar&payload=${payload}&quien=VENTANILLA`;
     const res=await loadJsonp(url, 45000);
     if(res&&res.ok){
       let msg=`✔ ${res.confirmados.length} F8 confirmadas.`;
-      if(res.omitidos_ya_asignados&&res.omitidos_ya_asignados.length)msg+=` ${res.omitidos_ya_asignados.length} ya asignadas.`;
       if(res.omitidos_ya_en_buffer&&res.omitidos_ya_en_buffer.length)msg+=` ${res.omitidos_ya_en_buffer.length} ya en buffer.`;
       toast(msg);
     }else{
