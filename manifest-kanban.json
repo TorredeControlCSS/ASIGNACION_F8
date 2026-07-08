@@ -1,0 +1,13 @@
+{
+  "name": "Torre de Control — Reporte de Pedidos",
+  "short_name": "Reporte F8",
+  "description": "Reporte de seguimiento de pedidos del almacén · DINALOG/CEDIS",
+  "start_url": "./kanban_reporte.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ececec",
+  "theme_color": "#0C447C",
+  "icons": [
+    { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
