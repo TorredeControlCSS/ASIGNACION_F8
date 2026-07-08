@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>Torre de Control — Reporte de Pedidos</title>
+<link rel="icon" href="./favicon.ico?v=1"/>
+<link rel="manifest" href="./manifest-kanban.json"/>
+<meta name="theme-color" content="#0C447C"/>
+<style>
+  :root{
+    --azul:#1e5a9e; --azul2:#0C447C; --deg1:#0b1f3a; --deg2:#133a74;
+    --bg:#ececec; --card:#ffffff; --bord:#a8a8a8; --txt:#20303f; --sub:#6b7684;
+    --ok:#1c7c3a; --okbg:#e7f4ec; --rojo:#a12626; --rojobg:#fcebeb;
+    --amar:#EF9F27; --amarbg:#fdf3e2;
+    --urg:#a12626; --men:#1e5a9e;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--txt);
+    display:flex;flex-direction:column;min-height:100vh;}
+  .num{font-family:Consolas,"Courier New",monospace;}
+  button{font-family:inherit;cursor:pointer;border:none;}
+
+  /* ---------- Topbar ---------- */
+  .top{display:flex;align-items:center;gap:12px;padding:10px 16px;
+    background:linear-gradient(90deg,var(--deg1),var(--deg2));color:#fff;
+    position:sticky;top:0;z-index:100;box-shadow:0 2px 6px rgba(0,0,0,.25);}
+  .top img{width:34px;height:34px;object-fit:contain;}
+  .top .who{flex:1;min-width:0;}
+  .top .who .n{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .top .who .r{font-size:10px;opacity:.8;text-transform:uppercase;letter-spacing:.4px;}
+  .top .conn{font-size:9px;padding:3px 8px;border-radius:10px;font-weight:700;}
+  .conn.on{background:rgba(255,255,255,.15);} .conn.off{background:var(--rojo);}
+  .top .out{background:rgba(255,255,255,.12);color:#fff;padding:6px 10px;border-radius:4px;font-size:11px;}
+
+  /* ---------- Login ---------- */
+  .login{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;}
+  .login .logo{width:72px;height:72px;margin-bottom:14px;}
+  .login h1{font-size:17px;margin:0 0 2px;color:var(--azul2);text-align:center;}
+  .login .sub{font-size:12px;color:var(--sub);margin-bottom:26px;text-align:center;}
+  .pinbox{background:var(--card);border:1px solid var(--bord);padding:22px;width:100%;max-width:320px;}
+  .pindisplay{display:flex;gap:8px;justify-content:center;margin-bottom:18px;}
+  .pindot{width:14px;height:14px;border-radius:50%;border:2px solid var(--azul2);}
+  .pindot.f{background:var(--azul2);}
+  .keys{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+  .keys button{aspect-ratio:1;font-size:22px;font-weight:600;background:#f4f7fb;
+    border:1px solid var(--bord);color:var(--azul2);border-radius:6px;}
+  .keys button:active{background:var(--azul);color:#fff;}
+  .keys .wide{grid-column:span 1;font-size:14px;}
+  .loginmsg{color:var(--rojo);font-size:12px;text-align:center;min-height:16px;margin-top:12px;}
+  .stationlink{margin-top:22px;font-size:11px;color:var(--sub);text-decoration:underline;background:none;}
+
+  /* ---------- App shell ---------- */
+  .app{flex:1;display:none;flex-direction:column;}
+  .app.show{display:flex;}
+  .tabs{display:flex;background:var(--card);border-bottom:1px solid var(--bord);overflow-x:auto;}
+  .tabs button{flex:1;min-width:96px;padding:11px 8px;font-size:11px;font-weight:700;
+    background:none;color:var(--sub);border-bottom:3px solid transparent;text-transform:uppercase;letter-spacing:.3px;}
+  .tabs button.on{color:var(--azul2);border-bottom-color:var(--azul);}
+  .tabs button .badge{display:inline-block;min-width:18px;padding:1px 5px;margin-left:4px;
+    background:var(--rojo);color:#fff;border-radius:9px;font-size:10px;font-family:Consolas,monospace;}
+
+  .toolbar{display:flex;gap:8px;padding:10px 14px;background:#e4e8ee;align-items:center;flex-wrap:wrap;}
+  .toolbar input{flex:1;min-width:120px;padding:8px 10px;border:1px solid var(--bord);font-size:13px;}
+  .toolbar .rc{font-size:11px;color:var(--sub);font-family:Consolas,monospace;}
+  .toolbar select{padding:7px;border:1px solid var(--bord);font-size:12px;}
+
+  .list{flex:1;overflow-y:auto;padding:12px 14px 90px;}
+  .card{background:var(--card);border:1px solid var(--bord);border-left:4px solid var(--men);
+    padding:12px 14px;margin-bottom:10px;}
+  .card.urg{border-left-color:var(--urg);}
+  .card .r1{display:flex;align-items:center;gap:8px;margin-bottom:4px;}
+  .card .f8{font-family:Consolas,monospace;font-weight:700;font-size:15px;color:var(--azul2);}
+  .card .tp{font-size:9px;font-weight:700;padding:2px 7px;border-radius:3px;text-transform:uppercase;}
+  .tp.urg{background:var(--rojobg);color:var(--urg);} .tp.men{background:#e8f0f9;color:var(--men);}
+  .card .grp{font-size:10px;color:var(--sub);margin-left:auto;font-family:Consolas,monospace;}
+  .card .ue{font-size:13px;font-weight:600;margin-bottom:2px;}
+  .card .meta{font-size:11px;color:var(--sub);display:flex;gap:12px;margin-bottom:10px;}
+  .card .meta .num{color:var(--txt);}
+  .card .flag{display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;background:var(--amarbg);color:#854F0B;margin-left:6px;}
+  .card .act{width:100%;padding:12px;background:var(--azul);color:#fff;font-size:14px;font-weight:700;
+    border-radius:5px;text-transform:uppercase;letter-spacing:.4px;}
+  .card .act:active{background:var(--azul2);}
+  .card .act.done{background:var(--okbg);color:var(--ok);pointer-events:none;}
+  .card .act.pending{background:var(--amar);}
+  .card .stage{font-size:10px;color:var(--sub);text-transform:uppercase;letter-spacing:.3px;margin-bottom:8px;}
+
+  .empty{padding:50px 20px;text-align:center;color:var(--sub);font-size:13px;}
+  .loading{padding:40px;text-align:center;color:var(--sub);}
+  .spinner{width:26px;height:26px;border:3px solid #ddd;border-top-color:var(--azul);
+    border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 10px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  /* ---------- Toast ---------- */
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(80px);
+    background:var(--azul2);color:#fff;padding:12px 20px;border-radius:6px;font-size:13px;font-weight:600;
+    box-shadow:0 4px 14px rgba(0,0,0,.3);z-index:2000;transition:transform .25s;max-width:90%;text-align:center;}
+  .toast.show{transform:translateX(-50%) translateY(0);}
+  .toast.ok{background:var(--ok);} .toast.err{background:var(--rojo);}
+
+  /* ---------- Offline queue banner ---------- */
+  .qbanner{background:var(--amarbg);color:#854F0B;font-size:11px;padding:6px 14px;text-align:center;
+    border-bottom:1px solid var(--amar);display:none;}
+  .qbanner.show{display:block;}
+
+  /* ---------- Station mode (70") ---------- */
+  body.station{background:#0b1f3a;}
+  .station .top{padding:16px 28px;}
+  .station .top img{width:48px;height:48px;}
+  .station .top .who .n{font-size:22px;}
+  .station-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;color:#fff;}
+  .station-wrap h2{font-size:28px;margin:0 0 8px;}
+  .station-wrap .hint{font-size:15px;opacity:.7;margin-bottom:30px;}
+  .scanbox{background:#fff;border-radius:12px;padding:24px;width:100%;max-width:520px;color:var(--txt);}
+  .scanbox input{width:100%;padding:18px;font-size:24px;font-family:Consolas,monospace;text-align:center;
+    border:2px solid var(--azul);border-radius:8px;letter-spacing:1px;}
+  .scanbox .lbl{font-size:13px;color:var(--sub);text-align:center;margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px;}
+  .station-feed{margin-top:24px;width:100%;max-width:520px;}
+  .feed-item{background:rgba(255,255,255,.1);color:#fff;padding:12px 16px;border-radius:6px;margin-bottom:8px;
+    font-size:15px;display:flex;justify-content:space-between;align-items:center;}
+  .feed-item .fok{color:#7ee2a0;font-weight:700;}
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<div class="login" id="loginView">
+  <img class="logo" src="./icons/icon-512.png" alt="CSS"/>
+  <h1>Torre de Control</h1>
+  <div class="sub">Reporte de seguimiento de pedidos · DINALOG</div>
+  <div class="pinbox">
+    <div class="pindisplay" id="pinDisplay"></div>
+    <div class="keys" id="keys"></div>
+    <div class="loginmsg" id="loginMsg"></div>
+  </div>
+  <button class="stationlink" id="toStation">Usar como estación de escaneo (pantalla del almacén)</button>
+</div>
+
+<!-- ============ APP ============ -->
+<div class="app" id="appView">
+  <div class="top">
+    <img src="./icons/icon-512.png" alt="CSS"/>
+    <div class="who"><div class="n" id="uName">—</div><div class="r" id="uRole">—</div></div>
+    <span class="conn on" id="conn">EN LÍNEA</span>
+    <button class="out" id="btnOut">Salir</button>
+  </div>
+  <div class="qbanner" id="qBanner"></div>
+  <div class="tabs" id="tabs"></div>
+  <div class="toolbar">
+    <input type="text" id="search" placeholder="Buscar F8 o Unidad Ejecutora…"/>
+    <select id="fTipo"><option value="">Todos</option><option value="URGENCIA">Urgencia</option><option value="MENSUAL">Mensual</option></select>
+    <span class="rc" id="rowCount"></span>
+  </div>
+  <div class="list" id="list"><div class="loading"><div class="spinner"></div>Cargando pedidos…</div></div>
+</div>
+
+<!-- ============ STATION ============ -->
+<div class="app" id="stationView" style="display:none">
+  <div class="top">
+    <img src="./icons/icon-512.png" alt="CSS"/>
+    <div class="who"><div class="n">Estación de Hand-off</div><div class="r">Escaneo de documentos · Torre de Control</div></div>
+    <span class="conn on" id="connS">EN LÍNEA</span>
+    <button class="out" id="btnOutS">Cerrar</button>
+  </div>
+  <div class="station-wrap">
+    <h2>Escanea el documento</h2>
+    <div class="hint">Enfoca el QR de la Forma 8 o escribe el número y presiona Enter</div>
+    <div class="scanbox">
+      <div class="lbl">Número de Forma 8</div>
+      <input type="text" id="scanInput" placeholder="8037-2026-1-132" autocomplete="off"/>
+    </div>
+    <div class="station-feed" id="stationFeed"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const WEBAPP = "https://script.google.com/macros/s/AKfycbyVHDQ8IuVHibz259AiEvZ-jUfVC7fxvSSqC-wfaiiq1_13C9_TK4dVtPK0SMW4sZoJ/exec";
+
+// ---- Estado ----
+let USER = null;          // {nombre, rol, funcion, panel, grupos, subgrupo}
+let PIN = "";
+let PEDIDOS = [];
+let CURRENT_STAGE = null;  // etapa activa de la pestaña
+let STAGES = [];           // etapas que este rol reporta
+const QKEY = "kb_offline_queue";
+
+// ---- Contrato: qué etapa marca cada panel/rol, en orden ----
+// Cada panel expone las etapas que ESE actor reporta. La PWA muestra una
+// pestaña por etapa "de entrada" (los pedidos que están listos para que él actúe).
+const PANEL_STAGES = {
+  // capturador: recibe el documento (hand-off) y confirma recolección
+  CAPTURADOR: [
+    {from:'ASIGNADA',            mark:'HANDOFF_CAPTURADOR', tab:'Por recibir',    action:'Recibí el documento'},
+    {from:'HANDOFF_CAPTURADOR',  mark:'RECOLECTADA',        tab:'Por recolectar', action:'Confirmar recolección'}
+  ],
+  ALMACENISTA: [
+    {from:'RECOLECTADA',         mark:'PICKING',            tab:'Por pickear',    action:'Picking hecho'}
+  ],
+  FACTURACION: [
+    {from:'PICKING',             mark:'HANDOFF_FACTURACION',tab:'Por recibir',    action:'Recibí para facturar'}
+  ],
+  DISTRIBUCION: [
+    {from:'FACTURACIÓN',         mark:'EMPACADO',           tab:'Por empacar',    action:'Empacado'},
+    {from:'EMPACADO',            mark:'DISTRIBUCIÓN',        tab:'Por distribuir', action:'Distribuido (salida WMS)'},
+    {from:'DISTRIBUCIÓN',        mark:'DESPACHADO',          tab:'Por despachar',  action:'Despachado'},
+    {from:'DESPACHADO',          mark:'ENTREGADO',           tab:'Por entregar',   action:'Entregado en UE'}
+  ]
+};
+
+// ================= LOGIN =================
+function buildKeys(){
+  const k=document.getElementById('keys');
+  const nums=['1','2','3','4','5','6','7','8','9','C','0','⌫'];
+  k.innerHTML='';
+  nums.forEach(n=>{
+    const b=document.createElement('button');
+    b.textContent=n; b.className='wide';
+    b.onclick=()=>pressKey(n);
+    k.appendChild(b);
+  });
+  renderPin();
+}
+function renderPin(){
+  const d=document.getElementById('pinDisplay'); d.innerHTML='';
+  const len=Math.max(4, PIN.length);
+  for(let i=0;i<len;i++){
+    const s=document.createElement('div');
+    s.className='pindot'+(i<PIN.length?' f':'');
+    d.appendChild(s);
+  }
+}
+function pressKey(n){
+  if(n==='C'){ PIN=''; }
+  else if(n==='⌫'){ PIN=PIN.slice(0,-1); }
+  else if(PIN.length<8){ PIN+=n; }
+  renderPin();
+  document.getElementById('loginMsg').textContent='';
+  if(PIN.length>=4 && (n!=='C'&&n!=='⌫')) { /* auto-try at 4+ only on explicit? we try on 4 */ }
+  if(PIN.length===4) tryLogin();
+}
+async function tryLogin(){
+  const msg=document.getElementById('loginMsg');
+  msg.textContent='Verificando…'; msg.style.color='#6b7684';
+  try{
+    const res=await jsonp(`${WEBAPP}?file=kanban_login&pin=${encodeURIComponent(PIN)}`);
+    if(!res.ok){ msg.style.color='#a12626'; msg.textContent=res.msg||'PIN incorrecto'; PIN=''; renderPin(); return; }
+    if(res.panel==='NINGUNO'){ msg.style.color='#a12626'; msg.textContent='Este PIN no tiene panel de reporte asignado.'; PIN=''; renderPin(); return; }
+    USER=res;
+    sessionStorage.setItem('kb_user', JSON.stringify(res));
+    enterApp();
+  }catch(e){
+    msg.style.color='#a12626'; msg.textContent='Sin conexión. Intenta de nuevo.'; PIN='';
+    renderPin();
+  }
+}
+
+// ================= APP =================
+function enterApp(){
+  document.getElementById('loginView').style.display='none';
+  document.getElementById('appView').classList.add('show');
+  document.getElementById('uName').textContent=USER.nombre;
+  document.getElementById('uRole').textContent=(USER.rol||'')+' · '+(USER.funcion||'');
+  // Supervisión ve el tablero, no reporta: mensaje
+  if(USER.panel==='TABLERO'){
+    STAGES=[];
+    document.getElementById('tabs').innerHTML='';
+    document.getElementById('list').innerHTML='<div class="empty">Tu rol es de supervisión.<br>Usa el <b>Tablero Maestro</b> para ver el panorama por Unidad Ejecutora.</div>';
+    document.querySelector('.toolbar').style.display='none';
+    return;
+  }
+  STAGES = PANEL_STAGES[USER.panel] || [];
+  if(!STAGES.length){
+    document.getElementById('list').innerHTML='<div class="empty">No hay etapas de reporte para tu función.</div>';
+    return;
+  }
+  buildTabs();
+  CURRENT_STAGE = STAGES[0];
+  loadPedidos();
+}
+
+function buildTabs(){
+  const t=document.getElementById('tabs'); t.innerHTML='';
+  STAGES.forEach((s,i)=>{
+    const b=document.createElement('button');
+    b.className=(i===0?'on':'');
+    b.innerHTML=s.tab+' <span class="badge" id="badge'+i+'">·</span>';
+    b.onclick=()=>{ CURRENT_STAGE=s; [...t.children].forEach(c=>c.classList.remove('on')); b.classList.add('on'); render(); };
+    t.appendChild(b);
+  });
+}
+
+async function loadPedidos(){
+  document.getElementById('list').innerHTML='<div class="loading"><div class="spinner"></div>Cargando pedidos…</div>';
+  try{
+    // pedir todos los pedidos de los grupos del usuario (una sola llamada; filtramos por etapa en cliente)
+    const grupos = encodeURIComponent(USER.grupos||'');
+    const res=await jsonp(`${WEBAPP}?file=kanban_pedidos&grupos=${grupos}`);
+    PEDIDOS = res.pedidos||[];
+    updateBadges();
+    render();
+    flushQueue();
+  }catch(e){
+    document.getElementById('list').innerHTML='<div class="empty">No se pudieron cargar los pedidos.<br>Revisa tu conexión y reintenta.</div>';
+  }
+}
+
+function updateBadges(){
+  STAGES.forEach((s,i)=>{
+    const n=PEDIDOS.filter(p=>p.etapa===s.from).length;
+    const b=document.getElementById('badge'+i);
+    if(b){ b.textContent=n; b.style.display=n>0?'inline-block':'none'; }
+  });
+}
+
+function render(){
+  const s=CURRENT_STAGE; if(!s) return;
+  const q=(document.getElementById('search').value||'').trim().toLowerCase();
+  const ft=document.getElementById('fTipo').value;
+  let arr=PEDIDOS.filter(p=>p.etapa===s.from);
+  if(ft) arr=arr.filter(p=>(p.tipo||'').toUpperCase()===ft);
+  if(q) arr=arr.filter(p=>p.id.toLowerCase().includes(q)||(p.ue||'').toLowerCase().includes(q));
+  document.getElementById('rowCount').textContent=arr.length+' pedidos';
+  const list=document.getElementById('list');
+  if(!arr.length){ list.innerHTML='<div class="empty">Nada pendiente en esta etapa. Buen trabajo.</div>'; return; }
+  list.innerHTML='';
+  arr.forEach(p=>{
+    const urg=(p.tipo||'').toUpperCase().indexOf('URG')>=0;
+    const c=document.createElement('div');
+    c.className='card'+(urg?' urg':'');
+    c.innerHTML=`
+      <div class="stage">${s.tab}</div>
+      <div class="r1">
+        <span class="f8">${p.id}</span>
+        <span class="tp ${urg?'urg':'men'}">${urg?'Urgencia':'Mensual'}</span>
+        <span class="grp">${p.grupo||''}</span>
+      </div>
+      <div class="ue">${p.ue||''}</div>
+      <div class="meta"><span>Ítems asignados: <b class="num">${p.itemsAsig||0}</b></span></div>
+      <button class="act" data-id="${p.id}" data-grupo="${p.grupo||''}">${s.action}</button>`;
+    c.querySelector('.act').onclick=(ev)=>marcar(ev.target, p, s);
+    list.appendChild(c);
+  });
+}
+
+async function marcar(btn, p, stage){
+  btn.classList.add('done'); btn.textContent='✓ '+stage.action;
+  const payload={ id:p.id, grupo:p.grupo||'', etapa:stage.mark, quien:USER.nombre };
+  const ok = await enviarMarca(payload);
+  if(ok){
+    toast('✓ '+p.id+' → '+stage.mark, 'ok');
+    // avanzar el pedido localmente para que salga de esta pestaña
+    const idx=PEDIDOS.findIndex(x=>x.id===p.id && x.grupo===p.grupo);
+    if(idx>=0) PEDIDOS[idx].etapa=stage.mark;
+    updateBadges();
+    setTimeout(render, 450);
+  }else{
+    // quedó en cola offline
+    toast('Guardado sin conexión — se enviará al reconectar', 'err');
+    queueAdd(payload);
+    const idx=PEDIDOS.findIndex(x=>x.id===p.id && x.grupo===p.grupo);
+    if(idx>=0) PEDIDOS[idx].etapa=stage.mark;
+    updateBadges(); setTimeout(render, 450);
+  }
+}
+
+// POST con fallback JSONP (GAS acepta ambos por doGet en este motor)
+async function enviarMarca(payload){
+  if(!navigator.onLine) return false;
+  try{
+    const q=Object.keys(payload).map(k=>k+'='+encodeURIComponent(payload[k])).join('&');
+    const res=await jsonp(`${WEBAPP}?file=kanban_marcar&${q}`);
+    return !!(res&&res.ok);
+  }catch(e){ return false; }
+}
+
+// ================= COLA OFFLINE =================
+function queueGet(){ try{return JSON.parse(localStorage.getItem(QKEY)||'[]');}catch(e){return[];} }
+function queueSet(a){ localStorage.setItem(QKEY, JSON.stringify(a)); updateQBanner(); }
+function queueAdd(p){ const a=queueGet(); a.push({...p, ts:Date.now()}); queueSet(a); }
+function updateQBanner(){
+  const n=queueGet().length; const b=document.getElementById('qBanner');
+  if(n>0){ b.classList.add('show'); b.textContent=n+' reporte(s) pendiente(s) de sincronizar'; }
+  else b.classList.remove('show');
+}
+async function flushQueue(){
+  if(!navigator.onLine) return;
+  let a=queueGet(); if(!a.length) return;
+  const keep=[];
+  for(const item of a){
+    const ok=await enviarMarca(item);
+    if(!ok) keep.push(item);
+  }
+  queueSet(keep);
+  if(a.length && !keep.length) toast('Reportes sincronizados', 'ok');
+}
+
+// ================= ESTACIÓN (70") =================
+function enterStation(){
+  document.body.classList.add('station');
+  document.getElementById('loginView').style.display='none';
+  document.getElementById('appView').classList.remove('show');
+  document.getElementById('stationView').style.display='flex';
+  const inp=document.getElementById('scanInput');
+  inp.focus();
+  inp.onkeydown=(e)=>{ if(e.key==='Enter'){ stationScan(inp.value.trim()); inp.value=''; } };
+  // mantener foco (lectores QR "tipean" y dan Enter)
+  document.getElementById('stationView').onclick=()=>inp.focus();
+}
+async function stationScan(f8){
+  if(!f8) return;
+  // La estación marca el hand-off a Cómputo (el punto que hoy se pierde)
+  const payload={ doc:f8, quien:'ESTACIÓN' };
+  const feed=document.getElementById('stationFeed');
+  try{
+    const q=Object.keys(payload).map(k=>k+'='+encodeURIComponent(payload[k])).join('&');
+    const res=await jsonp(`${WEBAPP}?file=kanban_handoff&${q}`);
+    const item=document.createElement('div'); item.className='feed-item';
+    if(res&&res.ok){
+      item.innerHTML=`<span class="num">${f8}</span><span class="fok">✓ Hand-off registrado (${res.marcadas})</span>`;
+    }else{
+      item.innerHTML=`<span class="num">${f8}</span><span style="color:#ffb4b4">✗ ${res&&res.msg?res.msg:'No encontrado'}</span>`;
+    }
+    feed.prepend(item);
+    while(feed.children.length>8) feed.removeChild(feed.lastChild);
+  }catch(e){
+    const item=document.createElement('div'); item.className='feed-item';
+    item.innerHTML=`<span class="num">${f8}</span><span style="color:#ffb4b4">✗ Sin conexión</span>`;
+    feed.prepend(item);
+  }
+}
+
+// ================= UTIL =================
+function jsonp(url, timeout){
+  return new Promise((resolve,reject)=>{
+    const cb='kb_'+Math.random().toString(36).slice(2);
+    const s=document.createElement('script'); let done=false;
+    const clean=()=>{try{delete window[cb];}catch(e){window[cb]=undefined;} if(s.parentNode)s.remove();};
+    const t=setTimeout(()=>{if(done)return;done=true;clean();reject(new Error('Timeout'));}, timeout||30000);
+    s.src=`${url}&callback=${cb}&_ts=${Date.now()}`;
+    s.onerror=()=>{if(done)return;done=true;clearTimeout(t);clean();reject(new Error('err'));};
+    window[cb]=(d)=>{if(done)return;done=true;clearTimeout(t);clean();resolve(d);};
+    document.body.appendChild(s);
+  });
+}
+let toastT=null;
+function toast(msg, type){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.className='toast show '+(type||'');
+  clearTimeout(toastT); toastT=setTimeout(()=>el.classList.remove('show'), 2600);
+}
+function setConn(on){
+  ['conn','connS'].forEach(id=>{const e=document.getElementById(id); if(e){e.className='conn '+(on?'on':'off'); e.textContent=on?'EN LÍNEA':'SIN CONEXIÓN';}});
+}
+
+// ================= INIT =================
+window.addEventListener('online', ()=>{ setConn(true); flushQueue(); });
+window.addEventListener('offline', ()=>setConn(false));
+document.getElementById('btnOut').onclick=()=>{ sessionStorage.removeItem('kb_user'); location.reload(); };
+document.getElementById('btnOutS').onclick=()=>location.reload();
+document.getElementById('toStation').onclick=enterStation;
+document.getElementById('search').oninput=render;
+document.getElementById('fTipo').onchange=render;
+
+setConn(navigator.onLine);
+buildKeys();
+updateQBanner();
+// sesión recordada
+const saved=sessionStorage.getItem('kb_user');
+if(saved){ try{ USER=JSON.parse(saved); enterApp(); }catch(e){} }
+
+// registrar service worker (offline)
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('./sw-kanban.js').catch(()=>{});
+}
+</script>
+</body>
+</html>
