@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Cronograma de Entregas — DINALOG/CEDIS</title>
+<title>Listos para Retiro — DINALOG/CEDIS</title>
 <link rel="icon" href="./favicon.ico?v=1"/>
 <style>
   :root{--azul:#1e5a9e;--azul2:#0C447C;--bg:#ececec;--card:#fff;--bord:#a8a8a8;
-    --txt:#20303f;--sub:#6b7684;--ok:#1c7c3a;--okbg:#e2efda;--ambar:#BA7517;--ambarbg:#faeeda;--rojo:#a12626;}
+    --txt:#20303f;--sub:#6b7684;--ok:#1c7c3a;--okbg:#e2efda;--ambar:#BA7517;--ambarbg:#faeeda;--rojo:#a12626;--rojobg:#fcebeb;}
   *{box-sizing:border-box;margin:0;padding:0;}
   body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--txt);font-size:14px;}
   .num{font-family:Consolas,"Courier New",monospace;}
@@ -17,79 +17,85 @@
   .top .sub{font-size:11px;opacity:.8;}
   .top .spacer{flex:1;}
   .top .gen{font-size:11px;opacity:.75;text-align:right;}
-  .top .gen b{display:block;font-size:13px;}
-  .tabs{display:flex;gap:0;background:var(--card);border-bottom:1px solid var(--bord);padding:0 22px;}
-  .tab{padding:13px 26px;font-size:14px;font-weight:600;color:var(--sub);cursor:pointer;border-bottom:3px solid transparent;}
-  .tab.active{color:var(--azul2);border-bottom-color:var(--azul);}
-  .tab .cnt{font-family:Consolas,monospace;font-size:11px;background:#eef2f6;padding:1px 7px;border-radius:9px;margin-left:6px;}
-  .bar{background:var(--card);border-bottom:1px solid var(--bord);padding:9px 22px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;}
-  .legend{display:flex;gap:14px;font-size:12px;color:var(--sub);}
-  .legend span{display:inline-flex;align-items:center;gap:5px;}
-  .dot{width:11px;height:11px;border-radius:2px;display:inline-block;}
-  .dot.l{background:var(--ok);}.dot.p{background:var(--ambar);}.dot.r{background:#8fa2b5;}
-  .bar .spacer{flex:1;}
-  .btn{background:var(--azul2);color:#fff;border:0;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;border-radius:4px;}
-  .week{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;padding:18px 22px;}
-  .day{background:var(--card);border:1px solid var(--bord);display:flex;flex-direction:column;min-height:200px;}
-  .day.hoy{border:2px solid var(--azul);box-shadow:0 0 0 2px rgba(30,90,158,.12);}
-  .day-h{background:var(--azul2);color:#fff;padding:10px 12px;}
-  .day-h .d{font-size:14px;font-weight:700;letter-spacing:.5px;display:flex;justify-content:space-between;align-items:center;}
-  .day-h .badge{font-size:9px;background:#fff;color:var(--azul2);padding:2px 7px;border-radius:9px;font-weight:700;}
-  .day-h .cnt{font-family:Consolas,monospace;font-size:11px;opacity:.85;margin-top:3px;}
-  .day-body{padding:8px;overflow-y:auto;flex:1;}
-  .ue{border:1px solid #e0e6ee;border-left:3px solid #8fa2b5;padding:8px 10px;margin-bottom:7px;background:#fafbfc;}
-  .ue.hasready{border-left-color:var(--ok);}
-  .ue .n{font-size:12px;font-weight:600;line-height:1.25;margin-bottom:5px;}
-  .ue .bars{display:flex;gap:4px;align-items:center;flex-wrap:wrap;}
-  .pill{font-family:Consolas,monospace;font-size:10px;font-weight:700;padding:2px 6px;border-radius:8px;}
-  .pill.l{background:var(--okbg);color:var(--ok);}
-  .pill.p{background:var(--ambarbg);color:var(--ambar);}
-  .pill.r{background:#eef2f6;color:#5a6b7a;}
-  .ue .foot{display:flex;justify-content:space-between;align-items:center;margin-top:6px;}
-  .timer{font-family:Consolas,monospace;font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px;}
-  .timer.hoy{background:#fcebeb;color:var(--rojo);}
-  .timer.pronto{background:var(--ambarbg);color:var(--ambar);}
-  .timer.ok{background:var(--okbg);color:var(--ok);}
-  .vol{font-size:10px;color:var(--sub);}
-  .empty-day{color:#b0bcc8;font-size:11px;text-align:center;padding:30px 8px;}
+  .top .gen b{display:block;font-size:14px;}
+  .wrap{max-width:1180px;margin:0 auto;padding:16px 22px;}
+
+  /* Métricas-filtro (modelo dashboard citas) */
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px;}
+  .metric{background:var(--card);border:1px solid var(--bord);border-radius:8px;padding:14px 16px;display:flex;gap:12px;align-items:center;}
+  .metric.clickable{cursor:pointer;transition:.12s;}
+  .metric.clickable:hover{border-color:var(--azul);}
+  .metric.activa{background:var(--azul2);color:#fff;border-color:var(--azul2);}
+  .metric .v{font-family:Consolas,monospace;font-size:26px;font-weight:800;line-height:1;color:var(--azul);}
+  .metric.activa .v{color:#fff;}
+  .metric .l{font-size:11px;color:var(--sub);margin-top:4px;}
+  .metric.activa .l{color:#cde0f2;}
+  .metric .v.small{font-size:20px;}
+
+  /* Selector día + búsqueda */
+  .controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;background:var(--card);border:1px solid var(--bord);border-radius:8px;padding:10px 14px;margin-bottom:14px;}
+  .daysel{display:flex;gap:0;border:1px solid var(--azul2);border-radius:6px;overflow:hidden;}
+  .daysel button{border:0;background:#fff;color:var(--azul2);padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer;border-right:1px solid #d4dce6;}
+  .daysel button:last-child{border-right:0;}
+  .daysel button.active{background:var(--azul2);color:#fff;}
+  .daysel button .badge{font-size:8px;background:var(--rojo);color:#fff;padding:1px 5px;border-radius:8px;margin-left:4px;}
+  .search{flex:1;min-width:180px;}
+  .search input{width:100%;padding:8px 12px;border:1px solid var(--bord);border-radius:5px;font-size:13px;}
+  .controls .spacer{flex:1;}
+  .btn{background:var(--azul2);color:#fff;border:0;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;border-radius:5px;}
+
+  .dayhead{font-size:15px;font-weight:700;color:var(--azul2);margin:6px 2px 12px;padding-bottom:8px;border-bottom:2px solid #d4dce6;display:flex;align-items:center;gap:10px;}
+  .dayhead .pill{font-family:Consolas,monospace;font-size:12px;background:var(--okbg);color:var(--ok);padding:3px 10px;border-radius:10px;font-weight:700;}
+
+  /* Tarjetas UE */
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px;}
+  .ue{background:var(--card);border:1px solid var(--bord);border-left:5px solid var(--ok);border-radius:6px;padding:14px 16px;}
+  .ue.pocos{border-left-color:var(--ambar);}
+  .ue .r1{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px;}
+  .ue .n{font-size:15px;font-weight:700;line-height:1.2;}
+  .ue .cedis{font-size:10px;color:var(--sub);margin-top:2px;}
+  .ue .timer{font-family:Consolas,monospace;font-size:11px;font-weight:700;padding:3px 9px;border-radius:10px;white-space:nowrap;}
+  .timer.hoy{background:var(--rojobg);color:var(--rojo);}
+  .timer.man{background:var(--ambarbg);color:var(--ambar);}
+  .timer.fut{background:#eef2f6;color:#5a6b7a;}
+  .ue .big{display:flex;gap:16px;align-items:baseline;margin:8px 0;}
+  .ue .big .listos{font-family:Consolas,monospace;font-size:30px;font-weight:800;color:var(--ok);line-height:1;}
+  .ue .big .txt{font-size:12px;color:var(--sub);}
+  .ue .vol{font-family:Consolas,monospace;font-size:13px;color:var(--azul2);font-weight:700;}
+  .grupos{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;}
+  .gchip{font-size:10px;background:#eef3f9;color:var(--azul2);padding:2px 8px;border-radius:9px;font-weight:600;}
+  .gchip .num{font-weight:800;}
+  .tipos{display:flex;gap:6px;margin-top:8px;}
+  .tchip{font-size:10px;font-weight:700;padding:2px 8px;border-radius:9px;}
+  .tchip.urg{background:var(--rojobg);color:var(--rojo);}
+  .tchip.men{background:#eef3f9;color:var(--azul2);}
+
+  .vacio{padding:50px;text-align:center;color:#b0bcc8;background:var(--card);border:1px solid var(--bord);border-radius:8px;}
   .loading{padding:60px;text-align:center;color:var(--sub);font-size:15px;}
-  /* mensuales FIFO */
-  .fifo{padding:18px 22px;}
-  .fifo table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--bord);}
-  .fifo th{background:var(--azul2);color:#fff;font-size:12px;padding:10px 12px;text-align:left;}
-  .fifo td{padding:9px 12px;font-size:13px;border-bottom:1px solid #eef2f6;}
-  .fifo tr:hover td{background:#f7fafd;}
-  .fifo .pos{font-family:Consolas,monospace;font-weight:700;color:var(--azul);}
-  .hidden{display:none;}
 </style>
 </head>
 <body>
 <div class="top">
   <img src="./icons/icon-512.png" onerror="this.style.display='none'"/>
-  <div><h1>Cronograma de Entregas</h1><div class="sub">Torre de Control · DINALOG / CEDIS · Qué despachar y cuándo debe estar listo</div></div>
+  <div><h1>Listos para Retiro</h1><div class="sub">Torre de Control · DINALOG / CEDIS</div></div>
   <div class="spacer"></div>
   <div class="gen" id="gen"></div>
 </div>
-<div class="tabs">
-  <div class="tab active" id="tabUrg" onclick="setTab('urg')">Urgencias <span class="cnt" id="cntUrg">·</span></div>
-  <div class="tab" id="tabMen" onclick="setTab('men')">Mensuales (FIFO 15 días) <span class="cnt" id="cntMen">·</span></div>
-</div>
-<div class="bar">
-  <div class="legend">
-    <span><i class="dot l"></i> Listos para despachar</span>
-    <span><i class="dot p"></i> En proceso</span>
-    <span><i class="dot r"></i> Recién recibidos</span>
+<div class="wrap">
+  <div class="metrics" id="metrics"></div>
+  <div class="controls">
+    <div class="daysel" id="daysel"></div>
+    <div class="search"><input id="q" type="text" placeholder="Buscar Unidad Ejecutora…" oninput="render()"/></div>
+    <div class="spacer"></div>
+    <button class="btn" onclick="cargar()">↻ Actualizar</button>
   </div>
-  <div class="spacer"></div>
-  <button class="btn" onclick="cargar()">↻ Actualizar</button>
+  <div id="content"><div class="loading">Cargando pedidos listos…</div></div>
 </div>
-<div id="viewUrg"><div id="week" class="week"><div class="loading" style="grid-column:1/-1">Cargando cronograma…</div></div></div>
-<div id="viewMen" class="hidden"><div class="fifo" id="fifo"></div></div>
 
 <script>
 const WEBAPP="https://script.google.com/macros/s/AKfycbyVHDQ8IuVHibz259AiEvZ-jUfVC7fxvSSqC-wfaiiq1_13C9_TK4dVtPK0SMW4sZoJ/exec";
 const DIAS=['LUNES','MARTES','MIERCOLES','JUEVES','VIERNES'];
-let DATA=null;
+let DATA=null, DIA_SEL=null, GRUPO_SEL='';
 
 function jsonp(url){
   return new Promise((res,rej)=>{
@@ -102,68 +108,84 @@ function jsonp(url){
     document.body.appendChild(s);
   });
 }
-function setTab(t){
-  document.getElementById('tabUrg').classList.toggle('active',t==='urg');
-  document.getElementById('tabMen').classList.toggle('active',t==='men');
-  document.getElementById('viewUrg').classList.toggle('hidden',t!=='urg');
-  document.getElementById('viewMen').classList.toggle('hidden',t!=='men');
-}
 async function cargar(){
-  document.getElementById('week').innerHTML='<div class="loading" style="grid-column:1/-1">Cargando cronograma…</div>';
-  try{ DATA=await jsonp(WEBAPP+'?file=kanban_cronograma_v2'); render(DATA); }
-  catch(e){ document.getElementById('week').innerHTML='<div class="loading" style="grid-column:1/-1;color:#a12626">Sin conexión.</div>'; }
+  document.getElementById('content').innerHTML='<div class="loading">Cargando pedidos listos…</div>';
+  try{
+    DATA=await jsonp(WEBAPP+'?file=kanban_cronograma_v2');
+    if(!DIA_SEL) DIA_SEL=DATA.diaHoy||'LUNES';
+    renderMetrics(); renderDaySel(); render();
+    document.getElementById('gen').innerHTML='<b>Hoy: '+(DATA.diaHoy||'')+'</b>'+(DATA.generado||'');
+  }catch(e){ document.getElementById('content').innerHTML='<div class="vacio" style="color:#a12626">Sin conexión.</div>'; }
 }
-function timerHTML(d){
-  if(d===null||d===undefined) return '';
-  if(d===0) return '<span class="timer hoy">HOY</span>';
-  if(d<=2) return '<span class="timer pronto">en '+d+'d</span>';
-  return '<span class="timer ok">en '+d+'d</span>';
-}
-function render(r){
-  document.getElementById('gen').innerHTML='<b>Hoy: '+(r.diaHoy||'')+'</b>'+(r.generado||'');
-  // contar
-  let totUrg=0; DIAS.forEach(d=>totUrg+=((r.urgencias&&r.urgencias[d])||[]).length);
-  document.getElementById('cntUrg').textContent=totUrg;
-  document.getElementById('cntMen').textContent=(r.mensuales||[]).length;
 
-  // URGENCIAS por día
+function renderMetrics(){
+  const r=DATA.resumen||{};
+  const cards=[
+    ['v', r.hoyUE||0, 'UE con retiro HOY', null],
+    ['v', r.hoyListos||0, 'Pedidos listos HOY', null],
+    ['v small', (r.hoyBultos||0), 'Bultos estimados HOY', null],
+    ['v', r.totalPrelistos||0, 'Total pre-listos (semana)', null]
+  ];
+  // grupos como filtro
+  const grupos=new Set();
+  DIAS.forEach(d=>((DATA.dias&&DATA.dias[d])||[]).forEach(u=>(u.gruposArr||[]).forEach(g=>grupos.add(g.g))));
+  let html=cards.map(c=>'<div class="metric"><div><div class="'+c[0]+'">'+c[1]+'</div><div class="l">'+c[2]+'</div></div></div>').join('');
+  document.getElementById('metrics').innerHTML=html;
+}
+
+function renderDaySel(){
   let html='';
-  DIAS.forEach(dia=>{
-    const ues=(r.urgencias&&r.urgencias[dia])||[];
-    const totListos=ues.reduce((a,u)=>a+u.listos,0);
-    const esHoy=(r.diaHoy===dia);
-    html+='<div class="day'+(esHoy?' hoy':'')+'">'+
-      '<div class="day-h"><div class="d"><span>'+dia+'</span>'+(esHoy?'<span class="badge">HOY</span>':'')+'</div>'+
-        '<div class="cnt">'+ues.length+' UE · '+totListos+' listos</div></div>'+
-      '<div class="day-body">';
-    if(!ues.length){ html+='<div class="empty-day">Sin UEs</div>'; }
-    else ues.forEach(u=>{
-      html+='<div class="ue'+(u.listos>0?' hasready':'')+'">'+
-        '<div class="n">'+u.ue+'</div>'+
-        '<div class="bars">'+
-          (u.listos>0?'<span class="pill l">'+u.listos+' listos</span>':'')+
-          (u.proceso>0?'<span class="pill p">'+u.proceso+' proc.</span>':'')+
-          (u.recibidos>0?'<span class="pill r">'+u.recibidos+' recib.</span>':'')+
+  DIAS.forEach(d=>{
+    const ues=(DATA.dias&&DATA.dias[d])||[];
+    const hoy=(DATA.diaHoy===d);
+    html+='<button class="'+(DIA_SEL===d?'active':'')+'" onclick="selDia(\''+d+'\')">'+
+      d.slice(0,3)+' <span style="opacity:.7">'+ues.length+'</span>'+(hoy?'<span class="badge">HOY</span>':'')+'</button>';
+  });
+  document.getElementById('daysel').innerHTML=html;
+}
+function selDia(d){ DIA_SEL=d; renderDaySel(); render(); }
+
+function timerHTML(d,esHoy){
+  if(esHoy||d===0) return '<span class="timer hoy">RETIRO HOY</span>';
+  if(d===1) return '<span class="timer man">MAÑANA</span>';
+  if(d===null||d===undefined) return '';
+  return '<span class="timer fut">en '+d+' días</span>';
+}
+
+function render(){
+  if(!DATA) return;
+  const q=(document.getElementById('q').value||'').toUpperCase();
+  let ues=(DATA.dias&&DATA.dias[DIA_SEL])||[];
+  if(q) ues=ues.filter(u=>u.ue.toUpperCase().indexOf(q)>=0);
+
+  const totListos=ues.reduce((a,u)=>a+u.total,0);
+  const totBultos=ues.reduce((a,u)=>a+u.bultosEstimados,0);
+  let html='<div class="dayhead">'+DIA_SEL+(DATA.diaHoy===DIA_SEL?' · HOY':'')+
+    '<span class="pill">'+ues.length+' UE · '+totListos+' pedidos listos · ≈'+totBultos+' bultos</span></div>';
+
+  if(!ues.length){ html+='<div class="vacio">No hay pedidos listos para retiro este día.</div>'; }
+  else{
+    html+='<div class="cards">';
+    ues.forEach(u=>{
+      const pocos=u.total<3;
+      html+='<div class="ue'+(pocos?' pocos':'')+'">'+
+        '<div class="r1"><div><div class="n">'+u.ue+'</div>'+
+          (u.cedis&&u.cedis!=='SIN CEDIS'?'<div class="cedis">'+u.cedis+'</div>':'')+'</div>'+
+          timerHTML(u.diasRestantes,u.esHoy)+'</div>'+
+        '<div class="big"><span class="listos">'+u.total+'</span>'+
+          '<span class="txt">pedidos listos<br>para despachar</span>'+
+          '<span style="flex:1"></span><span class="vol">≈ '+u.bultosEstimados+' bultos</span></div>'+
+        '<div class="tipos">'+
+          (u.urg>0?'<span class="tchip urg">'+u.urg+' urgencia'+(u.urg>1?'s':'')+'</span>':'')+
+          (u.men>0?'<span class="tchip men">'+u.men+' mensual'+(u.men>1?'es':'')+'</span>':'')+'</div>'+
+        '<div class="grupos">'+
+          (u.gruposArr||[]).map(g=>'<span class="gchip">'+g.g.split('-')[0]+' <span class="num">'+g.n+'</span></span>').join('')+
         '</div>'+
-        '<div class="foot">'+timerHTML(u.diasRestantes)+
-          '<span class="vol">≈ '+(u.bultosEstimados||0)+' bultos</span></div>'+
       '</div>';
     });
-    html+='</div></div>';
-  });
-  document.getElementById('week').innerHTML=html;
-
-  // MENSUALES FIFO
-  const men=r.mensuales||[];
-  let f='<table><thead><tr><th>#</th><th>Unidad Ejecutora</th><th>CEDIS</th><th>Listos</th><th>En proceso</th><th>Total</th><th>Vol. estim.</th></tr></thead><tbody>';
-  if(!men.length) f+='<tr><td colspan="7" style="text-align:center;color:#b0bcc8;padding:30px">Sin pedidos mensuales pendientes</td></tr>';
-  else men.forEach((u,i)=>{
-    f+='<tr><td class="pos">'+(i+1)+'</td><td><b>'+u.ue+'</b></td><td>'+(u.cedis||'')+'</td>'+
-      '<td>'+u.listos+'</td><td>'+u.proceso+'</td><td class="num">'+u.total+'</td>'+
-      '<td class="vol">≈ '+(u.bultosEstimados||0)+' bultos</td></tr>';
-  });
-  f+='</tbody></table><p style="font-size:11px;color:#6b7684;margin-top:10px">Orden FIFO por recepción más antigua — los que llevan más tiempo esperando salen primero (ciclo 15 días).</p>';
-  document.getElementById('fifo').innerHTML=f;
+    html+='</div>';
+  }
+  document.getElementById('content').innerHTML=html;
 }
 cargar();
 </script>
