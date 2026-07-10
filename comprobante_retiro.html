@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="./favicon.ico?v=1">
+<title>Comprobante de Retiro | CEDIS Panamá</title>
+<style>
+  :root{
+    --azul:#1e5a9e; --azul-osc:#0C447C; --azul-claro:#e8f0f8; --fondo:#ececec; --borde:#a8a8a8;
+    --borde-suave:#c8c8c8; --mono:'Consolas','Courier New',monospace;
+    --rojo:#A32D2D; --rojo-bg:#fcecec; --verde:#0F6E56; --verde-bg:#e1f5ee;
+    --ambar:#854F0B; --ambar-bg:#fdf4e3;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--fondo);font-family:Arial,Helvetica,sans-serif;color:#222;
+    font-size:15px;line-height:1.5;-webkit-text-size-adjust:100%;}
+  .wrap{max-width:520px;margin:0 auto;padding:14px;}
+  .card{background:#fff;border:1px solid var(--borde-suave);border-radius:6px;overflow:hidden;
+    box-shadow:0 1px 4px rgba(0,0,0,.08);}
+  .head{background:var(--azul-osc);color:#fff;padding:14px 16px;display:flex;align-items:center;gap:12px;}
+  .head img{width:42px;height:42px;flex-shrink:0;object-fit:contain;}
+  .head .t1{font-size:15px;font-weight:700;line-height:1.2;}
+  .head .t2{font-size:11.5px;color:#B5D4F4;margin-top:2px;}
+
+  .estado{padding:12px 16px;text-align:center;font-weight:700;font-size:15px;letter-spacing:.3px;}
+  .estado.LISTO{background:var(--verde-bg);color:var(--verde);border-bottom:1px solid #b8e0d0;}
+  .estado.DIFERIDO{background:var(--ambar-bg);color:var(--ambar);border-bottom:1px solid #e8d3a8;}
+  .estado.OTRO{background:var(--azul-claro);color:var(--azul-osc);border-bottom:1px solid #b8d0ea;}
+
+  .body{padding:16px;}
+  .ue{font-size:17px;font-weight:700;color:#222;margin-bottom:2px;}
+  .f8{font-family:var(--mono);font-size:14px;color:#555;margin-bottom:14px;}
+  .f8 b{color:var(--azul-osc);}
+
+  .vol{background:var(--azul-claro);border:1px solid #b8d0ea;border-radius:5px;padding:14px;margin-bottom:14px;text-align:center;}
+  .vol .n{font-family:var(--mono);font-size:30px;font-weight:800;color:var(--azul-osc);line-height:1;}
+  .vol .u{font-size:12px;color:#555;margin-top:3px;text-transform:uppercase;letter-spacing:.5px;}
+  .vol .pal{margin-top:8px;padding-top:8px;border-top:1px dashed #b8d0ea;font-size:13px;color:#444;}
+  .vol .pal b{font-family:var(--mono);}
+  .vol .aviso{font-size:11.5px;color:#666;margin-top:8px;}
+
+  .fila{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #eee;font-size:14px;}
+  .fila:last-child{border-bottom:none;}
+  .fila .k{color:#777;}
+  .fila .v{font-weight:600;text-align:right;}
+  .fila .v.mono{font-family:var(--mono);}
+
+  .nota{background:#f4f7fb;border:1px solid #d6e2f0;border-radius:5px;padding:11px 13px;margin-top:14px;font-size:12.5px;color:#555;}
+  .pie{text-align:center;padding:14px 16px;border-top:1px solid #eee;font-size:11px;color:#888;line-height:1.6;}
+  .err{padding:40px 20px;text-align:center;color:#999;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card" id="card">
+    <div class="err">Cargando comprobante…</div>
+  </div>
+</div>
+
+<script>
+function par(n){ try{ return new URLSearchParams(location.search).get(n)||''; }catch(e){ return ''; } }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+function num(s){ const n=parseFloat(String(s).replace(/,/g,'')); return isNaN(n)?null:n; }
+
+function render(){
+  const f8=par('f8'), ue=par('ue'), grupo=par('grupo'), dia=par('dia');
+  const bultos=num(par('bultos')), pallets=num(par('pallets')), reng=par('reng');
+  const estRaw=(par('est')||'LISTO').toUpperCase();
+  const est = (estRaw==='LISTO'||estRaw==='DIFERIDO') ? estRaw : 'OTRO';
+
+  if(!f8){
+    document.getElementById('card').innerHTML='<div class="err">Comprobante no válido: falta el número de Forma 8.</div>';
+    return;
+  }
+
+  const estTxt = est==='LISTO' ? '✓ PEDIDO LISTO PARA RETIRO'
+    : (est==='DIFERIDO' ? '⚠ PEDIDO DIFERIDO — PRÓXIMO CICLO' : estRaw);
+
+  let volHtml='';
+  if(bultos!=null){
+    volHtml =
+      '<div class="vol">'+
+        '<div class="n">'+bultos.toLocaleString()+'</div>'+
+        '<div class="u">bultos a retirar</div>'+
+        (pallets!=null && pallets>0 ? '<div class="pal">Pallets aprox.: <b>'+pallets.toLocaleString()+'</b></div>' : '')+
+        '<div class="aviso">Considere el vehículo adecuado para este volumen.</div>'+
+      '</div>';
+  }
+
+  let filas='';
+  if(reng) filas+='<div class="fila"><span class="k">Renglones</span><span class="v mono">'+esc(reng)+'</span></div>';
+  if(grupo) filas+='<div class="fila"><span class="k">Grupo(s)</span><span class="v">'+esc(grupo)+'</span></div>';
+  if(dia) filas+='<div class="fila"><span class="k">Día de retiro</span><span class="v">'+esc(dia)+'</span></div>';
+
+  const notaEst = est==='DIFERIDO'
+    ? 'Su pedido no pudo completarse en este ciclo. Permanece en la fila de atención y será procesado con prioridad. Le notificaremos cuando esté listo.'
+    : 'Presente este comprobante o el número de Forma 8 al llegar al CEDIS Panamá para coordinar su retiro.';
+
+  document.getElementById('card').innerHTML =
+    '<div class="head">'+
+      '<img src="./icons/icon-192.png" onerror="this.style.display=\'none\'" alt="CSS">'+
+      '<div><div class="t1">Comprobante de Retiro</div>'+
+        '<div class="t2">Caja de Seguro Social · CEDIS Panamá</div></div>'+
+    '</div>'+
+    '<div class="estado '+est+'">'+estTxt+'</div>'+
+    '<div class="body">'+
+      (ue?'<div class="ue">'+esc(ue)+'</div>':'')+
+      '<div class="f8">Forma 8: <b>'+esc(f8)+'</b></div>'+
+      volHtml+
+      (filas?'<div>'+filas+'</div>':'')+
+      '<div class="nota">'+notaEst+'</div>'+
+    '</div>'+
+    '<div class="pie">Dirección Nacional de Logística · Torre de Control<br>'+
+      'dbethancourth@css.gob.pa · Tel. +507 513-7000 Ext. 86322</div>';
+
+  document.title='Retiro '+f8+' | CEDIS Panamá';
+}
+render();
+</script>
+</body>
+</html>
