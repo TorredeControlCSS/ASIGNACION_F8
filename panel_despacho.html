@@ -263,7 +263,31 @@
       <div id="supCont"><div class="loading">Cargando métricas de supervisión…</div></div>
     </div>
     <!-- TRANSITO -->
-    <div id="tabTransito" class="hidden"><div id="transitoCont"><div class="loading">Cargando F8 en tránsito…</div></div></div>
+    <div id="tabTransito" class="hidden">
+      <div class="filtros-linea" style="margin-bottom:0;">
+        <div class="filtro-campo" style="flex:1;min-width:200px"><span class="et">Unidad Ejecutora</span>
+          <select id="trUE" onchange="renderTransito()" style="width:100%"><option value="">Todas</option></select>
+        </div>
+        <div class="filtro-campo"><span class="et">Grupo</span>
+          <select id="trGrupo" onchange="renderTransito()"><option value="">Todos</option></select>
+        </div>
+        <div class="filtro-campo"><span class="et">Tipo</span>
+          <select id="trTipo" onchange="renderTransito()">
+            <option value="">Todos</option><option value="URG">Urgencia</option><option value="MEN">Mensual</option>
+          </select>
+        </div>
+        <div class="filtro-campo"><span class="et">Antigüedad</span>
+          <select id="trDias" onchange="renderTransito()">
+            <option value="">Cualquiera</option>
+            <option value="7">7+ días en tránsito</option>
+            <option value="15">15+ días</option>
+            <option value="30">30+ días</option>
+          </select>
+        </div>
+        <button class="btn" onclick="limpiarTransito()" style="align-self:flex-end">✕ Limpiar</button>
+      </div>
+      <div id="transitoCont"><div class="loading">Cargando F8 en tránsito…</div></div>
+    </div>
   </div>
 </div>
 
@@ -630,16 +654,66 @@ async function notificarMasivo(){
   finally{ if(btn){ btn.disabled=false; btn.textContent='✉ Notificar UEs con pedido listo'; } }
 }
 
+let TR_POBLADO=false;
+function poblarTransito(){
+  const arr=DATA.transito||[];
+  // UEs
+  const ues=[...new Set(arr.map(t=>String(t.ue||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
+  const selU=document.getElementById('trUE'); const pu=selU.value;
+  selU.innerHTML='<option value="">Todas</option>'+ues.map(u=>'<option value="'+u.replace(/"/g,'&quot;')+'">'+u+'</option>').join('');
+  if(pu&&ues.indexOf(pu)>=0) selU.value=pu;
+  // grupos (un doc puede tener varios separados por coma → separar)
+  const gset=new Set();
+  arr.forEach(t=>String(t.grupo||'').split(',').forEach(g=>{ g=g.trim(); if(g&&g!=='—')gset.add(g); }));
+  const grupos=[...gset].sort();
+  const selG=document.getElementById('trGrupo'); const pg=selG.value;
+  selG.innerHTML='<option value="">Todos</option>'+grupos.map(g=>'<option value="'+g+'">'+g+'</option>').join('');
+  if(pg&&grupos.indexOf(pg)>=0) selG.value=pg;
+  TR_POBLADO=true;
+}
+function limpiarTransito(){
+  ['trUE','trGrupo','trTipo','trDias'].forEach(id=>{const e=document.getElementById(id); if(e)e.value='';});
+  renderTransito();
+}
+function colorDias(d){
+  if(d==null) return '#888';
+  if(d>=30) return 'var(--t-rojo)'; if(d>=15) return 'var(--t-naranja)'; if(d>=7) return 'var(--t-amarillo)'; return '#3a8c3a';
+}
+
 function renderTransito(){
   if(!DATA) return;
-  const arr=DATA.transito||[];
+  if(!TR_POBLADO) poblarTransito();
+  let arr=(DATA.transito||[]).slice();
+  const fu=document.getElementById('trUE').value;
+  const fg=document.getElementById('trGrupo').value;
+  const ft=document.getElementById('trTipo').value;
+  const fd=parseInt(document.getElementById('trDias').value||'0',10);
+  if(fu) arr=arr.filter(t=>String(t.ue||'').trim()===fu);
+  if(fg) arr=arr.filter(t=>String(t.grupo||'').split(',').map(x=>x.trim()).indexOf(fg)>=0);
+  if(ft==='URG') arr=arr.filter(t=>/URG/i.test(t.tipo||'')); else if(ft==='MEN') arr=arr.filter(t=>!/URG/i.test(t.tipo||''));
+  if(fd) arr=arr.filter(t=>t.diasTransito!=null && t.diasTransito>=fd);
+
   const cont=document.getElementById('transitoCont');
-  if(!arr.length){ cont.innerHTML='<div class="vacio">No hay F8 en tránsito (todo lo generado ya llegó).</div>'; return; }
+  if(!arr.length){ cont.innerHTML='<div class="vacio">No hay F8 en tránsito con este filtro.</div>'; return; }
+
+  // resumen
+  const conDias=arr.filter(t=>t.diasTransito!=null);
+  const prom=conDias.length?Math.round(conDias.reduce((s,t)=>s+t.diasTransito,0)/conDias.length):0;
+  const mas15=arr.filter(t=>t.diasTransito!=null&&t.diasTransito>=15).length;
+  const mas30=arr.filter(t=>t.diasTransito!=null&&t.diasTransito>=30).length;
+
   let html='<p style="font-size:12px;color:#666;margin:0 0 10px">F8 generadas en el WMS que aún no han llegado físicamente al CEDIS (REQUISICIONES − BUFFER). Punto de Información normalizado; grupo inferido de los renglones. Solo UEs de CEDIS Panamá.</p>';
-  html+='<table class="tabla"><thead><tr><th>Nº Documento</th><th>Punto de Información</th><th>Grupo</th><th>Tipo</th><th style="text-align:right">Renglones</th><th>Generada</th></tr></thead><tbody>';
+  html+='<div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap">'+
+    '<div style="background:var(--fondo);border:1px solid var(--borde-suave);border-radius:3px;padding:7px 12px;font-size:12.5px"><b style="font-family:var(--mono);font-size:16px">'+arr.length+'</b> F8 en tránsito</div>'+
+    '<div style="background:var(--fondo);border:1px solid var(--borde-suave);border-radius:3px;padding:7px 12px;font-size:12.5px">Promedio <b style="font-family:var(--mono);font-size:16px">'+prom+'</b> días en tránsito</div>'+
+    '<div style="background:var(--ambar-bg);border:1px solid #e8d3a8;border-radius:3px;padding:7px 12px;font-size:12.5px;color:var(--ambar)"><b style="font-family:var(--mono);font-size:16px">'+mas15+'</b> con 15+ días</div>'+
+    (mas30?'<div style="background:var(--rojo-bg);border:1px solid #e6b0b0;border-radius:3px;padding:7px 12px;font-size:12.5px;color:var(--rojo)"><b style="font-family:var(--mono);font-size:16px">'+mas30+'</b> con 30+ días</div>':'')+
+  '</div>';
+  html+='<table class="tabla"><thead><tr><th>Nº Documento</th><th>Punto de Información</th><th>Grupo</th><th>Tipo</th><th style="text-align:right">Rengl.</th><th>Generada</th><th style="text-align:right">Días en tránsito</th></tr></thead><tbody>';
   arr.forEach(t=>{
     const f=(t.fecha&&String(t.fecha).length>10)?String(t.fecha).slice(0,10):(t.fecha||'');
     const esUrg=/URG/i.test(t.tipo||'');
+    const dt=t.diasTransito;
     html+='<tr>'+
       '<td style="font-family:var(--mono)">'+t.id+'</td>'+
       '<td>'+(t.ue||'—')+'</td>'+
@@ -647,6 +721,7 @@ function renderTransito(){
       '<td>'+(esUrg?'<span style="color:var(--rojo);font-weight:600">':'')+(t.tipo||'')+(esUrg?'</span>':'')+'</td>'+
       '<td style="text-align:right;font-family:var(--mono)">'+(t.renglones!=null?t.renglones:'—')+'</td>'+
       '<td style="font-family:var(--mono)">'+f+'</td>'+
+      '<td style="text-align:right;font-family:var(--mono);font-weight:700;color:'+colorDias(dt)+'">'+(dt!=null?dt+'d':'—')+'</td>'+
     '</tr>';
   });
   html+='</tbody></table>';
