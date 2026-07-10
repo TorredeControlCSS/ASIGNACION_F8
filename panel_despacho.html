@@ -102,6 +102,7 @@
   .hidden{display:none;}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -116,7 +117,7 @@
   <div class="kpis" id="kpis"></div>
 
   <div class="carga">
-    <div class="carga-head"><div class="t">Carga de la semana — pedidos listos por día de retiro <small>· barras = pedidos listos · línea = urgencias</small></div></div>
+    <div class="carga-head"><div class="t">Carga de la semana — pedidos pre-listos por día de retiro <small>· barras apiladas = mensuales + urgencias (eje izq.) · línea = solo urgencias (eje der.)</small></div></div>
     <div class="carga-body"><canvas id="cargaChart"></canvas></div>
   </div>
 
@@ -141,6 +142,9 @@
         </div>
         <div class="filtro-campo"><span class="et">Estado</span>
           <select id="fEtapa" onchange="renderLista()"><option value="">Todas las etapas</option></select>
+        </div>
+        <div class="filtro-campo"><span class="et">Grupo</span>
+          <select id="fGrupo" onchange="renderLista()"><option value="">Todos los grupos</option></select>
         </div>
         <div class="filtro-campo"><span class="et">Tipo</span>
           <select id="fTipo" onchange="renderLista()">
@@ -238,27 +242,79 @@ function filtroKpi(k){
   renderKpis(); renderLista();
 }
 
+// Fecha calendario de cada día L-V de la SEMANA EN CURSO. Devuelve {LUNES:'13/07', ...}.
+function fechasSemana(){
+  const abr={1:'LUNES',2:'MARTES',3:'MIERCOLES',4:'JUEVES',5:'VIERNES'};
+  const hoy=new Date(); const dow=hoy.getDay(); // 0=Dom
+  // lunes de esta semana (si hoy es domingo, tomamos el lunes siguiente)
+  const lun=new Date(hoy); const desplaz=(dow===0)?1:(1-dow);
+  lun.setDate(hoy.getDate()+desplaz);
+  const out={};
+  for(let i=0;i<5;i++){ const d=new Date(lun); d.setDate(lun.getDate()+i);
+    const dd=String(d.getDate()).padStart(2,'0'), mm=String(d.getMonth()+1).padStart(2,'0');
+    out[abr[i+1]]={fecha:dd+'/'+mm, esHoy:(d.toDateString()===hoy.toDateString())};
+  }
+  return out;
+}
+
 function renderCargaChart(){
   const c=DATA.cargaSemanal||{};
-  const listos=DIAS.map(d=>(c[d]&&c[d].listos)||0);
-  const urg=DIAS.map(d=>(c[d]&&c[d].urg)||0);
+  const fs=fechasSemana();
+  const cap=d=>d.charAt(0)+d.slice(1,3).toLowerCase();          // LUNES -> Lun
+  const labels=DIAS.map(d=>{ const f=fs[d]; return [cap(d)+(f?' '+f.fecha:''), f&&f.esHoy?'(hoy)':'']; });
+  const men =DIAS.map(d=>(c[d]&&c[d].men)||0);
+  const urg =DIAS.map(d=>(c[d]&&c[d].urg)||0);
+  const maxUrg=Math.max(1,...urg);
   if(chartCarga) chartCarga.destroy();
   chartCarga=new Chart(document.getElementById('cargaChart'),{
-    data:{ labels:DIAS.map(d=>d.charAt(0)+d.slice(1).toLowerCase()),
+    plugins:[ChartDataLabels],
+    data:{ labels:labels,
       datasets:[
-        {type:'bar',label:'Pedidos listos',data:listos,backgroundColor:'#1e5a9e',order:2},
-        {type:'line',label:'Urgencias',data:urg,borderColor:'#c0281f',backgroundColor:'#c0281f',tension:.3,order:1,yAxisID:'y'}
+        // barras apiladas: mensuales (azul) + urgencias (rojo) => altura total = pedidos listos del día
+        {type:'bar',label:'Mensuales (quincenal)',data:men,backgroundColor:'#1e5a9e',stack:'listos',order:3,yAxisID:'y',
+          datalabels:{color:'#fff',font:{size:10,weight:'bold'},display:ctx=>ctx.dataset.data[ctx.dataIndex]>0}},
+        {type:'bar',label:'Urgencias (por día)',data:urg,backgroundColor:'#c0281f',stack:'listos',order:3,yAxisID:'y',
+          datalabels:{color:'#fff',font:{size:10,weight:'bold'},display:ctx=>ctx.dataset.data[ctx.dataIndex]>0}},
+        // línea sobre el eje derecho: SOLO urgencias, con su propia escala y valor visible
+        {type:'line',label:'Tendencia urgencias',data:urg,borderColor:'#7a1a15',backgroundColor:'#7a1a15',
+          borderWidth:2,tension:.3,order:1,yAxisID:'yUrg',pointRadius:4,pointBackgroundColor:'#7a1a15',
+          datalabels:{align:'top',anchor:'end',color:'#7a1a15',font:{size:11,weight:'bold'},
+            display:ctx=>ctx.dataset.data[ctx.dataIndex]>0}}
       ]},
     options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{position:'top',labels:{font:{size:11}}}},
-      scales:{y:{beginAtZero:true,ticks:{font:{size:10}}},x:{ticks:{font:{size:11}}}}}
+      layout:{padding:{top:14}},
+      plugins:{
+        legend:{position:'top',labels:{font:{size:11},boxWidth:12,padding:10}},
+        datalabels:{clamp:true},
+        tooltip:{callbacks:{
+          title:items=>{ const l=items[0].label; return Array.isArray(l)?l.filter(Boolean).join(' '):l; },
+          label:ctx=>ctx.dataset.label+': '+ctx.parsed.y+' pedidos'
+        }}
+      },
+      scales:{
+        y:{beginAtZero:true,stacked:true,position:'left',
+           title:{display:true,text:'Pedidos pre-listos',font:{size:10}},
+           ticks:{font:{size:10},precision:0}},
+        yUrg:{beginAtZero:true,position:'right',suggestedMax:Math.ceil(maxUrg*1.4),
+           grid:{drawOnChartArea:false},
+           title:{display:true,text:'Urgencias',color:'#7a1a15',font:{size:10}},
+           ticks:{color:'#7a1a15',font:{size:10},precision:0}},
+        x:{stacked:true,ticks:{font:{size:11}}}
+      }}
   });
 }
 
 function poblarEtapas(){
-  const set=new Set((DATA.pedidos||[]).map(p=>p.etapa));
+  const peds=DATA.pedidos||[];
+  const set=new Set(peds.map(p=>p.etapa));
   const sel=document.getElementById('fEtapa');
   sel.innerHTML='<option value="">Todas las etapas</option>'+[...set].map(e=>'<option value="'+e+'">'+e+'</option>').join('');
+  // Grupos: numéricos (1..10). Orden natural, no lexicográfico.
+  const gset=new Set(peds.map(p=>String(p.grupo||'').trim()).filter(Boolean));
+  const grupos=[...gset].sort((a,b)=>{ const na=parseFloat(a),nb=parseFloat(b);
+    if(!isNaN(na)&&!isNaN(nb)) return na-nb; return a.localeCompare(b); });
+  const selG=document.getElementById('fGrupo');
+  selG.innerHTML='<option value="">Todos los grupos</option>'+grupos.map(g=>'<option value="'+g+'">Grupo '+g+'</option>').join('');
 }
 
 function setFiltroRojo(){ document.getElementById('fTriage').value='ROJO'; renderLista(); }
@@ -268,6 +324,7 @@ function renderLista(){
   const q=(document.getElementById('q').value||'').toUpperCase();
   const ft=document.getElementById('fTriage').value;
   const fe=document.getElementById('fEtapa').value;
+  const fg=document.getElementById('fGrupo').value;
   const fti=document.getElementById('fTipo').value;
   const fc=document.getElementById('fCero').value;
   let arr=(DATA.pedidos||[]).slice();
@@ -275,6 +332,7 @@ function renderLista(){
   else if(ft==='NARANJA') arr=arr.filter(p=>p.triageP<=2);
   else if(ft==='AMARILLO') arr=arr.filter(p=>p.triageP<=3);
   if(fe) arr=arr.filter(p=>p.etapa===fe);
+  if(fg) arr=arr.filter(p=>String(p.grupo||'').trim()===fg);
   if(fti==='URG') arr=arr.filter(p=>p.esUrg); else if(fti==='MEN') arr=arr.filter(p=>!p.esUrg);
   if(fc==='1') arr=arr.filter(p=>p.tieneCero);
   if(q) arr=arr.filter(p=>p.ue.toUpperCase().includes(q)||p.id.toUpperCase().includes(q));
@@ -324,22 +382,83 @@ function cardPed(p,i){
   '</div>';
 }
 
+// Colores triage para el encabezado del modal
+const TRI_COLOR={ROJO:'#c0281f',NARANJA:'#d97316',AMARILLO:'#c99700',VERDE:'#3a8c3a',AZUL:'#2a6db5'};
+
+// Una señal explicada: etiqueta, puntos obtenidos / máximo, barra proporcional y frase humana.
+function senalHTML(nombre, pts, max, frase){
+  const pct = max ? Math.round(100*pts/max) : 0;
+  return ''+
+   '<div style="margin-bottom:12px">'+
+     '<div class="senal" style="border-bottom:none;padding-bottom:2px">'+
+       '<span style="font-weight:600">'+nombre+'</span>'+
+       '<span class="v">'+pts+' <span style="color:#999;font-weight:400">de '+max+' pts</span></span>'+
+     '</div>'+
+     '<div style="height:7px;background:#eef2f6;border-radius:3px;overflow:hidden">'+
+       '<span style="display:block;height:100%;width:'+pct+'%;background:'+(pts>0?'#1e5a9e':'#cfd8e2')+'"></span>'+
+     '</div>'+
+     '<div style="font-size:11.5px;color:#555;margin-top:4px;line-height:1.4">'+frase+'</div>'+
+   '</div>';
+}
+
 function verPorque(i){
   const p=(window.__ARR||[])[i]; if(!p) return;
   const s=p.senales||{};
-  document.getElementById('mTitle').textContent='IPD '+Math.round(p.ipd)+' · '+p.triage+' ('+p.triageLabel+')';
-  const barra=(v,max)=>'<div style="height:6px;background:#eef2f6;border-radius:3px;margin-top:3px"><span style="display:block;height:100%;width:'+(max?100*v/max:0)+'%;background:#1e5a9e"></span></div>';
-  let html='';
-  html+='<div class="senal"><span>Saldo cero (50%)</span><span class="v">'+s.cero+'</span></div>'+barra(s.cero,50);
-  html+='<div class="senal"><span>Proximidad (25%)</span><span class="v">'+s.proximidad+'</span></div>'+barra(s.proximidad,25);
-  html+='<div class="senal"><span>Antigüedad (15%)</span><span class="v">'+s.antiguedad+'</span></div>'+barra(s.antiguedad,15);
-  html+='<div class="senal"><span>Tipo (10%)</span><span class="v">'+s.tipo+'</span></div>'+barra(s.tipo,10);
+  const col=TRI_COLOR[p.triage]||'#1e5a9e';
+
+  // Encabezado con color del triage
+  const mh=document.querySelector('#modalBg .mh');
+  if(mh) mh.style.background=col;
+  document.getElementById('mTitle').textContent='IPD '+Math.round(p.ipd)+' · '+p.triage+' — '+p.triageLabel;
+
+  // --- Frases humanas por señal ---
+  // 1) Saldo cero (nivel UE — la UE tiene ≥1 renglón sin existencias)
+  const fCero = p.tieneCero
+    ? '<b>'+p.ue+'</b> tiene renglón(es) <b>SIN existencias</b> en el sistema (SALMI). Es lo que más duele: aporta el máximo (50 de 50 pts).'
+    : 'No se detectaron renglones en cero para esta UE en el último corte SALMI (0 de 50 pts).';
+
+  // 2) Proximidad a la ventana alcanzable
+  let fProx;
+  if(p.diasVent==null) fProx='Sin cronograma de retiro registrado para esta UE (0 de 25 pts).';
+  else if(p.diasVent<=0) fProx='Su ventana de retiro es <b>hoy o ya vencida</b> → prioridad máxima de tiempo ('+s.proximidad+' de 25 pts).';
+  else fProx='Próxima ventana de retiro con margen de preparación: <b>en '+p.diasVent+' día'+(p.diasVent===1?'':'s')+'</b>. '+
+             'Cuanto más cerca, más urge tenerlo listo ('+s.proximidad+' de 25 pts).';
+
+  // 3) Antigüedad (días esperando desde recepción)
+  const fAntig = 'Este pedido lleva <b>'+p.antig+' día'+(p.antig===1?'':'s')+'</b> esperando desde que se recibió la F8 en ventanilla. '+
+                 'Mientras más espera, más sube ('+s.antiguedad+' de 15 pts).';
+
+  // 4) Tipo
+  const fTipo = p.esUrg
+    ? 'Es una <b>Urgencia</b> → pesa más que un pedido mensual ('+s.tipo+' de 10 pts).'
+    : 'Es un pedido <b>Mensual</b> (cadencia quincenal) → menor peso que una urgencia ('+s.tipo+' de 10 pts).';
+
+  let html=''+
+    '<p style="font-size:12.5px;color:#444;margin:0 0 14px;line-height:1.45">'+
+      'El <b>IPD</b> mide qué tan urgente es despachar este pedido. Combina cuatro señales; '+
+      'a mayor IPD, más arriba en la fila de despacho.</p>';
+  html+=senalHTML('Saldo cero (50%)',      s.cero,       50, fCero);
+  html+=senalHTML('Proximidad (25%)',      s.proximidad, 25, fProx);
+  html+=senalHTML('Antigüedad (15%)',      s.antiguedad, 15, fAntig);
+  html+=senalHTML('Tipo de pedido (10%)',  s.tipo,       10, fTipo);
+
+  if(p.defcon)
+    html+='<div style="margin-top:6px;padding:10px;background:#fcecec;border-left:4px solid #c0281f;border-radius:2px;font-size:12px;color:#A32D2D">'+
+          '<b>Marcado ROJO manualmente</b> en reunión gerencial. Sube al tope de la fila sin importar el cálculo.</div>';
+
   if(p.brecha && p.brecha.gap>0)
-    html+='<div style="margin-top:12px;padding:10px;background:#fdf4e3;border-radius:4px;font-size:12px;color:#854F0B"><b>Evidencia:</b> pedido '+p.brecha.solicitado.toLocaleString()+', distribuido '+p.brecha.distribuido.toLocaleString()+', brecha '+p.brecha.gap.toLocaleString()+'.</div>';
+    html+='<div style="margin-top:12px;padding:10px;background:#fdf4e3;border-left:4px solid #854F0B;border-radius:2px;font-size:12px;color:#854F0B">'+
+          '<b>Evidencia gerencial (no altera el IPD):</b> esta UE ha pedido acumulado <b>'+p.brecha.solicitado.toLocaleString()+'</b> '+
+          'y se le ha distribuido <b>'+p.brecha.distribuido.toLocaleString()+'</b> → brecha de <b>'+p.brecha.gap.toLocaleString()+'</b>. '+
+          'Señal de que algo viene quedándose atascado.</div>';
+
   document.getElementById('mBody').innerHTML=html;
   document.getElementById('modalBg').classList.add('show');
 }
-function cerrarModal(){ document.getElementById('modalBg').classList.remove('show'); }
+function cerrarModal(){
+  document.getElementById('modalBg').classList.remove('show');
+  const mh=document.querySelector('#modalBg .mh'); if(mh) mh.style.background='';
+}
 async function priorizar(id,activar){
   try{ const r=await jsonp(WEBAPP+'?file=kanban_priorizar&id='+encodeURIComponent(id)+'&activar='+(activar?'1':'0')+'&quien='+encodeURIComponent(USUARIO));
     if(r.ok) cargar(); else alert(r.msg||'No se pudo'); }catch(e){ alert('Sin conexión'); }
