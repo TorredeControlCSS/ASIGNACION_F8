@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Despacho a Unidades Ejecutoras — DINALOG/CEDIS Panamá</title>
+<link rel="icon" href="./favicon.ico?v=1"/>
+<style>
+  :root{--azul:#1e5a9e;--azul2:#0C447C;--bg:#ececec;--card:#fff;--bord:#a8a8a8;
+    --txt:#20303f;--sub:#6b7684;--ok:#1c7c3a;--okbg:#e2efda;--ambar:#BA7517;--ambarbg:#faeeda;
+    --rojo:#a12626;--rojobg:#fcebeb;
+    --t-rojo:#c0281f;--t-naranja:#d97316;--t-amarillo:#d9a800;--t-verde:#3a8c3a;--t-azul:#2a6db5;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--txt);font-size:14px;}
+  .num{font-family:Consolas,"Courier New",monospace;}
+  .top{display:flex;align-items:center;gap:14px;padding:14px 22px;background:linear-gradient(90deg,#0b1f3a,#133a74);color:#fff;}
+  .top img{width:38px;height:38px;object-fit:contain;}
+  .top h1{font-size:18px;font-weight:700;}
+  .top .sub{font-size:11px;opacity:.8;}
+  .top .spacer{flex:1;}
+  .top .gen{font-size:11px;opacity:.75;text-align:right;}
+  .top .gen b{display:block;font-size:14px;}
+
+  .tabs{display:flex;gap:0;background:var(--card);border-bottom:1px solid var(--bord);padding:0 22px;}
+  .tab{padding:14px 24px;font-size:14px;font-weight:600;color:var(--sub);cursor:pointer;border-bottom:3px solid transparent;}
+  .tab.active{color:var(--azul2);border-bottom-color:var(--azul);}
+  .tab .cnt{font-family:Consolas,monospace;font-size:11px;background:#eef2f6;padding:1px 7px;border-radius:9px;margin-left:6px;}
+
+  .wrap{padding:16px 22px;max-width:1300px;margin:0 auto;}
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px;}
+  .metric{background:var(--card);border:1px solid var(--bord);border-radius:8px;padding:13px 15px;}
+  .metric .v{font-family:Consolas,monospace;font-size:24px;font-weight:800;line-height:1;color:var(--azul);}
+  .metric .l{font-size:11px;color:var(--sub);margin-top:4px;}
+
+  .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--card);border:1px solid var(--bord);border-radius:8px;padding:10px 14px;margin-bottom:14px;}
+  .controls select,.controls input{padding:7px 10px;border:1px solid var(--bord);border-radius:5px;font-size:13px;}
+  .controls input[type=text]{flex:1;min-width:170px;}
+  .daysel{display:flex;border:1px solid var(--azul2);border-radius:6px;overflow:hidden;}
+  .daysel button{border:0;background:#fff;color:var(--azul2);padding:8px 13px;font-size:12px;font-weight:600;cursor:pointer;border-right:1px solid #d4dce6;}
+  .daysel button:last-child{border-right:0;}
+  .daysel button.active{background:var(--azul2);color:#fff;}
+  .daysel button .badge{font-size:8px;background:var(--rojo);color:#fff;padding:1px 5px;border-radius:8px;margin-left:4px;}
+  .controls .spacer{flex:1;}
+  .btn{background:var(--azul2);color:#fff;border:0;padding:8px 15px;font-size:12px;font-weight:600;cursor:pointer;border-radius:5px;}
+  .btn.sec{background:#fff;color:var(--azul2);border:1px solid var(--bord);}
+
+  /* Triage leyenda */
+  .triage-leg{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+  .tl{display:flex;align-items:center;gap:6px;font-size:11px;background:var(--card);border:1px solid var(--bord);border-radius:20px;padding:4px 12px;}
+  .tl .sq{width:12px;height:12px;border-radius:3px;}
+  .sq.ROJO{background:var(--t-rojo);}.sq.NARANJA{background:var(--t-naranja);}.sq.AMARILLO{background:var(--t-amarillo);}
+  .sq.VERDE{background:var(--t-verde);}.sq.AZUL{background:var(--t-azul);}
+  .tl .n{font-family:Consolas,monospace;font-weight:700;}
+
+  .dayhead{font-size:15px;font-weight:700;color:var(--azul2);margin:6px 2px 12px;padding-bottom:8px;border-bottom:2px solid #d4dce6;display:flex;align-items:center;gap:10px;}
+  .dayhead .pill{font-family:Consolas,monospace;font-size:12px;background:var(--okbg);color:var(--ok);padding:3px 10px;border-radius:10px;font-weight:700;}
+
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px;}
+  .ue{background:var(--card);border:1px solid var(--bord);border-left:5px solid var(--ok);border-radius:6px;padding:14px 16px;}
+  .ue.pocos{border-left-color:var(--ambar);}
+  .ue .r1{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px;}
+  .ue .n{font-size:15px;font-weight:700;line-height:1.2;}
+  .ue .cedis{font-size:10px;color:var(--sub);margin-top:2px;}
+  .ue .timer{font-family:Consolas,monospace;font-size:11px;font-weight:700;padding:3px 9px;border-radius:10px;white-space:nowrap;}
+  .timer.hoy{background:var(--rojobg);color:var(--rojo);}
+  .timer.man{background:var(--ambarbg);color:var(--ambar);}
+  .timer.fut{background:#eef2f6;color:#5a6b7a;}
+  .ue .big{display:flex;gap:16px;align-items:baseline;margin:8px 0;}
+  .ue .big .listos{font-family:Consolas,monospace;font-size:30px;font-weight:800;color:var(--ok);line-height:1;}
+  .ue .big .txt{font-size:12px;color:var(--sub);}
+  .ue .vol{font-family:Consolas,monospace;font-size:13px;color:var(--azul2);font-weight:700;}
+  .grupos{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;}
+  .gchip{font-size:10px;background:#eef3f9;color:var(--azul2);padding:2px 8px;border-radius:9px;font-weight:600;}
+  .gchip .num{font-weight:800;}
+  .tipos{display:flex;gap:6px;margin-top:8px;}
+  .tchip{font-size:10px;font-weight:700;padding:2px 8px;border-radius:9px;}
+  .tchip.urg{background:var(--rojobg);color:var(--rojo);}
+  .tchip.men{background:#eef3f9;color:var(--azul2);}
+
+  /* Tarjeta triage (priorización) */
+  .card-t{background:var(--card);border:1px solid var(--bord);border-left:6px solid var(--t-azul);border-radius:6px;margin-bottom:10px;overflow:hidden;}
+  .card-t.ROJO{border-left-color:var(--t-rojo);} .card-t.NARANJA{border-left-color:var(--t-naranja);}
+  .card-t.AMARILLO{border-left-color:var(--t-amarillo);} .card-t.VERDE{border-left-color:var(--t-verde);}
+  .card-t.AZUL{border-left-color:var(--t-azul);}
+  .ct-head{display:flex;justify-content:space-between;align-items:flex-start;padding:12px 16px;gap:12px;}
+  .ct-fol{font-family:Consolas,monospace;font-size:16px;font-weight:700;color:var(--azul2);}
+  .ct-ue{font-size:14px;font-weight:600;margin-top:2px;}
+  .ct-meta{font-size:11px;color:var(--sub);margin-top:3px;}
+  .ct-chips{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;}
+  .chip{font-size:10px;font-weight:700;padding:2px 8px;border-radius:9px;}
+  .chip.urg{background:var(--rojobg);color:var(--rojo);}.chip.men{background:#eef3f9;color:var(--azul2);}
+  .chip.cero{background:var(--rojo);color:#fff;}.chip.etapa{background:var(--okbg);color:var(--ok);}
+  .triage-badge{text-align:center;min-width:92px;}
+  .triage-badge .lvl{font-size:11px;font-weight:800;color:#fff;padding:3px 10px;border-radius:12px;display:inline-block;letter-spacing:.5px;}
+  .lvl.ROJO{background:var(--t-rojo);}.lvl.NARANJA{background:var(--t-naranja);}.lvl.AMARILLO{background:var(--t-amarillo);color:#5a4500;}
+  .lvl.VERDE{background:var(--t-verde);}.lvl.AZUL{background:var(--t-azul);}
+  .triage-badge .ipd{font-family:Consolas,monospace;font-size:22px;font-weight:800;color:var(--azul);margin-top:4px;}
+  .triage-badge .lbl{font-size:9px;color:var(--sub);}
+  .triage-badge .porque{font-size:10px;color:var(--azul);cursor:pointer;text-decoration:underline;margin-top:2px;}
+  .brecha{background:#faf6ee;border-top:1px solid #f0e4cc;padding:8px 16px;font-size:11px;color:#7a5a1a;}
+  .brecha b{font-family:Consolas,monospace;} .brecha .warn{color:var(--rojo);font-weight:700;}
+  .acciones{display:flex;gap:6px;flex-wrap:wrap;padding:8px 16px;background:#f4f4f4;border-top:1px solid #eee;}
+  .acciones .btn{font-size:11px;padding:7px 11px;}
+  .btn.rojo{background:var(--t-rojo);} .btn.quitarojo{background:#fff;color:var(--t-rojo);border:1px solid var(--t-rojo);}
+
+  .chart{background:var(--card);border:1px solid var(--bord);border-radius:8px;padding:16px;}
+  .chart h3{font-size:14px;color:var(--azul2);margin-bottom:14px;}
+  .bars{display:flex;gap:16px;align-items:flex-end;height:200px;padding:0 10px;}
+  .barcol{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;}
+  .barcol .bar{width:60%;background:var(--azul);border-radius:3px 3px 0 0;min-height:2px;position:relative;}
+  .barcol .bar .val{position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-family:Consolas,monospace;font-size:11px;font-weight:700;color:var(--azul2);}
+  .barcol .lbl{font-size:11px;color:var(--sub);margin-top:6px;font-weight:600;}
+  .barcol.hoy .bar{background:var(--rojo);}
+
+  .vacio{padding:50px;text-align:center;color:#b0bcc8;background:var(--card);border:1px solid var(--bord);border-radius:8px;}
+  .loading{padding:60px;text-align:center;color:var(--sub);font-size:15px;}
+  .hidden{display:none;}
+
+  .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:100;}
+  .modal-bg.show{display:flex;}
+  .modal{background:#fff;border-radius:8px;max-width:440px;width:90%;overflow:hidden;}
+  .modal .mh{background:var(--azul2);color:#fff;padding:14px 18px;font-size:15px;font-weight:700;display:flex;justify-content:space-between;}
+  .modal .mh .x{cursor:pointer;} .modal .mb{padding:18px;}
+  .senal{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee;font-size:13px;}
+  .senal .v{font-family:Consolas,monospace;font-weight:700;}
+  .senal-bar{height:6px;background:#eef2f6;border-radius:3px;margin-top:4px;overflow:hidden;}
+  .senal-bar span{display:block;height:100%;background:var(--azul);}
+</style>
+</head>
+<body>
+<div class="top">
+  <img src="./icons/icon-512.png" onerror="this.style.display='none'"/>
+  <div><h1>Despacho a Unidades Ejecutoras</h1><div class="sub">Torre de Control · ALMACÉN CEDIS Panamá</div></div>
+  <div class="spacer"></div>
+  <div class="gen" id="gen"></div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" id="tabRetiro" onclick="setTab('retiro')">Listos para Retiro <span class="cnt" id="cntRetiro">·</span></div>
+  <div class="tab" id="tabTriage" onclick="setTab('triage')">Priorización (Triage) <span class="cnt" id="cntTriage">·</span></div>
+  <div class="tab" id="tabCal" onclick="setTab('cal')">Calendario</div>
+</div>
+
+<div class="wrap">
+  <!-- RETIRO -->
+  <div id="viewRetiro">
+    <div class="metrics" id="mRetiro"></div>
+    <div class="controls">
+      <div class="daysel" id="daysel"></div>
+      <input type="text" id="qRetiro" placeholder="Buscar Unidad Ejecutora…" oninput="renderRetiro()"/>
+      <div class="spacer"></div>
+      <button class="btn" onclick="cargarRetiro()">↻ Actualizar</button>
+    </div>
+    <div id="retiroContent"><div class="loading">Cargando pedidos listos…</div></div>
+  </div>
+
+  <!-- TRIAGE -->
+  <div id="viewTriage" class="hidden">
+    <div class="metrics" id="mTriage"></div>
+    <div class="triage-leg" id="triageLeg"></div>
+    <div class="controls">
+      <select id="fTriage" onchange="renderTriage()">
+        <option value="">Todos los niveles</option>
+        <option value="ROJO">Solo ROJO (inmediata)</option>
+        <option value="NARANJA">Naranja o superior</option>
+        <option value="cero">Solo saldo CERO</option>
+      </select>
+      <input type="text" id="qTriage" placeholder="Buscar UE o Nº F8…" oninput="renderTriage()"/>
+      <div class="spacer"></div>
+      <button class="btn" onclick="cargarTriage()">↻ Actualizar</button>
+    </div>
+    <div id="triageContent"><div class="loading">Calculando prioridades…</div></div>
+  </div>
+
+  <!-- CALENDARIO -->
+  <div id="viewCal" class="hidden">
+    <div class="chart">
+      <h3>Carga semanal — pedidos listos por día de retiro</h3>
+      <div class="bars" id="bars"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modalBg" onclick="if(event.target===this)cerrarModal()">
+  <div class="modal">
+    <div class="mh"><span id="mTitle">Cómo se calcula</span><span class="x" onclick="cerrarModal()">✕</span></div>
+    <div class="mb" id="mBody"></div>
+  </div>
+</div>
+
+<script>
+const WEBAPP="https://script.google.com/macros/s/AKfycbyVHDQ8IuVHibz259AiEvZ-jUfVC7fxvSSqC-wfaiiq1_13C9_TK4dVtPK0SMW4sZoJ/exec";
+const DIAS=['LUNES','MARTES','MIERCOLES','JUEVES','VIERNES'];
+const USUARIO="Torre de Control";
+let RETIRO=null, TRIAGE=null, DIA_SEL=null, TAB='retiro';
+
+function jsonp(url){
+  return new Promise((res,rej)=>{
+    const cb='cb_'+Math.random().toString(36).slice(2);
+    const s=document.createElement('script'); let done=false;
+    const t=setTimeout(()=>{if(done)return;done=true;s.remove();rej(new Error('Timeout'));},25000);
+    s.src=url+(url.indexOf('?')<0?'?':'&')+'callback='+cb+'&_ts='+Date.now();
+    s.onerror=()=>{if(done)return;done=true;clearTimeout(t);s.remove();rej(new Error('Red'));};
+    window[cb]=(d)=>{if(done)return;done=true;clearTimeout(t);delete window[cb];s.remove();res(d);};
+    document.body.appendChild(s);
+  });
+}
+function setTab(t){
+  TAB=t;
+  ['Retiro','Triage','Cal'].forEach(x=>{
+    document.getElementById('tab'+x).classList.toggle('active',t===x.toLowerCase());
+    document.getElementById('view'+x).classList.toggle('hidden',t!==x.toLowerCase());
+  });
+  if(t==='triage' && !TRIAGE) cargarTriage();
+  if(t==='cal') renderCal();
+}
+
+/* ---------- RETIRO ---------- */
+async function cargarRetiro(){
+  document.getElementById('retiroContent').innerHTML='<div class="loading">Cargando pedidos listos…</div>';
+  try{
+    RETIRO=await jsonp(WEBAPP+'?file=kanban_cronograma_v2');
+    if(!DIA_SEL) DIA_SEL=RETIRO.diaHoy||'LUNES';
+    document.getElementById('gen').innerHTML='<b>Hoy: '+(RETIRO.diaHoy||'')+'</b>'+(RETIRO.generado||'');
+    const r=RETIRO.resumen||{};
+    document.getElementById('cntRetiro').textContent=r.totalPrelistos||0;
+    document.getElementById('mRetiro').innerHTML=[
+      ['UE con retiro HOY',r.hoyUE||0],['Pedidos listos HOY',r.hoyListos||0],
+      ['Bultos estimados HOY',r.hoyBultos||0],['Total pre-listos (semana)',r.totalPrelistos||0]
+    ].map(c=>'<div class="metric"><div class="v">'+c[1]+'</div><div class="l">'+c[0]+'</div></div>').join('');
+    renderDaySel(); renderRetiro();
+  }catch(e){ document.getElementById('retiroContent').innerHTML='<div class="vacio" style="color:#a12626">Sin conexión.</div>'; }
+}
+function renderDaySel(){
+  document.getElementById('daysel').innerHTML=DIAS.map(d=>{
+    const ues=(RETIRO.dias&&RETIRO.dias[d])||[];
+    const hoy=(RETIRO.diaHoy===d);
+    return '<button class="'+(DIA_SEL===d?'active':'')+'" onclick="selDia(\''+d+'\')">'+
+      d.slice(0,3)+' <span style="opacity:.7">'+ues.length+'</span>'+(hoy?'<span class="badge">HOY</span>':'')+'</button>';
+  }).join('');
+}
+function selDia(d){ DIA_SEL=d; renderDaySel(); renderRetiro(); }
+function timerHTML(d,esHoy){
+  if(esHoy||d===0) return '<span class="timer hoy">RETIRO HOY</span>';
+  if(d===1) return '<span class="timer man">MAÑANA</span>';
+  if(d===null||d===undefined) return '';
+  return '<span class="timer fut">en '+d+' días</span>';
+}
+function renderRetiro(){
+  if(!RETIRO) return;
+  const q=(document.getElementById('qRetiro').value||'').toUpperCase();
+  let ues=(RETIRO.dias&&RETIRO.dias[DIA_SEL])||[];
+  if(q) ues=ues.filter(u=>u.ue.toUpperCase().includes(q));
+  const totL=ues.reduce((a,u)=>a+u.total,0), totB=ues.reduce((a,u)=>a+u.bultosEstimados,0);
+  let html='<div class="dayhead">'+DIA_SEL+(RETIRO.diaHoy===DIA_SEL?' · HOY':'')+
+    '<span class="pill">'+ues.length+' UE · '+totL+' listos · ≈'+totB+' bultos</span></div>';
+  if(!ues.length){ html+='<div class="vacio">No hay pedidos listos para retiro este día.</div>'; }
+  else{
+    html+='<div class="cards">';
+    ues.forEach(u=>{
+      html+='<div class="ue'+(u.total<3?' pocos':'')+'">'+
+        '<div class="r1"><div><div class="n">'+u.ue+'</div>'+
+          (u.cedis&&u.cedis!=='SIN CEDIS'?'<div class="cedis">'+u.cedis+'</div>':'')+'</div>'+
+          timerHTML(u.diasRestantes,u.esHoy)+'</div>'+
+        '<div class="big"><span class="listos">'+u.total+'</span>'+
+          '<span class="txt">pedidos listos<br>para despachar</span>'+
+          '<span style="flex:1"></span><span class="vol">≈ '+u.bultosEstimados+' bultos</span></div>'+
+        '<div class="tipos">'+
+          (u.urg>0?'<span class="tchip urg">'+u.urg+' urgencia'+(u.urg>1?'s':'')+'</span>':'')+
+          (u.men>0?'<span class="tchip men">'+u.men+' mensual'+(u.men>1?'es':'')+'</span>':'')+'</div>'+
+        '<div class="grupos">'+(u.gruposArr||[]).map(g=>'<span class="gchip">'+g.g.split('-')[0]+' <span class="num">'+g.n+'</span></span>').join('')+'</div>'+
+      '</div>';
+    });
+    html+='</div>';
+  }
+  document.getElementById('retiroContent').innerHTML=html;
+}
+
+/* ---------- TRIAGE ---------- */
+async function cargarTriage(){
+  document.getElementById('triageContent').innerHTML='<div class="loading">Calculando prioridades…</div>';
+  try{
+    TRIAGE=await jsonp(WEBAPP+'?file=kanban_ipd');
+    const r=TRIAGE.resumen||{}, tr=r.triage||{};
+    document.getElementById('cntTriage').textContent=(TRIAGE.pedidos||[]).length;
+    document.getElementById('mTriage').innerHTML=[
+      ['F8 activas',(TRIAGE.pedidos||[]).length],['Saldo en CERO',r.conCero||0],
+      ['Renglones 0 (red)',(r.combosCero||0).toLocaleString()]
+    ].map(c=>'<div class="metric"><div class="v">'+c[1]+'</div><div class="l">'+c[0]+'</div></div>').join('');
+    const cols=['ROJO','NARANJA','AMARILLO','VERDE','AZUL'];
+    document.getElementById('triageLeg').innerHTML=cols.map(c=>
+      '<div class="tl"><span class="sq '+c+'"></span>'+c.charAt(0)+c.slice(1).toLowerCase()+
+      ' <span class="n">'+(tr[c]||0)+'</span></div>').join('');
+    renderTriage();
+  }catch(e){ document.getElementById('triageContent').innerHTML='<div class="vacio" style="color:#a12626">Sin conexión.</div>'; }
+}
+function renderTriage(){
+  if(!TRIAGE) return;
+  const q=(document.getElementById('qTriage').value||'').toUpperCase();
+  const f=document.getElementById('fTriage').value;
+  let arr=(TRIAGE.pedidos||[]).slice();
+  if(f==='ROJO') arr=arr.filter(p=>p.triage==='ROJO');
+  else if(f==='NARANJA') arr=arr.filter(p=>p.triageP<=2);
+  else if(f==='cero') arr=arr.filter(p=>p.tieneCero);
+  if(q) arr=arr.filter(p=>p.ue.toUpperCase().includes(q)||p.id.toUpperCase().includes(q));
+  const cont=document.getElementById('triageContent');
+  if(!arr.length){ cont.innerHTML='<div class="vacio">No hay F8 con este filtro.</div>'; return; }
+  window.__ARR=arr;
+  const lim=arr.slice(0,150);
+  cont.innerHTML=lim.map((p,i)=>cardTriage(p,i)).join('')+
+    (arr.length>150?'<div class="vacio" style="padding:18px">Mostrando 150 de '+arr.length+'. Filtra para acotar.</div>':'');
+}
+function cardTriage(p,i){
+  const gap=p.brecha?p.brecha.gap:0;
+  const hayGap=p.brecha && p.brecha.solicitado>0 && gap>0;
+  return '<div class="card-t '+p.triage+'">'+
+    '<div class="ct-head">'+
+      '<div style="flex:1">'+
+        '<div class="ct-fol">'+p.id+'</div><div class="ct-ue">'+p.ue+'</div>'+
+        '<div class="ct-meta">Grupo '+p.grupo+' · recibido hace '+p.antig+'d</div>'+
+        '<div class="ct-chips">'+
+          (p.tieneCero?'<span class="chip cero">SALDO 0</span>':'')+
+          '<span class="chip '+(p.esUrg?'urg':'men')+'">'+p.tipo+'</span>'+
+          '<span class="chip etapa">'+p.etapa+'</span></div>'+
+      '</div>'+
+      '<div class="triage-badge">'+
+        '<div class="lvl '+p.triage+'">'+p.triage+'</div>'+
+        '<div class="ipd">'+Math.round(p.ipd)+'</div><div class="lbl">IPD · '+p.triageLabel+'</div>'+
+        '<div class="porque" onclick="verPorque('+i+')">¿por qué?</div>'+
+      '</div>'+
+    '</div>'+
+    (hayGap?'<div class="brecha">Demanda acumulada: pedido <b>'+p.brecha.solicitado.toLocaleString()+
+      '</b> · distribuido <b>'+p.brecha.distribuido.toLocaleString()+'</b> · <span class="warn">brecha '+gap.toLocaleString()+'</span></div>':'')+
+    '<div class="acciones">'+
+      (p.triage==='ROJO'&&p.defcon
+        ? '<button class="btn quitarojo" onclick="priorizar(\''+p.id+'\',false)">Quitar código ROJO</button>'
+        : '<button class="btn rojo" onclick="priorizar(\''+p.id+'\',true)">● Marcar ROJO (inmediata)</button>')+
+      '<button class="btn sec" onclick="alert(\'Detalle: pendiente conectar ASIGNACIONES + contacto UE\')">Ver detalle</button>'+
+      '<button class="btn sec" onclick="alert(\'Notificar UE: pendiente correo + volumetria\')">Notificar UE</button>'+
+    '</div></div>';
+}
+function verPorque(i){
+  const p=(window.__ARR||[])[i]; if(!p) return;
+  const s=p.senales||{};
+  document.getElementById('mTitle').textContent='IPD '+Math.round(p.ipd)+' · Triage '+p.triage;
+  const barra=(v,max)=>'<div class="senal-bar"><span style="width:'+(max?100*v/max:0)+'%"></span></div>';
+  let html='<div style="text-align:center;padding:12px;border-radius:6px;margin-bottom:14px;background:#f4f6f9">'+
+    '<span class="lvl '+p.triage+'" style="font-size:13px;padding:5px 14px">'+p.triage+' — '+p.triageLabel+'</span>'+
+    (p.defcon?'<div style="font-size:11px;color:#7a2020;margin-top:6px">Marcado manualmente por '+(p.defconPor||'equipo')+'</div>':'')+'</div>';
+  html+='<div style="font-size:12px;color:#6b7684;margin-bottom:10px">El IPD combina cuatro señales:</div>';
+  html+='<div class="senal"><span>Saldo cero (50%)</span><span class="v">'+s.cero+'</span></div>'+barra(s.cero,50);
+  html+='<div class="senal"><span>Proximidad (25%)</span><span class="v">'+s.proximidad+'</span></div>'+barra(s.proximidad,25);
+  html+='<div class="senal"><span>Antigüedad (15%)</span><span class="v">'+s.antiguedad+'</span></div>'+barra(s.antiguedad,15);
+  html+='<div class="senal"><span>Tipo (10%)</span><span class="v">'+s.tipo+'</span></div>'+barra(s.tipo,10);
+  if(p.brecha && p.brecha.gap>0){
+    html+='<div style="margin-top:14px;padding:12px;background:#faf6ee;border-radius:6px;font-size:12px;color:#7a5a1a">'+
+      '<b>Evidencia gerencial:</b> pedido '+p.brecha.solicitado.toLocaleString()+', distribuido '+
+      p.brecha.distribuido.toLocaleString()+' — brecha '+p.brecha.gap.toLocaleString()+'.</div>';
+  }
+  document.getElementById('mBody').innerHTML=html;
+  document.getElementById('modalBg').classList.add('show');
+}
+function cerrarModal(){ document.getElementById('modalBg').classList.remove('show'); }
+async function priorizar(id,activar){
+  try{
+    const r=await jsonp(WEBAPP+'?file=kanban_priorizar&id='+encodeURIComponent(id)+
+      '&activar='+(activar?'1':'0')+'&quien='+encodeURIComponent(USUARIO));
+    if(r.ok) cargarTriage(); else alert(r.msg||'No se pudo');
+  }catch(e){ alert('Sin conexión'); }
+}
+
+/* ---------- CALENDARIO ---------- */
+function renderCal(){
+  if(!RETIRO) return;
+  const cont={}; DIAS.forEach(d=>cont[d]=0);
+  DIAS.forEach(d=>{ cont[d]=((RETIRO.dias&&RETIRO.dias[d])||[]).reduce((a,u)=>a+u.total,0); });
+  const max=Math.max(1,...DIAS.map(d=>cont[d]));
+  document.getElementById('bars').innerHTML=DIAS.map(d=>{
+    const h=Math.round(100*cont[d]/max), hoy=(RETIRO.diaHoy===d);
+    return '<div class="barcol'+(hoy?' hoy':'')+'"><div class="bar" style="height:'+h+'%"><span class="val">'+cont[d]+'</span></div>'+
+      '<div class="lbl">'+d.slice(0,3)+'</div></div>';
+  }).join('');
+}
+cargarRetiro();
+</script>
+</body>
+</html>
