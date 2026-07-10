@@ -132,6 +132,9 @@
     <!-- LISTA -->
     <div id="tabLista">
       <div class="filtros-linea">
+        <div class="filtro-campo" style="flex:1;min-width:220px"><span class="et">Unidad Ejecutora</span>
+          <select id="fUE" onchange="renderLista()" style="width:100%"><option value="">Todas las unidades</option></select>
+        </div>
         <div class="filtro-campo filtro-tri"><span class="et">Nivel triage</span>
           <select id="fTriage" onchange="renderLista()">
             <option value="">Todos los niveles</option>
@@ -315,6 +318,13 @@ function poblarEtapas(){
     if(!isNaN(na)&&!isNaN(nb)) return na-nb; return a.localeCompare(b); });
   const selG=document.getElementById('fGrupo');
   selG.innerHTML='<option value="">Todos los grupos</option>'+grupos.map(g=>'<option value="'+g+'">Grupo '+g+'</option>').join('');
+  // Unidades Ejecutoras: alfabético.
+  const uset=new Set(peds.map(p=>String(p.ue||'').trim()).filter(Boolean));
+  const ues=[...uset].sort((a,b)=>a.localeCompare(b,'es'));
+  const selU=document.getElementById('fUE');
+  const prev=selU.value;
+  selU.innerHTML='<option value="">Todas las unidades</option>'+ues.map(u=>'<option value="'+u.replace(/"/g,'&quot;')+'">'+u+'</option>').join('');
+  if(prev && ues.indexOf(prev)>=0) selU.value=prev;   // conservar selección tras recargar
 }
 
 function setFiltroRojo(){ document.getElementById('fTriage').value='ROJO'; renderLista(); }
@@ -324,6 +334,7 @@ function renderLista(){
   const q=(document.getElementById('q').value||'').toUpperCase();
   const ft=document.getElementById('fTriage').value;
   const fe=document.getElementById('fEtapa').value;
+  const fu=document.getElementById('fUE').value;
   const fg=document.getElementById('fGrupo').value;
   const fti=document.getElementById('fTipo').value;
   const fc=document.getElementById('fCero').value;
@@ -331,6 +342,7 @@ function renderLista(){
   if(ft==='ROJO') arr=arr.filter(p=>p.triage==='ROJO');
   else if(ft==='NARANJA') arr=arr.filter(p=>p.triageP<=2);
   else if(ft==='AMARILLO') arr=arr.filter(p=>p.triageP<=3);
+  if(fu) arr=arr.filter(p=>String(p.ue||'').trim()===fu);
   if(fe) arr=arr.filter(p=>p.etapa===fe);
   if(fg) arr=arr.filter(p=>String(p.grupo||'').trim()===fg);
   if(fti==='URG') arr=arr.filter(p=>p.esUrg); else if(fti==='MEN') arr=arr.filter(p=>!p.esUrg);
