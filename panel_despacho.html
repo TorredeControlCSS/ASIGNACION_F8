@@ -172,6 +172,32 @@
   .sup-card .n{font-size:10.5px;color:#aaa;margin-top:6px;}
   .sup-nota{background:#f4f7fb;border:1px solid #d6e2f0;border-radius:4px;padding:11px 14px;font-size:12.5px;color:#555;line-height:1.5;margin-bottom:16px;}
   .sup-sec{font-size:14px;font-weight:700;color:var(--azul-osc);margin:18px 0 8px;padding-bottom:5px;border-bottom:1px solid var(--borde-suave);}
+
+  /* Termografía por UE */
+  .tg-head{background:var(--azul-osc);color:#fff;padding:12px 16px;border-radius:4px;margin-bottom:14px;}
+  .tg-head .t1{font-size:16px;font-weight:700;}
+  .tg-head .t2{font-size:12px;color:#B5D4F4;margin-top:3px;}
+  .tg-kpis{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
+  .tg-kpi{background:#fff;border:1px solid var(--borde-suave);border-radius:4px;padding:8px 14px;}
+  .tg-kpi .l{font-size:11px;color:#666;text-transform:uppercase;}
+  .tg-kpi .v{font-size:22px;font-weight:800;font-family:var(--mono);color:var(--azul-osc);}
+  .tg-matriz{width:100%;border-collapse:collapse;font-size:11.5px;margin-bottom:8px;}
+  .tg-matriz th{background:var(--gris-bg);color:#444;padding:6px 5px;font-size:10px;text-align:center;border:1px solid var(--borde-suave);font-weight:600;}
+  .tg-matriz th.grupo{text-align:left;background:var(--azul-osc);color:#fff;}
+  .tg-matriz td{padding:6px 5px;text-align:center;border:1px solid #eee;font-family:var(--mono);font-weight:700;}
+  .tg-matriz td.grupo{text-align:left;font-family:Arial;font-weight:600;background:#f7f7f7;font-size:11px;}
+  .tg-matriz td.cero{color:#ddd;font-weight:400;}
+  .tg-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;}
+  .tg-card{background:#fff;border:1px solid var(--borde-suave);border-top:4px solid var(--azul);border-radius:4px;padding:12px 14px;}
+  .tg-card .g{font-size:14px;font-weight:700;color:var(--azul-osc);margin-bottom:6px;}
+  .tg-card .prog{display:flex;height:8px;border-radius:3px;overflow:hidden;background:#eee;margin:6px 0;}
+  .tg-card .prog span{display:block;}
+  .tg-card .row{display:flex;justify-content:space-between;font-size:11.5px;padding:2px 0;color:#555;}
+  .tg-card .row b{font-family:var(--mono);}
+  .tg-otif{display:flex;gap:6px;margin-top:8px;}
+  .tg-otif .o{flex:1;text-align:center;background:var(--fondo);border-radius:3px;padding:5px;}
+  .tg-otif .o .ov{font-size:16px;font-weight:800;font-family:var(--mono);}
+  .tg-otif .o .ol{font-size:9px;color:#777;text-transform:uppercase;}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
@@ -198,6 +224,7 @@
     <div class="tab" data-tab="calendario">Calendario</div>
     <div class="tab" data-tab="kanban">Kanban</div>
     <div class="tab" data-tab="supervision">Supervisión · OTIF</div>
+    <div class="tab" data-tab="termografia">Termografía UE</div>
     <div class="tab" data-tab="transito">F8 en tránsito <span class="cnt" id="cntTransito">·</span></div>
   </div>
 
@@ -286,6 +313,16 @@
     <div id="tabSupervision" class="hidden">
       <div id="supCont"><div class="loading">Cargando métricas de supervisión…</div></div>
     </div>
+    <!-- TERMOGRAFIA POR UE -->
+    <div id="tabTermografia" class="hidden">
+      <div class="filtros-linea" style="margin-bottom:12px;">
+        <div class="filtro-campo" style="flex:1;min-width:260px"><span class="et">Unidad Ejecutora</span>
+          <select id="tgUE" onchange="renderTermografia()" style="width:100%"><option value="">— Selecciona una unidad —</option></select>
+        </div>
+        <button class="btn noprint" onclick="window.print()" style="align-self:flex-end">🖨 Imprimir</button>
+      </div>
+      <div id="tgCont"><div class="vacio">Selecciona una Unidad Ejecutora para ver su footprint de atención por grupo.</div></div>
+    </div>
     <!-- TRANSITO -->
     <div id="tabTransito" class="hidden">
       <div class="filtros-linea" style="margin-bottom:0;">
@@ -342,13 +379,14 @@ function jsonp(url){
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
   TAB=t.dataset.tab;
   document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('activa',x===t));
-  ['Lista','Calendario','Kanban','Supervision','Transito'].forEach(v=>{
+  ['Lista','Calendario','Kanban','Supervision','Termografia','Transito'].forEach(v=>{
     document.getElementById('tab'+v).classList.toggle('hidden', v.toLowerCase()!==TAB);
   });
   if(TAB==='transito') renderTransito();
   if(TAB==='calendario') renderCalendario();
   if(TAB==='kanban') renderKanban();
   if(TAB==='supervision') cargarSupervision();
+  if(TAB==='termografia') poblarTermografiaUE();
 }));
 
 async function cargar(){
@@ -1020,6 +1058,127 @@ function renderSupervision(){
 
   html+='<div class="sup-nota" style="margin-top:8px;">Actualizado '+(d.generado||'')+
     '. La latencia hand-off→facturación es la evidencia objetiva del tiempo entre que un pedido pasa a Cómputo y su facturación efectiva.</div>';
+
+  cont.innerHTML=html;
+}
+
+// ===================== TERMOGRAFÍA POR UE =====================
+// Etapas mostradas en la matriz de calor (subconjunto legible del flujo).
+const TG_ETAPAS=['ASIGNADA','PICKING','FACTURACIÓN','EMPACADO','DISTRIBUCIÓN','DESPACHADO','ENTREGADO'];
+const TG_ET_CORTA={'ASIGNADA':'Asig.','PICKING':'Picking','FACTURACIÓN':'Fact.','EMPACADO':'Empac.','DISTRIBUCIÓN':'Distr.','DESPACHADO':'Desp.','ENTREGADO':'Entr.'};
+
+function poblarTermografiaUE(){
+  const sel=document.getElementById('tgUE');
+  if(sel.options.length>1) return; // ya poblado
+  const ues=[...new Set((DATA.pedidos||[]).map(p=>String(p.ue||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
+  sel.innerHTML='<option value="">— Selecciona una unidad —</option>'+ues.map(u=>'<option value="'+u.replace(/"/g,'&quot;')+'">'+u+'</option>').join('');
+}
+
+function ordenarGrupos(gs){
+  return gs.sort((a,b)=>{const na=parseFloat((a.match(/\d+/)||[99])[0]),nb=parseFloat((b.match(/\d+/)||[99])[0]);return na-nb||a.localeCompare(b);});
+}
+
+function renderTermografia(){
+  const ue=document.getElementById('tgUE').value;
+  const cont=document.getElementById('tgCont');
+  if(!ue){ cont.innerHTML='<div class="vacio">Selecciona una Unidad Ejecutora para ver su footprint de atención por grupo.</div>'; return; }
+  const peds=(DATA.pedidos||[]).filter(p=>String(p.ue||'').trim()===ue);
+  if(!peds.length){ cont.innerHTML='<div class="vacio">Sin pedidos registrados para esta unidad.</div>'; return; }
+
+  // agrupar por grupo -> {etapa:count}, bultos, cerrados para OTIF
+  const porGrupo={};
+  peds.forEach(p=>{
+    const g=String(p.grupo||'Sin grupo').trim()||'Sin grupo';
+    if(!porGrupo[g]) porGrupo[g]={etapas:{},total:0,bultos:0,cerr:0,onTime:0,onTimeN:0,fillSol:0,fillAsig:0};
+    const o=porGrupo[g];
+    o.etapas[p.etapa]=(o.etapas[p.etapa]||0)+1;
+    o.total++; o.bultos+=(p.bultos||0);
+    if(p.cerrado){
+      o.cerr++;
+      // fill rate por cantidad (usa brecha si existe, si no asume completo)
+      if(p.brecha){ o.fillSol+=p.brecha.solicitado; o.fillAsig+=p.brecha.distribuido; }
+    }
+  });
+  const grupos=ordenarGrupos(Object.keys(porGrupo));
+
+  // KPIs de la unidad
+  const totF8=peds.length;
+  const totBultos=peds.reduce((s,p)=>s+(p.bultos||0),0);
+  const cerrados=peds.filter(p=>p.cerrado).length;
+  const enProceso=totF8-cerrados;
+  const crono=(peds[0].diasRetiro||[]).join(' · ')||'—';
+  const cedis=peds[0].cedis||'';
+
+  let html='';
+  html+='<div class="tg-head"><div class="t1">'+ue+'</div>'+
+    '<div class="t2">Footprint de atención por grupo · Cronograma de entrega: '+crono+(cedis?' · '+cedis:'')+'</div></div>';
+
+  html+='<div class="tg-kpis">'+
+    '<div class="tg-kpi"><div class="l">Total F8</div><div class="v">'+totF8+'</div></div>'+
+    '<div class="tg-kpi"><div class="l">En proceso</div><div class="v">'+enProceso+'</div></div>'+
+    '<div class="tg-kpi"><div class="l">Despachadas</div><div class="v">'+cerrados+'</div></div>'+
+    '<div class="tg-kpi"><div class="l">Grupos activos</div><div class="v">'+grupos.length+'</div></div>'+
+    '<div class="tg-kpi"><div class="l">Bultos totales</div><div class="v">'+Math.round(totBultos).toLocaleString()+'</div></div>'+
+  '</div>';
+
+  // === MATRIZ DE CALOR grupo x etapa ===
+  // máximo por celda para escalar intensidad
+  let maxCel=1;
+  grupos.forEach(g=>TG_ETAPAS.forEach(e=>{ const v=porGrupo[g].etapas[e]||0; if(v>maxCel)maxCel=v; }));
+  html+='<div class="sup-sec">Mapa de calor — F8 por grupo y etapa</div>';
+  html+='<table class="tg-matriz"><thead><tr><th class="grupo">Grupo</th>';
+  TG_ETAPAS.forEach(e=>{ html+='<th>'+TG_ET_CORTA[e]+'</th>'; });
+  html+='<th>Total</th></tr></thead><tbody>';
+  grupos.forEach(g=>{
+    html+='<tr><td class="grupo">'+g+'</td>';
+    TG_ETAPAS.forEach(e=>{
+      const v=porGrupo[g].etapas[e]||0;
+      if(!v){ html+='<td class="cero">·</td>'; }
+      else{
+        const inten=v/maxCel; // 0..1
+        // celda azul si avanzado (despachado/entregado), ámbar/rojo si atascado en asignada/picking
+        const atascada=(e==='ASIGNADA'||e==='PICKING');
+        const bg = atascada
+          ? 'rgba('+Math.round(192+ (255-192)*(1-inten))+','+Math.round(120*(1-inten)+40)+','+Math.round(31*(1-inten)+20)+','+(0.25+0.6*inten)+')'
+          : 'rgba(30,90,158,'+(0.15+0.55*inten)+')';
+        const col=inten>0.55?'#fff':'#333';
+        html+='<td style="background:'+bg+';color:'+col+'">'+v+'</td>';
+      }
+    });
+    html+='<td style="background:#f0f0f0">'+porGrupo[g].total+'</td></tr>';
+  });
+  html+='</tbody></table>';
+  html+='<div style="font-size:11px;color:#888;margin-bottom:6px">Rojo/ámbar = F8 detenidas aguas arriba (asignadas/picking sin avanzar). Azul = F8 que ya avanzaron hacia despacho. Intensidad = volumen.</div>';
+
+  // === TARJETAS POR GRUPO ===
+  html+='<div class="sup-sec">Detalle por grupo — progreso del flujo y cumplimiento</div>';
+  html+='<div class="tg-cards">';
+  grupos.forEach(g=>{
+    const o=porGrupo[g];
+    const cerr=o.etapas['DESPACHADO']||0, entr=o.etapas['ENTREGADO']||0, distr=o.etapas['DISTRIBUCIÓN']||0;
+    const salidos=cerr+entr+distr;
+    const enProc=o.total-salidos;
+    const pctSal=o.total?Math.round(100*salidos/o.total):0;
+    // barra de progreso: proceso (ámbar) vs salidos (azul)
+    const prog='<div class="prog">'+
+      (enProc?'<span style="flex:'+enProc+';background:var(--t-naranja)"></span>':'')+
+      (salidos?'<span style="flex:'+salidos+';background:var(--azul)"></span>':'')+'</div>';
+    // OTIF del grupo (fill rate)
+    const fill=o.fillSol>0?Math.round(100*o.fillAsig/o.fillSol):null;
+    const fillCl=fill==null?'':(fill>=70?'bueno':(fill>=40?'medio':'malo'));
+    html+='<div class="tg-card">'+
+      '<div class="g">'+g+'</div>'+
+      prog+
+      '<div class="row"><span>En proceso</span><b>'+enProc+'</b></div>'+
+      '<div class="row"><span>Despachadas/salidas</span><b>'+salidos+' ('+pctSal+'%)</b></div>'+
+      '<div class="row"><span>Bultos</span><b>'+Math.round(o.bultos).toLocaleString()+'</b></div>'+
+      '<div class="tg-otif">'+
+        '<div class="o"><div class="ov" style="color:'+(fillCl==='malo'?'var(--t-rojo)':fillCl==='medio'?'var(--t-naranja)':fillCl==='bueno'?'var(--t-verde)':'#999')+'">'+(fill==null?'—':fill+'%')+'</div><div class="ol">Fill rate</div></div>'+
+        '<div class="o"><div class="ov">'+o.cerr+'</div><div class="ol">Cerradas</div></div>'+
+      '</div>'+
+    '</div>';
+  });
+  html+='</div>';
 
   cont.innerHTML=html;
 }
