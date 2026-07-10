@@ -77,6 +77,7 @@
   .btn.rojo{background:var(--t-rojo);color:#fff;border-color:var(--t-rojo);}
   .btn.quitarojo{background:#fff;color:var(--t-rojo);border-color:var(--t-rojo);}
   .btn.conf{background:var(--verde);color:#fff;border-color:var(--verde);}
+  .btn.difer{background:#fff;color:var(--ambar);border-color:var(--ambar);}
   /* Lado triage */
   .ped-triage{width:110px;flex-shrink:0;background:#fafafa;border-left:1px solid #eee;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 6px;text-align:center;}
   .ped-triage .lvl{font-size:10px;font-weight:800;color:#fff;padding:2px 9px;border-radius:11px;letter-spacing:.5px;}
@@ -165,7 +166,7 @@
         <button class="btn" onclick="cargar()">↻ Actualizar</button>
         <button class="btn" onclick="limpiarFiltros()">✕ Limpiar filtros</button>
         <button class="btn chip" onclick="setFiltroRojo()">Solo ROJO</button>
-        <button class="btn primary" onclick="alert('Notificar UEs con pedido listo: correo con volumetría — Capa 2')">✉ Notificar UEs con pedido listo</button>
+        <button class="btn primary" onclick="notificarMasivo()">✉ Notificar UEs con pedido listo</button>
       </div>
       <div id="listaCont"><div class="loading">Cargando pedidos…</div></div>
     </div>
@@ -408,8 +409,8 @@ function cardPed(p,i){
         (p.triage==='ROJO'&&p.defcon
           ? '<button class="btn quitarojo" onclick="priorizar(\''+p.id+'\',false)">Quitar ROJO</button>'
           : '<button class="btn rojo" onclick="priorizar(\''+p.id+'\',true)">● Marcar ROJO</button>')+
-        '<button class="btn conf" onclick="alert(\'Confirmar listo + correo con volumetría — Capa 2\')">✓ Confirmar listo</button>'+
-        '<button class="btn" onclick="alert(\'Ver detalle: renglones desde ASIGNACIONES + contacto UE — Capa 2\')">Ver detalle</button>'+
+        '<button class="btn conf" onclick="confirmarListo(\''+p.id+'\')">✓ Confirmar listo</button>'+
+        '<button class="btn difer" onclick="diferirPedido(\''+p.id+'\')">Diferir</button>'+
       '</div>'+
     '</div>'+
     '<div class="ped-triage">'+
@@ -494,6 +495,46 @@ function cerrarModal(){
 async function priorizar(id,activar){
   try{ const r=await jsonp(WEBAPP+'?file=kanban_priorizar&id='+encodeURIComponent(id)+'&activar='+(activar?'1':'0')+'&quien='+encodeURIComponent(USUARIO));
     if(r.ok) cargar(); else alert(r.msg||'No se pudo'); }catch(e){ alert('Sin conexión'); }
+}
+
+// --- Capa 2: correos ---
+async function confirmarListo(id){
+  const dia=(prompt('Día de retiro para incluir en el correo (opcional, ej. "jueves"):','')||'').trim();
+  try{
+    const r=await jsonp(WEBAPP+'?file=despacho_confirmar_listo&id='+encodeURIComponent(id)+
+      '&dia='+encodeURIComponent(dia)+'&quien='+encodeURIComponent(USUARIO));
+    if(r.ok && r.correo_enviado){
+      alert('Correo enviado a '+r.ue+' ('+r.to+').\nVolumen: '+r.bultos+' bultos · '+r.renglones+' renglón(es).');
+    }else{
+      alert('No se envió: '+(r.msg||r.correo_error||'error desconocido'));
+    }
+  }catch(e){ alert('Sin conexión'); }
+}
+
+async function diferirPedido(id){
+  const motivo=(prompt('Motivo del diferimiento (opcional, se incluye en el correo):','')||'').trim();
+  if(!confirm('Se enviará a la UE un correo indicando que su Forma 8 '+id+' fue diferida al próximo ciclo. ¿Continuar?')) return;
+  try{
+    const r=await jsonp(WEBAPP+'?file=despacho_diferir&id='+encodeURIComponent(id)+
+      '&motivo='+encodeURIComponent(motivo)+'&quien='+encodeURIComponent(USUARIO));
+    if(r.ok && r.correo_enviado){ alert('Correo de diferimiento enviado a '+r.ue+' ('+r.to+').'); }
+    else{ alert('No se envió: '+(r.msg||r.correo_error||'error desconocido')); }
+  }catch(e){ alert('Sin conexión'); }
+}
+
+async function notificarMasivo(){
+  if(!confirm('Se enviará un correo a CADA Unidad Ejecutora que tenga pedidos pre-listos para retiro, con su volumetría consolidada.\n\nEsta acción envía múltiples correos. ¿Continuar?')) return;
+  const btn=event&&event.target; if(btn){ btn.disabled=true; btn.textContent='Enviando…'; }
+  try{
+    const r=await jsonp(WEBAPP+'?file=despacho_notificar_masivo&quien='+encodeURIComponent(USUARIO));
+    if(r.ok){
+      let msg='Correos enviados: '+r.enviados+'.';
+      if(r.ues_sin_correo>0) msg+='\nUEs sin correo registrado: '+r.ues_sin_correo+(r.sin_correo&&r.sin_correo.length?('\n('+r.sin_correo.join(', ')+')'):'');
+      if(r.errores>0) msg+='\nErrores: '+r.errores;
+      alert(msg);
+    }else{ alert('No se pudo: '+(r.msg||'error')); }
+  }catch(e){ alert('Sin conexión (el envío masivo puede tardar; verifica antes de reintentar)'); }
+  finally{ if(btn){ btn.disabled=false; btn.textContent='✉ Notificar UEs con pedido listo'; } }
 }
 
 function renderTransito(){
