@@ -101,6 +101,47 @@
   .senal{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #eee;font-size:13px;}
   .senal .v{font-family:var(--mono);font-weight:700;}
   .hidden{display:none;}
+
+  /* Calendario mensual (patrón del panel de proveedores) */
+  .cal-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;}
+  .cal-nav{display:flex;align-items:center;gap:8px;}
+  .cal-nav .btn{padding:4px 12px;}
+  .cal-titulo{font-size:15px;font-weight:700;color:var(--azul-osc);min-width:150px;text-align:center;text-transform:capitalize;}
+  .cal-leyenda{display:flex;gap:14px;font-size:11.5px;color:#666;align-items:center;flex-wrap:wrap;}
+  .cal-chip{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:4px;vertical-align:middle;}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--borde-suave);border:1px solid var(--borde-suave);}
+  .cal-dow{background:var(--azul-osc);color:#fff;font-size:11px;font-weight:600;text-align:center;padding:5px 0;}
+  .cal-dia{background:#fff;min-height:88px;padding:4px 5px;font-size:11px;vertical-align:top;overflow:hidden;}
+  .cal-dia.otro{background:#f6f6f6;color:#bbb;}
+  .cal-dia.hoy{box-shadow:inset 0 0 0 2px var(--azul);}
+  .cal-dia.dia-sel{box-shadow:inset 0 0 0 3px var(--verde);background:#f0f8f4;}
+  .cal-dia.clic{cursor:pointer;}
+  .cal-dia.clic:hover{background:#f4f8fc;}
+  .cal-dia .dnum{font-weight:700;color:#444;font-size:12px;display:block;margin-bottom:2px;}
+  .cal-cab{display:flex;justify-content:space-between;align-items:baseline;}
+  .cal-total{font-size:10px;color:#888;font-family:var(--mono);}
+  .cal-barra{display:flex;height:5px;border-radius:2px;overflow:hidden;margin:3px 0;background:#eee;}
+  .cal-barra span{display:block;}
+  .b-urg{background:var(--t-rojo);} .b-men{background:var(--azul);} .b-venc{background:#7a1a15;}
+  .cal-desg{font-size:9.5px;color:#555;line-height:1.5;}
+  .cal-desg .pt{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:3px;vertical-align:middle;}
+  .cal-res{border:2px solid var(--verde);border-radius:4px;padding:10px;margin-bottom:12px;background:#f8fdfb;}
+  .cal-res h4{margin:0 0 8px;font-size:13px;color:var(--verde);}
+
+  /* Kanban por etapa */
+  .kb-scroll{overflow-x:auto;padding-bottom:8px;}
+  .kb-cols{display:flex;gap:8px;min-width:min-content;}
+  .kb-col{flex:0 0 190px;background:var(--gris-bg);border:1px solid var(--borde-suave);border-radius:4px;display:flex;flex-direction:column;max-height:560px;}
+  .kb-col-head{background:var(--azul-osc);color:#fff;padding:7px 10px;border-radius:3px 3px 0 0;font-size:11.5px;font-weight:600;display:flex;justify-content:space-between;align-items:center;}
+  .kb-col-head .n{font-family:var(--mono);background:rgba(255,255,255,.2);padding:1px 6px;border-radius:9px;font-size:11px;}
+  .kb-col-body{padding:6px;overflow-y:auto;flex:1;}
+  .kb-card{background:#fff;border:1px solid var(--borde-suave);border-left:4px solid #ccc;border-radius:2px;padding:6px 8px;margin-bottom:6px;font-size:11.5px;}
+  .kb-card.ROJO{border-left-color:var(--t-rojo);} .kb-card.NARANJA{border-left-color:var(--t-naranja);}
+  .kb-card.AMARILLO{border-left-color:var(--t-amarillo);} .kb-card.VERDE{border-left-color:var(--t-verde);} .kb-card.AZUL{border-left-color:var(--t-azul);}
+  .kb-card .ue{font-weight:600;font-size:11px;line-height:1.2;}
+  .kb-card .id{font-family:var(--mono);font-size:10px;color:#777;margin-top:1px;}
+  .kb-card .meta{font-size:9.5px;color:#888;margin-top:2px;}
+  .kb-col-vacia{color:#bbb;font-size:11px;text-align:center;padding:14px 4px;}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
@@ -172,9 +213,36 @@
     </div>
 
     <!-- CALENDARIO -->
-    <div id="tabCalendario" class="hidden"><div class="vacio">Calendario mensual — Capa 3</div></div>
+    <div id="tabCalendario" class="hidden">
+      <div class="cal-top">
+        <div class="cal-nav">
+          <button class="btn" onclick="calMesAnterior()">‹</button>
+          <span class="cal-titulo" id="calTitulo">—</span>
+          <button class="btn" onclick="calMesSiguiente()">›</button>
+          <button class="btn" onclick="calHoy()">Hoy</button>
+        </div>
+        <div class="cal-nav">
+          <span style="font-size:11px;color:#777;">Ver:</span>
+          <select id="calTipo" onchange="renderCalendario()" style="padding:4px 8px;border:1px solid var(--borde);font-size:12px;">
+            <option value="">Urgencias + Mensuales</option>
+            <option value="URG">Solo Urgencias</option>
+            <option value="MEN">Solo Mensuales</option>
+          </select>
+        </div>
+      </div>
+      <div class="cal-leyenda">
+        <span><span class="cal-chip" style="background:var(--t-rojo)"></span>Urgencia (vence)</span>
+        <span><span class="cal-chip" style="background:var(--azul)"></span>Mensual (vence)</span>
+        <span style="color:#999;">· Cada F8 cae en su fecha de vencimiento de despacho · respeta los filtros de la lista</span>
+      </div>
+      <div id="calResDia"></div>
+      <div id="calGrid" class="cal-grid" style="margin-top:10px;"></div>
+    </div>
     <!-- KANBAN -->
-    <div id="tabKanban" class="hidden"><div class="vacio">Kanban por etapa — Capa 3</div></div>
+    <div id="tabKanban" class="hidden">
+      <p style="font-size:12px;color:#666;margin:0 0 10px;">Cada F8 en su etapa actual del flujo (11 estados). Respeta los filtros de la lista priorizada.</p>
+      <div class="kb-scroll"><div class="kb-cols" id="kbCols"></div></div>
+    </div>
     <!-- TRANSITO -->
     <div id="tabTransito" class="hidden"><div id="transitoCont"><div class="loading">Cargando F8 en tránsito…</div></div></div>
   </div>
@@ -211,6 +279,8 @@ document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
     document.getElementById('tab'+v).classList.toggle('hidden', v.toLowerCase()!==TAB);
   });
   if(TAB==='transito') renderTransito();
+  if(TAB==='calendario') renderCalendario();
+  if(TAB==='kanban') renderKanban();
 }));
 
 async function cargar(){
@@ -354,8 +424,8 @@ function limpiarFiltros(){
   renderKpis(); renderLista();
 }
 
-function renderLista(){
-  if(!DATA) return;
+// Aplica todos los filtros activos y devuelve el arreglo. Reutilizado por lista, calendario y kanban.
+function pedidosFiltrados(){
   const q=(document.getElementById('q').value||'').toUpperCase();
   const ft=document.getElementById('fTriage').value;
   const fe=document.getElementById('fEtapa').value;
@@ -373,13 +443,26 @@ function renderLista(){
   if(fti==='URG') arr=arr.filter(p=>p.esUrg); else if(fti==='MEN') arr=arr.filter(p=>!p.esUrg);
   if(fc==='1') arr=arr.filter(p=>p.tieneCero);
   if(q) arr=arr.filter(p=>p.ue.toUpperCase().includes(q)||p.id.toUpperCase().includes(q));
-  window.__ARR=arr;
-  renderCargaChart(arr);                    // el gráfico reacciona al filtro actual
+  return arr;
+}
+
+function renderLista(){
+  if(!DATA) return;
+  const arr=pedidosFiltrados();                 // universo filtrado (incluye cerrados)
+  renderCargaChart(arr);                         // gráfico reacciona al filtro
+  if(TAB==='calendario') renderCalendario();     // calendario y kanban usan TODO (con cerrados)
+  if(TAB==='kanban') renderKanban();
+  // La lista PRIORIZADA no muestra cerrados (no se prioriza lo ya despachado),
+  // salvo que el usuario filtre explícitamente por una etapa cerrada.
+  const feEtapa=document.getElementById('fEtapa').value;
+  const etapaCerrada=(feEtapa==='DESPACHADO'||feEtapa==='ENTREGADO');
+  const listaArr = etapaCerrada ? arr : arr.filter(p=>!p.cerrado);
+  window.__ARR=listaArr;                          // el índice de las tarjetas mapea a este arreglo
   const cont=document.getElementById('listaCont');
-  if(!arr.length){ cont.innerHTML='<div class="vacio">No hay pedidos con este filtro.</div>'; return; }
-  const lim=arr.slice(0,120);
+  if(!listaArr.length){ cont.innerHTML='<div class="vacio">No hay pedidos con este filtro.</div>'; return; }
+  const lim=listaArr.slice(0,120);
   cont.innerHTML=lim.map((p,i)=>cardPed(p,i)).join('')+
-    (arr.length>120?'<div class="vacio">Mostrando 120 de '+arr.length+'. Filtra para acotar.</div>':'');
+    (listaArr.length>120?'<div class="vacio">Mostrando 120 de '+listaArr.length+'. Filtra para acotar.</div>':'');
 }
 
 function cardPed(p,i){
@@ -558,6 +641,127 @@ function renderTransito(){
   });
   html+='</tbody></table>';
   cont.innerHTML=html;
+}
+
+// ===================== CALENDARIO MENSUAL =====================
+let calMes = new Date();  // mes visible
+const CAL_MESES_NOM=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+function calMesAnterior(){ calMes=new Date(calMes.getFullYear(),calMes.getMonth()-1,1); renderCalendario(); }
+function calMesSiguiente(){ calMes=new Date(calMes.getFullYear(),calMes.getMonth()+1,1); renderCalendario(); }
+function calHoy(){ calMes=new Date(); renderCalendario(); }
+
+function renderCalendario(){
+  if(!DATA) return;
+  const grid=document.getElementById('calGrid');
+  if(!grid) return;
+  const tipoF=document.getElementById('calTipo').value;   // '', 'URG', 'MEN'
+  let arr=pedidosFiltrados();
+  if(tipoF==='URG') arr=arr.filter(p=>p.esUrg); else if(tipoF==='MEN') arr=arr.filter(p=>!p.esUrg);
+
+  const y=calMes.getFullYear(), m=calMes.getMonth();
+  document.getElementById('calTitulo').textContent=CAL_MESES_NOM[m]+' '+y;
+
+  // Indexar por día de VENCIMIENTO dentro del mes visible
+  const porDia={};
+  arr.forEach(p=>{
+    const f=p.fechaVencimiento; if(!f) return;
+    const mm=f.match(/(\d{4})-(\d{2})-(\d{2})/); if(!mm) return;
+    if(+mm[1]===y && (+mm[2]-1)===m){ (porDia[f]=porDia[f]||[]).push(p); }
+  });
+
+  const dow=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  let html=dow.map(d=>'<div class="cal-dow">'+d+'</div>').join('');
+  const inicioDow=new Date(y,m,1).getDay();
+  const diasMes=new Date(y,m+1,0).getDate();
+  const diasMesAnt=new Date(y,m,0).getDate();
+  const hoyISO=new Date().toISOString().slice(0,10);
+  for(let i=inicioDow-1;i>=0;i--){ html+='<div class="cal-dia otro"><span class="dnum">'+(diasMesAnt-i)+'</span></div>'; }
+
+  for(let d=1;d<=diasMes;d++){
+    const iso=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const evs=porDia[iso]||[];
+    const esHoy = iso===hoyISO ? ' hoy':'';
+    if(!evs.length){ html+='<div class="cal-dia'+esHoy+'"><span class="dnum">'+d+'</span></div>'; continue; }
+    let cUrg=0,cMen=0,bultos=0;
+    evs.forEach(p=>{ if(p.esUrg)cUrg++; else cMen++; bultos+=(p.bultos||0); });
+    const tot=evs.length;
+    const seg=[];
+    if(cUrg) seg.push('<span class="b-urg" style="flex:'+cUrg+'"></span>');
+    if(cMen) seg.push('<span class="b-men" style="flex:'+cMen+'"></span>');
+    const desg=[];
+    if(cUrg) desg.push('<div><span class="pt" style="background:var(--t-rojo)"></span>'+cUrg+' urgencia'+(cUrg>1?'s':'')+'</div>');
+    if(cMen) desg.push('<div><span class="pt" style="background:var(--azul)"></span>'+cMen+' mensual'+(cMen>1?'es':'')+'</div>');
+    html+='<div class="cal-dia clic'+esHoy+'" data-cal-dia="'+iso+'">'+
+      '<div class="cal-cab"><span class="dnum">'+d+'</span><span class="cal-total">'+tot+'</span></div>'+
+      '<div class="cal-barra">'+seg.join('')+'</div>'+
+      '<div class="cal-desg">'+desg.join('')+'</div>'+
+      (bultos>0?'<div style="font-size:9.5px;color:#666;margin-top:2px;"><b style="font-family:var(--mono)">'+Math.round(bultos).toLocaleString()+'</b> bultos</div>':'')+
+    '</div>';
+  }
+  const resto=(7-((inicioDow+diasMes)%7))%7;
+  for(let i=1;i<=resto;i++){ html+='<div class="cal-dia otro"><span class="dnum">'+i+'</span></div>'; }
+  grid.innerHTML=html;
+  document.getElementById('calResDia').innerHTML='';
+
+  grid.querySelectorAll('[data-cal-dia]').forEach(b=>b.addEventListener('click',()=>{
+    const iso=b.dataset.calDia, evs=porDia[iso]||[];
+    grid.querySelectorAll('.cal-dia').forEach(c=>c.classList.remove('dia-sel'));
+    b.classList.add('dia-sel');
+    verDiaCalendario(iso, evs);
+  }));
+}
+
+function verDiaCalendario(iso, evs){
+  const cont=document.getElementById('calResDia');
+  const [yy,mm,dd]=iso.split('-');
+  let bultos=0; evs.forEach(p=>bultos+=(p.bultos||0));
+  let html='<div class="cal-res"><h4>Vencen el '+dd+'/'+mm+'/'+yy+' — '+evs.length+' Forma(s) 8 · '+Math.round(bultos).toLocaleString()+' bultos</h4>';
+  html+='<table class="tabla"><thead><tr><th>Nº F8</th><th>Unidad Ejecutora</th><th>Tipo</th><th>Etapa</th><th style="text-align:right">Bultos</th><th>Triage</th></tr></thead><tbody>';
+  evs.slice().sort((a,b)=>b.ipd-a.ipd).forEach(p=>{
+    html+='<tr>'+
+      '<td style="font-family:var(--mono)">'+p.id+'</td>'+
+      '<td>'+p.ue+'</td>'+
+      '<td>'+(p.esUrg?'<span style="color:var(--rojo);font-weight:600">Urgencia</span>':'Mensual')+'</td>'+
+      '<td>'+p.etapa+'</td>'+
+      '<td style="text-align:right;font-family:var(--mono)">'+(p.bultos>0?p.bultos.toLocaleString():'—')+'</td>'+
+      '<td><span style="font-size:10px;font-weight:700;color:#fff;padding:1px 7px;border-radius:9px;background:'+triColor(p.triage)+'">'+p.triage+'</span></td>'+
+    '</tr>';
+  });
+  html+='</tbody></table></div>';
+  cont.innerHTML=html;
+  cont.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function triColor(t){ return {ROJO:'#c0281f',NARANJA:'#d97316',AMARILLO:'#c99700',VERDE:'#3a8c3a',AZUL:'#2a6db5'}[t]||'#888'; }
+
+// ===================== KANBAN POR ETAPA =====================
+const KB_FLUJO=['RECEPCION','ASIGNADA','HANDOFF_CAPTURADOR','RECOLECTADA','PICKING',
+  'HANDOFF_FACTURACION','FACTURACIÓN','EMPACADO','DISTRIBUCIÓN','DESPACHADO','ENTREGADO'];
+const KB_ETIQUETA={'RECEPCION':'Recepción','ASIGNADA':'Asignada','HANDOFF_CAPTURADOR':'Hand-off capturador',
+  'RECOLECTADA':'Recolectada','PICKING':'Picking','HANDOFF_FACTURACION':'Hand-off facturación',
+  'FACTURACIÓN':'Facturación','EMPACADO':'Empacado','DISTRIBUCIÓN':'Distribución','DESPACHADO':'Despachado','ENTREGADO':'Entregado'};
+
+function renderKanban(){
+  if(!DATA) return;
+  const cont=document.getElementById('kbCols');
+  if(!cont) return;
+  const arr=pedidosFiltrados();
+  const porEtapa={}; KB_FLUJO.forEach(e=>porEtapa[e]=[]);
+  arr.forEach(p=>{ (porEtapa[p.etapa]=porEtapa[p.etapa]||[]).push(p); });
+
+  const etapas=KB_FLUJO.filter(e=>porEtapa[e]).concat(Object.keys(porEtapa).filter(e=>KB_FLUJO.indexOf(e)<0));
+  cont.innerHTML=etapas.map(e=>{
+    const lista=(porEtapa[e]||[]).slice().sort((a,b)=>b.ipd-a.ipd);
+    const cards=lista.slice(0,50).map(p=>
+      '<div class="kb-card '+p.triage+'">'+
+        '<div class="ue">'+p.ue+'</div>'+
+        '<div class="id">'+p.id+'</div>'+
+        '<div class="meta">Grupo '+p.grupo+' · '+(p.esUrg?'Urg':'Men')+' · IPD '+Math.round(p.ipd)+(p.bultos>0?' · '+p.bultos+' bultos':'')+'</div>'+
+      '</div>').join('');
+    return '<div class="kb-col">'+
+      '<div class="kb-col-head"><span>'+(KB_ETIQUETA[e]||e)+'</span><span class="n">'+lista.length+'</span></div>'+
+      '<div class="kb-col-body">'+(lista.length?cards+(lista.length>50?'<div class="kb-col-vacia">+'+(lista.length-50)+' más…</div>':''):'<div class="kb-col-vacia">—</div>')+'</div>'+
+    '</div>';
+  }).join('');
 }
 
 cargar();
