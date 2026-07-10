@@ -196,6 +196,8 @@
             <option value="ROJO">🔴 Rojo (inmediata)</option>
             <option value="NARANJA">🟠 Naranja o superior</option>
             <option value="AMARILLO">🟡 Amarillo o superior</option>
+            <option value="VERDE">🟢 Verde o superior</option>
+            <option value="AZUL">🔵 Azul (todos)</option>
           </select>
         </div>
         <div class="filtro-campo"><span class="et">Estado</span>
@@ -455,6 +457,8 @@ function pedidosFiltrados(){
   if(ft==='ROJO') arr=arr.filter(p=>p.triage==='ROJO');
   else if(ft==='NARANJA') arr=arr.filter(p=>p.triageP<=2);
   else if(ft==='AMARILLO') arr=arr.filter(p=>p.triageP<=3);
+  else if(ft==='VERDE') arr=arr.filter(p=>p.triageP<=4);
+  else if(ft==='AZUL') arr=arr.filter(p=>p.triageP<=5);
   if(fu) arr=arr.filter(p=>String(p.ue||'').trim()===fu);
   if(fe) arr=arr.filter(p=>p.etapa===fe);
   if(fg) arr=arr.filter(p=>String(p.grupo||'').trim()===fg);
@@ -511,7 +515,6 @@ function cardPed(p,i){
           ? '<button class="btn quitarojo" onclick="priorizar(\''+p.id+'\',false)">Quitar ROJO</button>'
           : '<button class="btn rojo" onclick="priorizar(\''+p.id+'\',true)">● Marcar ROJO</button>')+
         '<button class="btn conf" onclick="confirmarListo(\''+p.id+'\')">✓ Confirmar listo</button>'+
-        '<button class="btn difer" onclick="diferirPedido(\''+p.id+'\')">Diferir</button>'+
       '</div>'+
     '</div>'+
     '<div class="ped-triage">'+
@@ -609,17 +612,6 @@ async function confirmarListo(id){
     }else{
       alert('No se envió: '+(r.msg||r.correo_error||'error desconocido'));
     }
-  }catch(e){ alert('Sin conexión'); }
-}
-
-async function diferirPedido(id){
-  const motivo=(prompt('Motivo del diferimiento (opcional, se incluye en el correo):','')||'').trim();
-  if(!confirm('Se enviará a la UE un correo indicando que su Forma 8 '+id+' fue diferida al próximo ciclo. ¿Continuar?')) return;
-  try{
-    const r=await jsonp(WEBAPP+'?file=despacho_diferir&id='+encodeURIComponent(id)+
-      '&motivo='+encodeURIComponent(motivo)+'&quien='+encodeURIComponent(USUARIO));
-    if(r.ok && r.correo_enviado){ alert('Correo de diferimiento enviado a '+r.ue+' ('+r.to+').'); }
-    else{ alert('No se envió: '+(r.msg||r.correo_error||'error desconocido')); }
   }catch(e){ alert('Sin conexión'); }
 }
 
