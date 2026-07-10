@@ -142,6 +142,18 @@
   .kb-card .id{font-family:var(--mono);font-size:10px;color:#777;margin-top:1px;}
   .kb-card .meta{font-size:9.5px;color:#888;margin-top:2px;}
   .kb-col-vacia{color:#bbb;font-size:11px;text-align:center;padding:14px 4px;}
+
+  /* Supervisión / OTIF */
+  .sup-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px;}
+  .sup-card{background:#fff;border:1px solid var(--borde-suave);border-top:4px solid var(--azul);border-radius:4px;padding:14px 16px;}
+  .sup-card.malo{border-top-color:var(--t-rojo);} .sup-card.medio{border-top-color:var(--t-naranja);} .sup-card.bueno{border-top-color:var(--t-verde);}
+  .sup-card .lbl{font-size:12px;color:#666;text-transform:uppercase;letter-spacing:.4px;}
+  .sup-card .val{font-size:34px;font-weight:800;font-family:var(--mono);line-height:1.1;margin:4px 0;}
+  .sup-card .val.malo{color:var(--t-rojo);} .sup-card .val.medio{color:var(--t-naranja);} .sup-card .val.bueno{color:var(--t-verde);}
+  .sup-card .sub{font-size:11.5px;color:#888;}
+  .sup-card .n{font-size:10.5px;color:#aaa;margin-top:6px;}
+  .sup-nota{background:#f4f7fb;border:1px solid #d6e2f0;border-radius:4px;padding:11px 14px;font-size:12.5px;color:#555;line-height:1.5;margin-bottom:16px;}
+  .sup-sec{font-size:14px;font-weight:700;color:var(--azul-osc);margin:18px 0 8px;padding-bottom:5px;border-bottom:1px solid var(--borde-suave);}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
@@ -167,6 +179,7 @@
     <div class="tab activa" data-tab="lista">Lista priorizada <span class="cnt" id="cntLista">·</span></div>
     <div class="tab" data-tab="calendario">Calendario</div>
     <div class="tab" data-tab="kanban">Kanban</div>
+    <div class="tab" data-tab="supervision">Supervisión · OTIF</div>
     <div class="tab" data-tab="transito">F8 en tránsito <span class="cnt" id="cntTransito">·</span></div>
   </div>
 
@@ -243,6 +256,10 @@
       <p style="font-size:12px;color:#666;margin:0 0 10px;">Cada F8 en su etapa actual del flujo (11 estados). Respeta los filtros de la lista priorizada.</p>
       <div class="kb-scroll"><div class="kb-cols" id="kbCols"></div></div>
     </div>
+    <!-- SUPERVISION / OTIF -->
+    <div id="tabSupervision" class="hidden">
+      <div id="supCont"><div class="loading">Cargando métricas de supervisión…</div></div>
+    </div>
     <!-- TRANSITO -->
     <div id="tabTransito" class="hidden"><div id="transitoCont"><div class="loading">Cargando F8 en tránsito…</div></div></div>
   </div>
@@ -275,12 +292,13 @@ function jsonp(url){
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
   TAB=t.dataset.tab;
   document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('activa',x===t));
-  ['Lista','Calendario','Kanban','Transito'].forEach(v=>{
+  ['Lista','Calendario','Kanban','Supervision','Transito'].forEach(v=>{
     document.getElementById('tab'+v).classList.toggle('hidden', v.toLowerCase()!==TAB);
   });
   if(TAB==='transito') renderTransito();
   if(TAB==='calendario') renderCalendario();
   if(TAB==='kanban') renderKanban();
+  if(TAB==='supervision') cargarSupervision();
 }));
 
 async function cargar(){
@@ -762,6 +780,91 @@ function renderKanban(){
       '<div class="kb-col-body">'+(lista.length?cards+(lista.length>50?'<div class="kb-col-vacia">+'+(lista.length-50)+' más…</div>':''):'<div class="kb-col-vacia">—</div>')+'</div>'+
     '</div>';
   }).join('');
+}
+
+// ===================== SUPERVISIÓN / OTIF =====================
+let SUP_DATA=null;
+async function cargarSupervision(){
+  const cont=document.getElementById('supCont');
+  if(SUP_DATA){ renderSupervision(); return; }
+  cont.innerHTML='<div class="loading">Cargando métricas de supervisión…</div>';
+  try{
+    SUP_DATA=await jsonp(WEBAPP+'?file=kanban_tablero');
+    renderSupervision();
+  }catch(e){ cont.innerHTML='<div class="vacio" style="color:#a32d2d">Sin conexión. Reintenta.</div>'; }
+}
+
+function clasePct(pct){
+  if(pct==null) return '';
+  if(pct>=70) return 'bueno'; if(pct>=40) return 'medio'; return 'malo';
+}
+
+function tarjetaPct(lbl, pct, sub, n){
+  const cl = pct==null ? '' : clasePct(pct);
+  const val = pct==null ? '—' : pct.toFixed(1)+'%';
+  return '<div class="sup-card '+cl+'">'+
+    '<div class="lbl">'+lbl+'</div>'+
+    '<div class="val '+cl+'">'+val+'</div>'+
+    (sub?'<div class="sub">'+sub+'</div>':'')+
+    (n!=null?'<div class="n">sobre '+n.toLocaleString()+' pedidos medibles</div>':'')+
+  '</div>';
+}
+
+function renderSupervision(){
+  const d=SUP_DATA||{};
+  const o=d.otif||{};
+  const cont=document.getElementById('supCont');
+
+  const lat = d.latenciaFacturacion;
+  const latCl = lat==null?'':(lat<=2?'bueno':(lat<=5?'medio':'malo'));
+  const latCard = '<div class="sup-card '+latCl+'">'+
+    '<div class="lbl">Latencia hand-off → facturación</div>'+
+    '<div class="val '+latCl+'">'+(lat==null?'—':lat.toFixed(1))+'</div>'+
+    '<div class="sub">días promedio desde que Cómputo recibe hasta que factura</div>'+
+    (d.latenciaN!=null?'<div class="n">sobre '+d.latenciaN.toLocaleString()+' pedidos con ambas fechas</div>':'')+
+  '</div>';
+
+  let html='';
+  html+='<div class="sup-nota"><b>Métricas de cumplimiento de despacho (OTIF).</b> Calculadas sobre pedidos ya despachados. '+
+    'Los números reflejan la operación real, respaldados por los registros de SEGUIMIENTO_PEDIDOS. '+
+    'Cada tarjeta indica sobre cuántos pedidos se midió.</div>';
+
+  html+='<div class="sup-sec">OTIF — On-Time In-Full</div>';
+  html+='<div class="sup-grid">'+
+    tarjetaPct('OTIF (a tiempo Y completo)', o.otifPct, 'Despachado antes de vencer y con cantidad completa', o.otifN)+
+    tarjetaPct('On-Time (a tiempo)', o.onTimePct, 'Despachado en o antes de su fecha de vencimiento', o.onTimeN)+
+    tarjetaPct('In-Full (completo ≥99%)', o.inFullPct, 'Cantidad despachada = cantidad solicitada', o.inFullN)+
+  '</div>';
+
+  html+='<div class="sup-sec">Fill Rate — cobertura real de la demanda</div>';
+  const fr=o.fillRatePct;
+  const frCl=clasePct(fr);
+  html+='<div class="sup-grid">'+
+    '<div class="sup-card '+frCl+'">'+
+      '<div class="lbl">Delivery Fill Rate (por cantidad)</div>'+
+      '<div class="val '+frCl+'">'+(fr==null?'—':fr.toFixed(1)+'%')+'</div>'+
+      '<div class="sub">unidades despachadas ÷ unidades solicitadas</div>'+
+      (o.fillN!=null?'<div class="n">sobre '+o.fillN.toLocaleString()+' pedidos</div>':'')+
+    '</div>'+
+    '<div class="sup-card">'+
+      '<div class="lbl">Solicitado (unidades)</div>'+
+      '<div class="val" style="font-size:24px;color:#444">'+(o.fillSolicitado!=null?o.fillSolicitado.toLocaleString():'—')+'</div>'+
+      '<div class="sub">demanda total registrada</div>'+
+    '</div>'+
+    '<div class="sup-card">'+
+      '<div class="lbl">Despachado (unidades)</div>'+
+      '<div class="val" style="font-size:24px;color:var(--azul-osc)">'+(o.fillDespachado!=null?o.fillDespachado.toLocaleString():'—')+'</div>'+
+      '<div class="sub">volumen realmente entregado</div>'+
+    '</div>'+
+  '</div>';
+
+  html+='<div class="sup-sec">Latencia interna — evidencia de proceso</div>';
+  html+='<div class="sup-grid">'+latCard+'</div>';
+
+  html+='<div class="sup-nota" style="margin-top:8px;">Actualizado '+(d.generado||'')+
+    '. La latencia hand-off→facturación es la evidencia objetiva del tiempo entre que un pedido pasa a Cómputo y su facturación efectiva.</div>';
+
+  cont.innerHTML=html;
 }
 
 cargar();
