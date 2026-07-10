@@ -128,6 +128,24 @@
   .cal-res{border:2px solid var(--verde);border-radius:4px;padding:10px;margin-bottom:12px;background:#f8fdfb;}
   .cal-res h4{margin:0 0 8px;font-size:13px;color:var(--verde);}
 
+  /* Calendario rico: layout de dos columnas (grilla + resúmenes por grupo) */
+  .cal-layout{display:flex;gap:14px;align-items:flex-start;}
+  .cal-layout .cal-main{flex:1;min-width:0;}
+  .cal-layout .cal-side{flex:0 0 280px;}
+  .cal-res-bloque{background:#fff;border:1px solid var(--borde-suave);border-radius:4px;padding:10px 12px;margin-bottom:12px;}
+  .cal-res-titulo{font-size:12.5px;font-weight:700;color:var(--azul-osc);margin-bottom:6px;}
+  .cal-res-tabla{width:100%;border-collapse:collapse;font-size:11.5px;}
+  .cal-res-tabla th{text-align:left;color:#777;font-weight:600;padding:3px 5px;border-bottom:1px solid #eee;font-size:10.5px;text-transform:uppercase;}
+  .cal-res-tabla td{padding:3px 5px;border-bottom:1px solid #f2f2f2;}
+  .cal-res-tabla td:nth-child(2),.cal-res-tabla td:nth-child(3){text-align:right;font-family:var(--mono);}
+  .cal-res-tot td{font-weight:700;border-top:2px solid var(--borde-suave);border-bottom:none;color:var(--azul-osc);}
+  .cal-res-prom{font-size:11px;color:#666;margin-top:6px;padding-top:6px;border-top:1px dashed #ddd;}
+  @media print{
+    .noprint,.header,.kpis,.carga,.tabs,.filtros-linea,.buscar-barra{display:none !important;}
+    .cal-side{flex:0 0 240px;}
+  }
+  @media(max-width:900px){ .cal-layout{flex-direction:column;} .cal-layout .cal-side{flex:1 0 auto;width:100%;} }
+
   /* Kanban por etapa */
   .kb-scroll{overflow-x:auto;padding-bottom:8px;}
   .kb-cols{display:flex;gap:8px;min-width:min-content;}
@@ -243,6 +261,7 @@
             <option value="URG">Solo Urgencias</option>
             <option value="MEN">Solo Mensuales</option>
           </select>
+          <button class="btn noprint" onclick="window.print()">🖨 Imprimir</button>
         </div>
       </div>
       <div class="cal-leyenda">
@@ -250,8 +269,13 @@
         <span><span class="cal-chip" style="background:var(--azul)"></span>Mensual (vence)</span>
         <span style="color:#999;">· Cada F8 cae en su fecha de vencimiento de despacho · respeta los filtros de la lista</span>
       </div>
-      <div id="calResDia"></div>
-      <div id="calGrid" class="cal-grid" style="margin-top:10px;"></div>
+      <div class="cal-layout" style="margin-top:10px;">
+        <div class="cal-main">
+          <div id="calResDia"></div>
+          <div id="calGrid" class="cal-grid"></div>
+        </div>
+        <div class="cal-side" id="calResumen"></div>
+      </div>
     </div>
     <!-- KANBAN -->
     <div id="tabKanban" class="hidden">
@@ -794,18 +818,67 @@ function renderCalendario(){
     b.classList.add('dia-sel');
     verDiaCalendario(iso, evs);
   }));
+
+  // Panel lateral de resúmenes por GRUPO (el almacén se maneja por grupos).
+  renderCalResumenLateral(arr, porDia, y, m);
+}
+
+// Resumen por grupo: F8 (conteo) + bultos, para semana actual / siguiente / mes.
+function resumenPorGrupo(arr){
+  const r={}; let tF=0, tB=0;
+  arr.forEach(p=>{ const g=String(p.grupo||'Sin grupo').trim()||'Sin grupo';
+    if(!r[g]) r[g]={f8:0,bultos:0}; r[g].f8++; r[g].bultos+=(p.bultos||0); tF++; tB+=(p.bultos||0); });
+  return {r,totF8:tF,totBultos:tB};
+}
+function tablaResumenGrupo(titulo, arr, extra){
+  const {r,totF8,totBultos}=resumenPorGrupo(arr);
+  if(!arr.length) return '<div class="cal-res-bloque"><div class="cal-res-titulo">'+titulo+'</div><div style="font-size:11.5px;color:#999;">Sin F8 en el período.</div></div>';
+  const grupos=Object.keys(r).sort((a,b)=>{const na=parseFloat((a.match(/\d+/)||[99])[0]),nb=parseFloat((b.match(/\d+/)||[99])[0]);return na-nb||a.localeCompare(b);});
+  let h='<div class="cal-res-bloque"><div class="cal-res-titulo">'+titulo+'</div>'+
+    '<table class="cal-res-tabla"><thead><tr><th>Grupo</th><th>F8</th><th>Bultos</th></tr></thead><tbody>';
+  grupos.forEach(g=>{ h+='<tr><td>'+g+'</td><td>'+r[g].f8+'</td><td>'+Math.round(r[g].bultos).toLocaleString()+'</td></tr>'; });
+  h+='<tr class="cal-res-tot"><td>TOTAL</td><td>'+totF8+'</td><td>'+Math.round(totBultos).toLocaleString()+'</td></tr></tbody></table>';
+  if(extra) h+='<div class="cal-res-prom">'+extra+'</div>';
+  h+='</div>';
+  return h;
+}
+function renderCalResumenLateral(arrMes, porDia, y, m){
+  const cont=document.getElementById('calResumen');
+  if(!cont) return;
+  const isoDe=dt=>dt.toISOString().slice(0,10);
+  const lunesDe=dt=>{const x=new Date(dt);const day=(x.getDay()+6)%7;x.setDate(x.getDate()-day);x.setHours(0,0,0,0);return x;};
+  const hoy=new Date();hoy.setHours(0,0,0,0);
+  const lunA=lunesDe(hoy), domA=new Date(lunA); domA.setDate(domA.getDate()+6);
+  const lunS=new Date(lunA); lunS.setDate(lunS.getDate()+7); const domS=new Date(lunS); domS.setDate(domS.getDate()+6);
+  const enRango=(ini,fin)=>{let a=[];Object.keys(porDia).forEach(iso=>{if(iso>=isoDe(ini)&&iso<=isoDe(fin))a=a.concat(porDia[iso]);});return a;};
+  const diasCon=Object.keys(porDia).length;
+  const promF8=diasCon?(arrMes.length/diasCon):0;
+  const totB=arrMes.reduce((s,p)=>s+(p.bultos||0),0);
+  const MESN=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  let h='';
+  h+=tablaResumenGrupo('Semana actual ('+isoDe(lunA).slice(5)+' al '+isoDe(domA).slice(5)+')', enRango(lunA,domA));
+  h+=tablaResumenGrupo('Semana siguiente ('+isoDe(lunS).slice(5)+' al '+isoDe(domS).slice(5)+')', enRango(lunS,domS));
+  h+=tablaResumenGrupo('Resumen del mes — '+MESN[m]+' '+y, arrMes,
+    'Promedio por día con vencimientos: <b>'+promF8.toFixed(1)+'</b> F8 · <b>'+Math.round(totB).toLocaleString()+'</b> bultos · '+diasCon+' día(s)');
+  cont.innerHTML=h;
 }
 
 function verDiaCalendario(iso, evs){
   const cont=document.getElementById('calResDia');
   const [yy,mm,dd]=iso.split('-');
   let bultos=0; evs.forEach(p=>bultos+=(p.bultos||0));
-  let html='<div class="cal-res"><h4>Vencen el '+dd+'/'+mm+'/'+yy+' — '+evs.length+' Forma(s) 8 · '+Math.round(bultos).toLocaleString()+' bultos</h4>';
-  html+='<table class="tabla"><thead><tr><th>Nº F8</th><th>Unidad Ejecutora</th><th>Tipo</th><th>Etapa</th><th style="text-align:right">Bultos</th><th>Triage</th></tr></thead><tbody>';
+  // mini-resumen por grupo del día
+  const rg={}; evs.forEach(p=>{const g=String(p.grupo||'Sin grupo').trim()||'Sin grupo'; if(!rg[g])rg[g]={f8:0,b:0}; rg[g].f8++; rg[g].b+=(p.bultos||0);});
+  const chips=Object.keys(rg).sort().map(g=>'<span style="display:inline-block;background:#eef4fb;border:1px solid #b8d0ea;border-radius:9px;padding:2px 9px;margin:2px;font-size:11px;color:var(--azul-osc)">'+g+': <b>'+rg[g].f8+'</b> F8 · '+Math.round(rg[g].b).toLocaleString()+' bultos</span>').join('');
+  let html='<div class="cal-res"><h4>Vencen el '+dd+'/'+mm+'/'+yy+' — '+evs.length+' Forma(s) 8 · '+Math.round(bultos).toLocaleString()+' bultos '+
+    '<button class="btn noprint" style="float:right;padding:3px 10px;font-size:11px" onclick="imprimirDiaCal(\''+iso+'\')">🖨 Imprimir día</button></h4>';
+  if(chips) html+='<div style="margin-bottom:8px">'+chips+'</div>';
+  html+='<table class="tabla"><thead><tr><th>Nº F8</th><th>Unidad Ejecutora</th><th>Grupo</th><th>Tipo</th><th>Etapa</th><th style="text-align:right">Bultos</th><th>Triage</th></tr></thead><tbody>';
   evs.slice().sort((a,b)=>b.ipd-a.ipd).forEach(p=>{
     html+='<tr>'+
       '<td style="font-family:var(--mono)">'+p.id+'</td>'+
       '<td>'+p.ue+'</td>'+
+      '<td>'+p.grupo+'</td>'+
       '<td>'+(p.esUrg?'<span style="color:var(--rojo);font-weight:600">Urgencia</span>':'Mensual')+'</td>'+
       '<td>'+p.etapa+'</td>'+
       '<td style="text-align:right;font-family:var(--mono)">'+(p.bultos>0?p.bultos.toLocaleString():'—')+'</td>'+
@@ -814,7 +887,24 @@ function verDiaCalendario(iso, evs){
   });
   html+='</tbody></table></div>';
   cont.innerHTML=html;
+  window.__CAL_DIA={iso,evs};
   cont.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+// Imprime solo el detalle del día en una ventana nueva (patrón del panel de proveedores).
+function imprimirDiaCal(iso){
+  const d=window.__CAL_DIA; if(!d||d.iso!==iso) return;
+  const [yy,mm,dd]=iso.split('-');
+  let bultos=0; d.evs.forEach(p=>bultos+=(p.bultos||0));
+  let filas=d.evs.slice().sort((a,b)=>b.ipd-a.ipd).map(p=>'<tr><td>'+p.id+'</td><td>'+p.ue+'</td><td>'+p.grupo+'</td><td>'+(p.esUrg?'Urgencia':'Mensual')+'</td><td>'+p.etapa+'</td><td style="text-align:right">'+(p.bultos>0?p.bultos.toLocaleString():'—')+'</td></tr>').join('');
+  const w=window.open('','_blank');
+  w.document.write('<html><head><title>Vencimientos '+dd+'/'+mm+'/'+yy+'</title>'+
+    '<style>body{font-family:Arial;font-size:12px;padding:20px;}h2{color:#0C447C;}table{width:100%;border-collapse:collapse;}th{background:#0C447C;color:#fff;padding:6px;text-align:left;}td{padding:5px 6px;border-bottom:1px solid #eee;}</style></head><body>'+
+    '<h2>Vencimientos de despacho — '+dd+'/'+mm+'/'+yy+'</h2>'+
+    '<p>CEDIS Panamá · '+d.evs.length+' Forma(s) 8 · '+Math.round(bultos).toLocaleString()+' bultos</p>'+
+    '<table><thead><tr><th>Nº F8</th><th>Unidad Ejecutora</th><th>Grupo</th><th>Tipo</th><th>Etapa</th><th style="text-align:right">Bultos</th></tr></thead><tbody>'+filas+'</tbody></table>'+
+    '<button class="noprint" onclick="window.print()" style="margin-top:16px;padding:8px 16px;background:#1e5a9e;color:#fff;border:none;border-radius:3px;cursor:pointer;">Imprimir / Guardar PDF</button>'+
+    '</body></html>');
+  w.document.close();
 }
 function triColor(t){ return {ROJO:'#c0281f',NARANJA:'#d97316',AMARILLO:'#c99700',VERDE:'#3a8c3a',AZUL:'#2a6db5'}[t]||'#888'; }
 
