@@ -163,6 +163,7 @@
       <div class="buscar-barra">
         <input type="text" id="q" placeholder="Buscar Unidad Ejecutora o Nº F8…" oninput="renderLista()">
         <button class="btn" onclick="cargar()">↻ Actualizar</button>
+        <button class="btn" onclick="limpiarFiltros()">✕ Limpiar filtros</button>
         <button class="btn chip" onclick="setFiltroRojo()">Solo ROJO</button>
         <button class="btn primary" onclick="alert('Notificar UEs con pedido listo: correo con volumetría — Capa 2')">✉ Notificar UEs con pedido listo</button>
       </div>
@@ -184,6 +185,8 @@
 
 <script>
 const WEBAPP="https://script.google.com/macros/s/AKfycbyVHDQ8IuVHibz259AiEvZ-jUfVC7fxvSSqC-wfaiiq1_13C9_TK4dVtPK0SMW4sZoJ/exec";
+// Fecha ISO -> dd/mm/aa (ancla concreta, como el panel de proveedores)
+function fechaCorta(f){ f=String(f||''); const m=f.match(/(\d{4})-(\d{2})-(\d{2})/); return m?(m[3]+'/'+m[2]+'/'+m[1].slice(2)):''; }
 const DIAS=['LUNES','MARTES','MIERCOLES','JUEVES','VIERNES'];
 const USUARIO="Torre de Control";
 let DATA=null, TAB='lista', KPI_FILTRO='', chartCarga=null;
@@ -343,6 +346,13 @@ function poblarEtapas(){
 
 function setFiltroRojo(){ document.getElementById('fTriage').value='ROJO'; renderLista(); }
 
+function limpiarFiltros(){
+  ['fUE','fTriage','fEtapa','fGrupo','fTipo','fCero'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('q').value='';
+  KPI_FILTRO='';
+  renderKpis(); renderLista();
+}
+
 function renderLista(){
   if(!DATA) return;
   const q=(document.getElementById('q').value||'').toUpperCase();
@@ -383,8 +393,12 @@ function cardPed(p,i){
           '<div class="c"><span class="k">Etapa</span>'+p.etapa+'</div>'+
           '<div class="c"><span class="k">Grupo</span>'+p.grupo+'</div>'+
           '<div class="c"><span class="k">Bultos</span>'+(p.bultos>0?p.bultos.toLocaleString():'—')+'</div>'+
-          '<div class="c"><span class="k">Recibido</span>hace '+p.antig+'d</div>'+
-          '<div class="c"><span class="k">Ventana</span>'+(p.diasVent!=null?'en '+p.diasVent+'d':'—')+'</div>'+
+          '<div class="c"><span class="k">Recibido</span>'+
+            (p.fechaRecepcion?fechaCorta(p.fechaRecepcion):'—')+
+            '<span style="color:#999"> · hace '+p.antig+'d</span></div>'+
+          '<div class="c"><span class="k">Ventana retiro</span>'+
+            (p.fechaVentana?fechaCorta(p.fechaVentana):'—')+
+            (p.diasVent!=null?'<span style="color:#999"> · en '+p.diasVent+'d</span>':'')+'</div>'+
         '</div>'+
         '<div class="ped-chips">'+
           (p.tieneCero?'<span class="chip cero">SALDO 0</span>':'')+
@@ -487,11 +501,19 @@ function renderTransito(){
   const arr=DATA.transito||[];
   const cont=document.getElementById('transitoCont');
   if(!arr.length){ cont.innerHTML='<div class="vacio">No hay F8 en tránsito (todo lo generado ya llegó).</div>'; return; }
-  let html='<p style="font-size:12px;color:#666;margin:0 0 10px">F8 generadas en el WMS que aún no han llegado físicamente al CEDIS (REQUISICIONES − BUFFER). Solo UEs de CEDIS Panamá.</p>';
-  html+='<table class="tabla"><thead><tr><th>Nº F8</th><th>Unidad Ejecutora</th><th>Tipo</th><th>Generada</th></tr></thead><tbody>';
+  let html='<p style="font-size:12px;color:#666;margin:0 0 10px">F8 generadas en el WMS que aún no han llegado físicamente al CEDIS (REQUISICIONES − BUFFER). Punto de Información normalizado; grupo inferido de los renglones. Solo UEs de CEDIS Panamá.</p>';
+  html+='<table class="tabla"><thead><tr><th>Nº Documento</th><th>Punto de Información</th><th>Grupo</th><th>Tipo</th><th style="text-align:right">Renglones</th><th>Generada</th></tr></thead><tbody>';
   arr.forEach(t=>{
-    const f=(t.fecha&&t.fecha.length>10)?t.fecha.slice(0,10):(t.fecha||'');
-    html+='<tr><td style="font-family:var(--mono)">'+t.id+'</td><td>'+t.ue+'</td><td>'+(t.tipo||'')+'</td><td>'+f+'</td></tr>';
+    const f=(t.fecha&&String(t.fecha).length>10)?String(t.fecha).slice(0,10):(t.fecha||'');
+    const esUrg=/URG/i.test(t.tipo||'');
+    html+='<tr>'+
+      '<td style="font-family:var(--mono)">'+t.id+'</td>'+
+      '<td>'+(t.ue||'—')+'</td>'+
+      '<td>'+(t.grupo||'—')+'</td>'+
+      '<td>'+(esUrg?'<span style="color:var(--rojo);font-weight:600">':'')+(t.tipo||'')+(esUrg?'</span>':'')+'</td>'+
+      '<td style="text-align:right;font-family:var(--mono)">'+(t.renglones!=null?t.renglones:'—')+'</td>'+
+      '<td style="font-family:var(--mono)">'+f+'</td>'+
+    '</tr>';
   });
   html+='</tbody></table>';
   cont.innerHTML=html;
