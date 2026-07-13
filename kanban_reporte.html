@@ -276,11 +276,11 @@ const PANEL_STAGES = {
   // El cierre de la etapa lo confirma el lector MB51 desde SAP; aquí él
   // reconoce que el documento está en su bandeja.
   'FACTURACIÓN': [
-    {from:'HANDOFF_FACTURACION', mark:'FACTURACION_RECIBIDA', tab:'Entregados a mí',  action:'Recibí para facturar'},
-    {from:'RESERVA',             mark:'FACTURACION_RECIBIDA', tab:'Por facturar',     action:'Recibí para facturar'},
-    {from:'PICKING',             mark:'FACTURACION_RECIBIDA', tab:'Pickeados',        action:'Recibí para facturar'},
-    {from:'EMPACADO',            mark:'FACTURACION_RECIBIDA', tab:'Empacados',        action:'Recibí para facturar'},
-    {from:'DESPACHADO',          mark:'FACTURACION_RECIBIDA', tab:'Salieron sin facturar', action:'Registrar factura'}
+    {from:'HANDOFF_FACTURACION', mark:'FACTURACION_RECIBIDA', tab:'Entregados a mí',  action:'Recibí para facturar', sinFactura:true},
+    {from:'RESERVA',             mark:'FACTURACION_RECIBIDA', tab:'Por facturar',     action:'Recibí para facturar', sinFactura:true},
+    {from:'PICKING',             mark:'FACTURACION_RECIBIDA', tab:'Pickeados',        action:'Recibí para facturar', sinFactura:true},
+    {from:'EMPACADO',            mark:'FACTURACION_RECIBIDA', tab:'Empacados',        action:'Recibí para facturar', sinFactura:true},
+    {from:'DESPACHADO',          mark:'FACTURACION_RECIBIDA', tab:'Salieron sin facturar', action:'Registrar factura', sinFactura:true}
   ],
   // Empacadores (Bey Mario, Sebastián): equipo distinto al de distribución.
   'EMPACADO': [
@@ -457,6 +457,9 @@ async function loadPedidos(){
 function pedidosDeEtapa(s, modo){
   let arr=PEDIDOS.filter(p=>p.etapa===s.from);
   if(s.soloUrg) arr=arr.filter(p=>/URG/i.test(p.tipo||''));
+  // Facturación: lo que YA tiene factura no es trabajo pendiente.
+  // Sin este filtro, Ricaute vería miles de documentos ya facturados.
+  if(s.sinFactura) arr=arr.filter(p=>!p.facturado);
   if(modo==='activo')  arr=arr.filter(p=> (p.diasDeuda==null) || p.diasDeuda < DIAS_DEUDA_VIEJA);
   if(modo==='deuda')   arr=arr.filter(p=> p.diasDeuda != null && p.diasDeuda >= DIAS_DEUDA_VIEJA);
   return arr;
