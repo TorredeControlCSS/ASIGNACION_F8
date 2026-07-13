@@ -80,6 +80,8 @@
   /* DEUDA: pedido anterior al corte, sigue pendiente de atender */
   .card .deuda{font-size:10.5px;background:#fce9d8;color:#8a4a12;border:1px solid #f0cfae;
     border-radius:3px;padding:5px 8px;margin-bottom:9px;font-weight:600;line-height:1.4;}
+  /* 30+ días sin atender: deuda dura */
+  .card .deuda.grave{background:#fbe0de;color:#8f2620;border-color:#f0bfbb;}
   .card.card-deuda{border-left:4px solid #d97316;}
   .card .meta .num{color:var(--txt);}
   .card .flag{display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;background:var(--amarbg);color:#854F0B;margin-left:6px;}
@@ -313,11 +315,26 @@ function enterApp(){
     return;
   }
   // El contrato se resuelve por FUNCION_KANBAN (padrón PERSONAL_KANBAN).
-  // Fallback a USER.panel para compatibilidad con el backend anterior.
-  const fx = String(USER.funcion||'').trim().toUpperCase();
-  STAGES = PANEL_STAGES[fx] || PANEL_STAGES[USER.panel] || [];
-  if(!STAGES.length){
-    document.getElementById('list').innerHTML='<div class="empty">Tu función (<b>'+(USER.funcion||USER.panel||'—')+'</b>) no reporta etapas del Kanban.<br><span style="font-size:12px;color:#6b7684">Si crees que es un error, verifica FUNCION_KANBAN en el padrón.</span></div>';
+  // Se prueba en varios campos porque el backend puede enviarlo con
+  // distintos nombres, y se normaliza (tildes, espacios) para que
+  // 'FACTURACIÓN' y 'FACTURACION' resuelvan al mismo panel.
+  const norm = s => String(s||'').trim().toUpperCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g,'');   // quita tildes
+  const candidatos = [USER.funcion, USER.funcion_kanban, USER.FUNCION_KANBAN,
+                      USER.panel, USER.rol, USER.area];
+  const STAGES_MAP = {};
+  Object.keys(PANEL_STAGES).forEach(k => { STAGES_MAP[norm(k)] = PANEL_STAGES[k]; });
+
+  STAGES = null;
+  for(const c of candidatos){
+    if(c && STAGES_MAP[norm(c)]){ STAGES = STAGES_MAP[norm(c)]; break; }
+  }
+  if(!STAGES){
+    const vistos = candidatos.filter(Boolean).join(' · ') || '(ninguno)';
+    document.getElementById('list').innerHTML =
+      '<div class="empty">No encuentro las etapas para tu función.<br><br>' +
+      '<span style="font-size:12px;color:#6b7684">Recibido del sistema: <b>'+vistos+'</b><br>' +
+      'Verifica FUNCION_KANBAN en el padrón PERSONAL_KANBAN.</span></div>';
     return;
   }
   buildTabs();
@@ -362,6 +379,15 @@ async function loadPedidos(){
     PEDIDOS = (res.pedidos||[]).map(p => {
       const f = p.fechaAsignacion || p.fechaF8 || p.fecha || '';
       p.esDeuda = f ? (String(f).slice(0,10) < CORTE_PRODUCCION) : true;
+      // Días de atraso: se calculan aquí porque el backend no los envía.
+      // Un pedido asignado hace 47 días y aún sin atender es deuda dura.
+      if(f){
+        const d = new Date(String(f).slice(0,10));
+        p.diasDeuda = isNaN(d) ? null
+          : Math.max(0, Math.floor((new Date() - d) / 86400000));
+      } else {
+        p.diasDeuda = null;
+      }
       return p;
     });
     updateBadges();
@@ -407,8 +433,15 @@ function render(){
       ? `<div class="meta" style="color:#b06a00"><span>Picking por: <b>${p.quien_previo}</b> — validas su trabajo</span></div>` : '';
     // DEUDA: pedido anterior al corte. Se puede cerrar, pero la fecha no será
     // la real del evento (nadie la recuerda): se registra como regularización.
-    const deuda = p.esDeuda
-      ? `<div class="deuda">DEUDA · asignado hace ${p.dias||'?'} días — se registra como regularización</div>` : '';
+    let deuda = '';
+    if(p.esDeuda){
+      const d = p.diasDeuda;
+      const grave = (d != null && d >= 30);
+      const txt = (d != null)
+        ? `asignado hace <b>${d} días</b>`
+        : 'sin fecha de asignación';
+      deuda = `<div class="deuda${grave?' grave':''}">DEUDA · ${txt} — se registra como regularización</div>`;
+    }
     c.innerHTML=`
       <div class="stage">${s.tab}</div>
       <div class="r1">
