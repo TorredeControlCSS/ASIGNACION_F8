@@ -77,6 +77,10 @@
   .card .grp{font-size:10px;color:var(--sub);margin-left:auto;font-family:Consolas,monospace;}
   .card .ue{font-size:13px;font-weight:600;margin-bottom:2px;}
   .card .meta{font-size:11px;color:var(--sub);display:flex;gap:12px;margin-bottom:10px;}
+  /* DEUDA: pedido anterior al corte, sigue pendiente de atender */
+  .card .deuda{font-size:10.5px;background:#fce9d8;color:#8a4a12;border:1px solid #f0cfae;
+    border-radius:3px;padding:5px 8px;margin-bottom:9px;font-weight:600;line-height:1.4;}
+  .card.card-deuda{border-left:4px solid #d97316;}
   .card .meta .num{color:var(--txt);}
   .card .flag{display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;background:var(--amarbg);color:#854F0B;margin-left:6px;}
   .card .act{width:100%;padding:12px;background:var(--azul);color:#fff;font-size:14px;font-weight:700;
@@ -187,26 +191,63 @@ let CURRENT_STAGE = null;  // etapa activa de la pestaña
 let STAGES = [];           // etapas que este rol reporta
 const QKEY = "kb_offline_queue";
 
-// ---- Contrato: qué etapa marca cada panel/rol, en orden ----
-// Cada panel expone las etapas que ESE actor reporta. La PWA muestra una
-// pestaña por etapa "de entrada" (los pedidos que están listos para que él actúe).
+// ============================================================================
+// CORTE A PRODUCCIÓN
+// ----------------------------------------------------------------------------
+// El panel solo muestra pedidos con fecha IGUAL O POSTERIOR a este corte.
+// Lo anterior fue el período experimental: nadie recuerda cuándo entregó cada
+// documento, y pedirle al personal que reconstruya el pasado de memoria sería
+// fabricar datos. Ese histórico queda congelado como línea base del "antes".
+//
+// AJUSTA esta fecha al día en que el almacén arranque con la captura.
+// ============================================================================
+const CORTE_PRODUCCION = "2026-07-13";   // AAAA-MM-DD
+
+// ---- Contrato: qué etapa marca cada actor, según el MODELO CANÓNICO de 12 etapas ----
+// La llave es FUNCION_KANBAN de la hoja PERSONAL_KANBAN (el padrón oficial).
+// Cada panel expone solo las etapas que ESE actor reporta; la PWA muestra una
+// pestaña por etapa "de entrada" (pedidos listos para que él actúe).
+//
+// FLUJO CANÓNICO (12):
+//  1 RECEPCION  2 ASIGNADA  3 HANDOFF_CAPTURADOR  4 RECOLECCION  5 PICKING
+//  6 RESERVA    7 HANDOFF_FACTURACION  8 FACTURACION(MB51)  9 EMPACADO
+// 10 DISTRIBUCION  11 DESPACHO_FISICO  12 ENTREGADO
+//
+// Etapas SISTÉMICAS (no se marcan aquí): 1 Recepción (BUFFER_F8),
+// 2 Asignada (Motor), 8 Facturación (MB51/SAP).
 const PANEL_STAGES = {
-  // capturador: recibe el documento (hand-off) y confirma recolección
-  CAPTURADOR: [
-    {from:'ASIGNADA',            mark:'HANDOFF_CAPTURADOR', tab:'Por recibir',    action:'Recibí el documento'},
-    {from:'HANDOFF_CAPTURADOR',  mark:'RECOLECTADA',        tab:'Por recolectar', action:'Confirmar recolección'}
+  // Capturador (Januario, Rafael, Eric): recibe el documento, recolecta en WMS,
+  // y tras el VoBo del almacenista genera la RESERVA.
+  'RECOLECCION Y RESERVA': [
+    {from:'ASIGNADA',            mark:'HANDOFF_CAPTURADOR',  tab:'Por recibir',    action:'Recibí el documento'},
+    {from:'HANDOFF_CAPTURADOR',  mark:'RECOLECCION',         tab:'Por recolectar', action:'Recolección generada (WMS)'},
+    // Doble confirmación: el capturador valida el picking físico del almacenista
+    {from:'PICKING',             mark:'RESERVA',             tab:'Validar picking',action:'VoBo · generar reserva', dobleConf:true},
+    {from:'RESERVA',             mark:'HANDOFF_FACTURACION', tab:'Entregar a fact.',action:'Entregado a Facturación'}
   ],
-  ALMACENISTA: [
-    {from:'RECOLECTADA',         mark:'PICKING',            tab:'Por pickear',    action:'Picking hecho'}
+  // Almacenista: hace el picking físico con la Hoja de Recolección.
+  'PICKING FISICO': [
+    {from:'RECOLECCION',         mark:'PICKING',             tab:'Por pickear',    action:'Picking físico hecho'}
   ],
-  FACTURACION: [
-    {from:'PICKING',             mark:'HANDOFF_FACTURACION',tab:'Por recibir',    action:'Recibí para facturar'}
+  // Almacenistas de urgencias (cross-área).
+  'SOLO PICKING-URG': [
+    {from:'RECOLECCION',         mark:'PICKING',             tab:'Urgencias',      action:'Picking físico hecho', soloUrg:true}
   ],
-  DISTRIBUCION: [
-    {from:'FACTURACIÓN',         mark:'EMPACADO',           tab:'Por empacar',    action:'Empacado'},
-    {from:'EMPACADO',            mark:'DISTRIBUCIÓN',        tab:'Por distribuir', action:'Distribuido (salida WMS)'},
-    {from:'DISTRIBUCIÓN',        mark:'DESPACHADO',          tab:'Por despachar',  action:'Despachado'},
-    {from:'DESPACHADO',          mark:'ENTREGADO',           tab:'Por entregar',   action:'Entregado en UE'}
+  // Facturación (Ricaute + equipo): confirma que recibió. El cierre de la etapa
+  // FACTURACION lo siembra el lector MB51 desde SAP, no se marca a mano.
+  'FACTURACIÓN': [
+    {from:'HANDOFF_FACTURACION', mark:'FACTURACION_RECIBIDA',tab:'Por recibir',    action:'Recibí para facturar'}
+  ],
+  // Empacadores (Bey Mario, Sebastián): equipo distinto al de distribución.
+  'EMPACADO': [
+    {from:'FACTURACIÓN',         mark:'EMPACADO',            tab:'Por empacar',    action:'Empacado'}
+  ],
+  // Distribuidores (Manuel=mensuales, Yerisbeth=urgencias): salida del WMS,
+  // despacho físico y confirmación de entrega.
+  'DISTRIBUCIÓN': [
+    {from:'EMPACADO',            mark:'DISTRIBUCION',        tab:'Por distribuir', action:'Salida del WMS'},
+    {from:'DISTRIBUCION',        mark:'DESPACHO_FISICO',     tab:'Por despachar',  action:'Despachado (bahía/flota)'},
+    {from:'DESPACHO_FISICO',     mark:'ENTREGADO',           tab:'Por entregar',   action:'Entregado en destino'}
   ]
 };
 
@@ -271,9 +312,12 @@ function enterApp(){
     document.querySelector('.toolbar').style.display='none';
     return;
   }
-  STAGES = PANEL_STAGES[USER.panel] || [];
+  // El contrato se resuelve por FUNCION_KANBAN (padrón PERSONAL_KANBAN).
+  // Fallback a USER.panel para compatibilidad con el backend anterior.
+  const fx = String(USER.funcion||'').trim().toUpperCase();
+  STAGES = PANEL_STAGES[fx] || PANEL_STAGES[USER.panel] || [];
   if(!STAGES.length){
-    document.getElementById('list').innerHTML='<div class="empty">No hay etapas de reporte para tu función.</div>';
+    document.getElementById('list').innerHTML='<div class="empty">Tu función (<b>'+(USER.funcion||USER.panel||'—')+'</b>) no reporta etapas del Kanban.<br><span style="font-size:12px;color:#6b7684">Si crees que es un error, verifica FUNCION_KANBAN en el padrón.</span></div>';
     return;
   }
   buildTabs();
@@ -298,7 +342,28 @@ async function loadPedidos(){
     // pedir todos los pedidos de los grupos del usuario (una sola llamada; filtramos por etapa en cliente)
     const grupos = encodeURIComponent(USER.grupos||'');
     const res=await jsonp(`${WEBAPP}?file=kanban_pedidos&grupos=${grupos}`);
-    PEDIDOS = res.pedidos||[];
+    // ===================================================================
+    // TODOS los pendientes se muestran. NINGUNO se oculta.
+    // -------------------------------------------------------------------
+    // Hay DEUDA DE ATENCIÓN: Formas 8 asignadas hace semanas que siguen sin
+    // distribuir. Ocultarlas cegaría al almacén ante su propio atraso.
+    //
+    // Lo que sí distinguimos es qué se puede REPORTAR:
+    //   · Pedidos DESDE el corte  -> el colaborador marca su etapa con fecha
+    //                                real, porque acaba de hacerlo.
+    //   · Pedidos ANTES del corte -> son DEUDA. Se muestran y se pueden
+    //                                marcar, pero se registran como
+    //                                'regularización': se sabe QUE se hizo,
+    //                                no CUÁNDO exactamente.
+    //
+    // Nadie recuerda la fecha de un hand-off de hace un mes. Pedirla sería
+    // fabricar datos. Pero el trabajo pendiente hay que verlo y cerrarlo.
+    // ===================================================================
+    PEDIDOS = (res.pedidos||[]).map(p => {
+      const f = p.fechaAsignacion || p.fechaF8 || p.fecha || '';
+      p.esDeuda = f ? (String(f).slice(0,10) < CORTE_PRODUCCION) : true;
+      return p;
+    });
     updateBadges();
     render();
     flushQueue();
@@ -307,9 +372,16 @@ async function loadPedidos(){
   }
 }
 
+// Pedidos que le tocan a una etapa del contrato (respeta soloUrg del rol de urgencias).
+function pedidosDeEtapa(s){
+  let arr=PEDIDOS.filter(p=>p.etapa===s.from);
+  if(s.soloUrg) arr=arr.filter(p=>/URG/i.test(p.tipo||''));
+  return arr;
+}
+
 function updateBadges(){
   STAGES.forEach((s,i)=>{
-    const n=PEDIDOS.filter(p=>p.etapa===s.from).length;
+    const n=pedidosDeEtapa(s).length;
     const b=document.getElementById('badge'+i);
     if(b){ b.textContent=n; b.style.display=n>0?'inline-block':'none'; }
   });
@@ -319,7 +391,7 @@ function render(){
   const s=CURRENT_STAGE; if(!s) return;
   const q=(document.getElementById('search').value||'').trim().toLowerCase();
   const ft=document.getElementById('fTipo').value;
-  let arr=PEDIDOS.filter(p=>p.etapa===s.from);
+  let arr=pedidosDeEtapa(s);
   if(ft) arr=arr.filter(p=>(p.tipo||'').toUpperCase()===ft);
   if(q) arr=arr.filter(p=>p.id.toLowerCase().includes(q)||(p.ue||'').toLowerCase().includes(q));
   document.getElementById('rowCount').textContent=arr.length+' pedidos';
@@ -329,7 +401,14 @@ function render(){
   arr.forEach(p=>{
     const urg=(p.tipo||'').toUpperCase().indexOf('URG')>=0;
     const c=document.createElement('div');
-    c.className='card'+(urg?' urg':'');
+    c.className='card'+(urg?' urg':'')+(p.esDeuda?' card-deuda':'');
+    // Doble confirmación: el capturador ve QUIÉN hizo el picking que va a validar.
+    const quienPrevio = s.dobleConf && p.quien_previo
+      ? `<div class="meta" style="color:#b06a00"><span>Picking por: <b>${p.quien_previo}</b> — validas su trabajo</span></div>` : '';
+    // DEUDA: pedido anterior al corte. Se puede cerrar, pero la fecha no será
+    // la real del evento (nadie la recuerda): se registra como regularización.
+    const deuda = p.esDeuda
+      ? `<div class="deuda">DEUDA · asignado hace ${p.dias||'?'} días — se registra como regularización</div>` : '';
     c.innerHTML=`
       <div class="stage">${s.tab}</div>
       <div class="r1">
@@ -339,6 +418,8 @@ function render(){
       </div>
       <div class="ue">${p.ue||''}</div>
       <div class="meta"><span>Ítems asignados: <b class="num">${p.itemsAsig||0}</b></span></div>
+      ${deuda}
+      ${quienPrevio}
       <button class="act" data-id="${p.id}" data-grupo="${p.grupo||''}">${s.action}</button>`;
     c.querySelector('.act').onclick=(ev)=>marcar(ev.target, p, s);
     list.appendChild(c);
@@ -348,6 +429,13 @@ function render(){
 async function marcar(btn, p, stage){
   btn.classList.add('done'); btn.textContent='✓ '+stage.action;
   const payload={ id:p.id, grupo:p.grupo||'', etapa:stage.mark, quien:USER.nombre };
+  // Doble confirmación: 2ª firma del capturador validando el picking del almacenista.
+  if(stage.dobleConf) payload.doble_conf='1';
+  if(USER.pin) payload.pin=USER.pin;              // firma digital del actor
+  // REGULARIZACIÓN: el pedido es anterior al corte. Se cierra la etapa, pero
+  // se marca que la fecha NO es la del evento real (nadie la recuerda).
+  // Así las latencias del histórico no se contaminan con timestamps falsos.
+  if(p.esDeuda) payload.regulariza='1';
   const ok = await enviarMarca(payload);
   if(ok){
     toast('✓ '+p.id+' → '+stage.mark, 'ok');
