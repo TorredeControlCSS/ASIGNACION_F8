@@ -263,10 +263,24 @@ const PANEL_STAGES = {
   'SOLO PICKING-URG': [
     {from:'RECOLECCION',         mark:'PICKING',             tab:'Urgencias',      action:'Picking físico hecho', soloUrg:true}
   ],
-  // Facturación (Ricaute + equipo): confirma que recibió. El cierre de la etapa
-  // FACTURACION lo siembra el lector MB51 desde SAP, no se marca a mano.
+  // Facturación (Ricaute + equipo).
+  // Su bandeja NO puede depender solo del hand-off registrado: hoy hay más de
+  // mil documentos que avanzaron sin que nadie marcara la entrega, y el panel
+  // le decía "todo al día" mientras tenía una montaña de trabajo.
+  //
+  // Ve DOS cosas:
+  //   1. Lo que un capturador le entregó formalmente (hand-off registrado)
+  //   2. Todo lo que YA avanzó en el flujo y sigue SIN factura
+  //      (ahí está la deuda real: documentos despachados sin facturar)
+  //
+  // El cierre de la etapa lo confirma el lector MB51 desde SAP; aquí él
+  // reconoce que el documento está en su bandeja.
   'FACTURACIÓN': [
-    {from:'HANDOFF_FACTURACION', mark:'FACTURACION_RECIBIDA',tab:'Por recibir',    action:'Recibí para facturar'}
+    {from:'HANDOFF_FACTURACION', mark:'FACTURACION_RECIBIDA', tab:'Entregados a mí',  action:'Recibí para facturar'},
+    {from:'RESERVA',             mark:'FACTURACION_RECIBIDA', tab:'Por facturar',     action:'Recibí para facturar'},
+    {from:'PICKING',             mark:'FACTURACION_RECIBIDA', tab:'Pickeados',        action:'Recibí para facturar'},
+    {from:'EMPACADO',            mark:'FACTURACION_RECIBIDA', tab:'Empacados',        action:'Recibí para facturar'},
+    {from:'DESPACHADO',          mark:'FACTURACION_RECIBIDA', tab:'Salieron sin facturar', action:'Registrar factura'}
   ],
   // Empacadores (Bey Mario, Sebastián): equipo distinto al de distribución.
   'EMPACADO': [
@@ -493,13 +507,26 @@ function render(){
   const list=document.getElementById('list');
 
   // Aviso honesto cuando se entra a la deuda vieja.
-  const aviso = (MODO==='deuda' && arr.length)
-    ? `<div class="aviso-deuda">
+  let aviso = '';
+  if(MODO==='deuda' && arr.length){
+    aviso = `<div class="aviso-deuda">
          <b>Estos documentos llevan más de 30 días sin avanzar.</b><br>
          No se espera que recuerdes cuándo los recibiste. Marca solo los que
          tengas físicamente. Los que no aparezcan hay que buscarlos o darlos
          de baja con tu supervisor — no los marques a ciegas.
-       </div>` : '';
+       </div>`;
+  }
+  // Aviso para Facturación: los despachados sin factura son una anomalía,
+  // no una tarea normal. Y parte puede ser un hueco del archivo MB51.
+  if(s.from==='DESPACHADO' && arr.length){
+    aviso += `<div class="aviso-deuda">
+         <b>Estos documentos salieron del CEDIS sin registro de facturación.</b><br>
+         Puede haber dos causas: que efectivamente no se facturaran, o que el
+         archivo MB51 de esos días no haya llegado al sistema (faltan los cierres
+         del 11 al 26 de junio). Antes de marcarlos, verifica en SAP si la factura
+         existe. Si existe, el problema es el archivo, no el despacho.
+       </div>`;
+  }
 
   if(!arr.length){
     list.innerHTML = MODO==='deuda'
