@@ -253,6 +253,18 @@ const PANEL_STAGES = {
   ]
 };
 
+// ---- Alias del código de panel que devuelve el backend ----
+// El GAS calcula un 'panel' (CAPTURADOR, FACTURACION, ALMACENISTA...) además
+// de enviar la FUNCION_KANBAN. Se mapean ambos al mismo contrato para que el
+// panel resuelva sin importar cuál llegue.
+PANEL_STAGES['CAPTURADOR']          = PANEL_STAGES['RECOLECCION Y RESERVA'];
+PANEL_STAGES['MODULO-PRE-PICKING']  = PANEL_STAGES['RECOLECCION Y RESERVA'];
+PANEL_STAGES['ALMACENISTA']         = PANEL_STAGES['PICKING FISICO'];
+PANEL_STAGES['PICKING']             = PANEL_STAGES['PICKING FISICO'];
+PANEL_STAGES['FACTURACION']         = PANEL_STAGES['FACTURACIÓN'];
+PANEL_STAGES['DISTRIBUCION']        = PANEL_STAGES['DISTRIBUCIÓN'];
+PANEL_STAGES['DISTRIBUCION-WMS']    = PANEL_STAGES['DISTRIBUCIÓN'];
+
 // ================= LOGIN =================
 function buildKeys(){
   const k=document.getElementById('keys');
