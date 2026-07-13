@@ -947,26 +947,17 @@ function imprimirDiaCal(iso){
 function triColor(t){ return {ROJO:'#c0281f',NARANJA:'#d97316',AMARILLO:'#c99700',VERDE:'#3a8c3a',AZUL:'#2a6db5'}[t]||'#888'; }
 
 // ===================== KANBAN POR ETAPA =====================
-// Modelo canónico de 12 etapas. Faltaba RESERVA (etapa 6): los pedidos en
-// esa etapa no aparecían en ninguna columna del Kanban.
+// Modelo canónico de 12 etapas. Faltaba RESERVA: los pedidos en esa etapa
+// no aparecían en ninguna columna del Kanban.
 const KB_FLUJO=['RECEPCION','ASIGNADA','HANDOFF_CAPTURADOR','RECOLECCION','PICKING',
   'RESERVA','HANDOFF_FACTURACION','FACTURACIÓN','EMPACADO','DISTRIBUCIÓN',
   'DESPACHADO','ENTREGADO'];
-const KB_ETIQUETA={
-  'RECEPCION':'Recepción',
-  'ASIGNADA':'Asignada',
-  'HANDOFF_CAPTURADOR':'Hand-off capturador',
-  'RECOLECCION':'Recolección',
-  'RECOLECTADA':'Recolección',            // alias heredado
-  'PICKING':'Picking físico',
-  'RESERVA':'Reserva',
-  'HANDOFF_FACTURACION':'Hand-off facturación',
-  'FACTURACIÓN':'Facturación',
-  'EMPACADO':'Empacado',
-  'DISTRIBUCIÓN':'Distribución',
-  'DISTRIBUCION':'Distribución',          // sin tilde
-  'DESPACHADO':'Despacho físico',
-  'ENTREGADO':'Entregado'};
+const KB_ETIQUETA={'RECEPCION':'Recepción','ASIGNADA':'Asignada',
+  'HANDOFF_CAPTURADOR':'Hand-off capturador','RECOLECCION':'Recolección',
+  'RECOLECTADA':'Recolección','PICKING':'Picking físico','RESERVA':'Reserva',
+  'HANDOFF_FACTURACION':'Hand-off facturación','FACTURACIÓN':'Facturación',
+  'EMPACADO':'Empacado','DISTRIBUCIÓN':'Distribución','DISTRIBUCION':'Distribución',
+  'DESPACHADO':'Despacho físico','ENTREGADO':'Entregado'};
 
 function renderKanban(){
   if(!DATA) return;
@@ -1079,8 +1070,8 @@ function renderSupervision(){
 
 // ===================== TERMOGRAFÍA POR UE =====================
 // Etapas mostradas en la matriz de calor (subconjunto legible del flujo).
-// Etapas de la matriz de calor. Se agregaron RECOLECCION y RESERVA, que ahora
-// sí tienen datos: sin ellas la termografía escondía dónde se atasca el flujo.
+// Se agregaron RECOLECCION y RESERVA: sin ellas la termografía escondía
+// justo donde se atasca el flujo.
 const TG_ETAPAS=['ASIGNADA','RECOLECCION','PICKING','RESERVA','FACTURACIÓN',
   'EMPACADO','DISTRIBUCIÓN','DESPACHADO','ENTREGADO'];
 const TG_ET_CORTA={'ASIGNADA':'Asig.','RECOLECCION':'Recol.','PICKING':'Picking',
@@ -1157,8 +1148,7 @@ function renderTermografia(){
       else{
         const inten=v/maxCel; // 0..1
         // celda azul si avanzado (despachado/entregado), ámbar/rojo si atascado en asignada/picking
-        // Atasco = el documento se quedó aguas arriba, sin llegar a facturación.
-        // Ahí es donde vive el cuello de botella real del almacén.
+        // Atasco = se quedó aguas arriba, sin llegar a facturación.
         const atascada=(e==='ASIGNADA'||e==='RECOLECCION'||e==='PICKING'||e==='RESERVA');
         const bg = atascada
           ? 'rgba('+Math.round(192+ (255-192)*(1-inten))+','+Math.round(120*(1-inten)+40)+','+Math.round(31*(1-inten)+20)+','+(0.25+0.6*inten)+')'
