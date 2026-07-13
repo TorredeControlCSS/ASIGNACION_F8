@@ -83,6 +83,19 @@
   /* 30+ días sin atender: deuda dura */
   .card .deuda.grave{background:#fbe0de;color:#8f2620;border-color:#f0bfbb;}
   .card.card-deuda{border-left:4px solid #d97316;}
+
+  /* Barra de modo: separa el trabajo del día de la deuda vieja */
+  .modo-bar{display:none;gap:8px;padding:10px 16px 0;background:#fff;}
+  .modo-btn{flex:1;padding:10px;border:1px solid #d4d4d4;background:#f7f7f7;color:#6b7684;
+    border-radius:4px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;
+    display:flex;align-items:center;justify-content:center;gap:8px;}
+  .modo-btn.on{background:#0C447C;color:#fff;border-color:#0C447C;}
+  .modo-btn .n{background:rgba(0,0,0,.12);padding:1px 8px;border-radius:9px;font-size:12px;
+    font-family:Consolas,monospace;}
+  .modo-btn.on .n{background:rgba(255,255,255,.25);}
+  /* Aviso al entrar a la deuda vieja: nadie debe marcar a ciegas */
+  .aviso-deuda{background:#fbe0de;border:1px solid #f0bfbb;color:#8f2620;border-radius:4px;
+    padding:12px 14px;margin-bottom:12px;font-size:12.5px;line-height:1.6;}
   .card .meta .num{color:var(--txt);}
   .card .flag{display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;background:var(--amarbg);color:#854F0B;margin-left:6px;}
   .card .act{width:100%;padding:12px;background:var(--azul);color:#fff;font-size:14px;font-weight:700;
@@ -158,6 +171,7 @@
     <select id="fTipo"><option value="">Todos</option><option value="URGENCIA">Urgencia</option><option value="MENSUAL">Mensual</option></select>
     <span class="rc" id="rowCount"></span>
   </div>
+  <div class="modo-bar" id="modoBar"></div>
   <div class="list" id="list"><div class="loading"><div class="spinner"></div>Cargando pedidos…</div></div>
 </div>
 
@@ -204,6 +218,20 @@ const QKEY = "kb_offline_queue";
 // AJUSTA esta fecha al día en que el almacén arranque con la captura.
 // ============================================================================
 const CORTE_PRODUCCION = "2026-07-13";   // AAAA-MM-DD
+
+// ============================================================================
+// UMBRAL DE DEUDA VIEJA
+// ----------------------------------------------------------------------------
+// Un documento asignado hace más de 30 días y aún sin recibir ya no es una
+// tarea: es una incógnita. El colaborador no recuerda si lo tuvo, ni dónde
+// está. Mezclarlo con el trabajo del día lo obligaría a marcar sin mirar,
+// fabricando datos falsos.
+//
+// Por eso se separan en dos vistas:
+//   ACTIVO  -> menos de 30 días. Es trabajo real, accionable.
+//   DEUDA   -> 30 días o más. Requiere una decisión, no un clic.
+// ============================================================================
+const DIAS_DEUDA_VIEJA = 30;
 
 // ---- Contrato: qué etapa marca cada actor, según el MODELO CANÓNICO de 12 etapas ----
 // La llave es FUNCION_KANBAN de la hoja PERSONAL_KANBAN (el padrón oficial).
@@ -411,31 +439,75 @@ async function loadPedidos(){
 }
 
 // Pedidos que le tocan a una etapa del contrato (respeta soloUrg del rol de urgencias).
-function pedidosDeEtapa(s){
+// Además separa por ANTIGÜEDAD: lo accionable de lo que ya es deuda vieja.
+function pedidosDeEtapa(s, modo){
   let arr=PEDIDOS.filter(p=>p.etapa===s.from);
   if(s.soloUrg) arr=arr.filter(p=>/URG/i.test(p.tipo||''));
+  if(modo==='activo')  arr=arr.filter(p=> (p.diasDeuda==null) || p.diasDeuda < DIAS_DEUDA_VIEJA);
+  if(modo==='deuda')   arr=arr.filter(p=> p.diasDeuda != null && p.diasDeuda >= DIAS_DEUDA_VIEJA);
   return arr;
 }
 
+let MODO='activo';   // 'activo' = menos de 30 días · 'deuda' = 30+ días
+
 function updateBadges(){
   STAGES.forEach((s,i)=>{
-    const n=pedidosDeEtapa(s).length;
+    const n=pedidosDeEtapa(s,'activo').length;   // el badge cuenta lo ACCIONABLE
     const b=document.getElementById('badge'+i);
     if(b){ b.textContent=n; b.style.display=n>0?'inline-block':'none'; }
   });
+}
+
+function setModo(m){
+  MODO=m;
+  document.querySelectorAll('.modo-btn').forEach(b=>{
+    b.classList.toggle('on', b.dataset.modo===m);
+  });
+  render();
 }
 
 function render(){
   const s=CURRENT_STAGE; if(!s) return;
   const q=(document.getElementById('search').value||'').trim().toLowerCase();
   const ft=document.getElementById('fTipo').value;
-  let arr=pedidosDeEtapa(s);
+
+  const nAct = pedidosDeEtapa(s,'activo').length;
+  const nDeu = pedidosDeEtapa(s,'deuda').length;
+
+  // Barra de modo: separa el trabajo del día de la deuda vieja.
+  const barra = document.getElementById('modoBar');
+  if(barra){
+    barra.innerHTML =
+      `<button class="modo-btn${MODO==='activo'?' on':''}" data-modo="activo" onclick="setModo('activo')">`+
+        `Trabajo actual <span class="n">${nAct}</span></button>`+
+      `<button class="modo-btn${MODO==='deuda'?' on':''}" data-modo="deuda" onclick="setModo('deuda')">`+
+        `Deuda +30 días <span class="n">${nDeu}</span></button>`;
+    barra.style.display = (nDeu>0) ? 'flex' : 'none';
+  }
+
+  let arr=pedidosDeEtapa(s, MODO);
   if(ft) arr=arr.filter(p=>(p.tipo||'').toUpperCase()===ft);
   if(q) arr=arr.filter(p=>p.id.toLowerCase().includes(q)||(p.ue||'').toLowerCase().includes(q));
   document.getElementById('rowCount').textContent=arr.length+' pedidos';
+
   const list=document.getElementById('list');
-  if(!arr.length){ list.innerHTML='<div class="empty">Nada pendiente en esta etapa. Buen trabajo.</div>'; return; }
-  list.innerHTML='';
+
+  // Aviso honesto cuando se entra a la deuda vieja.
+  const aviso = (MODO==='deuda' && arr.length)
+    ? `<div class="aviso-deuda">
+         <b>Estos documentos llevan más de 30 días sin avanzar.</b><br>
+         No se espera que recuerdes cuándo los recibiste. Marca solo los que
+         tengas físicamente. Los que no aparezcan hay que buscarlos o darlos
+         de baja con tu supervisor — no los marques a ciegas.
+       </div>` : '';
+
+  if(!arr.length){
+    list.innerHTML = MODO==='deuda'
+      ? '<div class="empty">No hay deuda vieja en esta etapa.</div>'
+      : '<div class="empty">Nada pendiente en esta etapa. Buen trabajo.</div>';
+    return;
+  }
+  list.innerHTML=aviso;
   arr.forEach(p=>{
     const urg=(p.tipo||'').toUpperCase().indexOf('URG')>=0;
     const c=document.createElement('div');
