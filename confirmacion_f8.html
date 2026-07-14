@@ -143,6 +143,57 @@
   .log-row .ok{color:var(--verde);font-weight:700;font-size:11px;}
   .log-row .n{font-family:Consolas,monospace;text-align:right;}
   .origen-tag{font-size:8px;font-weight:700;padding:1px 5px;background:#faeeda;color:#854F0B;margin-left:6px;vertical-align:middle;}
+
+  /* ===== Recepción del día — reemplaza la pestaña-día del libro paralelo ===== */
+  .dia-nav{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--bord);
+    padding:8px 12px;margin-bottom:10px;}
+  .dia-nav button{padding:6px 12px;background:var(--azul2);color:#fff;border:none;cursor:pointer;
+    font-weight:700;font-size:13px;font-family:Consolas,monospace;}
+  .dia-nav button:disabled{opacity:.35;cursor:not-allowed;}
+  .dia-nav select{padding:6px 10px;border:1px solid var(--bord);font-size:13px;
+    font-family:Consolas,monospace;font-weight:700;color:var(--azul2);}
+  .dia-nav .cierre{flex:1;text-align:right;font-size:12px;color:var(--sub);}
+  .dia-nav .cierre b{font-family:Consolas,monospace;color:var(--azul2);font-size:14px;}
+  .dia-nav .cierre .crit{color:#7d2229;}
+
+  .dia-filtros{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;}
+  .dia-filtros select{padding:6px 10px;border:1px solid var(--bord);font-size:12px;background:#fff;}
+  .chip{padding:5px 11px;border:1px solid var(--bord);background:#fff;cursor:pointer;font-size:11px;
+    font-weight:700;letter-spacing:.3px;}
+  .chip.on{border-width:2px;}
+  .chip[data-p="CRITICO"]{color:#7d2229;} .chip[data-p="CRITICO"].on{background:#f8d7da;border-color:#7d2229;}
+  .chip[data-p="ALTO"]{color:#7a5200;}    .chip[data-p="ALTO"].on{background:#fdecc8;border-color:#7a5200;}
+  .chip[data-p="MEDIO"]{color:#0C447C;}   .chip[data-p="MEDIO"].on{background:#d6e4f0;border-color:#0C447C;}
+  .chip[data-p="MANUAL"]{color:#854F0B;}  .chip[data-p="MANUAL"].on{background:#faeeda;border-color:#854F0B;}
+
+  .dtab{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--bord);font-size:12px;}
+  .dtab th{background:#f4f4f4;border-bottom:1px solid var(--bord);padding:7px 8px;text-align:left;
+    font-size:10px;text-transform:uppercase;color:var(--sub);letter-spacing:.3px;position:sticky;top:56px;}
+  .dtab th.r{text-align:right;}
+  .dtab td{padding:6px 8px;border-bottom:1px solid #eee;}
+  .dtab td.n{font-family:Consolas,monospace;text-align:right;}
+  .dtab td.f8{font-family:Consolas,monospace;font-weight:700;color:var(--azul2);white-space:nowrap;}
+  .dtab td.cod{font-family:Consolas,monospace;}
+  .dtab tr.p-CRITICO{background:#f8d7da;color:#7d2229;}
+  .dtab tr.p-ALTO{background:#fdecc8;color:#7a5200;}
+  .dtab tr.p-MEDIO{background:#d6e4f0;color:#0C447C;}
+  .dtab tr.p-NORMAL{background:#fff;}
+  .dtab tr.pend{background:#e8e8e8;color:#5a5a5a;}
+  .dtab .badge{font-size:9px;font-weight:700;padding:1px 5px;border:1px solid currentColor;}
+  .dtab .sin{color:var(--sub);font-style:italic;}
+  .dia-vacio{padding:28px;text-align:center;color:var(--sub);font-size:13px;
+    background:#fff;border:1px solid var(--bord);}
+
+  /* Captura de renglones de una F8 manual (solo sobre PENDIENTE_DETALLE) */
+  .cap-box{background:#fff;border:1px solid var(--bord);border-left:4px solid #854F0B;
+    padding:10px 12px;margin-bottom:10px;}
+  .cap-box h4{margin:0 0 8px;font-size:12px;color:var(--azul2);}
+  .cap-row{display:grid;grid-template-columns:130px 1fr 110px 90px;gap:8px;align-items:center;margin-bottom:6px;}
+  .cap-row input{padding:6px 8px;border:1px solid var(--bord);font-size:12px;width:100%;}
+  .cap-row input.n{text-align:right;font-family:Consolas,monospace;}
+  .cap-row button{padding:6px 10px;border:none;cursor:pointer;font-weight:700;font-size:12px;}
+  .cap-add{background:#dfe4ea;color:var(--azul2);}
+  .cap-save{background:var(--verde);color:#fff;}
 </style>
 </head>
 <body>
@@ -159,6 +210,7 @@
 
   <div class="tabs">
     <div class="tab active" id="tabRecepcion" onclick="switchTab('recepcion')">Recepción</div>
+    <div class="tab" id="tabDia" onclick="switchTab('dia')">Recepción del día</div>
     <div class="tab" id="tabManual" onclick="switchTab('manual')">Captura Manual</div>
   </div>
 
@@ -197,6 +249,28 @@
   <div id="lista"><div class="loading">Cargando documentos…</div></div>
 
   </div><!-- fin paneRecepcion -->
+
+  <div class="tabpane" id="paneDia">
+    <p class="manual-hint">Detalle renglón por renglón de lo recibido en el día. Prioridad: <b>CRÍTICO</b> = renglón vital con saldo cero en la UE. Reemplaza la pestaña-día del libro de solicitudes.</p>
+
+    <div class="dia-nav">
+      <button id="dPrev" title="Día anterior">◄</button>
+      <select id="dLote"></select>
+      <button id="dNext" title="Día siguiente">►</button>
+      <div class="cierre" id="dCierre">—</div>
+    </div>
+
+    <div class="dia-filtros">
+      <select id="dUE"><option value="">Todas las UE</option></select>
+      <span class="chip" data-p="CRITICO" onclick="dToggleChip(this)">CRÍTICO</span>
+      <span class="chip" data-p="ALTO" onclick="dToggleChip(this)">ALTO</span>
+      <span class="chip" data-p="MEDIO" onclick="dToggleChip(this)">MEDIO</span>
+      <span class="chip" data-p="MANUAL" onclick="dToggleChip(this)">MANUAL</span>
+    </div>
+
+    <div id="dCap"></div>
+    <div id="dLista"><div class="loading">Cargando…</div></div>
+  </div><!-- fin paneDia -->
 
   <div class="tabpane" id="paneManual">
     <p class="manual-hint">Captura de F8 que llegan físicamente pero no están en el sistema (Grupo 9 y 10, o UE pendientes de instalación). Cada F8 es única por grupo. Se registran directo en el buffer.</p>
@@ -436,13 +510,18 @@ document.getElementById('btnConfirmar').onclick=async ()=>{
 
 /* ===== Pestañas ===== */
 function switchTab(which){
-  const rec=which==='recepcion';
-  document.getElementById('tabRecepcion').classList.toggle('active',rec);
-  document.getElementById('tabManual').classList.toggle('active',!rec);
-  document.getElementById('paneRecepcion').classList.toggle('active',rec);
-  document.getElementById('paneManual').classList.toggle('active',!rec);
-  document.getElementById('actionbar').style.display=rec?'flex':'none';
-  if(!rec) poblarFormularioManual();
+  const mapa = {recepcion:['tabRecepcion','paneRecepcion'],
+                dia:      ['tabDia',      'paneDia'],
+                manual:   ['tabManual',   'paneManual']};
+  Object.keys(mapa).forEach(k=>{
+    const on = (k===which);
+    document.getElementById(mapa[k][0]).classList.toggle('active',on);
+    document.getElementById(mapa[k][1]).classList.toggle('active',on);
+  });
+  // La barra de confirmación solo aplica a la pestaña de ventanilla.
+  document.getElementById('actionbar').style.display = (which==='recepcion') ? 'flex' : 'none';
+  if(which==='manual') poblarFormularioManual();
+  if(which==='dia' && !DIA_CARGADO) dCargar();
 }
 
 /* ===== Captura manual (fila de producción, un grupo por F8) ===== */
@@ -513,6 +592,191 @@ async function registrarManual(){
 document.getElementById('btnManualSave').onclick=registrarManual;
 document.getElementById('mNdoc').addEventListener('keydown',function(e){ if(e.key==='Enter') registrarManual(); });
 document.getElementById('mSol').addEventListener('keydown',function(e){ if(e.key==='Enter') registrarManual(); });
+
+/* ==========================================================================
+   RECEPCIÓN DEL DÍA
+   Lee BUFFER_F8_DETALLE (endpoint buffer_detalle). Reemplaza la pestaña-día
+   del libro SOLICITUDES F8_PENDIENTES: mismo foco, mismo cierre, misma
+   bitácora — sin fragmentar la fuente de verdad en libros mensuales.
+   ========================================================================== */
+let DIA_CARGADO = false;
+let DIA_DATA    = null;
+let DIA_CHIPS   = new Set();
+
+function dHoy(){
+  const d=new Date();
+  return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
+}
+
+async function dCargar(lote){
+  document.getElementById('dLista').innerHTML='<div class="loading">Cargando…</div>';
+  document.getElementById('dCap').innerHTML='';
+  try{
+    const url=`${WEBAPP_BASE}?file=buffer_detalle&lote=${encodeURIComponent(lote||dHoy())}`;
+    const r=await loadJsonp(url,90000);
+    if(!r||!r.ok){toast('No se pudo cargar el detalle del día.',true);return;}
+    DIA_DATA=r; DIA_CARGADO=true;
+    dPoblarLotes(r);
+    dPoblarUE(r);
+    dPintarCierre(r.resumen);
+    dRender();
+  }catch(err){
+    document.getElementById('dLista').innerHTML='<div class="dia-vacio">No se pudo cargar: '+err.message+'</div>';
+  }
+}
+
+function dPoblarLotes(r){
+  const sel=document.getElementById('dLote');
+  const lotes=(r.lotes&&r.lotes.length)?r.lotes.slice():[r.lote];
+  if(lotes.indexOf(r.lote)<0) lotes.unshift(r.lote);
+  sel.innerHTML=lotes.map(l=>`<option value="${l}"${l===r.lote?' selected':''}>${l}</option>`).join('');
+  const i=lotes.indexOf(r.lote);
+  document.getElementById('dPrev').disabled=(i>=lotes.length-1);   // lotes vienen desc
+  document.getElementById('dNext').disabled=(i<=0);
+}
+
+function dPoblarUE(r){
+  const sel=document.getElementById('dUE');
+  const prev=sel.value;
+  const ues=[...new Set((r.renglones||[]).map(x=>x.ue).filter(Boolean))].sort();
+  sel.innerHTML='<option value="">Todas las UE</option>'+ues.map(u=>`<option>${u}</option>`).join('');
+  if(ues.indexOf(prev)>=0) sel.value=prev;
+}
+
+function dPintarCierre(rs){
+  rs=rs||{};
+  const p=[];
+  p.push(`<b>${rs.docs||0}</b> documentos`);
+  p.push(`<b>${rs.renglones||0}</b> renglones`);
+  if(rs.criticos)   p.push(`<b class="crit">${rs.criticos}</b> críticos`);
+  if(rs.manuales)   p.push(`<b>${rs.manuales}</b> manuales`);
+  if(rs.pendientes) p.push(`<b>${rs.pendientes}</b> sin detalle`);
+  document.getElementById('dCierre').innerHTML=p.join(' · ');
+}
+
+function dToggleChip(el){
+  const p=el.getAttribute('data-p');
+  if(DIA_CHIPS.has(p)){DIA_CHIPS.delete(p);el.classList.remove('on');}
+  else{DIA_CHIPS.add(p);el.classList.add('on');}
+  dRender();
+}
+
+function dFiltrados(){
+  if(!DIA_DATA) return [];
+  const ue=document.getElementById('dUE').value;
+  return (DIA_DATA.renglones||[]).filter(x=>{
+    if(ue && x.ue!==ue) return false;
+    if(DIA_CHIPS.size){
+      const prio = DIA_CHIPS.has(x.prioridad);
+      const man  = DIA_CHIPS.has('MANUAL') && x.origen==='MANUAL';
+      if(!prio && !man) return false;
+    }
+    return true;
+  });
+}
+
+function dRender(){
+  const rows=dFiltrados();
+  const cap=document.getElementById('dCap');
+  const box=document.getElementById('dLista');
+
+  // F8 sin detalle -> captura de renglones. La hace el analista de Torre,
+  // sin prisa. Ventanilla no captura renglones: solo recibe documentos.
+  const pend=[...new Set(rows.filter(x=>x.estado==='PENDIENTE_DETALLE').map(x=>x.f8))];
+  cap.innerHTML = pend.length
+    ? pend.map(f8=>{
+        const d=rows.find(x=>x.f8===f8);
+        return `<div class="cap-box" id="cap_${f8.replace(/[^\w]/g,'_')}">
+          <h4>Sin detalle — ${f8} · ${d.ue||'—'} <span class="origen-tag">${d.origen||''}</span></h4>
+          <div class="caprows"></div>
+          <div class="cap-row">
+            <button class="cap-add" onclick="dAddRow('${f8}')">+ Renglón</button>
+            <span></span><span></span>
+            <button class="cap-save" onclick="dGuardar('${f8}')">✔ Guardar detalle</button>
+          </div>
+        </div>`;
+      }).join('')
+    : '';
+  pend.forEach(f8=>dAddRow(f8));
+
+  const vis=rows.filter(x=>x.estado!=='PENDIENTE_DETALLE');
+  if(!vis.length){
+    box.innerHTML = pend.length ? '' : '<div class="dia-vacio">Sin renglones para este día con los filtros aplicados.</div>';
+    return;
+  }
+
+  box.innerHTML=`<table class="dtab">
+    <thead><tr>
+      <th>F8</th><th>UE</th><th>Cód.</th><th>Suministro</th>
+      <th class="r">Solicitado</th><th class="r">Saldo UE</th>
+      <th>Importancia</th><th>Prioridad</th><th>Origen</th>
+    </tr></thead><tbody>${
+    vis.map(x=>`<tr class="p-${x.prioridad||'NORMAL'}">
+      <td class="f8">${x.f8}</td>
+      <td>${x.ue||'—'}</td>
+      <td class="cod">${x.cod||''}</td>
+      <td>${x.suministro||''}</td>
+      <td class="n">${(x.solicitado||0).toLocaleString('es-PA')}</td>
+      <td class="n">${(x.saldo===''||x.saldo===null||x.saldo===undefined)?'<span class="sin">s/d</span>':Number(x.saldo).toLocaleString('es-PA')}</td>
+      <td>${x.importancia||'<span class="sin">sin clasificar</span>'}</td>
+      <td><span class="badge">${x.prioridad||''}</span></td>
+      <td>${x.origen==='MANUAL'?'<span class="origen-tag">MANUAL</span>':''}</td>
+    </tr>`).join('')}</tbody></table>`;
+}
+
+/* --- Captura de renglones de una F8 sin detalle --- */
+function dAddRow(f8){
+  const box=document.querySelector('#cap_'+f8.replace(/[^\w]/g,'_')+' .caprows');
+  if(!box) return;
+  const d=document.createElement('div');
+  d.className='cap-row';
+  d.innerHTML=`<input type="text" placeholder="Código renglón" class="c-cod" autocomplete="off"/>
+    <input type="text" placeholder="Suministro (opcional)" class="c-sum" autocomplete="off"/>
+    <input type="text" placeholder="0" class="c-sol n" inputmode="numeric"/>
+    <span></span>`;
+  box.appendChild(d);
+}
+
+async function dGuardar(f8){
+  const box=document.querySelector('#cap_'+f8.replace(/[^\w]/g,'_'));
+  if(!box) return;
+  const rgl=[...box.querySelectorAll('.caprows .cap-row')].map(r=>({
+    cod:(r.querySelector('.c-cod').value||'').trim(),
+    suministro:(r.querySelector('.c-sum').value||'').trim(),
+    solicitado:(r.querySelector('.c-sol').value||'0').replace(/[^\d.]/g,'')
+  })).filter(x=>x.cod);
+
+  if(!rgl.length){toast('Capture al menos un renglón con su código.',true);return;}
+
+  const btn=box.querySelector('.cap-save');
+  btn.disabled=true; btn.textContent='Guardando…';
+  try{
+    const url=`${WEBAPP_BASE}?file=bfd_manual_add&f8=${encodeURIComponent(f8)}`
+            + `&renglones=${encodeURIComponent(JSON.stringify(rgl))}`;
+    const r=await loadJsonp(url,60000);
+    if(r&&r.ok){
+      toast(`${r.renglones_agregados} renglones guardados en ${f8}.`);
+      dCargar(document.getElementById('dLote').value);
+    }else{
+      toast((r&&r.msg)||'No se pudo guardar.',true);
+      btn.disabled=false; btn.textContent='✔ Guardar detalle';
+    }
+  }catch(err){
+    toast('Conexión lenta: reintente. ('+err.message+')',true);
+    btn.disabled=false; btn.textContent='✔ Guardar detalle';
+  }
+}
+
+document.getElementById('dLote').onchange=function(){dCargar(this.value);};
+document.getElementById('dUE').onchange=dRender;
+document.getElementById('dPrev').onclick=function(){
+  const s=document.getElementById('dLote');
+  if(s.selectedIndex<s.options.length-1){s.selectedIndex++;dCargar(s.value);}
+};
+document.getElementById('dNext').onclick=function(){
+  const s=document.getElementById('dLote');
+  if(s.selectedIndex>0){s.selectedIndex--;dCargar(s.value);}
+};
 
 cargar();
 </script>
