@@ -194,6 +194,14 @@
   .cap-row button{padding:6px 10px;border:none;cursor:pointer;font-weight:700;font-size:12px;}
   .cap-add{background:#dfe4ea;color:var(--azul2);}
   .cap-save{background:var(--verde);color:#fff;}
+  .cap-nota{font-size:11px;color:var(--sub);margin:0 0 8px;}
+  .cap-nota b{color:var(--azul2);}
+  /* Bloque informativo: NO requiere acción. El trigger la resuelve solo. */
+  .cap-espera{border-left-color:var(--azul);background:#f7fafd;}
+  .cap-espera h4{color:var(--azul2);}
+  .cap-espera .cap-nota{margin:0;}
+  .sis-tag{font-size:8px;font-weight:700;padding:1px 5px;background:#d6e4f0;color:#0C447C;
+    margin-left:6px;vertical-align:middle;}
 </style>
 </head>
 <body>
@@ -680,14 +688,25 @@ function dRender(){
   const cap=document.getElementById('dCap');
   const box=document.getElementById('dLista');
 
-  // F8 sin detalle -> captura de renglones. La hace el analista de Torre,
-  // sin prisa. Ventanilla no captura renglones: solo recibe documentos.
+  // F8 sin detalle. DOS casos distintos, y confundirlos causa trabajo doble:
+  //   SISTEMA -> llegó a ventanilla antes del volcado de SALMI. El trigger la
+  //              resuelve solo en cuanto entre el volcado. NO capturar a mano.
+  //   MANUAL  -> generada fuera del WMS. No existe en REQUISICIONES_F8 y nunca
+  //              existirá. Solo el analista puede capturarla.
   const pend=[...new Set(rows.filter(x=>x.estado==='PENDIENTE_DETALLE').map(x=>x.f8))];
   cap.innerHTML = pend.length
     ? pend.map(f8=>{
         const d=rows.find(x=>x.f8===f8);
+        const esManual = (d.origen==='MANUAL');
+        if(!esManual){
+          return `<div class="cap-box cap-espera">
+            <h4>Esperando el volcado de SALMI — ${f8} · ${d.ue||'—'} <span class="sis-tag">SISTEMA</span></h4>
+            <p class="cap-nota">Esta F8 llegó a ventanilla antes del corte de SALMI. Se poblará sola en cuanto se cargue el próximo volcado. <b>No la capture a mano.</b></p>
+          </div>`;
+        }
         return `<div class="cap-box" id="cap_${f8.replace(/[^\w]/g,'_')}">
-          <h4>Sin detalle — ${f8} · ${d.ue||'—'} <span class="origen-tag">${d.origen||''}</span></h4>
+          <h4>Requiere captura — ${f8} · ${d.ue||'—'} <span class="origen-tag">MANUAL</span></h4>
+          <p class="cap-nota">Generada fuera del WMS: no está en SALMI y no llegará sola. Capture sus renglones.</p>
           <div class="caprows"></div>
           <div class="cap-row">
             <button class="cap-add" onclick="dAddRow('${f8}')">+ Renglón</button>
@@ -697,7 +716,10 @@ function dRender(){
         </div>`;
       }).join('')
     : '';
-  pend.forEach(f8=>dAddRow(f8));
+  pend.forEach(f8=>{
+    const d=rows.find(x=>x.f8===f8);
+    if(d && d.origen==='MANUAL') dAddRow(f8);
+  });
 
   const vis=rows.filter(x=>x.estado!=='PENDIENTE_DETALLE');
   if(!vis.length){
