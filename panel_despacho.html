@@ -215,7 +215,13 @@
   <div class="kpis" id="kpis"></div>
 
   <div class="carga">
-    <div class="carga-head"><div class="t">Carga de la semana — pedidos listos por día de retiro <small>· barras = pedidos listos (eje izq.) · línea = bultos / volumen (eje der.) · refleja los filtros aplicados</small></div></div>
+    <div class="carga-head" style="display:flex;align-items:center;gap:12px;">
+      <div class="t" style="flex:1">Carga de la semana — pedidos listos por día de retiro <small>· barras = pedidos listos (eje izq.) · línea = bultos / volumen (eje der.) · refleja los filtros aplicados</small></div>
+      <button class="btn" onclick="semanaPrev()" title="Semana anterior">‹</button>
+      <span id="rangoSemana" style="font-family:Consolas,monospace;font-size:12px;min-width:110px;text-align:center;color:#0C447C;font-weight:600;"></span>
+      <button class="btn" onclick="semanaNext()" title="Semana siguiente">›</button>
+      <button class="btn" onclick="semanaHoy()" title="Volver a esta semana">Hoy</button>
+    </div>
     <div class="carga-body"><canvas id="cargaChart"></canvas></div>
   </div>
 
@@ -426,34 +432,70 @@ function filtroKpi(k){
 }
 
 // Fecha calendario de cada día L-V de la SEMANA EN CURSO. Devuelve {LUNES:'13/07', ...}.
+let SEMANA_OFFSET = 0;   // 0 = semana actual, -1 = anterior, +1 = siguiente
+
 function fechasSemana(){
   const abr={1:'LUNES',2:'MARTES',3:'MIERCOLES',4:'JUEVES',5:'VIERNES'};
   const hoy=new Date(); const dow=hoy.getDay(); // 0=Dom
   // lunes de esta semana (si hoy es domingo, tomamos el lunes siguiente)
   const lun=new Date(hoy); const desplaz=(dow===0)?1:(1-dow);
-  lun.setDate(hoy.getDate()+desplaz);
+  lun.setDate(hoy.getDate()+desplaz + SEMANA_OFFSET*7);   // desplazar por offset
   const out={};
   for(let i=0;i<5;i++){ const d=new Date(lun); d.setDate(lun.getDate()+i);
     const dd=String(d.getDate()).padStart(2,'0'), mm=String(d.getMonth()+1).padStart(2,'0');
-    out[abr[i+1]]={fecha:dd+'/'+mm, esHoy:(d.toDateString()===hoy.toDateString())};
+    const yy=d.getFullYear();
+    out[abr[i+1]]={fecha:dd+'/'+mm, iso:yy+'-'+mm+'-'+dd, esHoy:(d.toDateString()===hoy.toDateString())};
   }
   return out;
 }
 
-// Agrupa por día de retiro los pedidos PRE-LISTOS de un arreglo (ya filtrado).
-// Devuelve {LUNES:{listos, bultos}, ...} para que el gráfico reaccione a los filtros.
+// Rango legible de la semana visible (para el encabezado del gráfico).
+function rangoSemanaTexto(){
+  const fs=fechasSemana();
+  return fs.LUNES.fecha+' al '+fs.VIERNES.fecha;
+}
+
+// Agrupa por día de retiro los pedidos PRE-LISTOS, PROYECTADOS a las fechas
+// absolutas de la semana visible. Un pedido cuya UE retira los "martes" cuenta
+// en el martes de ESTA semana solo si esa fecha cae dentro de su ventana de
+// vigencia (ya está listo y no ha pasado su fecha límite de retiro). Así, al
+// navegar semanas, los datos cambian de verdad: cada semana muestra lo vigente.
 function cargaDesde(arr){
   const acc={}; DIAS.forEach(d=>acc[d]={listos:0,bultos:0});
+  const fs=fechasSemana();
+  // límites de la semana visible (para acotar la vigencia)
+  const isoLun=fs.LUNES.iso, isoVie=fs.VIERNES.iso;
   (arr||[]).forEach(p=>{
     if(!p.prelisto) return;                          // solo lo que superó facturación
+    // Fecha límite de retiro del pedido (su ventana). Si no la tiene, es vigente.
+    const limite = p.fechaVentana ? isoDe_(p.fechaVentana) : null;
     (p.diasRetiro||[]).forEach(dia=>{
-      if(acc[dia]){ acc[dia].listos++; acc[dia].bultos+=(p.bultos||0); }
+      const celda=fs[dia]; if(!celda||!acc[dia]) return;
+      // El pedido cuenta en esta fecha absoluta solo si aún es alcanzable:
+      // la fecha proyectada no debe ser posterior a su ventana límite.
+      if(limite && celda.iso > limite) return;
+      acc[dia].listos++; acc[dia].bultos+=(p.bultos||0);
     });
   });
   return acc;
 }
 
+// Normaliza cualquier fecha a ISO yyyy-mm-dd para comparar como texto.
+function isoDe_(v){
+  if(!v) return null;
+  if(/^\d{4}-\d{2}-\d{2}/.test(v)) return v.slice(0,10);
+  const d=new Date(v); if(isNaN(d)) return null;
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+// Navegación de semanas del gráfico de carga. Cambia el offset y re-renderiza:
+// como cargaDesde proyecta a fechas absolutas, los datos cambian de verdad.
+function semanaPrev(){ SEMANA_OFFSET--; renderLista(); }
+function semanaNext(){ SEMANA_OFFSET++; renderLista(); }
+function semanaHoy(){ SEMANA_OFFSET=0; renderLista(); }
+
 function renderCargaChart(arr){
+  const rs=document.getElementById('rangoSemana'); if(rs) rs.textContent=rangoSemanaTexto();
   const c=cargaDesde(arr!=null?arr:(DATA.pedidos||[]));
   const fs=fechasSemana();
   const cap=d=>d.charAt(0)+d.slice(1,3).toLowerCase();          // LUNES -> Lun
@@ -576,7 +618,7 @@ function renderLista(){
 function cardPed(p,i){
   return '<div class="ped '+p.triage+'">'+
     '<div class="ped-cuerpo">'+
-      '<div class="ped-info">'+
+      '<div class="ped-info" onclick="verDetallePedido('+i+')" style="cursor:pointer" title="Ver detalle del pedido">'+
         '<div class="ped-top"><div>'+
           '<div class="ped-nombre">'+p.ue+'</div>'+
           '<div class="ped-fol">'+p.id+'</div>'+
@@ -628,6 +670,64 @@ function senalHTML(nombre, pts, max, frase){
      '</div>'+
      '<div style="font-size:11.5px;color:#555;margin-top:4px;line-height:1.4">'+frase+'</div>'+
    '</div>';
+}
+
+// Detalle completo del pedido al hacer clic en la tarjeta.
+// Solo-frontend: usa los campos que despacho_panel ya trae por pedido.
+function verDetallePedido(i){
+  const p=(window.__ARR||[])[i]; if(!p) return;
+  const col=TRI_COLOR[p.triage]||'#0C447C';
+  const mh=document.querySelector('#modalBg .mh');
+  if(mh) mh.style.background=col;
+  document.getElementById('mTitle').textContent=p.ue+' · '+p.id;
+
+  const fila=(k,v)=> v==null||v===''||v==='—'
+    ? ''
+    : '<div style="display:flex;justify-content:space-between;gap:14px;padding:6px 0;border-bottom:1px solid #eee;font-size:13px;">'+
+        '<span style="color:#6b7684;">'+k+'</span>'+
+        '<span style="font-family:Consolas,monospace;text-align:right;">'+v+'</span></div>';
+
+  const bultosTxt = p.bultos>0 ? p.bultos.toLocaleString() : '—';
+  const recib = p.fechaRecepcion?fechaCorta(p.fechaRecepcion):'—';
+  const vent  = p.fechaVentana?fechaCorta(p.fechaVentana):'—';
+  const venc  = p.fechaVencimiento?fechaCorta(p.fechaVencimiento):'—';
+
+  let chips='';
+  if(p.tieneCero) chips+='<span class="chip cero">SALDO 0</span> ';
+  chips+='<span class="chip '+(p.esUrg?'urg':'men')+'">'+p.tipo+'</span> ';
+  chips+='<span class="lvl '+p.triage+'" style="padding:2px 8px;border-radius:4px;">'+p.triage+'</span>';
+
+  let html='<div style="margin-bottom:12px;">'+chips+'</div>';
+
+  html+='<div style="background:#f4f7fb;border:1px solid #d4dce6;border-radius:6px;padding:10px 14px;margin-bottom:14px;">'+
+    '<div style="font-size:11px;color:#6b7684;text-transform:uppercase;letter-spacing:.3px;">Índice de Priorización de Despacho</div>'+
+    '<div style="font-size:28px;font-weight:700;font-family:Consolas,monospace;color:'+col+';">'+Math.round(p.ipd)+
+    ' <span style="font-size:13px;font-weight:400;color:#6b7684;">'+(p.triageLabel||'')+'</span></div>'+
+    '<div class="porque" style="margin-top:4px;font-size:12px;cursor:pointer;color:#2a6db5;" onclick="verPorque('+i+')">Ver desglose del cálculo ▸</div>'+
+  '</div>';
+
+  html+=fila('Etapa actual', p.etapa);
+  html+=fila('Grupo', p.grupo);
+  html+=fila('Tipo', p.tipo);
+  html+=fila('Bultos (terciarios)', bultosTxt);
+  html+=fila('Recibido en CEDIS', recib+(p.antig!=null?' · hace '+p.antig+' d':''));
+  html+=fila('Ventana de retiro', vent+(p.diasVent!=null?' · en '+p.diasVent+' d':''));
+  html+=fila('Vencimiento lote', venc);
+  html+=fila('Antigüedad', p.antig!=null?p.antig+' días en el flujo':'');
+  html+=fila('Días de retiro UE', p.diasRetiro||'');
+
+  // Brecha de cobertura (si el Motor la calculó)
+  if(p.brecha){
+    html+='<div style="margin-top:14px;background:#fcebeb;border:1px solid #f0c9c9;border-radius:6px;padding:10px 14px;">'+
+      '<div style="font-size:11px;color:#7d2229;text-transform:uppercase;font-weight:600;">Brecha de cobertura</div>'+
+      fila('Solicitado', p.brecha.solicitado!=null?p.brecha.solicitado.toLocaleString():'')+
+      fila('Distribuido', p.brecha.distribuido!=null?p.brecha.distribuido.toLocaleString():'')+
+      fila('Déficit', p.brecha.gap!=null?p.brecha.gap.toLocaleString():'')+
+    '</div>';
+  }
+
+  document.getElementById('mBody').innerHTML=html;
+  document.getElementById('modalBg').classList.add('show');
 }
 
 function verPorque(i){
