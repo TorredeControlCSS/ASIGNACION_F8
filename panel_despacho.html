@@ -275,6 +275,12 @@
         <button class="btn chip" onclick="setFiltroRojo()">Solo ROJO</button>
         <button class="btn primary" onclick="notificarMasivo()">✉ Notificar UEs con pedido listo</button>
       </div>
+      <div class="buscar-barra noprint" style="border-top:1px solid #e0e6ee;padding-top:8px;">
+        <span style="font-size:11px;color:#6b7684;align-self:center;margin-right:4px;">Reportes:</span>
+        <button class="btn" onclick="reporteAgendaDia()">🖨 Agenda del día</button>
+        <button class="btn" onclick="reporteCargaSemanal()">🖨 Carga semanal</button>
+        <button class="btn" onclick="reporteEstrategia()">🖨 Estrategia de despacho</button>
+      </div>
       <div id="listaCont"><div class="loading">Cargando pedidos…</div></div>
     </div>
 
@@ -778,6 +784,155 @@ function verPorque(i){
   document.getElementById('mBody').innerHTML=html;
   document.getElementById('modalBg').classList.add('show');
 }
+// ============================================================================
+// REPORTES INSTITUCIONALES DE DESPACHO (solo-frontend)
+// Mismo patrón que panel_confirmacion: header CEDIS, tablas azules, se abren en
+// ventana nueva para imprimir/PDF. Usan los datos que despacho_panel ya trae.
+// ============================================================================
+
+// Encabezado + estilos institucionales compartidos por los tres reportes.
+function repHeadDesp_(titulo, org2, sub){
+  let logoUrl='';
+  try{ const lg=document.querySelector('.header .logo'); if(lg && lg.src) logoUrl=lg.src; }catch(e){}
+  return '<!doctype html><html><head><meta charset="utf-8"><title>'+titulo+'</title><style>'+
+    'body{font-family:Segoe UI,Arial,sans-serif;margin:24px;color:#222;}'+
+    '.head{display:flex;align-items:center;gap:14px;border-bottom:3px solid #0C447C;padding-bottom:10px;margin-bottom:14px;}'+
+    '.head img{height:52px;}'+
+    '.head h1{margin:0;font-size:19px;color:#0C447C;}'+
+    '.head .org{font-size:12px;color:#333;font-weight:600;}'+
+    '.head .org2{font-size:11px;color:#555;}'+
+    '.sub{font-size:12px;color:#444;margin-bottom:10px;}'+
+    '.resumenln{font-size:11px;color:#0C447C;background:#eaf1f9;border-left:4px solid #0C447C;padding:6px 10px;margin:0 0 12px;border-radius:0 3px 3px 0;}'+
+    '.resumenln b{color:#0C447C;}'+
+    'table{border-collapse:collapse;width:100%;margin-bottom:8px;}'+
+    'th{background:#0C447C;color:#fff;padding:6px;font-size:10px;text-align:left;border:1px solid #0C447C;font-weight:700;}'+
+    'td{border:1px solid #aaa;padding:4px 6px;vertical-align:top;font-size:10px;}'+
+    'tr:nth-child(even) td{background:#f4f7fa;}'+
+    '.num{font-family:Consolas,monospace;text-align:right;}'+
+    '.grpttl{background:#1e5a9e;color:#fff;font-size:12px;font-weight:700;padding:5px 8px;margin:14px 0 0;}'+
+    '.rojo{color:#b00020;font-weight:bold;}.ambar{color:#8a5a00;}'+
+    '.chip0{background:#fde2e2;color:#7d2229;font-weight:bold;padding:1px 5px;border-radius:3px;font-size:9px;}'+
+    '.tot td{background:#dce6f2;font-weight:bold;}'+
+    '.firma{margin-top:26px;font-size:11px;display:flex;gap:60px;}'+
+    '.firma div{border-top:1px solid #333;padding-top:4px;min-width:230px;text-align:center;}'+
+    '@media print{thead{display:table-header-group;}tr{break-inside:avoid;}.noprint{display:none;}}'+
+    '</style></head><body>'+
+    '<div class="head">'+(logoUrl?'<img src="'+logoUrl+'">':'')+
+      '<div><h1>CENTRO DE DISTRIBUCIÓN PANAMÁ</h1>'+
+      '<div class="org">Caja de Seguro Social · Dirección Nacional de Logística</div>'+
+      '<div class="org2">'+org2+'</div></div></div>'+
+    '<div class="sub">'+sub+' · Generado '+new Date().toLocaleString('es-PA')+'</div>';
+}
+function repAbrir_(html){
+  const w=window.open('','_blank');
+  w.document.write(html+'<button class="noprint" onclick="window.print()" style="margin-top:16px;padding:8px 16px;background:#1e5a9e;color:#fff;border:none;border-radius:3px;cursor:pointer;">Imprimir / Guardar PDF</button></body></html>');
+  w.document.close();
+}
+function repEsc_(s){ return String(s==null?'':s).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])); }
+
+// ---- REPORTE 1: AGENDA DE DESPACHO DEL DÍA ----
+// Las UEs que retiran HOY (o la fecha elegida), con F8, grupo, bultos, triage.
+// Con bloque de firmas Entregado/Recibido, como la agenda de citas.
+function reporteAgendaDia(){
+  const fs=fechasSemana();
+  // día por defecto: hoy, o el primer día con retiros de la semana visible
+  const hoyISO=new Date().toISOString().slice(0,10);
+  const arr=(pedidosFiltrados()||[]).filter(p=>p.prelisto);
+  // Proyectar: qué UEs retiran en la fecha objetivo
+  const objetivo = prompt('Fecha de la agenda (AAAA-MM-DD):', hoyISO);
+  if(!objetivo) return;
+  const iso=objetivo.trim().slice(0,10);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(iso)){ alert('Fecha inválida.'); return; }
+  // día de la semana de esa fecha -> nombre
+  const dd=new Date(iso+'T12:00:00'); const nom=['DOMINGO','LUNES','MARTES','MIERCOLES','JUEVES','VIERNES','SABADO'][dd.getDay()];
+  const items=arr.filter(p=>(p.diasRetiro||[]).indexOf(nom)>=0 &&
+    (!p.fechaVentana || isoDe_(p.fechaVentana)>=iso));
+  items.sort((a,b)=>b.ipd-a.ipd);
+  let bultos=0, cUrg=0; items.forEach(p=>{bultos+=(p.bultos||0); if(p.esUrg)cUrg++;});
+  const [y,m,d]=iso.split('-');
+  let html=repHeadDesp_('Agenda despacho '+d+'/'+m+'/'+y,
+    'Agenda de despacho a Unidades Ejecutoras',
+    'Día: <b>'+d+'/'+m+'/'+y+'</b> ('+nom.charAt(0)+nom.slice(1).toLowerCase()+')');
+  html+='<div class="resumenln"><b>'+items.length+'</b> Forma(s) 8 para retiro · <b>'+Math.round(bultos).toLocaleString()+'</b> bultos · '+cUrg+' urgencia(s)</div>';
+  html+='<table><thead><tr><th>Nº F8</th><th>Unidad Ejecutora</th><th>Grupo</th><th>Tipo</th><th>Etapa</th><th>IPD</th><th class="num">Bultos</th><th>Saldo</th></tr></thead><tbody>';
+  html+=items.map(p=>'<tr>'+
+    '<td class="num">'+repEsc_(p.id)+'</td><td>'+repEsc_(p.ue)+'</td><td>'+repEsc_(p.grupo)+'</td>'+
+    '<td>'+repEsc_(p.tipo)+'</td><td>'+repEsc_(p.etapa)+'</td>'+
+    '<td class="num'+(p.triage==='ROJO'?' rojo':'')+'">'+Math.round(p.ipd)+'</td>'+
+    '<td class="num">'+(p.bultos>0?p.bultos.toLocaleString():'—')+'</td>'+
+    '<td>'+(p.tieneCero?'<span class="chip0">SALDO 0</span>':'')+'</td></tr>').join('')||
+    '<tr><td colspan="8" style="text-align:center;color:#888;">Sin F8 para retiro este día.</td></tr>';
+  html+='</tbody></table>';
+  html+='<div class="firma"><div>Entregado por (CEDIS)</div><div>Recibido por (Unidad Ejecutora)</div></div>';
+  repAbrir_(html);
+}
+
+// ---- REPORTE 2: CARGA SEMANAL DE DESPACHO ----
+// Pedidos listos por día de retiro de la semana visible, agrupados por día,
+// con conteo de F8 y bultos por grupo.
+function reporteCargaSemanal(){
+  const fs=fechasSemana();
+  const arr=(pedidosFiltrados()||[]).filter(p=>p.prelisto);
+  let html=repHeadDesp_('Carga semanal '+fs.LUNES.iso,
+    'Carga semanal de despacho · Torre de Control',
+    'Semana: <b>'+fs.LUNES.fecha+'</b> al <b>'+fs.VIERNES.fecha+'</b>');
+  let totF8=0, totB=0;
+  DIAS.forEach(dia=>{
+    const celda=fs[dia];
+    const items=arr.filter(p=>(p.diasRetiro||[]).indexOf(dia)>=0 &&
+      (!p.fechaVentana || isoDe_(p.fechaVentana)>=celda.iso));
+    if(!items.length) return;
+    // agrupar por grupo
+    const g={}; let nB=0;
+    items.forEach(p=>{const k=String(p.grupo||'Sin grupo').trim()||'Sin grupo';
+      if(!g[k])g[k]={f8:0,b:0}; g[k].f8++; g[k].b+=(p.bultos||0); nB+=(p.bultos||0);});
+    totF8+=items.length; totB+=nB;
+    const cap=dia.charAt(0)+dia.slice(1).toLowerCase();
+    html+='<div class="grpttl">'+cap+' '+celda.fecha+' — '+items.length+' F8 · '+Math.round(nB).toLocaleString()+' bultos</div>';
+    html+='<table><thead><tr><th>Grupo</th><th class="num">F8</th><th class="num">Bultos</th></tr></thead><tbody>';
+    Object.keys(g).sort((a,b)=>{const na=parseFloat((a.match(/\d+/)||[99])[0]),nb=parseFloat((b.match(/\d+/)||[99])[0]);return na-nb||a.localeCompare(b);})
+      .forEach(k=>{html+='<tr><td>'+repEsc_(k)+'</td><td class="num">'+g[k].f8+'</td><td class="num">'+Math.round(g[k].b).toLocaleString()+'</td></tr>';});
+    html+='</tbody></table>';
+  });
+  html+='<div class="resumenln" style="margin-top:14px;"><b>TOTAL semana:</b> '+totF8+' Forma(s) 8 · '+Math.round(totB).toLocaleString()+' bultos</div>';
+  repAbrir_(html);
+}
+
+// ---- REPORTE 3: ESTRATEGIA DE DESPACHO (priorizada) ----
+// Pedidos priorizados por IPD/triage, agrupados por nivel de triage, con los
+// críticos resaltados y una conclusión sugerida por grupo.
+function reporteEstrategia(){
+  const arr=(pedidosFiltrados()||[]).filter(p=>!p.cerrado);
+  const ORDEN=['ROJO','NARANJA','AMARILLO','VERDE','AZUL'];
+  const ETIQ={ROJO:'Crítico — despachar primero',NARANJA:'Alto',AMARILLO:'Medio',VERDE:'Normal',AZUL:'Bajo'};
+  const porTri={}; arr.forEach(p=>{const t=p.triage||'AZUL'; (porTri[t]=porTri[t]||[]).push(p);});
+  let html=repHeadDesp_('Estrategia despacho',
+    'Estrategia de despacho · priorización por IPD','Pedidos activos priorizados · '+arr.length+' Forma(s) 8');
+  const presentes=ORDEN.filter(t=>porTri[t]).concat(Object.keys(porTri).filter(t=>ORDEN.indexOf(t)<0));
+  presentes.forEach(t=>{
+    const items=porTri[t].slice().sort((a,b)=>b.ipd-a.ipd);
+    let nB=0; items.forEach(p=>nB+=(p.bultos||0));
+    html+='<div class="grpttl">'+t+' — '+(ETIQ[t]||'')+' · '+items.length+' F8 · '+Math.round(nB).toLocaleString()+' bultos</div>';
+    html+='<table><thead><tr><th>IPD</th><th>Nº F8</th><th>Unidad Ejecutora</th><th>Grupo</th><th>Etapa</th><th>Recibido</th><th>Ventana</th><th class="num">Bultos</th><th>Saldo</th></tr></thead><tbody>';
+    html+=items.slice(0,60).map(p=>'<tr>'+
+      '<td class="num'+(p.triage==='ROJO'?' rojo':'')+'">'+Math.round(p.ipd)+'</td>'+
+      '<td class="num">'+repEsc_(p.id)+'</td><td>'+repEsc_(p.ue)+'</td><td>'+repEsc_(p.grupo)+'</td>'+
+      '<td>'+repEsc_(p.etapa)+'</td>'+
+      '<td>'+(p.fechaRecepcion?fechaCorta(p.fechaRecepcion):'—')+(p.antig!=null?' · '+p.antig+'d':'')+'</td>'+
+      '<td>'+(p.fechaVentana?fechaCorta(p.fechaVentana):'—')+(p.diasVent!=null?' · '+p.diasVent+'d':'')+'</td>'+
+      '<td class="num">'+(p.bultos>0?p.bultos.toLocaleString():'—')+'</td>'+
+      '<td>'+(p.tieneCero?'<span class="chip0">0</span>':'')+'</td></tr>').join('');
+    if(items.length>60) html+='<tr><td colspan="9" style="text-align:center;color:#888;">… y '+(items.length-60)+' más en este nivel.</td></tr>';
+    html+='</tbody></table>';
+  });
+  // Conclusión sugerida
+  const rojos=(porTri['ROJO']||[]).length, ceros=arr.filter(p=>p.tieneCero).length;
+  html+='<div class="grpttl" style="background:#7d2229;">CONCLUSIÓN SUGERIDA</div>';
+  html+='<div class="resumenln"><b>'+rojos+'</b> pedido(s) en triage ROJO — despachar hoy. <b>'+ceros+'</b> con UE en saldo cero. '+
+    'Priorizar por IPD descendente dentro de cada nivel.</div>';
+  repAbrir_(html);
+}
+
 function cerrarModal(){
   document.getElementById('modalBg').classList.remove('show');
   const mh=document.querySelector('#modalBg .mh'); if(mh) mh.style.background='';
