@@ -260,6 +260,7 @@
                   <th>Código</th>
                   <th>Suministro</th>
                   <th style="font-size:9px;">Grp</th>
+                  <th style="font-size:9px;">Prioridad</th>
                   <!-- NUEVA COLUMNA VISUAL -->
                   <th class="right" style="background:#e3f2fd; color:#0d47a1;">Stock</th>
                   <th class="right">Solic.</th>
@@ -463,6 +464,19 @@
     renderActiveTab(LAST_FILTERED.length ? LAST_FILTERED : DATA);
   }
 
+  // V9: badge de prioridad clínica. Global para que la tabla y el modal lo usen.
+  function badgePrioridad(r){
+    const et = String(r.Rank_Etiqueta || "").toUpperCase();
+    let bg="", fg="", txt=et;
+    if (et === "COLA CERO")            { bg="#F8D7DA"; fg="#7D2229"; txt="cola cero"; }
+    else if (et === "ESENCIAL EN CERO"){ bg="#FDECC8"; fg="#7A5400"; txt="esencial 0"; }
+    else if (et === "VITAL")           { bg="#FDECC8"; fg="#7A5400"; txt="vital"; }
+    else if (et === "EN CERO")         { bg="#FDECC8"; fg="#7A5400"; txt="en cero"; }
+    else if (et === "ESENCIAL")        { bg="#E6F1FB"; fg="#0C447C"; txt="esencial"; }
+    else return '<span style="color:#aaa;">-</span>';
+    return '<span style="background:'+bg+'; color:'+fg+'; padding:2px 6px; border-radius:4px; font-weight:bold; white-space:nowrap;">'+txt+'</span>';
+  }
+
   function renderAsignacion(rows) {
     const tb = document.querySelector("#tbl_asignacion tbody");
     window.__currentData = rows; 
@@ -537,6 +551,8 @@
         <td>${r.Codigo || ""}</td>
         <td style="max-width:220px; white-space:normal; word-wrap:break-word; overflow-wrap:break-word; font-size:10px; line-height:1.1;">${iconos} ${r.Suministro || ""}</td>
         <td style="font-size:10px;">${r.Grupo || "-"}</td> 
+
+        <td style="font-size:9px; text-align:center;">${badgePrioridad(r)}</td>
 
         <!-- NUEVA COLUMNA STOCK (SOLO WEB) -->
         <td class="right" style="background:#e3f2fd; color:#0d47a1; font-weight:bold;">${fmt(r.Stock_Fisico)}</td>
@@ -1514,6 +1530,28 @@
       <div style="font-size:18px; font-weight:bold; color:#0b1f3a;">${r.Suministro}</div>
       <div style="font-size:12px; color:#666;">SKU: ${r.Codigo} | UE: ${r.Punto}</div>
     </div>`;
+
+    // 0. PRIORIDAD CLÍNICA (V9 — inteligencia de demanda)
+    const etq = String(r.Rank_Etiqueta || "").toUpperCase();
+    const esCero = (r.Inventario_UE === 0);
+    const pisoTxt = {
+      "CONSUMO_REAL":"consumo reportado por la UE",
+      "CONSUMO_SUPRIMIDO":"consumo deprimido por desabasto (protegido, no se recorta)",
+      "HIBRIDO_DIST":"histórico de lo despachado (la UE no reporta consumo)",
+      "HIBRIDO_REQ":"lo que la UE pide (sin historial)",
+      "SIN_PISO":"sin dato de demanda"
+    }[String(r.Piso_Origen||"").toUpperCase()] || (r.Piso_Origen || "—");
+    let clsP = esCero ? 'danger' : 'ok';
+    html += `<div class="audit-step ${clsP}"><span class="audit-title">0. PRIORIDAD CLÍNICA</span>
+      <div style="margin-top:4px;">Clasificación: ${badgePrioridad(r)}</div>
+      <div style="margin-top:6px;">Saldo en el estante de la UE: <span class="audit-val" style="${esCero?'color:#b71c1c;font-weight:bold;':''}">${r.Inventario_UE===null?'sin dato':fmt(r.Inventario_UE)}</span>${esCero?' — la UE no tiene existencias':''}</div>
+      <div style="margin-top:4px;">Distribuido este mes: <span class="audit-val">${fmt(r.Distrib_Mes||0)}</span></div>
+      <div style="margin-top:4px;">Piso de demanda: <span class="audit-val">${pisoTxt}</span></div>`;
+    if (r.Brecha_Req !== null && r.Brecha_Req > 1.05)
+      html += `<div style="margin-top:4px;">Brecha pide/consume: <span class="audit-val" style="color:#c0392b;">${r.Brecha_Req.toFixed(1)}x</span> — efecto presión (pide más de lo que consume)</div>`;
+    if (r.Protegido)
+      html += `<div style="margin-top:5px; color:#0C447C; font-weight:bold;">🛡️ PROTEGIDO: nunca se recorta (vital, consumo suprimido o sin piso firme).</div>`;
+    html += `</div>`;
 
     // 1. CUOTA
     html += `<div class="audit-step ${r.Acaparamiento ? 'danger' : 'ok'}">
