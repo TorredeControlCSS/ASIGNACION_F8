@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-<title>Torre de Control — Reporte de Pedidos</title>
+<title>Sistema Kanban de Trazabilidad Logística · CEDIS Panamá — DINALOG</title>
 <link rel="icon" href="./favicon.ico?v=1"/>
 <link rel="manifest" href="./manifest-kanban.json"/>
 <meta name="theme-color" content="#0C447C"/>
@@ -32,7 +32,7 @@
   .top .who .r{font-size:10px;opacity:.8;text-transform:uppercase;letter-spacing:.4px;}
   .top .conn{font-size:9px;padding:3px 8px;border-radius:10px;font-weight:700;}
   .conn.on{background:rgba(255,255,255,.15);} .conn.off{background:var(--rojo);}
-  .top .out{background:rgba(255,255,255,.12);color:#fff;padding:6px 10px;border-radius:4px;font-size:11px;}
+  .top .cover{background:#0C447C;color:#fff;border:1px solid #0C447C;border-radius:3px;padding:6px 10px;font-size:12px;cursor:pointer;margin-right:6px}.cover.active{background:#a15c00;border-color:#a15c00}.coverbar{background:#fff3e0;border:1px solid #a8a8a8;padding:8px 12px;font-size:12px;color:#7a4a00;display:none}.coverbar.show{display:block}.coverbar select{margin:0 6px;padding:3px}.out{background:rgba(255,255,255,.12);color:#fff;padding:6px 10px;border-radius:4px;font-size:11px;}
 
   /* ---------- Login ---------- */
   .login{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;}
@@ -146,8 +146,8 @@
 <!-- ============ LOGIN ============ -->
 <div class="login" id="loginView">
   <img class="logo" src="./icons/icon-512.png" alt="CSS"/>
-  <h1>Torre de Control</h1>
-  <div class="sub">Reporte de seguimiento de pedidos · DINALOG</div>
+  <h1>Sistema Kanban de Trazabilidad Logística</h1>
+  <div class="sub">CEDIS Panamá · DINALOG</div>
   <div class="pinbox">
     <div class="pindisplay" id="pinDisplay"></div>
     <div class="keys" id="keys"></div>
@@ -162,9 +162,9 @@
     <img src="./icons/icon-512.png" alt="CSS"/>
     <div class="who"><div class="n" id="uName">—</div><div class="r" id="uRole">—</div></div>
     <span class="conn on" id="conn">EN LÍNEA</span>
-    <button class="out" id="btnOut">Salir</button>
+    <button class="cover" id="btnCover" title="Reportar una función que no es la tuya hoy">Cubrir otra función</button><button class="out" id="btnOut">Salir</button>
   </div>
-  <div class="qbanner" id="qBanner"></div>
+  <div class="coverbar" id="coverBar"></div><div class="qbanner" id="qBanner"></div>
   <div class="tabs" id="tabs"></div>
   <div class="toolbar">
     <input type="text" id="search" placeholder="Buscar F8 o Unidad Ejecutora…"/>
@@ -179,7 +179,7 @@
 <div class="app" id="stationView" style="display:none">
   <div class="top">
     <img src="./icons/icon-512.png" alt="CSS"/>
-    <div class="who"><div class="n">Estación de Hand-off</div><div class="r">Escaneo de documentos · Torre de Control</div></div>
+    <div class="who"><div class="n">Estación de Hand-off</div><div class="r">Escaneo de documentos · Kanban CEDIS</div></div>
     <span class="conn on" id="connS">EN LÍNEA</span>
     <button class="out" id="btnOutS">Cerrar</button>
   </div>
@@ -352,6 +352,59 @@ async function tryLogin(){
     msg.style.color='#a12626'; msg.textContent='Sin conexión. Intenta de nuevo.'; PIN='';
     renderPin();
   }
+}
+
+// ============ COBERTURA (Opción 2) ============
+// Permite que alguien reporte una función que no es la suya ese día
+// (ausencias, apoyo). El *_POR se llena con quien está logueado, así que
+// la productividad queda a nombre de quien REALMENTE ejecutó la etapa.
+var COVER_FUNCIONES = [
+  {v:'RECOLECCION Y RESERVA', t:'Captura · Recolección/Reserva'},
+  {v:'PICKING FISICO',        t:'Almacén · Picking físico'},
+  {v:'FACTURACION',           t:'Facturación (Kardex)'},
+  {v:'EMPACADO',              t:'Empacado'},
+  {v:'DISTRIBUCION',          t:'Distribución'},
+  {v:'RECEPCION',             t:'Recepción de Formas 8'}
+];
+var FUNCION_ORIGINAL = null;
+function toggleCoverBar(){
+  var bar=document.getElementById('coverBar');
+  if(bar.classList.contains('show')){ bar.classList.remove('show'); return; }
+  if(FUNCION_ORIGINAL===null) FUNCION_ORIGINAL = USER.funcion;
+  var opts = COVER_FUNCIONES.map(function(f){
+    var sel = (norm2(f.v)===norm2(USER.funcion))?' selected':'';
+    return '<option value="'+f.v+'"'+sel+'>'+f.t+'</option>';
+  }).join('');
+  bar.innerHTML = 'Estás cubriendo otra función hoy. Lo que reportes quedará <b>a tu nombre</b>.'+
+    ' Función: <select id="coverSel">'+opts+'</select>'+
+    ' <button class="cover" id="coverApply">Aplicar</button>'+
+    ' <button class="out" id="coverReset">Volver a la mía</button>';
+  bar.classList.add('show');
+  document.getElementById('coverApply').onclick=function(){
+    var f=document.getElementById('coverSel').value;
+    aplicarCobertura(f, f!==FUNCION_ORIGINAL);
+  };
+  document.getElementById('coverReset').onclick=function(){
+    aplicarCobertura(FUNCION_ORIGINAL, false);
+    bar.classList.remove('show');
+    document.getElementById('btnCover').classList.remove('active');
+  };
+}
+function norm2(s){ return String(s||'').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+function aplicarCobertura(funcion, esCobertura){
+  USER.funcion = funcion;
+  document.getElementById('btnCover').classList.toggle('active', !!esCobertura);
+  document.getElementById('uRole').textContent =
+    (esCobertura?'⚠ CUBRIENDO · ':'')+(USER.rol||'')+' · '+funcion;
+  // re-resolver etapas para la nueva funcion
+  const STAGES_MAP = {};
+  Object.keys(PANEL_STAGES).forEach(k => { STAGES_MAP[norm2(k)] = PANEL_STAGES[k]; });
+  STAGES = STAGES_MAP[norm2(funcion)] || null;
+  if(!STAGES){
+    document.getElementById('list').innerHTML='<div class="empty">Esa función no tiene etapas reportables.</div>';
+    return;
+  }
+  buildTabs(); CURRENT_STAGE=STAGES[0]; if(typeof loadPedidos==='function') loadPedidos();
 }
 
 // ================= APP =================
@@ -693,6 +746,7 @@ function setConn(on){
 // ================= INIT =================
 window.addEventListener('online', ()=>{ setConn(true); flushQueue(); });
 window.addEventListener('offline', ()=>setConn(false));
+document.getElementById('btnCover').onclick=toggleCoverBar;
 document.getElementById('btnOut').onclick=()=>{ sessionStorage.removeItem('kb_user'); location.reload(); };
 document.getElementById('btnOutS').onclick=()=>location.reload();
 document.getElementById('toStation').onclick=enterStation;
