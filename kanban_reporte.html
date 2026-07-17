@@ -447,6 +447,13 @@ function enterApp(){
   buildTabs();
   CURRENT_STAGE = STAGES[0];
   loadPedidos();
+  // Si llegó un F8 por QR, pre-cargarlo en el buscador y avisar
+  if(DOC_ESCANEADO){
+    var s=document.getElementById('search');
+    if(s){ s.value=DOC_ESCANEADO; if(typeof render==='function'){ render(); } }
+    if(typeof toast==='function') toast('Documento '+DOC_ESCANEADO+' cargado desde QR', 'ok');
+    DOC_ESCANEADO=''; // consumir una sola vez
+  }
 }
 
 function buildTabs(){
@@ -756,6 +763,10 @@ document.getElementById('fTipo').onchange=render;
 setConn(navigator.onLine);
 buildKeys();
 updateQBanner();
+// F8 escaneado por QR (viene en ?doc=)
+var DOC_ESCANEADO = (function(){
+  try{ var p=new URLSearchParams(location.search); return (p.get('doc')||'').trim(); }catch(e){ return ''; }
+})();
 // sesión recordada
 const saved=sessionStorage.getItem('kb_user');
 if(saved){ try{ USER=JSON.parse(saved); enterApp(); }catch(e){} }
