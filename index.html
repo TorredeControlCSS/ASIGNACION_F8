@@ -1484,7 +1484,13 @@
         const _resp = await fetch('historial.json', {cache:'no-cache'});
         if (!_resp.ok) throw new Error('No se pudo leer historial.json. Publícalo desde el menú TORRE CONTROL → Publicar Histórico.');
         const _hist = await _resp.json();
-        newData = _hist.rows || [];
+        // Formato columnar: cols[] + rows[[...]] -> se reconstruyen los objetos.
+        if (_hist.cols && Array.isArray(_hist.rows) && Array.isArray(_hist.rows[0])) {
+          const _c = _hist.cols;
+          newData = _hist.rows.map(r => { const o = {}; for (let i=0;i<_c.length;i++) o[_c[i]] = r[i]; return o; });
+        } else {
+          newData = _hist.rows || [];   // compatibilidad con el formato anterior
+        }
         document.getElementById('mainHeader').textContent = "⚠️HISTORIAL ACUMULADO⚠️";
         document.getElementById('cutDate').textContent = "Histórico completo · " +
           (_hist.total || newData.length).toLocaleString() + " líneas · datos al " +
