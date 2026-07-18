@@ -1478,28 +1478,17 @@
         document.getElementById('mainHeader').textContent = "Asignación F8 (Corte diario)";
         document.getElementById('cutDate').textContent = PARAMS.cut_date || "Hoy";
       } else {
-        // El histórico EXIGE filtro: 44k filas revientan el límite de respuesta de GAS.
-        // Se toman los filtros ya presentes en la barra de búsqueda.
-        const _hF8 = (document.getElementById('doc')?.value || '').trim();
-        const _hUE = (document.getElementById('ue')?.value || '').trim();
-        const _hDe = (document.getElementById('dateFrom')?.value || '').trim();
-        const _hHa = (document.getElementById('dateTo')?.value || '').trim();
-        if (!_hF8 && (!_hUE || _hUE === 'ALL') && !_hDe && !_hHa) {
-          alert("El Histórico requiere un filtro.\n\nIndica una Forma 8, una Unidad Ejecutora o un rango de fechas antes de consultar.");
-          return;
-        }
-        let _q = `${WEBAPP_BASE}?file=history`;
-        if (_hF8) _q += '&f8=' + encodeURIComponent(_hF8);
-        if (_hUE && _hUE !== 'ALL') _q += '&ue=' + encodeURIComponent(_hUE);
-        if (_hDe) _q += '&desde=' + encodeURIComponent(_hDe);
-        if (_hHa) _q += '&hasta=' + encodeURIComponent(_hHa);
-        newData = await loadJsonp(_q);
-        if (newData && newData.requiereFiltro) {
-          alert(newData.msg || 'El histórico requiere un filtro.');
-          return;
-        }
+        // El histórico se lee de un JSON ESTÁTICO publicado en GitHub Pages
+        // (mismo patrón del simulador de reposición). 44k filas en ~2s, sin
+        // límite de JSONP y SIN filtros forzados: el histórico se ve completo.
+        const _resp = await fetch('historial.json', {cache:'no-cache'});
+        if (!_resp.ok) throw new Error('No se pudo leer historial.json. Publícalo desde el menú TORRE CONTROL → Publicar Histórico.');
+        const _hist = await _resp.json();
+        newData = _hist.rows || [];
         document.getElementById('mainHeader').textContent = "⚠️HISTORIAL ACUMULADO⚠️";
-        document.getElementById('cutDate').textContent = "Histórico filtrado";
+        document.getElementById('cutDate').textContent = "Histórico completo · " +
+          (_hist.total || newData.length).toLocaleString() + " líneas · datos al " +
+          (_hist.generado ? String(_hist.generado).slice(0,10) : '—');
       }
 
       if (!newData || newData.length === 0) alert("No se encontraron datos.");
