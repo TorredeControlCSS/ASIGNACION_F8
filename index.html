@@ -1478,9 +1478,28 @@
         document.getElementById('mainHeader').textContent = "Asignación F8 (Corte diario)";
         document.getElementById('cutDate').textContent = PARAMS.cut_date || "Hoy";
       } else {
-        newData = await loadJsonp(`${WEBAPP_BASE}?file=history`);
+        // El histórico EXIGE filtro: 44k filas revientan el límite de respuesta de GAS.
+        // Se toman los filtros ya presentes en la barra de búsqueda.
+        const _hF8 = (document.getElementById('doc')?.value || '').trim();
+        const _hUE = (document.getElementById('ue')?.value || '').trim();
+        const _hDe = (document.getElementById('dateFrom')?.value || '').trim();
+        const _hHa = (document.getElementById('dateTo')?.value || '').trim();
+        if (!_hF8 && (!_hUE || _hUE === 'ALL') && !_hDe && !_hHa) {
+          alert("El Histórico requiere un filtro.\n\nIndica una Forma 8, una Unidad Ejecutora o un rango de fechas antes de consultar.");
+          return;
+        }
+        let _q = `${WEBAPP_BASE}?file=history`;
+        if (_hF8) _q += '&f8=' + encodeURIComponent(_hF8);
+        if (_hUE && _hUE !== 'ALL') _q += '&ue=' + encodeURIComponent(_hUE);
+        if (_hDe) _q += '&desde=' + encodeURIComponent(_hDe);
+        if (_hHa) _q += '&hasta=' + encodeURIComponent(_hHa);
+        newData = await loadJsonp(_q);
+        if (newData && newData.requiereFiltro) {
+          alert(newData.msg || 'El histórico requiere un filtro.');
+          return;
+        }
         document.getElementById('mainHeader').textContent = "⚠️HISTORIAL ACUMULADO⚠️";
-        document.getElementById('cutDate').textContent = "Histórico Completo";
+        document.getElementById('cutDate').textContent = "Histórico filtrado";
       }
 
       if (!newData || newData.length === 0) alert("No se encontraron datos.");
