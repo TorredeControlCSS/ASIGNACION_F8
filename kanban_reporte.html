@@ -169,6 +169,20 @@
   .qr-scanfoot input{width:100%;padding:13px;font-size:16px;font-family:Consolas,monospace;
     border:1px solid var(--bord);margin-bottom:10px;text-align:center;}
 
+  /* ---------- SELECTOR DE PERSONAL CON BÚSQUEDA ---------- */
+  .qr-combo{position:relative;margin-bottom:12px;}
+  .qr-combo input{width:100%;padding:13px;font-size:15px;border:1px solid var(--bord);
+    background:#fff;}
+  .qr-opts{display:none;max-height:200px;overflow-y:auto;border:1px solid var(--bord);
+    border-top:none;background:#fff;position:relative;z-index:5;}
+  .qr-opt{padding:12px 13px;font-size:14px;cursor:pointer;border-bottom:1px solid #eef1f4;
+    display:flex;justify-content:space-between;align-items:center;}
+  .qr-opt:last-child{border-bottom:none;}
+  .qr-opt:hover,.qr-opt:active{background:#eef3f9;}
+  .qr-opt.vacio{color:var(--sub);cursor:default;}
+  .qr-suyo{font-size:10px;text-transform:uppercase;letter-spacing:.4px;
+    color:var(--azul);background:#e8f0f8;padding:2px 6px;}
+
   /* ---------- Offline queue banner ---------- */
   .qbanner{background:var(--amarbg);color:#854F0B;font-size:11px;padding:6px 14px;text-align:center;
     border-bottom:1px solid var(--amar);display:none;}
@@ -634,14 +648,14 @@ function renderQR(){
   if(!gente.length){
     h += '<div style="font-size:13px;color:var(--rojo)">No hay personal registrado para esta etapa en PERSONAL_KANBAN.</div>';
   }else{
+    // Lista con búsqueda: se puede escribir para filtrar o desplegar completa.
+    // Con ~37 almacenistas, hacer scroll ciego en un <select> nativo es lento.
     h += '<label for="qrQuien">¿Quién lo hizo?</label>';
-    h += '<select id="qrQuien" onchange="document.getElementById(\'qrOk\').disabled=!this.value">';
-    h += '<option value="">— Selecciona tu nombre —</option>';
-    gente.forEach(p => {
-      h += '<option value="' + esc(p.nombre) + '">' + esc(p.nombre) +
-           (p.suGrupo ? ' ·' : '') + '</option>';
-    });
-    h += '</select>';
+    h += '<div class="qr-combo">';
+    h += '<input type="text" id="qrQuien" autocomplete="off" placeholder="Escribe o toca para ver la lista" ' +
+         'oninput="filtrarPersonal(this.value)" onfocus="abrirPersonal()"/>';
+    h += '<div class="qr-opts" id="qrOpts"></div>';
+    h += '</div>';
     h += '<button class="qr-btn" id="qrOk" disabled onclick="confirmarQR()">Reportar</button>';
   }
   h += '</div></div>';
@@ -651,6 +665,37 @@ function renderQR(){
 
 function filaQR(k, v){
   return '<div class="qr-fila"><span class="k">' + esc(k) + '</span><span class="v">' + esc(v) + '</span></div>';
+}
+
+async // ---- Selector de personal con búsqueda ------------------------------------
+let QR_SEL = '';   // nombre confirmado
+
+function abrirPersonal(){ filtrarPersonal(document.getElementById('qrQuien').value); }
+
+function filtrarPersonal(txt){
+  const cont = document.getElementById('qrOpts');
+  const q = String(txt || '').trim().toUpperCase();
+  const gente = (QR_DATA && QR_DATA.personal) || [];
+  const lista = q ? gente.filter(p => p.nombre.toUpperCase().indexOf(q) >= 0) : gente;
+
+  // Solo vale un nombre elegido de la lista: evita reportes a nombre de alguien
+  // que no existe en PERSONAL_KANBAN.
+  QR_SEL = gente.some(p => p.nombre.toUpperCase() === q) ? q : '';
+  document.getElementById('qrOk').disabled = !QR_SEL;
+
+  cont.innerHTML = lista.length
+    ? lista.map(p => '<div class="qr-opt" onclick="elegirPersonal(this.dataset.n)" ' +
+        'data-n="' + esc(p.nombre) + '">' + esc(p.nombre) +
+        (p.suGrupo ? '<span class="qr-suyo">su grupo</span>' : '') + '</div>').join('')
+    : '<div class="qr-opt vacio">Sin coincidencias</div>';
+  cont.style.display = 'block';
+}
+
+function elegirPersonal(nombre){
+  document.getElementById('qrQuien').value = nombre;
+  QR_SEL = nombre.toUpperCase();
+  document.getElementById('qrOpts').style.display = 'none';
+  document.getElementById('qrOk').disabled = false;
 }
 
 async function confirmarQR(){
