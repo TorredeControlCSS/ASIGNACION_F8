@@ -237,7 +237,20 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const WEBAPP = "https://script.google.com/macros/s/AKfycbyVHDQ8IuVHibz259AiEvZ-jUfVC7fxvSSqC-wfaiiq1_13C9_TK4dVtPK0SMW4sZoJ/exec";
+// ============================================================================
+// URL DEL WEB APP  —  ojo con el /u/0/
+// ----------------------------------------------------------------------------
+// Si el dispositivo tiene VARIAS cuentas de Google iniciadas, el navegador
+// resuelve el Web App bajo la cuenta activa (/u/1/, /u/2/...). Como el script
+// pertenece a otra cuenta, Google responde con una página de Drive
+// ("Sorry, unable to open the file at this time") en vez del JSON. En JSONP eso
+// dispara onerror y el panel decía "Sin conexión" teniendo señal perfecta.
+//
+// El /u/0/ explícito fuerza la cuenta por defecto y evita ese redirect. Es el
+// caso típico del personal de almacén: celular con cuenta personal + cuenta
+// institucional.
+// ============================================================================
+const WEBAPP = "https://script.google.com/macros/u/0/s/AKfycbyVHDQ8IuVHibz259AiEvZ-jUfVC7fxvSSqC-wfaiiq1_13C9_TK4dVtPK0SMW4sZoJ/exec";
 
 // ---- Estado ----
 let USER = null;          // {nombre, rol, funcion, panel, grupos, subgrupo}
@@ -536,8 +549,29 @@ async function iniciarVistaQR(doc){
     QR_DATA = res;
     renderQR();
   }catch(e){
-    card.innerHTML = '<div class="qr-err">Sin conexión. Revisa la señal e intenta de nuevo.</div>' +
-      '<div style="padding:0 18px 18px"><button class="qr-btn sec" onclick="location.reload()">Reintentar</button></div>';
+    // Distinguir el fallo real. Si hay red, el JSONP no falló por señal:
+    // casi siempre es la sesión de Google del dispositivo interfiriendo
+    // (varias cuentas activas). Decirle "revisa la señal" manda a la persona
+    // a buscar donde no está el problema.
+    if(navigator.onLine){
+      card.innerHTML =
+        '<div class="qr-err" style="color:var(--txt);text-align:left;padding:22px">' +
+        '<div style="font-weight:700;color:var(--rojo);margin-bottom:10px;text-align:center">' +
+        'No se pudo leer el documento</div>' +
+        '<div style="font-size:13px;color:var(--sub);line-height:1.55">' +
+        'Tienes conexión, así que el problema suele ser la sesión de Google del ' +
+        'teléfono cuando hay <b>varias cuentas iniciadas</b>.<br><br>Prueba una de estas:' +
+        '<ul style="margin:8px 0 0 18px;padding:0">' +
+        '<li>Abrir el enlace en una <b>ventana de incógnito</b></li>' +
+        '<li>Dejar iniciada solo la cuenta institucional</li>' +
+        '</ul></div></div>' +
+        '<div style="padding:0 18px 18px">' +
+        '<button class="qr-btn" onclick="location.reload()">Reintentar</button>' +
+        '<button class="qr-btn sec" onclick="salirQR()">Entrar con mi PIN</button></div>';
+    }else{
+      card.innerHTML = '<div class="qr-err">Sin conexión. Revisa la señal e intenta de nuevo.</div>' +
+        '<div style="padding:0 18px 18px"><button class="qr-btn sec" onclick="location.reload()">Reintentar</button></div>';
+    }
   }
 }
 
@@ -612,7 +646,9 @@ async function confirmarQR(){
     }
   }catch(e){
     btn.disabled = false; btn.textContent = 'Reportar';
-    toast('Sin conexión. Intenta de nuevo.', 'err');
+    toast(navigator.onLine
+      ? 'No se pudo registrar. Prueba en ventana de incógnito.'
+      : 'Sin conexión. Intenta de nuevo.', 'err');
   }
 }
 
