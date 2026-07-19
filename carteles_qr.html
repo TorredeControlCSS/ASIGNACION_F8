@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<title>Carteles QR · Estaciones del Almacén</title>
+<style>
+  :root{ --azul:#1e5a9e; --azul-osc:#0C447C; --bord:#a8a8a8; --sub:#5a6470; }
+  *{box-sizing:border-box;}
+  body{margin:0;background:#ececec;font-family:'Segoe UI',Arial,sans-serif;color:#222;}
+  .barra{background:var(--azul-osc);color:#fff;padding:14px 20px;
+    display:flex;justify-content:space-between;align-items:center;}
+  .barra h1{margin:0;font-size:16px;font-weight:700;}
+  .barra button{padding:9px 18px;font-size:13px;font-weight:700;border:none;
+    background:#fff;color:var(--azul-osc);cursor:pointer;}
+  .hoja{width:210mm;min-height:297mm;background:#fff;margin:16px auto;
+    padding:18mm 16mm;page-break-after:always;display:flex;flex-direction:column;
+    align-items:center;text-align:center;border:1px solid var(--bord);}
+  .hoja .logo{width:74px;height:74px;margin-bottom:10px;}
+  .hoja .inst{font-size:12px;color:var(--sub);letter-spacing:.5px;
+    text-transform:uppercase;margin-bottom:2px;}
+  .hoja h2{font-size:26px;margin:0 0 4px;color:var(--azul-osc);}
+  .hoja .estacion{font-size:17px;color:var(--azul);font-weight:600;
+    border:2px solid var(--azul);padding:6px 20px;margin:14px 0 20px;}
+  .hoja .qr{width:250px;height:250px;border:1px solid var(--bord);padding:10px;
+    background:#fff;}
+  .hoja .instrucciones{margin-top:22px;text-align:left;width:100%;max-width:150mm;}
+  .hoja .paso{display:flex;gap:12px;margin-bottom:13px;align-items:flex-start;}
+  .hoja .paso .n{flex:0 0 26px;height:26px;background:var(--azul);color:#fff;
+    font-weight:700;font-size:13px;display:flex;align-items:center;
+    justify-content:center;}
+  .hoja .paso .t{font-size:14px;line-height:1.45;padding-top:3px;}
+  .hoja .pie{margin-top:auto;padding-top:16px;border-top:1px solid var(--bord);
+    width:100%;font-size:11px;color:var(--sub);}
+  .nota{max-width:210mm;margin:0 auto 16px;padding:14px 18px;background:#fff;
+    border:1px solid var(--bord);font-size:13px;line-height:1.55;color:var(--sub);}
+  @media print{
+    body{background:#fff;} .barra,.nota{display:none;}
+    .hoja{margin:0;border:none;width:auto;min-height:auto;}
+  }
+</style>
+</head>
+<body>
+
+<div class="barra">
+  <h1>Carteles QR por estación · CEDIS Panamá</h1>
+  <button onclick="window.print()">Imprimir</button>
+</div>
+
+<div class="nota">
+  Un cartel por estación. Imprimir, plastificar y pegar a la altura de la vista
+  en el punto donde se recibe o entrega el documento. El QR abre el panel de
+  reporte: no reemplaza al QR de la Forma 8, sirve para quien no puede escanear
+  el documento desde su cámara.
+</div>
+
+<div id="carteles"></div>
+
+<script>
+const PANEL = 'https://torredecontrolcss.github.io/ASIGNACION_F8/kanban_reporte.html';
+
+// Una hoja por estación del flujo. El texto cambia según lo que se reporta ahí.
+const ESTACIONES = [
+  { n:'RECEPCIÓN',            r:'la recepción del documento' },
+  { n:'CAPTURADORES',         r:'el hand-off y la recolección' },
+  { n:'PICKING · ALMACÉN',    r:'el picking físico' },
+  { n:'RESERVA',              r:'la reserva' },
+  { n:'KARDEX · FACTURACIÓN', r:'el hand-off a facturación' },
+  { n:'EMPAQUE',              r:'el empacado' },
+  { n:'DISTRIBUCIÓN',         r:'la distribución y el despacho' }
+];
+
+function qrSrc(txt, size){
+  return 'https://api.qrserver.com/v1/create-qr-code/?size=' + size + 'x' + size +
+         '&margin=0&data=' + encodeURIComponent(txt);
+}
+
+document.getElementById('carteles').innerHTML = ESTACIONES.map(e => `
+  <div class="hoja">
+    <img class="logo" src="./icons/icon-512.png" alt="CSS"/>
+    <div class="inst">Caja de Seguro Social · Dirección Nacional de Logística</div>
+    <h2>Reporte de Etapas</h2>
+    <div class="estacion">${e.n}</div>
+
+    <img class="qr" src="${qrSrc(PANEL, 500)}" alt="QR del panel"/>
+
+    <div class="instrucciones">
+      <div class="paso"><div class="n">1</div><div class="t">
+        Escanea este código con la cámara de tu celular. Si tu cámara no lo lee,
+        abre la aplicación <b>Kanban CEDIS</b> instalada en tu teléfono.</div></div>
+      <div class="paso"><div class="n">2</div><div class="t">
+        Escanea el <b>QR de la Forma 8</b> que tienes en la mano, o escribe su
+        número.</div></div>
+      <div class="paso"><div class="n">3</div><div class="t">
+        Confirma <b>${e.r}</b> y selecciona tu nombre.</div></div>
+    </div>
+
+    <div class="pie">
+      Torre de Control · CEDIS Panamá &nbsp;·&nbsp; Cada reporte queda registrado
+      con hora y responsable.
+    </div>
+  </div>
+`).join('');
+</script>
+</body>
+</html>
