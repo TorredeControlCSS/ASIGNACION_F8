@@ -238,19 +238,17 @@
 
 <script>
 // ============================================================================
-// URL DEL WEB APP  —  ojo con el /u/0/
+// URL DEL WEB APP
 // ----------------------------------------------------------------------------
-// Si el dispositivo tiene VARIAS cuentas de Google iniciadas, el navegador
-// resuelve el Web App bajo la cuenta activa (/u/1/, /u/2/...). Como el script
-// pertenece a otra cuenta, Google responde con una página de Drive
-// ("Sorry, unable to open the file at this time") en vez del JSON. En JSONP eso
-// dispara onerror y el panel decía "Sin conexión" teniendo señal perfecta.
+// Debe quedar SIEMPRE como /macros/s/.../exec. No anteponer /u/0/ ni /u/1/:
+// esa forma solo sirve en la interfaz de Google, no como endpoint invocable.
+// Con /u/0/ la llamada falla (probado: rompe el panel en escritorio también).
 //
-// El /u/0/ explícito fuerza la cuenta por defecto y evita ese redirect. Es el
-// caso típico del personal de almacén: celular con cuenta personal + cuenta
-// institucional.
+// PENDIENTE CONOCIDO: en dispositivos con VARIAS cuentas de Google iniciadas,
+// el navegador puede redirigir el Web App a una página de Drive en vez del
+// JSON. En incógnito funciona. Solución de fondo aún por definir.
 // ============================================================================
-const WEBAPP = "https://script.google.com/macros/u/0/s/AKfycbyVHDQ8IuVHibz259AiEvZ-jUfVC7fxvSSqC-wfaiiq1_13C9_TK4dVtPK0SMW4sZoJ/exec";
+const WEBAPP = "https://script.google.com/macros/s/AKfycbyVHDQ8IuVHibz259AiEvZ-jUfVC7fxvSSqC-wfaiiq1_13C9_TK4dVtPK0SMW4sZoJ/exec";
 
 // ---- Estado ----
 let USER = null;          // {nombre, rol, funcion, panel, grupos, subgrupo}
