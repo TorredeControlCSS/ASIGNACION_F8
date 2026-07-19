@@ -95,9 +95,9 @@
   .tabla tr:hover td{background:#f7fafd;}
   .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:100;}
   .modal-bg.show{display:flex;}
-  .modal{background:#fff;border-radius:4px;max-width:440px;width:90%;overflow:hidden;}
-  .modal .mh{background:var(--azul-osc);color:#fff;padding:13px 18px;font-size:14px;font-weight:600;display:flex;justify-content:space-between;}
-  .modal .mh .x{cursor:pointer;} .modal .mb{padding:16px;}
+  .modal{background:#fff;border-radius:4px;max-width:1080px;width:94%;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;}
+  .modal .mh{background:var(--azul-osc);color:#fff;padding:13px 18px;font-size:14px;font-weight:600;display:flex;justify-content:space-between;flex:0 0 auto;}
+  .modal .mh .x{cursor:pointer;} .modal .mb{padding:16px;overflow-y:auto;flex:1 1 auto;}
   .senal{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #eee;font-size:13px;}
   .senal .v{font-family:var(--mono);font-weight:700;}
   .hidden{display:none;}
@@ -318,7 +318,7 @@
     </div>
     <!-- KANBAN -->
     <div id="tabKanban" class="hidden">
-      <p style="font-size:12px;color:#666;margin:0 0 10px;">Cada F8 en su etapa actual del flujo (11 estados). Respeta los filtros de la lista priorizada.</p>
+      <p style="font-size:12px;color:#666;margin:0 0 10px;">Cada F8 en su etapa actual del flujo (12 etapas canónicas). Respeta los filtros de la lista priorizada.</p>
       <div class="kb-scroll"><div class="kb-cols" id="kbCols"></div></div>
     </div>
     <!-- SUPERVISION / OTIF -->
@@ -1315,11 +1315,17 @@ function imprimirDiaCal(iso){
 function triColor(t){ return {ROJO:'#c0281f',NARANJA:'#d97316',AMARILLO:'#c99700',VERDE:'#3a8c3a',AZUL:'#2a6db5'}[t]||'#888'; }
 
 // ===================== KANBAN POR ETAPA =====================
-// Modelo canónico de 12 etapas. Faltaba RESERVA: los pedidos en esa etapa
-// no aparecían en ninguna columna del Kanban.
-const KB_FLUJO=['RECEPCION','ASIGNADA','HANDOFF_CAPTURADOR','RECOLECCION','PICKING',
+// Modelo canónico de 12 etapas. El literal debe coincidir EXACTAMENTE con el
+// que emite kbEtapa_ en el backend: 'RECOLECTADA' (no 'RECOLECCION'). Con la
+// grafía equivocada la columna salía en 0 y los pedidos caían en una columna
+// huérfana al final del tablero.
+const KB_FLUJO=['RECEPCION','ASIGNADA','HANDOFF_CAPTURADOR','RECOLECTADA','PICKING',
   'RESERVA','HANDOFF_FACTURACION','FACTURACIÓN','EMPACADO','DISTRIBUCIÓN',
   'DESPACHADO','ENTREGADO'];
+// Etapas sin captura hoy: SALMI no entrega fecha de reserva, el backend nunca
+// emite este estado. La columna se conserva porque es donde el flujo se atasca:
+// se marca como no medida para no leerse como "sin pedidos".
+const KB_SIN_CAPTURA={'RESERVA':1};
 const KB_ETIQUETA={'RECEPCION':'Recepción','ASIGNADA':'Asignada',
   'HANDOFF_CAPTURADOR':'Hand-off capturador','RECOLECCION':'Recolección',
   'RECOLECTADA':'Recolección','PICKING':'Picking físico','RESERVA':'Reserva',
@@ -1346,7 +1352,7 @@ function renderKanban(){
       '</div>').join('');
     return '<div class="kb-col">'+
       '<div class="kb-col-head"><span>'+(KB_ETIQUETA[e]||e)+'</span><span class="n">'+lista.length+'</span></div>'+
-      '<div class="kb-col-body">'+(lista.length?cards+(lista.length>50?'<div class="kb-col-vacia">+'+(lista.length-50)+' más…</div>':''):'<div class="kb-col-vacia">—</div>')+'</div>'+
+      '<div class="kb-col-body">'+(lista.length?cards+(lista.length>50?'<div class="kb-col-vacia">+'+(lista.length-50)+' más…</div>':''):'<div class="kb-col-vacia">'+(KB_SIN_CAPTURA[e]?'Sin captura de fecha<br><span style="font-size:10px;">SALMI no registra esta etapa</span>':'—')+'</div>')+'</div>'+
     '</div>';
   }).join('');
 }
@@ -1440,17 +1446,20 @@ function renderSupervision(){
 // Etapas mostradas en la matriz de calor (subconjunto legible del flujo).
 // Se agregaron RECOLECCION y RESERVA: sin ellas la termografía escondía
 // justo donde se atasca el flujo.
-const TG_ETAPAS=['ASIGNADA','RECOLECCION','PICKING','RESERVA','FACTURACIÓN',
+const TG_ETAPAS=['ASIGNADA','RECOLECTADA','PICKING','RESERVA','FACTURACIÓN',
   'EMPACADO','DISTRIBUCIÓN','DESPACHADO','ENTREGADO'];
-const TG_ET_CORTA={'ASIGNADA':'Asig.','RECOLECCION':'Recol.','PICKING':'Picking',
+const TG_ET_CORTA={'ASIGNADA':'Asig.','RECOLECTADA':'Recol.','PICKING':'Picking',
   'RESERVA':'Reserva','FACTURACIÓN':'Fact.','EMPACADO':'Empac.',
   'DISTRIBUCIÓN':'Distr.','DESPACHADO':'Desp.','ENTREGADO':'Entr.'};
 
 function poblarTermografiaUE(){
   const sel=document.getElementById('tgUE');
-  if(sel.options.length>1) return; // ya poblado
+  const prev=sel.value;
   const ues=[...new Set((DATA.pedidos||[]).map(p=>String(p.ue||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
+  if(sel.dataset.n===String(ues.length)) return; // sin cambios: no repintar
+  sel.dataset.n=String(ues.length);
   sel.innerHTML='<option value="">— Selecciona una unidad —</option>'+ues.map(u=>'<option value="'+u.replace(/"/g,'&quot;')+'">'+u+'</option>').join('');
+  if(prev && ues.indexOf(prev)>=0){ sel.value=prev; renderTermografia(); }
 }
 
 function ordenarGrupos(gs){
@@ -1517,7 +1526,7 @@ function renderTermografia(){
         const inten=v/maxCel; // 0..1
         // celda azul si avanzado (despachado/entregado), ámbar/rojo si atascado en asignada/picking
         // Atasco = se quedó aguas arriba, sin llegar a facturación.
-        const atascada=(e==='ASIGNADA'||e==='RECOLECCION'||e==='PICKING'||e==='RESERVA');
+        const atascada=(e==='ASIGNADA'||e==='RECOLECTADA'||e==='PICKING'||e==='RESERVA');
         const bg = atascada
           ? 'rgba('+Math.round(192+ (255-192)*(1-inten))+','+Math.round(120*(1-inten)+40)+','+Math.round(31*(1-inten)+20)+','+(0.25+0.6*inten)+')'
           : 'rgba(30,90,158,'+(0.15+0.55*inten)+')';
