@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Diagnóstico · Escritura desde dispositivo</title>
+<style>
+  :root{ --azul:#1e5a9e; --azul-osc:#0C447C; --fondo:#ececec;
+         --bord:#a8a8a8; --sub:#6b7684; --ok:#2e7d32; --rojo:#a32d2d; }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--fondo);font-family:'Segoe UI',Arial,sans-serif;
+       color:#222;padding:14px;}
+  .card{background:#fff;border:1px solid var(--bord);max-width:520px;margin:0 auto;}
+  .head{background:var(--azul-osc);color:#fff;padding:14px 16px;}
+  .head h1{margin:0;font-size:16px;font-weight:700;}
+  .head .s{font-size:12px;opacity:.9;margin-top:3px;}
+  .body{padding:16px;}
+  .intro{font-size:13px;color:var(--sub);line-height:1.5;margin-bottom:16px;}
+  .test{border:1px solid #e0e6ee;margin-bottom:12px;}
+  .test .t{background:#f4f7fa;padding:10px 12px;font-size:13px;font-weight:700;
+           border-bottom:1px solid #e0e6ee;}
+  .test .d{padding:10px 12px;font-size:12px;color:var(--sub);line-height:1.45;}
+  .test .r{padding:10px 12px;font-family:Consolas,monospace;font-size:12px;
+           border-top:1px solid #e0e6ee;background:#fafbfc;word-break:break-all;}
+  .r.ok{color:var(--ok);} .r.err{color:var(--rojo);} .r.wait{color:var(--sub);}
+  button{width:100%;padding:14px;font-size:15px;font-weight:700;border:none;
+         background:var(--azul);color:#fff;cursor:pointer;margin-bottom:14px;}
+  button:disabled{background:#b9c2cc;}
+  .nota{font-size:12px;color:var(--sub);line-height:1.5;padding:12px;
+        background:#f4f7fa;border:1px solid #e0e6ee;}
+  code{background:#eef2f6;padding:1px 4px;font-size:11px;}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="head">
+    <h1>Diagnóstico de escritura</h1>
+    <div class="s">CEDIS Panamá · Torre de Control</div>
+  </div>
+  <div class="body">
+    <div class="intro">
+      Esta página <b>no toca datos de producción</b>. Escribe solo en una hoja
+      de prueba. Ejecuta las tres técnicas en este mismo dispositivo para ver
+      cuál funciona con varias cuentas de Google iniciadas.
+    </div>
+
+    <button id="btn" onclick="correr()">Ejecutar las 3 pruebas</button>
+
+    <div class="test">
+      <div class="t">1 · JSONP (técnica actual)</div>
+      <div class="d">Carga un &lt;script&gt;. Es lo que usa el panel hoy. Se espera que FALLE en este dispositivo.</div>
+      <div class="r wait" id="r1">— sin ejecutar —</div>
+    </div>
+
+    <div class="test">
+      <div class="t">2 · fetch normal (lee respuesta)</div>
+      <div class="d">Petición estándar leyendo el resultado. Se espera que falle por CORS.</div>
+      <div class="r wait" id="r2">— sin ejecutar —</div>
+    </div>
+
+    <div class="test">
+      <div class="t">3 · fetch no-cors (escribe sin leer)</div>
+      <div class="d">Envía la petición sin leer la respuesta. <b>Esta es la hipótesis.</b> El navegador dirá "opaque" siempre: lo que importa es si la fila aparece en la hoja.</div>
+      <div class="r wait" id="r3">— sin ejecutar —</div>
+    </div>
+
+    <div class="nota">
+      <b>Cómo interpretar el resultado.</b> El navegador no puede confirmar si
+      la prueba 3 funcionó — por diseño no ve la respuesta. La verdad está en
+      el libro: abre la hoja <code>PRUEBA_NOCORS</code> y mira si apareció una
+      fila con origen <code>no-cors</code>. Si aparece, la escritura funciona
+      desde este dispositivo.
+    </div>
+  </div>
+</div>
+
+<script>
+const WEBAPP = "https://script.google.com/macros/s/AKfycbyVHDQ8IuVHibz259AiEvZ-jUfVC7fxvSSqC-wfaiiq1_13C9_TK4dVtPK0SMW4sZoJ/exec";
+const UA = encodeURIComponent(navigator.userAgent.slice(0,120));
+
+function set(id, txt, cls){
+  const e = document.getElementById(id);
+  e.textContent = txt;
+  e.className = 'r ' + (cls || 'wait');
+}
+
+// 1 · JSONP — la técnica actual
+function pruebaJsonp(){
+  return new Promise(res => {
+    const cb = 'p_' + Math.random().toString(36).slice(2);
+    const s = document.createElement('script');
+    let done = false;
+    const t = setTimeout(() => {
+      if(done) return; done = true; s.remove();
+      res({ok:false, msg:'TIMEOUT — sin respuesta en 15s'});
+    }, 15000);
+    s.src = WEBAPP + '?file=prueba_nocors&origen=jsonp&ua=' + UA +
+            '&callback=' + cb + '&_ts=' + Date.now();
+    s.onerror = () => {
+      if(done) return; done = true; clearTimeout(t); s.remove();
+      res({ok:false, msg:'ERROR de carga — el navegador no recibió JavaScript'});
+    };
+    window[cb] = d => {
+      if(done) return; done = true; clearTimeout(t);
+      delete window[cb]; s.remove();
+      res({ok:true, msg:'OK — respuesta recibida: ' + JSON.stringify(d)});
+    };
+    document.body.appendChild(s);
+  });
+}
+
+// 2 · fetch normal
+async function pruebaFetch(){
+  try{
+    const r = await fetch(WEBAPP + '?file=prueba_nocors&origen=fetch&ua=' + UA);
+    const txt = await r.text();
+    return {ok:true, msg:'OK — status ' + r.status + ' · ' + txt.slice(0,90)};
+  }catch(err){
+    return {ok:false, msg:'BLOQUEADO — ' + String(err.message || err).slice(0,110)};
+  }
+}
+
+// 3 · fetch no-cors — la hipótesis
+async function pruebaNoCors(){
+  try{
+    await fetch(WEBAPP + '?file=prueba_nocors&origen=no-cors&ua=' + UA,
+                { mode:'no-cors' });
+    return {ok:true, msg:'ENVIADA sin error. Respuesta opaca (esperado). ' +
+                          'Verifica la hoja PRUEBA_NOCORS.'};
+  }catch(err){
+    return {ok:false, msg:'FALLÓ al enviar — ' + String(err.message || err).slice(0,110)};
+  }
+}
+
+async function correr(){
+  const b = document.getElementById('btn');
+  b.disabled = true; b.textContent = 'Ejecutando…';
+  ['r1','r2','r3'].forEach(id => set(id, 'ejecutando…', 'wait'));
+
+  const a = await pruebaJsonp();
+  set('r1', a.msg, a.ok ? 'ok' : 'err');
+
+  const c = await pruebaFetch();
+  set('r2', c.msg, c.ok ? 'ok' : 'err');
+
+  const d = await pruebaNoCors();
+  set('r3', d.msg, d.ok ? 'ok' : 'err');
+
+  b.disabled = false; b.textContent = 'Ejecutar de nuevo';
+}
+</script>
+</body>
+</html>
