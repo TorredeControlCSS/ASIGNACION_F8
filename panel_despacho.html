@@ -376,16 +376,32 @@ const DIAS=['LUNES','MARTES','MIERCOLES','JUEVES','VIERNES'];
 const USUARIO="Torre de Control";
 let DATA=null, TAB='lista', KPI_FILTRO='', chartCarga=null;
 
+// ============================================================================
+// LLAMADA AL BACKEND — fetch, no JSONP
+// ----------------------------------------------------------------------------
+// JSONP carga un <script> y arrastra las cookies de Google: en dispositivos con
+// varias cuentas iniciadas el navegador termina en una página de Drive en vez
+// del JSON, y el <script> revienta con un onerror mudo ("sin conexión" con
+// señal perfecta). fetch hace una petición limpia y además deja leer el status
+// HTTP real. Probado en celular multi-cuenta el 19-jul-2026.
+// Se conserva el nombre jsonp(url) para no tocar las llamadas existentes.
+// ============================================================================
 function jsonp(url){
-  return new Promise((res,rej)=>{
-    const cb='cb_'+Math.random().toString(36).slice(2);
-    const s=document.createElement('script'); let done=false;
-    const t=setTimeout(()=>{if(done)return;done=true;s.remove();rej(new Error('Timeout'));},30000);
-    s.src=url+(url.indexOf('?')<0?'?':'&')+'callback='+cb+'&_ts='+Date.now();
-    s.onerror=()=>{if(done)return;done=true;clearTimeout(t);s.remove();rej(new Error('Red'));};
-    window[cb]=(d)=>{if(done)return;done=true;clearTimeout(t);delete window[cb];s.remove();res(d);};
-    document.body.appendChild(s);
-  });
+  const ctrl=new AbortController();
+  const t=setTimeout(()=>ctrl.abort(),30000);
+  const sep=url.indexOf('?')<0?'?':'&';
+  return fetch(url+sep+'_ts='+Date.now(),{signal:ctrl.signal})
+    .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.text(); })
+    .then(txt=>{
+      // Acepta JSON puro o envuelto en callback, por si alguna ruta responde JSONP.
+      try{ return JSON.parse(txt); }
+      catch(e){
+        const m=txt.match(/^[^(]*\((.*)\)[\s;]*$/s);
+        if(m){ try{ return JSON.parse(m[1]); }catch(e2){} }
+        throw new Error('Respuesta no reconocida');
+      }
+    })
+    .finally(()=>clearTimeout(t));
 }
 
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
