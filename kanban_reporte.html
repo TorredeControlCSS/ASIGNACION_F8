@@ -183,6 +183,13 @@
   .qr-suyo{font-size:10px;text-transform:uppercase;letter-spacing:.4px;
     color:var(--azul);background:#e8f0f8;padding:2px 6px;}
 
+  /* Botón flotante de instalación. Discreto pero siempre a la vista: quien
+     no lo instale el primer día lo tiene disponible después. */
+  .btn-instalar{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);
+    z-index:200;padding:12px 22px;font-size:13px;font-weight:600;
+    background:var(--azul-osc);color:#fff;border:none;cursor:pointer;
+    box-shadow:0 3px 12px rgba(0,0,0,.28);white-space:nowrap;}
+
   /* ---------- Offline queue banner ---------- */
   .qbanner{background:var(--amarbg);color:#854F0B;font-size:11px;padding:6px 14px;text-align:center;
     border-bottom:1px solid var(--amar);display:none;}
@@ -1187,6 +1194,50 @@ document.getElementById('btnOutS').onclick=()=>location.reload();
 document.getElementById('toStation').onclick=enterStation;
 document.getElementById('search').oninput=render;
 document.getElementById('fTipo').onchange=render;
+
+// ============================================================================
+// INSTALAR EN EL CELULAR (PWA)
+// ----------------------------------------------------------------------------
+// Sin esto habría que explicarle a cada persona dónde está "Agregar a pantalla
+// de inicio" en su navegador — distinto en cada marca y versión. Con el botón
+// es un toque. Instalado, el panel queda como ícono en el celular: no se
+// pierde en el chat de WhatsApp ni depende de recordar un enlace.
+// El botón solo aparece si el navegador ofrece instalar y aún no está instalada.
+// ============================================================================
+let PROMPT_INSTALL = null;
+
+window.addEventListener('beforeinstallprompt', ev => {
+  ev.preventDefault();
+  PROMPT_INSTALL = ev;
+  mostrarBotonInstalar();
+});
+
+window.addEventListener('appinstalled', () => {
+  PROMPT_INSTALL = null;
+  const b = document.getElementById('btnInstalar');
+  if(b) b.remove();
+});
+
+function mostrarBotonInstalar(){
+  if(document.getElementById('btnInstalar')) return;
+  // Si ya se abre como app instalada, no tiene sentido ofrecerlo.
+  if(window.matchMedia('(display-mode: standalone)').matches) return;
+  const b = document.createElement('button');
+  b.id = 'btnInstalar';
+  b.className = 'btn-instalar';
+  b.textContent = 'Instalar en mi celular';
+  b.onclick = instalarApp;
+  document.body.appendChild(b);
+}
+
+async function instalarApp(){
+  if(!PROMPT_INSTALL) return;
+  PROMPT_INSTALL.prompt();
+  try{ await PROMPT_INSTALL.userChoice; }catch(e){}
+  PROMPT_INSTALL = null;
+  const b = document.getElementById('btnInstalar');
+  if(b) b.remove();
+}
 
 setConn(navigator.onLine);
 buildKeys();
