@@ -155,6 +155,20 @@
   .qr-fin .ic{font-size:34px;line-height:1;margin-bottom:8px;}
   .qr-err{padding:26px 20px;text-align:center;color:var(--rojo);font-size:14px;}
 
+  /* ---------- LECTOR DE CÁMARA INTEGRADO ---------- */
+  .qr-scanbox{position:relative;background:#000;aspect-ratio:4/3;overflow:hidden;}
+  .qr-scanbox video{width:100%;height:100%;object-fit:cover;display:block;}
+  .qr-mira{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    width:62%;aspect-ratio:1;border:3px solid rgba(255,255,255,.9);
+    box-shadow:0 0 0 2000px rgba(0,0,0,.35);}
+  .qr-scanmsg{position:absolute;left:0;right:0;bottom:0;padding:9px 12px;
+    background:rgba(0,0,0,.62);color:#fff;font-size:12px;text-align:center;}
+  .qr-scanfoot{padding:16px;}
+  .qr-scanfoot label{display:block;font-size:11px;text-transform:uppercase;
+    letter-spacing:.5px;color:var(--sub);margin-bottom:6px;}
+  .qr-scanfoot input{width:100%;padding:13px;font-size:16px;font-family:Consolas,monospace;
+    border:1px solid var(--bord);margin-bottom:10px;text-align:center;}
+
   /* ---------- Offline queue banner ---------- */
   .qbanner{background:var(--amarbg);color:#854F0B;font-size:11px;padding:6px 14px;text-align:center;
     border-bottom:1px solid var(--amar);display:none;}
@@ -547,6 +561,7 @@ function enterApp(){
 let QR_DATA = null;
 
 async function iniciarVistaQR(doc){
+  detenerCamara();   // libera la cámara si venía del escaneo continuo
   document.getElementById('loginView').style.display = 'none';
   document.getElementById('appView').classList.remove('show');
   document.getElementById('qrView').style.display = 'flex';
@@ -596,6 +611,12 @@ function renderQR(){
   h += filaQR('Grupo', (d.grupos && d.grupos.length) ? d.grupos.join(' · ') : '—');
   h += filaQR('Tipo', d.tipo || '—');
   h += filaQR('Etapa actual', d.etapaActualLabel || '—');
+  if(d.reportadoPor){
+    h += '<div style="margin-top:10px;padding:9px 11px;background:#fff8e6;' +
+         'border:1px solid #e8d9a8;font-size:12px;color:#6b5a2a;line-height:1.45">' +
+         'Reportado por <b>' + esc(d.reportadoPor) + '</b>' +
+         (d.reportadoEl ? ' · ' + esc(d.reportadoEl) : '') + '</div>';
+  }
 
   if(d.cerrado){
     h += '</div><div class="qr-fin"><div class="ic">✓</div>' +
@@ -651,7 +672,7 @@ async function confirmarQR(){
         '<div class="qr-fin"><div class="ic" style="color:var(--ok)">✓</div>' +
         '<div style="font-weight:700">' + esc(d.siguienteLabel) + ' registrado</div>' +
         '<div style="font-size:13px;color:var(--sub);margin-top:6px">Reportado por ' + esc(quien) + '</div>' +
-        '<button class="qr-btn sec" onclick="location.reload()">Escanear otro documento</button></div>';
+        '<button class="qr-btn sec" onclick="listoParaOtro()">Escanear otro documento</button></div>';
     }else{
       btn.disabled = false; btn.textContent = 'Reportar';
       toast(res && res.msg ? res.msg : 'No se pudo registrar', 'err');
@@ -664,7 +685,125 @@ async function confirmarQR(){
   }
 }
 
+// ----------------------------------------------------------------------------
+// ESCANEO CONTINUO
+// El colaborador termina de reportar y sigue con el siguiente documento sin
+// salir del navegador: la cámara se abre DENTRO del panel. Antes había que
+// cerrar, abrir la cámara nativa, escanear y volver — fricción pura en un
+// almacén de alto movimiento.
+// El PIN por lotes sigue disponible en paralelo: ambos métodos, siempre.
+// ----------------------------------------------------------------------------
+function listoParaOtro(){
+  try{ history.replaceState(null, '', location.pathname); }catch(e){}
+  QR_DATA = null;
+  document.getElementById('qrCard').innerHTML =
+    '<div class="qr-scan">' +
+      '<div class="qr-scanbox">' +
+        '<video id="qrVideo" playsinline muted></video>' +
+        '<div class="qr-mira"></div>' +
+        '<div class="qr-scanmsg" id="qrScanMsg">Iniciando cámara…</div>' +
+      '</div>' +
+      '<div class="qr-scanfoot">' +
+        '<label for="qrManual">o escribe el número</label>' +
+        '<input type="text" id="qrManual" placeholder="8107-2026-1-503" ' +
+               'autocomplete="off" inputmode="text"/>' +
+        '<button class="qr-btn" onclick="irAManual()">Buscar</button>' +
+        '<button class="qr-btn sec" onclick="salirQR()">Entrar con mi PIN</button>' +
+      '</div>' +
+    '</div>';
+  document.getElementById('qrManual').addEventListener('keydown', ev => {
+    if(ev.key === 'Enter') irAManual();
+  });
+  arrancarCamara();
+}
+
+function irAManual(){
+  const v = (document.getElementById('qrManual').value || '').trim();
+  if(v) abrirDoc(v);
+}
+
+// Salta al documento escaneado sin recargar la página.
+function abrirDoc(doc){
+  detenerCamara();
+  document.getElementById('qrCard').innerHTML =
+    '<div class="qr-load"><div class="spinner"></div>Leyendo documento…</div>';
+  iniciarVistaQR(doc);
+}
+
+// ---- Cámara ----------------------------------------------------------------
+let QR_STREAM = null, QR_LOOP = null, QR_DET = null;
+
+async function arrancarCamara(){
+  const msg = document.getElementById('qrScanMsg');
+  const vid = document.getElementById('qrVideo');
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    msg.textContent = 'Este dispositivo no permite abrir la cámara. Escribe el número.';
+    return;
+  }
+  try{
+    // facingMode 'environment' = cámara trasera, que es con la que se apunta
+    // al documento. En laptops cae a la webcam frontal sin fallar.
+    QR_STREAM = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' } }, audio: false
+    });
+    vid.srcObject = QR_STREAM;
+    await vid.play();
+    msg.textContent = 'Apunta al QR de la Forma 8';
+    if('BarcodeDetector' in window){
+      QR_DET = new BarcodeDetector({ formats: ['qr_code'] });
+      leerLoop(vid, msg);
+    }else{
+      msg.textContent = 'Lector no disponible aquí. Escribe el número abajo.';
+    }
+  }catch(err){
+    msg.textContent = (err && err.name === 'NotAllowedError')
+      ? 'Permiso de cámara denegado. Escribe el número abajo.'
+      : 'No se pudo abrir la cámara. Escribe el número abajo.';
+  }
+}
+
+function leerLoop(vid, msg){
+  let leyendo = false;
+  QR_LOOP = setInterval(async () => {
+    if(leyendo || !QR_DET || vid.readyState !== 4) return;
+    leyendo = true;
+    try{
+      const codes = await QR_DET.detect(vid);
+      if(codes && codes.length){
+        const raw = String(codes[0].rawValue || '').trim();
+        const doc = extraerDoc(raw);
+        if(doc){
+          msg.textContent = 'Leído: ' + doc;
+          abrirDoc(doc);
+          return;
+        }
+      }
+    }catch(e){}
+    leyendo = false;
+  }, 400);
+}
+
+// El QR de la Hoja de Asignación trae una URL con ?doc=... ; se acepta también
+// que alguien pegue el número pelado.
+function extraerDoc(raw){
+  if(!raw) return '';
+  const m = raw.match(/[?&]doc=([^&#\s]+)/i);
+  if(m) return decodeURIComponent(m[1]);
+  if(/^[\w-]+$/.test(raw)) return raw;
+  return '';
+}
+
+function detenerCamara(){
+  if(QR_LOOP){ clearInterval(QR_LOOP); QR_LOOP = null; }
+  if(QR_STREAM){
+    try{ QR_STREAM.getTracks().forEach(t => t.stop()); }catch(e){}
+    QR_STREAM = null;
+  }
+  QR_DET = null;
+}
+
 function salirQR(){
+  detenerCamara();
   document.getElementById('qrView').style.display = 'none';
   const saved = sessionStorage.getItem('kb_user');
   if(saved){ try{ USER = JSON.parse(saved); enterApp(); return; }catch(e){} }
@@ -1007,6 +1146,11 @@ document.getElementById('fTipo').onchange=render;
 setConn(navigator.onLine);
 buildKeys();
 updateQBanner();
+// Libera la cámara si el usuario deja la pestaña o cierra: en móvil el
+// indicador de cámara activa alarma si queda encendido sin uso.
+document.addEventListener('visibilitychange', () => { if(document.hidden) detenerCamara(); });
+window.addEventListener('pagehide', detenerCamara);
+
 // ARRANQUE
 // Si el panel se abrió desde el QR de una Forma 8 (?doc=...), esa vía manda:
 // va directo al reporte del documento, sin PIN y sin importar si hay sesión
