@@ -933,17 +933,42 @@ async function stationScan(f8){
 }
 
 // ================= UTIL =================
+// ============================================================================
+// LLAMADA AL BACKEND — fetch, no JSONP
+// ----------------------------------------------------------------------------
+// Antes esto cargaba un <script> (JSONP). Esa técnica arrastra las cookies de
+// Google, y en dispositivos con VARIAS cuentas iniciadas el navegador terminaba
+// redirigido a una página de Drive en vez del JSON. Como Drive devuelve HTML y
+// no JavaScript, el <script> reventaba con un onerror mudo: el panel decía
+// "sin conexión" teniendo señal perfecta. Bloqueaba el uso desde celulares,
+// que es justo donde reporta el personal de almacén.
+//
+// fetch hace una petición de datos limpia: sigue el redirect de Google y
+// entrega el JSON. Probado el 19-jul-2026 en celular multi-cuenta: JSONP falla,
+// fetch devuelve 200 con el cuerpo completo.
+//
+// Se conserva el nombre y la firma jsonp(url, timeout) a propósito, para no
+// tocar ninguna de las llamadas existentes.
+// ============================================================================
 function jsonp(url, timeout){
-  return new Promise((resolve,reject)=>{
-    const cb='kb_'+Math.random().toString(36).slice(2);
-    const s=document.createElement('script'); let done=false;
-    const clean=()=>{try{delete window[cb];}catch(e){window[cb]=undefined;} if(s.parentNode)s.remove();};
-    const t=setTimeout(()=>{if(done)return;done=true;clean();reject(new Error('Timeout'));}, timeout||30000);
-    s.src=`${url}&callback=${cb}&_ts=${Date.now()}`;
-    s.onerror=()=>{if(done)return;done=true;clearTimeout(t);clean();reject(new Error('err'));};
-    window[cb]=(d)=>{if(done)return;done=true;clearTimeout(t);clean();resolve(d);};
-    document.body.appendChild(s);
-  });
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeout || 30000);
+  return fetch(`${url}&_ts=${Date.now()}`, { signal: ctrl.signal })
+    .then(r => {
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      return r.text();
+    })
+    .then(txt => {
+      // El backend puede responder JSON puro o envuelto en callback (JSONP).
+      // Se aceptan ambos para no depender de cómo esté configurada la ruta.
+      try{ return JSON.parse(txt); }
+      catch(e){
+        const m = txt.match(/^[^(]*\((.*)\)[\s;]*$/s);
+        if(m){ try{ return JSON.parse(m[1]); }catch(e2){} }
+        throw new Error('Respuesta no reconocida');
+      }
+    })
+    .finally(() => clearTimeout(t));
 }
 let toastT=null;
 function toast(msg, type){
