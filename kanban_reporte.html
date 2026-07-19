@@ -122,7 +122,14 @@
   /* ---------- VISTA QR (reporte directo por escaneo) ---------- */
   .qrview{min-height:100vh;display:flex;align-items:center;justify-content:center;
     padding:16px;background:var(--fondo);}
-  .qr-card{background:#fff;border:1px solid var(--bord);width:100%;max-width:460px;
+  .qr-wrap{width:100%;max-width:460px;}
+  /* Header institucional: el colaborador escanea desde el piso y debe
+     reconocer de inmediato de qué sistema se trata y qué se le pide. */
+  .qr-brand{text-align:center;margin-bottom:16px;}
+  .qr-brand img{width:64px;height:64px;margin-bottom:10px;}
+  .qr-brand h1{font-size:16px;margin:0 0 2px;color:var(--azul2);}
+  .qr-brand .sub{font-size:12px;color:var(--sub);}
+  .qr-card{background:#fff;border:1px solid var(--bord);width:100%;
     padding:0;overflow:hidden;}
   .qr-load{padding:44px 20px;text-align:center;color:var(--sub);font-size:14px;}
   .qr-head{background:var(--azul);color:#fff;padding:16px 18px;}
@@ -191,8 +198,15 @@
      No pide PIN: el documento ya trae su ruta. Lee la etapa, propone la
      siguiente acción y solo al final pregunta quién la ejecutó. -->
 <div class="qrview" id="qrView" style="display:none">
-  <div class="qr-card" id="qrCard">
-    <div class="qr-load"><div class="spinner"></div>Leyendo documento…</div>
+  <div class="qr-wrap">
+    <div class="qr-brand">
+      <img src="./icons/icon-512.png" alt="CSS"/>
+      <h1>Sistema Kanban de Trazabilidad Logística</h1>
+      <div class="sub">CEDIS Panamá · DINALOG</div>
+    </div>
+    <div class="qr-card" id="qrCard">
+      <div class="qr-load"><div class="spinner"></div>Leyendo documento…</div>
+    </div>
   </div>
 </div>
 
