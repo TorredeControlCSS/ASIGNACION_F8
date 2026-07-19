@@ -631,6 +631,27 @@ function renderQR(){
   h += '<div class="qr-head"><div class="doc">' + esc(d.doc) + '</div>' +
        '<div class="ue">' + esc(d.ue || 'Unidad no registrada') + '</div></div>';
   h += '<div class="qr-body">';
+  // TIEMPO VIVO: la urgencia visible en el momento de actuar. Sin esto el
+  // colaborador no sabe si el documento lleva 2 días o 60 en el flujo.
+  if(d.antiguedad != null || d.diasVto != null){
+    const U = {vencido:['#a32d2d','#fdeaea'], hoy:['#a8500f','#fff3e6'],
+               proximo:['#8a6d1f','#fff9e6'], normal:['#2e5c8a','#eef3f9']};
+    const c = U[d.urgencia] || U.normal;
+    let txt = '';
+    if(d.diasVto != null){
+      txt = d.diasVto < 0  ? '<b>Vencido hace ' + Math.abs(d.diasVto) + ' d</b>'
+          : d.diasVto === 0 ? '<b>Vence HOY</b>'
+          : 'Vence en <b>' + d.diasVto + ' d</b>';
+      if(d.vtoTxt) txt += ' · ' + esc(d.vtoTxt);
+    }
+    if(d.antiguedad != null){
+      txt += (txt ? '<br>' : '') + '<span style="opacity:.85">' +
+             d.antiguedad + ' días en el flujo</span>';
+    }
+    h += '<div style="margin:-4px 0 12px;padding:10px 12px;background:' + c[1] +
+         ';border-left:4px solid ' + c[0] + ';color:' + c[0] +
+         ';font-size:13px;line-height:1.5">' + txt + '</div>';
+  }
   h += filaQR('Grupo', (d.grupos && d.grupos.length) ? d.grupos.join(' · ') : '—');
   h += filaQR('Tipo', d.tipo || '—');
   h += filaQR('Etapa actual', d.etapaActualLabel || '—');
