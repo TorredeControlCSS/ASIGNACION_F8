@@ -117,6 +117,36 @@
     box-shadow:0 4px 14px rgba(0,0,0,.3);z-index:2000;transition:transform .25s;max-width:90%;text-align:center;}
   .toast.show{transform:translateX(-50%) translateY(0);}
   .toast.ok{background:var(--ok);} .toast.err{background:var(--rojo);}
+  .toast.warn{background:#a86b12;}
+
+  /* ---------- VISTA QR (reporte directo por escaneo) ---------- */
+  .qrview{min-height:100vh;display:flex;align-items:center;justify-content:center;
+    padding:16px;background:var(--fondo);}
+  .qr-card{background:#fff;border:1px solid var(--bord);width:100%;max-width:460px;
+    padding:0;overflow:hidden;}
+  .qr-load{padding:44px 20px;text-align:center;color:var(--sub);font-size:14px;}
+  .qr-head{background:var(--azul);color:#fff;padding:16px 18px;}
+  .qr-head .doc{font-family:Consolas,monospace;font-size:20px;font-weight:700;letter-spacing:.5px;}
+  .qr-head .ue{font-size:13px;opacity:.92;margin-top:4px;}
+  .qr-body{padding:18px;}
+  .qr-fila{display:flex;justify-content:space-between;padding:9px 0;
+    border-bottom:1px solid #eef1f4;font-size:13px;}
+  .qr-fila .k{color:var(--sub);} .qr-fila .v{font-weight:600;text-align:right;}
+  .qr-ask{margin-top:18px;padding:16px;background:#f4f7fa;border:1px solid var(--bord);}
+  .qr-ask .pregunta{font-size:15px;font-weight:700;color:var(--azul2);margin-bottom:4px;}
+  .qr-ask .accion{font-size:13px;color:var(--sub);margin-bottom:14px;}
+  .qr-ask label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.5px;
+    color:var(--sub);margin-bottom:6px;}
+  .qr-ask select{width:100%;padding:13px;font-size:15px;border:1px solid var(--bord);
+    background:#fff;margin-bottom:12px;}
+  .qr-btn{width:100%;padding:15px;font-size:15px;font-weight:700;border:none;
+    background:var(--azul);color:#fff;cursor:pointer;}
+  .qr-btn:disabled{background:#b9c2cc;cursor:not-allowed;}
+  .qr-btn.sec{background:#fff;color:var(--azul);border:1px solid var(--bord);
+    font-weight:600;margin-top:8px;}
+  .qr-fin{padding:18px;text-align:center;}
+  .qr-fin .ic{font-size:34px;line-height:1;margin-bottom:8px;}
+  .qr-err{padding:26px 20px;text-align:center;color:var(--rojo);font-size:14px;}
 
   /* ---------- Offline queue banner ---------- */
   .qbanner{background:var(--amarbg);color:#854F0B;font-size:11px;padding:6px 14px;text-align:center;
@@ -154,6 +184,16 @@
     <div class="loginmsg" id="loginMsg"></div>
   </div>
   <button class="stationlink" id="toStation">Usar como estación de escaneo (pantalla del almacén)</button>
+</div>
+
+<!-- ============ QR · REPORTE DIRECTO ============ -->
+<!-- Se muestra cuando el panel se abre con ?doc=... desde el QR de la Forma 8.
+     No pide PIN: el documento ya trae su ruta. Lee la etapa, propone la
+     siguiente acción y solo al final pregunta quién la ejecutó. -->
+<div class="qrview" id="qrView" style="display:none">
+  <div class="qr-card" id="qrCard">
+    <div class="qr-load"><div class="spinner"></div>Leyendo documento…</div>
+  </div>
 </div>
 
 <!-- ============ APP ============ -->
@@ -204,6 +244,19 @@ let USER = null;          // {nombre, rol, funcion, panel, grupos, subgrupo}
 let PIN = "";
 let PEDIDOS = [];
 let CURRENT_STAGE = null;  // etapa activa de la pestaña
+
+// ============================================================================
+// DOCUMENTO ESCANEADO POR QR  (?doc=8037-2026-1-132)
+// ----------------------------------------------------------------------------
+// El QR impreso en la Hoja de Asignación abre este panel con el F8 en la URL.
+// Se declara AQUÍ, arriba de todo, porque enterApp() lo consulta: si se declara
+// al final del script, el hoisting de 'var' lo deja en undefined cuando el
+// usuario ya tiene sesión recordada -> el QR se perdía justo en el caso normal.
+// ============================================================================
+var DOC_ESCANEADO = (function(){
+  try{ var p=new URLSearchParams(location.search); return (p.get('doc')||'').trim(); }
+  catch(e){ return ''; }
+})();
 let STAGES = [];           // etapas que este rol reporta
 const QKEY = "kb_offline_queue";
 
@@ -250,18 +303,18 @@ const PANEL_STAGES = {
   // y tras el VoBo del almacenista genera la RESERVA.
   'RECOLECCION Y RESERVA': [
     {from:'ASIGNADA',            mark:'HANDOFF_CAPTURADOR',  tab:'Por recibir',    action:'Recibí el documento'},
-    {from:'HANDOFF_CAPTURADOR',  mark:'RECOLECCION',         tab:'Por recolectar', action:'Recolección generada (WMS)'},
+    {from:'HANDOFF_CAPTURADOR',  mark:'RECOLECTADA',         tab:'Por recolectar', action:'Recolección generada (WMS)'},
     // Doble confirmación: el capturador valida el picking físico del almacenista
     {from:'PICKING',             mark:'RESERVA',             tab:'Validar picking',action:'VoBo · generar reserva', dobleConf:true},
     {from:'RESERVA',             mark:'HANDOFF_FACTURACION', tab:'Entregar a fact.',action:'Entregado a Facturación'}
   ],
   // Almacenista: hace el picking físico con la Hoja de Recolección.
   'PICKING FISICO': [
-    {from:'RECOLECCION',         mark:'PICKING',             tab:'Por pickear',    action:'Picking físico hecho'}
+    {from:'RECOLECTADA',         mark:'PICKING',             tab:'Por pickear',    action:'Picking físico hecho'}
   ],
   // Almacenistas de urgencias (cross-área).
   'SOLO PICKING-URG': [
-    {from:'RECOLECCION',         mark:'PICKING',             tab:'Urgencias',      action:'Picking físico hecho', soloUrg:true}
+    {from:'RECOLECTADA',         mark:'PICKING',             tab:'Urgencias',      action:'Picking físico hecho', soloUrg:true}
   ],
   // Facturación (Ricaute + equipo).
   // Su bandeja NO puede depender solo del hand-off registrado: hoy hay más de
@@ -289,9 +342,9 @@ const PANEL_STAGES = {
   // Distribuidores (Manuel=mensuales, Yerisbeth=urgencias): salida del WMS,
   // despacho físico y confirmación de entrega.
   'DISTRIBUCIÓN': [
-    {from:'EMPACADO',            mark:'DISTRIBUCION',        tab:'Por distribuir', action:'Salida del WMS'},
-    {from:'DISTRIBUCION',        mark:'DESPACHO_FISICO',     tab:'Por despachar',  action:'Despachado (bahía/flota)'},
-    {from:'DESPACHO_FISICO',     mark:'ENTREGADO',           tab:'Por entregar',   action:'Entregado en destino'}
+    {from:'EMPACADO',            mark:'DISTRIBUCIÓN',        tab:'Por distribuir', action:'Salida del WMS'},
+    {from:'DISTRIBUCIÓN',        mark:'DESPACHADO',     tab:'Por despachar',  action:'Despachado (bahía/flota)'},
+    {from:'DESPACHADO',          mark:'ENTREGADO',           tab:'Por entregar',   action:'Entregado en destino'}
   ]
 };
 
@@ -447,13 +500,131 @@ function enterApp(){
   buildTabs();
   CURRENT_STAGE = STAGES[0];
   loadPedidos();
-  // Si llegó un F8 por QR, pre-cargarlo en el buscador y avisar
-  if(DOC_ESCANEADO){
-    var s=document.getElementById('search');
-    if(s){ s.value=DOC_ESCANEADO; if(typeof render==='function'){ render(); } }
-    if(typeof toast==='function') toast('Documento '+DOC_ESCANEADO+' cargado desde QR', 'ok');
-    DOC_ESCANEADO=''; // consumir una sola vez
+}
+
+// ============================================================================
+// QR · REPORTE DIRECTO  (sin PIN previo)
+// ----------------------------------------------------------------------------
+// El colaborador escanea el QR de la Forma 8 que tiene EN LA MANO.
+//   1. El panel consulta en qué etapa está el documento
+//   2. Propone la SIGUIENTE acción del flujo
+//   3. Pregunta quién la ejecutó (lista desplegable)
+//
+// El nombre se pide AL FINAL, no al principio: en un almacén con ausencias y
+// tardanzas, muchas veces el documento lo atiende otra persona disponible.
+// Preguntando al final se registra quien REALMENTE lo hizo — que es lo que el
+// Reporte de Productividad necesita.
+//
+// Disponible para TODOS, incluidos capturadores y kardex que trabajan por
+// lotes con su PIN. El QR no es la vía de quien no tiene computadora: es la
+// vía que no admite excusa.
+// ============================================================================
+let QR_DATA = null;
+
+async function iniciarVistaQR(doc){
+  document.getElementById('loginView').style.display = 'none';
+  document.getElementById('appView').classList.remove('show');
+  document.getElementById('qrView').style.display = 'flex';
+  const card = document.getElementById('qrCard');
+  try{
+    const res = await jsonp(`${WEBAPP}?file=kanban_qr&doc=${encodeURIComponent(doc)}`);
+    if(!res || !res.ok){
+      card.innerHTML = '<div class="qr-err">' + esc(res && res.msg ? res.msg : 'No se pudo leer el documento') +
+        '</div><div style="padding:0 18px 18px"><button class="qr-btn sec" onclick="salirQR()">Entrar con mi PIN</button></div>';
+      return;
+    }
+    QR_DATA = res;
+    renderQR();
+  }catch(e){
+    card.innerHTML = '<div class="qr-err">Sin conexión. Revisa la señal e intenta de nuevo.</div>' +
+      '<div style="padding:0 18px 18px"><button class="qr-btn sec" onclick="location.reload()">Reintentar</button></div>';
   }
+}
+
+function renderQR(){
+  const d = QR_DATA;
+  let h = '';
+  h += '<div class="qr-head"><div class="doc">' + esc(d.doc) + '</div>' +
+       '<div class="ue">' + esc(d.ue || 'Unidad no registrada') + '</div></div>';
+  h += '<div class="qr-body">';
+  h += filaQR('Grupo', (d.grupos && d.grupos.length) ? d.grupos.join(' · ') : '—');
+  h += filaQR('Tipo', d.tipo || '—');
+  h += filaQR('Etapa actual', d.etapaActualLabel || '—');
+
+  if(d.cerrado){
+    h += '</div><div class="qr-fin"><div class="ic">✓</div>' +
+         '<div style="font-weight:700">Este documento ya completó el flujo</div>' +
+         '<div style="font-size:13px;color:var(--sub);margin-top:6px">No hay nada pendiente por reportar.</div>' +
+         '<button class="qr-btn sec" onclick="salirQR()">Entrar con mi PIN</button></div>';
+    document.getElementById('qrCard').innerHTML = h;
+    return;
+  }
+
+  const gente = d.personal || [];
+  h += '<div class="qr-ask">';
+  h += '<div class="pregunta">¿Reportas ' + esc((d.siguienteLabel || '').toLowerCase()) + '?</div>';
+  h += '<div class="accion">' + esc(d.accion || '') + '</div>';
+  if(!gente.length){
+    h += '<div style="font-size:13px;color:var(--rojo)">No hay personal registrado para esta etapa en PERSONAL_KANBAN.</div>';
+  }else{
+    h += '<label for="qrQuien">¿Quién lo hizo?</label>';
+    h += '<select id="qrQuien" onchange="document.getElementById(\'qrOk\').disabled=!this.value">';
+    h += '<option value="">— Selecciona tu nombre —</option>';
+    gente.forEach(p => {
+      h += '<option value="' + esc(p.nombre) + '">' + esc(p.nombre) +
+           (p.suGrupo ? ' ·' : '') + '</option>';
+    });
+    h += '</select>';
+    h += '<button class="qr-btn" id="qrOk" disabled onclick="confirmarQR()">Reportar</button>';
+  }
+  h += '</div></div>';
+  h += '<div style="padding:0 18px 18px"><button class="qr-btn sec" onclick="salirQR()">Entrar con mi PIN</button></div>';
+  document.getElementById('qrCard').innerHTML = h;
+}
+
+function filaQR(k, v){
+  return '<div class="qr-fila"><span class="k">' + esc(k) + '</span><span class="v">' + esc(v) + '</span></div>';
+}
+
+async function confirmarQR(){
+  const sel = document.getElementById('qrQuien');
+  const quien = sel ? sel.value : '';
+  if(!quien) return;
+  const btn = document.getElementById('qrOk');
+  btn.disabled = true; btn.textContent = 'Registrando…';
+  const d = QR_DATA;
+  try{
+    const res = await jsonp(`${WEBAPP}?file=kanban_avanzar` +
+      `&id=${encodeURIComponent(d.doc)}` +
+      `&etapa=${encodeURIComponent(d.siguiente)}` +
+      `&quien=${encodeURIComponent(quien)}`);
+    if(res && res.ok){
+      document.getElementById('qrCard').innerHTML =
+        '<div class="qr-head"><div class="doc">' + esc(d.doc) + '</div>' +
+        '<div class="ue">' + esc(d.ue || '') + '</div></div>' +
+        '<div class="qr-fin"><div class="ic" style="color:var(--ok)">✓</div>' +
+        '<div style="font-weight:700">' + esc(d.siguienteLabel) + ' registrado</div>' +
+        '<div style="font-size:13px;color:var(--sub);margin-top:6px">Reportado por ' + esc(quien) + '</div>' +
+        '<button class="qr-btn sec" onclick="location.reload()">Escanear otro documento</button></div>';
+    }else{
+      btn.disabled = false; btn.textContent = 'Reportar';
+      toast(res && res.msg ? res.msg : 'No se pudo registrar', 'err');
+    }
+  }catch(e){
+    btn.disabled = false; btn.textContent = 'Reportar';
+    toast('Sin conexión. Intenta de nuevo.', 'err');
+  }
+}
+
+function salirQR(){
+  document.getElementById('qrView').style.display = 'none';
+  const saved = sessionStorage.getItem('kb_user');
+  if(saved){ try{ USER = JSON.parse(saved); enterApp(); return; }catch(e){} }
+  document.getElementById('loginView').style.display = 'flex';
+}
+
+function esc(s){
+  return String(s == null ? '' : s).replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
 }
 
 function buildTabs(){
@@ -763,13 +934,17 @@ document.getElementById('fTipo').onchange=render;
 setConn(navigator.onLine);
 buildKeys();
 updateQBanner();
-// F8 escaneado por QR (viene en ?doc=)
-var DOC_ESCANEADO = (function(){
-  try{ var p=new URLSearchParams(location.search); return (p.get('doc')||'').trim(); }catch(e){ return ''; }
-})();
-// sesión recordada
-const saved=sessionStorage.getItem('kb_user');
-if(saved){ try{ USER=JSON.parse(saved); enterApp(); }catch(e){} }
+// ARRANQUE
+// Si el panel se abrió desde el QR de una Forma 8 (?doc=...), esa vía manda:
+// va directo al reporte del documento, sin PIN y sin importar si hay sesión
+// recordada. Quien quiera su bandeja por lotes tiene el botón "Entrar con mi PIN".
+if(DOC_ESCANEADO){
+  iniciarVistaQR(DOC_ESCANEADO);
+  DOC_ESCANEADO = '';
+}else{
+  const saved=sessionStorage.getItem('kb_user');
+  if(saved){ try{ USER=JSON.parse(saved); enterApp(); }catch(e){} }
+}
 
 // registrar service worker (offline)
 if('serviceWorker' in navigator){
