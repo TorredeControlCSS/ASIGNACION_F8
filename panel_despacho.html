@@ -756,41 +756,64 @@ async function cargarRenglonesF8(f8){
       return;
     }
     const num=v=> (v==null||v===0)?'—':Number(v).toLocaleString();
-    let h='<div style="font-size:11px;color:#6b7684;margin-bottom:8px;">'+
-      r.n_renglones+' renglón(es) · Solicitado '+r.total_solicitado.toLocaleString()+
-      ' · Asignado '+r.total_asignado.toLocaleString()+
-      ' · Fill rate <b style="color:'+(r.fill_rate>=70?'#1e5a1e':(r.fill_rate>=40?'#8a5a00':'#7d2229'))+'">'+r.fill_rate+'%</b></div>';
+    const t=r.totales||{};
+    const pct=(a,b)=> (!b||b===0)?0:Math.round(100*a/b);
+    // Cadena de trazabilidad: donde se rompe
+    const chip=(lbl,val,base)=>{
+      const p=pct(val,base);
+      const col = p>=95?'#1e5a1e' : (p>=70?'#8a5a00' : '#7d2229');
+      return '<div style="flex:1;text-align:center;padding:6px 4px;border-right:1px solid #e5e9ef;">'+
+        '<div style="font-size:9px;color:#6b7684;text-transform:uppercase;letter-spacing:.4px;">'+lbl+'</div>'+
+        '<div style="font-family:Consolas,monospace;font-size:14px;font-weight:700;color:#0C447C;">'+Number(val||0).toLocaleString()+'</div>'+
+        '<div style="font-size:9px;color:'+col+';font-weight:700;">'+p+'%</div></div>';
+    };
+    const basePed = t.pedidoUE || t.pedido || 0;
+    let h='<div style="display:flex;border:1px solid #a8a8a8;background:#fafbfc;margin-bottom:10px;">'+
+      chip('Pidió la UE', basePed, basePed)+
+      chip('Asignó Motor', t.asignado, basePed)+
+      chip('Reservó WMS', t.reservado, basePed)+
+      chip('Facturó Kardex', t.facturado, basePed)+
+      chip('Distribuyó', t.distribuido, basePed)+
+      '</div>';
+    if(r.codigoSalida) h+='<div style="font-size:11px;color:#6b7684;margin-bottom:6px;">Código de salida: <b style="font-family:Consolas,monospace;color:#0C447C;">'+r.codigoSalida+'</b></div>';
+
     h+='<table style="width:100%;border-collapse:collapse;font-size:11px;">'+
       '<thead><tr style="background:#0C447C;color:#fff;">'+
-        '<th style="padding:4px 5px;text-align:left;">Renglón</th>'+
-        '<th style="padding:4px 5px;text-align:right;">Solicitado</th>'+
-        '<th style="padding:4px 5px;text-align:right;">Ajustado</th>'+
-        '<th style="padding:4px 5px;text-align:right;">Asignado</th>'+
-        '<th style="padding:4px 5px;text-align:right;">Reservado</th>'+
-        '<th style="padding:4px 5px;text-align:right;">Tránsito</th>'+
-        '<th style="padding:4px 5px;text-align:left;">Estado</th>'+
+        '<th style="padding:5px 6px;text-align:left;">Renglón</th>'+
+        '<th style="padding:5px 6px;text-align:right;">Pidió UE</th>'+
+        '<th style="padding:5px 6px;text-align:right;">Ajustado</th>'+
+        '<th style="padding:5px 6px;text-align:right;">Asignado</th>'+
+        '<th style="padding:5px 6px;text-align:right;">Reservado</th>'+
+        '<th style="padding:5px 6px;text-align:right;">Facturado</th>'+
+        '<th style="padding:5px 6px;text-align:right;">Distribuido</th>'+
+        '<th style="padding:5px 6px;text-align:left;">Lote / Fechas</th>'+
+        '<th style="padding:5px 6px;text-align:left;">Estado</th>'+
       '</tr></thead><tbody>';
     r.renglones.forEach(function(x){
       const vital = x.importancia && x.importancia.toUpperCase()==='VITAL';
-      const cero = x.inventario_ue===0;
-      const recortado = x.ajustado < x.solicitado;
-      h+='<tr style="border-bottom:1px solid #e5e9ef;'+(vital?'background:#fef8ee;':'')+'">'+
-        '<td style="padding:4px 5px;"><span style="font-family:Consolas,monospace;color:#0C447C;">'+x.sku+'</span>'+
+      const recortado = x.ajustado < x.pedido;
+      const ped = x.pedidoUE || x.pedido || 0;
+      // señal de ruptura: donde la cadena se corta
+      const rompe = (x.asignado>0 && x.distribuido===0) ? 'background:#fff6f6;' : '';
+      h+='<tr style="border-bottom:1px solid #e5e9ef;'+(vital?'background:#fef8ee;':rompe)+'">'+
+        '<td style="padding:5px 6px;"><span style="font-family:Consolas,monospace;color:#0C447C;">'+x.sku+'</span>'+
           (vital?' <span style="background:#fde2e2;color:#7d2229;font-size:8px;padding:1px 4px;border-radius:3px;font-weight:bold;">VITAL</span>':'')+
-          (cero?' <span style="background:#fde2e2;color:#7d2229;font-size:8px;padding:1px 4px;border-radius:3px;font-weight:bold;">UE EN 0</span>':'')+
-          '<br><span style="color:#6b7684;font-size:10px;">'+(x.nombre||'').slice(0,52)+'</span></td>'+
-        '<td style="padding:4px 5px;text-align:right;font-family:Consolas,monospace;">'+num(x.solicitado)+'</td>'+
-        '<td style="padding:4px 5px;text-align:right;font-family:Consolas,monospace;'+(recortado?'color:#8a5a00;':'')+'">'+num(x.ajustado)+(recortado?' ▼':'')+'</td>'+
-        '<td style="padding:4px 5px;text-align:right;font-family:Consolas,monospace;font-weight:bold;">'+num(x.asignado)+'</td>'+
-        '<td style="padding:4px 5px;text-align:right;font-family:Consolas,monospace;color:#6b7684;">'+num(x.reservado)+'</td>'+
-        '<td style="padding:4px 5px;text-align:right;font-family:Consolas,monospace;color:#6b7684;">'+num(x.transito)+'</td>'+
-        '<td style="padding:4px 5px;font-size:10px;">'+(x.estado||'')+'</td>'+
+          '<br><span style="color:#6b7684;font-size:10px;">'+(x.nombre||'').slice(0,46)+'</span></td>'+
+        '<td style="padding:5px 6px;text-align:right;font-family:Consolas,monospace;">'+num(ped)+'</td>'+
+        '<td style="padding:5px 6px;text-align:right;font-family:Consolas,monospace;'+(recortado?'color:#8a5a00;':'')+'">'+num(x.ajustado)+(recortado?' ▼':'')+'</td>'+
+        '<td style="padding:5px 6px;text-align:right;font-family:Consolas,monospace;font-weight:bold;">'+num(x.asignado)+'</td>'+
+        '<td style="padding:5px 6px;text-align:right;font-family:Consolas,monospace;color:#6b7684;">'+num(x.reservado)+'</td>'+
+        '<td style="padding:5px 6px;text-align:right;font-family:Consolas,monospace;color:#6b7684;">'+num(x.facturado)+'</td>'+
+        '<td style="padding:5px 6px;text-align:right;font-family:Consolas,monospace;font-weight:bold;color:'+(x.distribuido>0?'#1e5a1e':'#7d2229')+';">'+num(x.distribuido)+'</td>'+
+        '<td style="padding:5px 6px;font-size:9px;color:#6b7684;">'+(x.lotesDist||'—')+
+          (x.fechaFact?'<br>Fact: '+x.fechaFact:'')+(x.fechaDist?'<br>Dist: '+x.fechaDist:'')+'</td>'+
+        '<td style="padding:5px 6px;font-size:10px;">'+(x.estado||'')+'</td>'+
       '</tr>';
     });
     h+='</tbody></table>'+
-      '<div style="font-size:10px;color:#999;margin-top:6px;">Ajustado ▼ = el Motor recortó el pedido inflado a la demanda real. '+
-      'Reservado y Tránsito son cantidades comprometidas que aún no se despachan.</div>';
-    cont.innerHTML='<div style="font-size:12px;font-weight:700;color:#0C447C;border-bottom:2px solid #0C447C;padding-bottom:4px;margin-bottom:8px;">DETALLE POR RENGLÓN</div>'+h;
+      '<div style="font-size:10px;color:#999;margin-top:6px;">Cadena de trazabilidad: <b>Pidió UE → Asignó Motor → Reservó WMS → Facturó Kardex (SAP) → Distribuyó</b>. '+
+      'Ajustado ▼ = el Motor recortó el pedido inflado a la demanda real. Fondo rojo claro = asignado pero sin distribuir (cuello de botella).</div>';
+    cont.innerHTML='<div style="font-size:12px;font-weight:700;color:#0C447C;border-bottom:2px solid #0C447C;padding-bottom:4px;margin-bottom:8px;">TRAZABILIDAD POR RENGLÓN</div>'+h;
   }catch(e){
     cont.querySelector('.loading').outerHTML='<div style="font-size:12px;color:#7d2229;padding:8px 0;">No se pudo cargar el detalle de renglones.</div>';
   }
