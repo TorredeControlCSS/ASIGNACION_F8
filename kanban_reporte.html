@@ -180,6 +180,8 @@
   .qr-opt:last-child{border-bottom:none;}
   .qr-opt:hover,.qr-opt:active{background:#eef3f9;}
   .qr-opt.vacio{color:var(--sub);cursor:default;}
+  .qr-receptor{width:100%;padding:13px;font-size:15px;border:1px solid var(--bord);
+    background:#fff;margin-bottom:12px;}
   .qr-suyo{font-size:10px;text-transform:uppercase;letter-spacing:.4px;
     color:var(--azul);background:#e8f0f8;padding:2px 6px;}
 
@@ -665,6 +667,15 @@ function renderQR(){
     h += '</div>';
     h += '<button class="qr-btn" id="qrOk" disabled onclick="confirmarQR()">Reportar</button>';
   }
+  // ENTREGA: quién recibió del lado de la Unidad Ejecutora. Es personal ajeno
+  // al CEDIS (bahía o punto de entrega), así que va como campo abierto.
+  if(d.pideReceptor){
+    h = h.replace('<button class="qr-btn" id="qrOk"',
+      '<label for="qrReceptor">¿Quién recibió en la UE?</label>' +
+      '<input type="text" id="qrReceptor" class="qr-receptor" autocomplete="off" ' +
+      'placeholder="Nombre de quien recibe"/>' +
+      '<button class="qr-btn" id="qrOk"');
+  }
   h += '</div></div>';
   h += '<div style="padding:0 18px 18px"><button class="qr-btn sec" onclick="salirQR()">Entrar con mi PIN</button></div>';
   document.getElementById('qrCard').innerHTML = h;
@@ -716,7 +727,9 @@ async function confirmarQR(){
     const res = await jsonp(`${WEBAPP}?file=kanban_avanzar` +
       `&id=${encodeURIComponent(d.doc)}` +
       `&etapa=${encodeURIComponent(d.siguiente)}` +
-      `&quien=${encodeURIComponent(quien)}`);
+      `&quien=${encodeURIComponent(quien)}` +
+      (d.pideReceptor ? `&receptor=${encodeURIComponent(
+        (document.getElementById('qrReceptor')||{}).value || '')}` : ''));
     if(res && res.ok){
       document.getElementById('qrCard').innerHTML =
         '<div class="qr-head"><div class="doc">' + esc(d.doc) + '</div>' +
