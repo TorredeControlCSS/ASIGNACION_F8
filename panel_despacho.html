@@ -746,11 +746,41 @@ function verDetallePedido(i){
 }
 
 // Trae los renglones de la F8 y su transformación de cantidad a lo largo del flujo.
+// Cache del detalle: se descarga UNA vez (~1.7 MB) y sirve todos los clics.
+let DET_F8 = null, DET_LOAD = null;
+async function cargarDetalleJSON(){
+  if (DET_F8) return DET_F8;
+  if (DET_LOAD) return DET_LOAD;
+  DET_LOAD = fetch('detalle_f8.json', {cache:'default'})
+    .then(r => r.ok ? r.json() : null)
+    .then(d => { DET_F8 = d; return d; })
+    .catch(() => null);
+  return DET_LOAD;
+}
 async function cargarRenglonesF8(f8){
   const cont=document.getElementById('f8Renglones');
   if(!cont) return;
   try{
-    const r=await jsonp(WEBAPP+'?file=f8_detalle&f8='+encodeURIComponent(f8));
+    // 1) Intento rápido: JSON estático (milisegundos)
+    let r = null;
+    const D = await cargarDetalleJSON();
+    const key = String(f8||'').trim().toUpperCase();
+    if (D && D.f8 && D.f8[key]) {
+      const C = D.cols, ent = D.f8[key];
+      const obj = ent.r.map(a => { const o={}; C.forEach((c,ix)=>o[c]=a[ix]); return o; });
+      const T = obj.reduce((t,x)=>({
+        pedidoUE:t.pedidoUE+(x.ped||0), pedido:t.pedido+(x.ped||0),
+        asignado:t.asignado+(x.asi||0), reservado:t.reservado+(x.res||0),
+        facturado:t.facturado+(x.fac||0), distribuido:t.distribuido+(x.dis||0)
+      }), {pedidoUE:0,pedido:0,asignado:0,reservado:0,facturado:0,distribuido:0});
+      r = { ok:true, codigoSalida:ent.s||'', totales:T,
+            renglones: obj.map(x=>({ sku:x.sku, nombre:x.nom, importancia:x.imp, estado:x.est,
+              pedidoUE:x.ped, pedido:x.ped, ajustado:x.aju, asignado:x.asi,
+              reservado:x.res, facturado:x.fac, distribuido:x.dis,
+              lotesDist:x.lot, fechaFact:x.fFac, fechaDist:x.fDis })) };
+    }
+    // 2) Respaldo: si el F8 no está en el JSON, se consulta a GAS
+    if (!r) r = await jsonp(WEBAPP+'?file=f8_detalle&f8='+encodeURIComponent(f8));
     if(!r || !r.ok || !r.renglones || !r.renglones.length){
       cont.querySelector('.loading').outerHTML='<div style="font-size:12px;color:#888;padding:8px 0;">Sin detalle de renglones para esta F8.</div>';
       return;
