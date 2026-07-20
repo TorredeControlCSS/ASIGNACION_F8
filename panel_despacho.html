@@ -428,7 +428,16 @@ async function cargar(){
     DATA=await jsonp(WEBAPP+'?file=despacho_panel');
     document.getElementById('subAct').textContent='Actualizado '+(DATA.generado||'');
     renderKpis(); poblarEtapas();
-    document.getElementById('cntLista').textContent=(DATA.pedidos||[]).length;
+    // T5 — WIP vs CERRADO. El contador decia 5,677 (todo el universo) mientras
+    // la lista mostraba solo los activos: 63% de esas filas son DESPACHADO, ya
+    // cerradas. Un tablero de trabajo debe contar lo que falta por hacer.
+    // Los cerrados siguen consultables filtrando por etapa DESPACHADO/ENTREGADO.
+    var _todos = DATA.pedidos || [];
+    var _wip = _todos.filter(function(p){ return !p.cerrado; }).length;
+    document.getElementById('cntLista').textContent = _wip;
+    document.getElementById('cntLista').title =
+      _wip.toLocaleString() + ' activos · ' + (_todos.length - _wip).toLocaleString() +
+      ' cerrados (filtra por etapa Despacho físico o Entregado para verlos)';
     document.getElementById('cntTransito').textContent=(DATA.transito||[]).length;
     renderLista();
   }catch(e){ document.getElementById('listaCont').innerHTML='<div class="vacio" style="color:#a32d2d">Sin conexión. Reintenta.</div>'; }
@@ -636,9 +645,18 @@ function renderLista(){
   const listaArr = etapaCerrada ? arr : arr.filter(p=>!p.cerrado);
   window.__ARR=listaArr;                          // el índice de las tarjetas mapea a este arreglo
   const cont=document.getElementById('listaCont');
-  if(!listaArr.length){ cont.innerHTML='<div class="vacio">No hay pedidos con este filtro.</div>'; return; }
+  // T5: decir cuantos cerrados se estan ocultando. Antes desaparecian en
+  // silencio y el conteo de la pestana no cuadraba con lo que se veia.
+  const ocultos = etapaCerrada ? 0 : (arr.length - listaArr.length);
+  const avisoCerrados = ocultos > 0
+    ? '<div style="font-size:11px;color:#6b7684;background:#f2f4f7;border:1px solid #d8dde5;'+
+      'padding:6px 10px;margin-bottom:8px;">Mostrando <b>'+listaArr.length.toLocaleString()+
+      '</b> pedidos activos. <b>'+ocultos.toLocaleString()+'</b> ya cerrados no se listan: '+
+      'filtra por etapa <b>Despacho físico</b> o <b>Entregado</b> para consultarlos.</div>'
+    : '';
+  if(!listaArr.length){ cont.innerHTML=avisoCerrados+'<div class="vacio">No hay pedidos con este filtro.</div>'; return; }
   const lim=listaArr.slice(0,120);
-  cont.innerHTML=lim.map((p,i)=>cardPed(p,i)).join('')+
+  cont.innerHTML=avisoCerrados+lim.map((p,i)=>cardPed(p,i)).join('')+
     (listaArr.length>120?'<div class="vacio">Mostrando 120 de '+listaArr.length+'. Filtra para acotar.</div>':'');
 }
 
@@ -743,8 +761,10 @@ function verDetallePedido(i){
   html+=fila('Antigüedad', p.antig!=null?p.antig+' días en el flujo':'');
   html+=fila('Días de retiro UE', p.diasRetiro||'');
 
-  // Brecha de cobertura (si el Motor la calculó)
-  if(p.brecha){
+  // Brecha de cobertura. Solo se pinta si hay deficit real: ahora el backend
+  // envia los totales siempre (los necesita el fill rate por grupo, T8), pero
+  // un pedido completo no debe mostrar un recuadro rojo de alerta.
+  if(p.brecha && p.brecha.gap>0){
     html+='<div style="margin-top:14px;background:#fcebeb;border:1px solid #f0c9c9;border-radius:6px;padding:10px 14px;">'+
       '<div style="font-size:11px;color:#7d2229;text-transform:uppercase;font-weight:600;">Brecha de cobertura</div>'+
       fila('Solicitado', p.brecha.solicitado!=null?p.brecha.solicitado.toLocaleString():'')+
@@ -1265,15 +1285,28 @@ function renderCalendario(){
     const evs=porDia[iso]||[];
     const esHoy = iso===hoyISO ? ' hoy':'';
     if(!evs.length){ html+='<div class="cal-dia'+esHoy+'"><span class="dnum">'+d+'</span></div>'; continue; }
-    let cUrg=0,cMen=0,bultos=0;
-    evs.forEach(p=>{ if(p.esUrg)cUrg++; else cMen++; bultos+=(p.bultos||0); });
-    const tot=evs.length;
+    let cUrg=0,cMen=0,bultos=0,cCerr=0;
+    evs.forEach(p=>{
+      if(p.cerrado){ cCerr++; return; }          // ya despachado: no es carga futura
+      if(p.esUrg)cUrg++; else cMen++; bultos+=(p.bultos||0);
+    });
+    // T9 — el calendario mezclaba despachados con pendientes, inflando la carga
+    // de dias que ya se trabajaron. El total ahora cuenta solo lo PENDIENTE;
+    // lo cerrado se muestra aparte, en gris, como referencia historica.
+    const tot=cUrg+cMen;
+    if(!tot && cCerr){
+      html+='<div class="cal-dia'+esHoy+'"><div class="cal-cab"><span class="dnum">'+d+'</span>'+
+        '<span class="cal-total" style="background:#e5e9ef;color:#6b7684">'+cCerr+'</span></div>'+
+        '<div style="font-size:9.5px;color:#8a94a6;margin-top:3px">'+cCerr+' despachado'+(cCerr>1?'s':'')+'</div></div>';
+      continue;
+    }
     const seg=[];
     if(cUrg) seg.push('<span class="b-urg" style="flex:'+cUrg+'"></span>');
     if(cMen) seg.push('<span class="b-men" style="flex:'+cMen+'"></span>');
     const desg=[];
     if(cUrg) desg.push('<div><span class="pt" style="background:var(--t-rojo)"></span>'+cUrg+' urgencia'+(cUrg>1?'s':'')+'</div>');
     if(cMen) desg.push('<div><span class="pt" style="background:var(--azul)"></span>'+cMen+' mensual'+(cMen>1?'es':'')+'</div>');
+    if(cCerr) desg.push('<div style="color:#8a94a6"><span class="pt" style="background:#c3cad6"></span>'+cCerr+' despachado'+(cCerr>1?'s':'')+'</div>');
     html+='<div class="cal-dia clic'+esHoy+'" data-cal-dia="'+iso+'">'+
       '<div class="cal-cab"><span class="dnum">'+d+'</span><span class="cal-total">'+tot+'</span></div>'+
       '<div class="cal-barra">'+seg.join('')+'</div>'+
