@@ -634,33 +634,64 @@ function renderQR(){
   // TIEMPO VIVO: la urgencia visible en el momento de actuar. Sin esto el
   // colaborador no sabe si el documento lleva 2 días o 60 en el flujo.
   if(d.antiguedad != null || d.diasVto != null){
-    const U = {vencido:['#a32d2d','#fdeaea'], hoy:['#a8500f','#fff3e6'],
-               proximo:['#8a6d1f','#fff9e6'], normal:['#2e5c8a','#eef3f9']};
-    const c = U[d.urgencia] || U.normal;
+    const R = d.reloj || {};
+    const enUE = R.responsable === 'UE';
+    const cerrado = R.responsable === 'CERRADO';
+    // Paleta del cuadro. Si la pelota es de la UE el almacén ya cumplió: no se
+    // pinta en rojo aunque el pedido lleve días sin retirarse.
+    const U = {vencido:['#a32d2d','#fdeaea','#f3c9c9'], hoy:['#a8500f','#fff3e6','#f0d9bd'],
+               proximo:['#8a6d1f','#fff9e6','#eee0b0'], normal:['#2e5c8a','#eef3f9','#cfdcea']};
+    const c = enUE   ? ['#1e5a1e','#eaf6ea','#c5e2c5']
+            : cerrado? ['#4a5568','#f2f4f7','#d8dde5']
+            : (U[d.urgencia] || U.normal);
+
     let txt = '';
-    if(d.diasVto != null){
-      txt = d.diasVto < 0  ? '<b>Vencido hace ' + Math.abs(d.diasVto) + ' d</b>'
-          : d.diasVto === 0 ? '<b>Vence HOY</b>'
-          : 'Vence en <b>' + d.diasVto + ' d</b>';
-      if(d.vtoTxt) txt += ' · ' + esc(d.vtoTxt);
+    if(enUE){
+      txt = '<b>Facturado · disponible para retiro</b>';
+      if(R.diasUE != null) txt += '<br><span style="opacity:.85">Esperando a la UE hace ' + R.diasUE + ' d</span>';
+    } else if(cerrado){
+      txt = '<b>Entregado</b>';
+    } else {
+      if(d.diasVto != null){
+        txt = d.diasVto < 0  ? '<b>Vencido hace ' + Math.abs(d.diasVto) + ' d</b>'
+            : d.diasVto === 0 ? '<b>Vence HOY</b>'
+            : 'Vence en <b>' + d.diasVto + ' d</b>';
+        if(d.vtoTxt) txt += ' · ' + esc(d.vtoTxt);
+      }
+      if(d.antiguedad != null){
+        txt += (txt ? '<br>' : '') + '<span style="opacity:.85">' +
+               d.antiguedad + ' días en el flujo</span>';
+      } else if(d.recepcionFutura){
+        txt += (txt ? '<br>' : '') + '<span style="opacity:.85">' +
+               'Fecha de recepción por confirmar</span>';
+      }
     }
-    if(d.antiguedad != null){
-      txt += (txt ? '<br>' : '') + '<span style="opacity:.85">' +
-             d.antiguedad + ' días en el flujo</span>';
-    } else if(d.recepcionFutura){
-      // T25: no se muestra un numero negativo. Se dice la verdad.
-      txt += (txt ? '<br>' : '') + '<span style="opacity:.85">' +
-             'Fecha de recepción por confirmar</span>';
-    }
-    // CUENTA REGRESIVA: el reloj corriendo comunica urgencia mejor que "9 d".
-    // Solo cuando el documento sigue abierto y falta menos de 72 h.
-    if(d.vtoISO && !d.cerrado){
+
+    // CUENTA REGRESIVA: solo mientras el reloj corre contra el almacén.
+    if(d.vtoISO && !d.cerrado && !enUE && !cerrado){
       txt += '<div id="qrCuenta" data-vto="' + esc(d.vtoISO) + '" ' +
-             'style="margin-top:8px;font-family:Consolas,monospace;font-size:22px;' +
-             'font-weight:700;letter-spacing:1px;line-height:1.1"></div>';
+             'style="margin-top:10px;padding-top:9px;border-top:1px solid ' + c[2] + ';' +
+             'font-family:Consolas,monospace;font-size:26px;font-weight:700;' +
+             'letter-spacing:2px;line-height:1;text-align:center"></div>';
     }
-    h += '<div style="margin:-4px 0 12px;padding:10px 12px;background:' + c[1] +
-         ';border-left:4px solid ' + c[0] + ';color:' + c[0] +
+
+    // Desglose de responsabilidad: el tiempo de cada quien, por separado.
+    if(R.diasAlmacen != null || R.diasSafiro != null || R.diasUE != null){
+      const celda = (lbl, val, resalta) =>
+        '<div style="flex:1;text-align:center">' +
+        '<div style="font-size:9px;text-transform:uppercase;letter-spacing:.4px;opacity:.75">' + lbl + '</div>' +
+        '<div style="font-family:Consolas,monospace;font-size:15px;font-weight:' + (resalta?'700':'600') + '">' +
+        (val == null ? '—' : val + ' d') + '</div></div>';
+      txt += '<div style="margin-top:10px;padding-top:8px;border-top:1px solid ' + c[2] + ';display:flex">' +
+             celda('Almacén', R.diasAlmacen, !enUE && !cerrado) +
+             celda('Facturación', R.diasSafiro, false) +
+             celda('Unidad Ejec.', R.diasUE, enUE) +
+             '</div>';
+    }
+
+    // Cuadro completo: borde en los cuatro lados, sin la barra lateral.
+    h += '<div style="margin:-4px 0 14px;padding:12px 14px;background:' + c[1] +
+         ';border:1px solid ' + c[2] + ';color:' + c[0] +
          ';font-size:13px;line-height:1.5">' + txt + '</div>';
   }
   h += filaQR('Grupo', (d.grupos && d.grupos.length) ? d.grupos.join(' · ') : '—');
