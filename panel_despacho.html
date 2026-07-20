@@ -828,27 +828,40 @@ async function cargarRenglonesF8(f8){
         '<div style="font-size:9px;color:'+col+';font-weight:700;">'+p+'%</div></div>';
     };
     const basePed = t.pedidoUE || t.pedido || 0;
-    // RESERVA y FACTURACION son etapas TRANSITORIAS: la reserva se consume al
-    // distribuir (WMS la libera) y la factura se cierra en SAP. Un 0% en esas
-    // columnas con distribuido completo NO es una ruptura: es el flujo normal
-    // ya terminado. Pintarlas en rojo hacia leer "se rompio en RESERVA" cuando
-    // en realidad el pedido salio completo.
+    // CADENA DE CUMPLIMIENTO. El almacen responde hasta FACTURADO: ahi el pedido
+    // queda disponible y la UE pasa a retirarlo. DISTRIBUIDO es el tramite de
+    // salida del dia en que la UE se presenta.
+    // RESERVA no entra en la cadena: es un estado interno transitorio del WMS
+    // que se consume al distribuir. Mostrarlo como etapa hacia leer "roto en
+    // reserva" en pedidos que salieron completos. Baja a dato de detalle.
     const cerrado = basePed > 0 && t.distribuido >= basePed;
-    const chipT = (lbl, val, base) => {
+    const sinStock = basePed > 0 && !(t.asignado > 0);
+    const chipT = (lbl, val, base, nota) => {
+      // Sin stock: el almacen no fallo en ejecutar, no habia que asignar.
+      // Pintarlo rojo acusa a quien no tiene culpa.
+      if (sinStock) {
+        return '<div style="flex:1;text-align:center;padding:6px 4px;border-right:1px solid #e5e9ef;">'+
+          '<div style="font-size:9px;color:#6b7684;text-transform:uppercase;letter-spacing:.4px;">'+lbl+'</div>'+
+          '<div style="font-family:Consolas,monospace;font-size:14px;font-weight:700;color:#6b7684;">—</div>'+
+          '<div style="font-size:9px;color:#6b7684;">sin stock</div></div>';
+      }
       if (cerrado && (val === 0 || val == null)) {
         return '<div style="flex:1;text-align:center;padding:6px 4px;border-right:1px solid #e5e9ef;">'+
           '<div style="font-size:9px;color:#6b7684;text-transform:uppercase;letter-spacing:.4px;">'+lbl+'</div>'+
           '<div style="font-family:Consolas,monospace;font-size:14px;font-weight:700;color:#6b7684;">—</div>'+
-          '<div style="font-size:9px;color:#6b7684;">consumida</div></div>';
+          '<div style="font-size:9px;color:#6b7684;">'+(nota||'consumida')+'</div></div>';
       }
       return chip(lbl, val, base);
     };
-    let h='<div style="display:flex;border:1px solid #a8a8a8;background:#fafbfc;margin-bottom:10px;">'+
+    let h='<div style="display:flex;border:1px solid #a8a8a8;background:#fafbfc;margin-bottom:4px;">'+
       chip('Pidió la UE', basePed, basePed)+
-      chip('Asignó Motor', t.asignado, basePed)+
-      chipT('Reservó WMS', t.reservado, basePed)+
-      chipT('Facturó Kardex', t.facturado, basePed)+
-      chip('Distribuyó', t.distribuido, basePed)+
+      chipT('Asignó Motor', t.asignado, basePed)+
+      chipT('Facturó Kardex', t.facturado, basePed, 'sin dato MB51')+
+      chipT('Distribuyó', t.distribuido, basePed, 'pendiente retiro')+
+      '</div>'+
+      '<div style="font-size:10px;color:#6b7684;margin-bottom:10px;">'+
+      'Responsabilidad del almacén hasta <b>Facturó</b>. <b>Distribuyó</b> ocurre el día que la UE se presenta a retirar.'+
+      (t.reservado ? ' · Reservado en WMS: <b style="font-family:Consolas,monospace">'+Number(t.reservado).toLocaleString()+'</b> (estado transitorio)' : '')+
       '</div>';
     if(r.codigoSalida) h+='<div style="font-size:11px;color:#6b7684;margin-bottom:6px;">Código de salida: <b style="font-family:Consolas,monospace;color:#0C447C;">'+r.codigoSalida+'</b></div>';
 
@@ -870,7 +883,9 @@ async function cargarRenglonesF8(f8){
       const ped = x.pedidoUE || x.pedido || 0;
       // señal de ruptura: asignado pero SIN distribuir. La reserva en cero no
       // cuenta: es transitoria y se consume al distribuir.
-      const rompe = (x.asignado>0 && !(x.distribuido>0)) ? 'background:#fff6f6;' : '';
+      // Ruptura real: facturado (disponible) pero sin distribuir. Si aun no se
+      // factura, el pedido sigue en proceso normal, no es una falla.
+      const rompe = (x.facturado>0 && !(x.distribuido>0)) ? 'background:#fff6f6;' : '';
       h+='<tr style="border-bottom:1px solid #e5e9ef;'+(vital?'background:#fef8ee;':rompe)+'">'+
         '<td style="padding:5px 6px;"><span style="font-family:Consolas,monospace;color:#0C447C;">'+x.sku+'</span>'+
           (vital?' <span style="background:#fde2e2;color:#7d2229;font-size:8px;padding:1px 4px;border-radius:3px;font-weight:bold;">VITAL</span>':'')+
@@ -887,9 +902,10 @@ async function cargarRenglonesF8(f8){
       '</tr>';
     });
     h+='</tbody></table>'+
-      '<div style="font-size:10px;color:#999;margin-top:6px;">Cadena de trazabilidad: <b>Pidió UE → Asignó Motor → Reservó WMS → Facturó Kardex (SAP) → Distribuyó</b>. '+
-      'Ajustado ▼ = el Motor recortó el pedido inflado a la demanda real. Fondo rojo claro = asignado pero sin distribuir (cuello de botella). '+
-      '<b>Reservó / Facturó en “—  consumida”</b> = etapa transitoria ya cerrada: la reserva se libera al distribuir, no es una ruptura.</div>';
+      '<div style="font-size:10px;color:#999;margin-top:6px;">Cadena de trazabilidad: <b>Pidió UE → Asignó Motor → Facturó Kardex (SAP SAFIRO) → Distribuyó (retiro de la UE)</b>. '+
+      'Ajustado ▼ = el Motor recortó el pedido inflado a la demanda real. '+
+      'Fondo rojo claro = <b>asignado y facturado pero sin distribuir</b>: el pedido está listo y la UE no ha retirado. '+
+      'SIN STOCK no cuenta como incumplimiento del almacén.</div>';
     cont.innerHTML='<div style="font-size:12px;font-weight:700;color:#0C447C;border-bottom:2px solid #0C447C;padding-bottom:4px;margin-bottom:8px;">TRAZABILIDAD POR RENGLÓN</div>'+h;
   }catch(e){
     cont.querySelector('.loading').outerHTML='<div style="font-size:12px;color:#7d2229;padding:8px 0;">No se pudo cargar el detalle de renglones.</div>';
