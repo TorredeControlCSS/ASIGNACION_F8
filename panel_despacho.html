@@ -386,11 +386,16 @@ let DATA=null, TAB='lista', KPI_FILTRO='', chartCarga=null;
 // HTTP real. Probado en celular multi-cuenta el 19-jul-2026.
 // Se conserva el nombre jsonp(url) para no tocar las llamadas existentes.
 // ============================================================================
-function jsonp(url, timeoutMs){
+function jsonp(url, timeoutMs, sinCacheBuster){
   const ctrl=new AbortController();
   const t=setTimeout(()=>ctrl.abort(), timeoutMs||30000);
   const sep=url.indexOf('?')<0?'?':'&';
-  return fetch(url+sep+'_ts='+Date.now(),{signal:ctrl.signal})
+  // El _ts evita respuestas viejas en endpoints vivos, pero en los que YA se
+  // cachean del lado del servidor (f8_detalle) obliga a Google a tratar cada
+  // clic como URL nueva: no reusa la instancia caliente y se pagan 20-38 s de
+  // arranque en frio. Por eso se puede desactivar por llamada.
+  const u = sinCacheBuster ? url : (url+sep+'_ts='+Date.now());
+  return fetch(u,{signal:ctrl.signal})
     .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.text(); })
     .then(txt=>{
       // Acepta JSON puro o envuelto en callback, por si alguna ruta responde JSONP.
@@ -807,7 +812,7 @@ async function cargarRenglonesF8(f8){
           await new Promise(res => setTimeout(res, 1200 * intento));
         }
         try {
-          r = await jsonp(WEBAPP + '?file=f8_detalle&f8=' + encodeURIComponent(f8), 45000);
+          r = await jsonp(WEBAPP + '?file=f8_detalle&f8=' + encodeURIComponent(f8), 45000, true);
         } catch (eInt) { r = null; }
       }
     }
