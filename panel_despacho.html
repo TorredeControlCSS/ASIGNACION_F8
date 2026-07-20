@@ -386,9 +386,9 @@ let DATA=null, TAB='lista', KPI_FILTRO='', chartCarga=null;
 // HTTP real. Probado en celular multi-cuenta el 19-jul-2026.
 // Se conserva el nombre jsonp(url) para no tocar las llamadas existentes.
 // ============================================================================
-function jsonp(url){
+function jsonp(url, timeoutMs){
   const ctrl=new AbortController();
-  const t=setTimeout(()=>ctrl.abort(),30000);
+  const t=setTimeout(()=>ctrl.abort(), timeoutMs||30000);
   const sep=url.indexOf('?')<0?'?':'&';
   return fetch(url+sep+'_ts='+Date.now(),{signal:ctrl.signal})
     .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.text(); })
@@ -795,8 +795,22 @@ async function cargarRenglonesF8(f8){
               reservado:x.res, facturado:x.fac, distribuido:x.dis,
               lotesDist:x.lot, fechaFact:x.fFac, fechaDist:x.fDis })) };
     }
-    // 2) Respaldo: si el F8 no está en el JSON, se consulta a GAS
-    if (!r) r = await jsonp(WEBAPP+'?file=f8_detalle&f8='+encodeURIComponent(f8));
+    // 2) Respaldo: si el F8 no está en el JSON, se consulta a GAS.
+    //    El primer clic suele caer en un WebApp "frio": GAS tarda mas de 30 s
+    //    en levantar y el fetch aborta (por eso "a la primera no funciono y
+    //    luego si"). Se reintenta hasta 2 veces con espera creciente.
+    if (!r) {
+      for (let intento = 0; intento < 3 && !r; intento++) {
+        if (intento > 0) {
+          const cont2 = cont.querySelector('.loading');
+          if (cont2) cont2.textContent = 'Cargando renglones de la F8… (reintento ' + intento + ')';
+          await new Promise(res => setTimeout(res, 1200 * intento));
+        }
+        try {
+          r = await jsonp(WEBAPP + '?file=f8_detalle&f8=' + encodeURIComponent(f8), 45000);
+        } catch (eInt) { r = null; }
+      }
+    }
     if(!r || !r.ok || !r.renglones || !r.renglones.length){
       cont.querySelector('.loading').outerHTML='<div style="font-size:12px;color:#888;padding:8px 0;">Sin detalle de renglones para esta F8.</div>';
       return;
@@ -814,11 +828,26 @@ async function cargarRenglonesF8(f8){
         '<div style="font-size:9px;color:'+col+';font-weight:700;">'+p+'%</div></div>';
     };
     const basePed = t.pedidoUE || t.pedido || 0;
+    // RESERVA y FACTURACION son etapas TRANSITORIAS: la reserva se consume al
+    // distribuir (WMS la libera) y la factura se cierra en SAP. Un 0% en esas
+    // columnas con distribuido completo NO es una ruptura: es el flujo normal
+    // ya terminado. Pintarlas en rojo hacia leer "se rompio en RESERVA" cuando
+    // en realidad el pedido salio completo.
+    const cerrado = basePed > 0 && t.distribuido >= basePed;
+    const chipT = (lbl, val, base) => {
+      if (cerrado && (val === 0 || val == null)) {
+        return '<div style="flex:1;text-align:center;padding:6px 4px;border-right:1px solid #e5e9ef;">'+
+          '<div style="font-size:9px;color:#6b7684;text-transform:uppercase;letter-spacing:.4px;">'+lbl+'</div>'+
+          '<div style="font-family:Consolas,monospace;font-size:14px;font-weight:700;color:#6b7684;">—</div>'+
+          '<div style="font-size:9px;color:#6b7684;">consumida</div></div>';
+      }
+      return chip(lbl, val, base);
+    };
     let h='<div style="display:flex;border:1px solid #a8a8a8;background:#fafbfc;margin-bottom:10px;">'+
       chip('Pidió la UE', basePed, basePed)+
       chip('Asignó Motor', t.asignado, basePed)+
-      chip('Reservó WMS', t.reservado, basePed)+
-      chip('Facturó Kardex', t.facturado, basePed)+
+      chipT('Reservó WMS', t.reservado, basePed)+
+      chipT('Facturó Kardex', t.facturado, basePed)+
       chip('Distribuyó', t.distribuido, basePed)+
       '</div>';
     if(r.codigoSalida) h+='<div style="font-size:11px;color:#6b7684;margin-bottom:6px;">Código de salida: <b style="font-family:Consolas,monospace;color:#0C447C;">'+r.codigoSalida+'</b></div>';
@@ -839,8 +868,9 @@ async function cargarRenglonesF8(f8){
       const vital = x.importancia && x.importancia.toUpperCase()==='VITAL';
       const recortado = x.ajustado < x.pedido;
       const ped = x.pedidoUE || x.pedido || 0;
-      // señal de ruptura: donde la cadena se corta
-      const rompe = (x.asignado>0 && x.distribuido===0) ? 'background:#fff6f6;' : '';
+      // señal de ruptura: asignado pero SIN distribuir. La reserva en cero no
+      // cuenta: es transitoria y se consume al distribuir.
+      const rompe = (x.asignado>0 && !(x.distribuido>0)) ? 'background:#fff6f6;' : '';
       h+='<tr style="border-bottom:1px solid #e5e9ef;'+(vital?'background:#fef8ee;':rompe)+'">'+
         '<td style="padding:5px 6px;"><span style="font-family:Consolas,monospace;color:#0C447C;">'+x.sku+'</span>'+
           (vital?' <span style="background:#fde2e2;color:#7d2229;font-size:8px;padding:1px 4px;border-radius:3px;font-weight:bold;">VITAL</span>':'')+
@@ -858,7 +888,8 @@ async function cargarRenglonesF8(f8){
     });
     h+='</tbody></table>'+
       '<div style="font-size:10px;color:#999;margin-top:6px;">Cadena de trazabilidad: <b>Pidió UE → Asignó Motor → Reservó WMS → Facturó Kardex (SAP) → Distribuyó</b>. '+
-      'Ajustado ▼ = el Motor recortó el pedido inflado a la demanda real. Fondo rojo claro = asignado pero sin distribuir (cuello de botella).</div>';
+      'Ajustado ▼ = el Motor recortó el pedido inflado a la demanda real. Fondo rojo claro = asignado pero sin distribuir (cuello de botella). '+
+      '<b>Reservó / Facturó en “—  consumida”</b> = etapa transitoria ya cerrada: la reserva se libera al distribuir, no es una ruptura.</div>';
     cont.innerHTML='<div style="font-size:12px;font-weight:700;color:#0C447C;border-bottom:2px solid #0C447C;padding-bottom:4px;margin-bottom:8px;">TRAZABILIDAD POR RENGLÓN</div>'+h;
   }catch(e){
     cont.querySelector('.loading').outerHTML='<div style="font-size:12px;color:#7d2229;padding:8px 0;">No se pudo cargar el detalle de renglones.</div>';
