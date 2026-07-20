@@ -1452,11 +1452,51 @@
       .finally(() => clearTimeout(timer));
   }
 
+  // CACHE DEL HISTORICO + GUARDA DE CONCURRENCIA
+  // Antes: cada clic en "Ver Histórico" descargaba 21 MB con cache:'no-cache'.
+  // Si el usuario volvía a hacer clic mientras cargaba, se disparaba una segunda
+  // descarga en paralelo; la que terminara última pisaba a la otra y el panel
+  // quedaba en estado inconsistente (filtros vacíos, datos a medias).
+  // Ahora: una sola descarga por sesión, y los clics repetidos reusan la misma
+  // promesa en vez de abrir otra conexión.
+  let HIST_CACHE = null, HIST_LOAD = null, CARGANDO = false;
+
+  function cargarHistorialJSON(onProgreso) {
+    if (HIST_CACHE) return Promise.resolve(HIST_CACHE);
+    if (HIST_LOAD) return HIST_LOAD;
+    HIST_LOAD = fetch('historial.json')
+      .then(async r => {
+        if (!r.ok) throw new Error('No se pudo leer historial.json. Publícalo desde el menú TORRE CONTROL → Publicar Histórico.');
+        // Progreso real: el archivo pesa ~21 MB y sin esto la espera es muda.
+        const total = +(r.headers.get('content-length') || 0);
+        if (!r.body || !total) return r.json();
+        const reader = r.body.getReader();
+        const trozos = []; let leido = 0;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          trozos.push(value); leido += value.length;
+          if (onProgreso) onProgreso(Math.round(100 * leido / total));
+        }
+        const buf = new Uint8Array(leido); let off = 0;
+        for (const t of trozos) { buf.set(t, off); off += t.length; }
+        return JSON.parse(new TextDecoder('utf-8').decode(buf));
+      })
+      .then(d => { HIST_CACHE = d; HIST_LOAD = null; return d; })
+      .catch(err => { HIST_LOAD = null; throw err; });
+    return HIST_LOAD;
+  }
+
   async function fetchAndLoad(type) {
+    if (CARGANDO) return;               // ignora clics mientras ya está cargando
+    CARGANDO = true;
     const isHistory = type === 'history';
     const btn = isHistory ? document.getElementById('btnLoadHistory') : document.getElementById('btnLoadDaily');
     const originalText = btn.textContent;
     btn.textContent = "Cargando...";
+    btn.disabled = true;
+    const otro = isHistory ? document.getElementById('btnLoadDaily') : document.getElementById('btnLoadHistory');
+    if (otro) otro.disabled = true;
     document.body.style.cursor = 'wait';
 
     try {
@@ -1471,12 +1511,9 @@
         document.getElementById('mainHeader').textContent = "Asignación F8 (Corte diario)";
         document.getElementById('cutDate').textContent = PARAMS.cut_date || "Hoy";
       } else {
-        // El histórico se lee de un JSON ESTÁTICO publicado en GitHub Pages
-        // (mismo patrón del simulador de reposición). 44k filas en ~2s, sin
-        // límite de JSONP y SIN filtros forzados: el histórico se ve completo.
-        const _resp = await fetch('historial.json', {cache:'no-cache'});
-        if (!_resp.ok) throw new Error('No se pudo leer historial.json. Publícalo desde el menú TORRE CONTROL → Publicar Histórico.');
-        const _hist = await _resp.json();
+        // El histórico se lee de un JSON ESTÁTICO publicado en GitHub Pages.
+        // Se cachea en memoria: el segundo clic es instantáneo.
+        const _hist = await cargarHistorialJSON(p => { btn.textContent = 'Cargando ' + p + '%'; });
         // Formato columnar: cols[] + rows[[...]] -> se reconstruyen los objetos.
         if (_hist.cols && Array.isArray(_hist.rows) && Array.isArray(_hist.rows[0])) {
           const _c = _hist.cols;
@@ -1516,9 +1553,14 @@
       }
     } catch (e) {
       console.error(e);
-      alert("Error de conexión.");
+      // Antes decía siempre "Error de conexión", ocultando la causa real
+      // (JSON no publicado, GitHub 503, JSON corrupto). Ahora se ve el motivo.
+      alert(e && e.message ? e.message : 'Error de conexión.');
     } finally {
+      CARGANDO = false;
       btn.textContent = originalText;
+      btn.disabled = false;
+      if (otro) otro.disabled = false;
       document.body.style.cursor = 'default';
     }
   }
