@@ -647,6 +647,17 @@ function renderQR(){
     if(d.antiguedad != null){
       txt += (txt ? '<br>' : '') + '<span style="opacity:.85">' +
              d.antiguedad + ' días en el flujo</span>';
+    } else if(d.recepcionFutura){
+      // T25: no se muestra un numero negativo. Se dice la verdad.
+      txt += (txt ? '<br>' : '') + '<span style="opacity:.85">' +
+             'Fecha de recepción por confirmar</span>';
+    }
+    // CUENTA REGRESIVA: el reloj corriendo comunica urgencia mejor que "9 d".
+    // Solo cuando el documento sigue abierto y falta menos de 72 h.
+    if(d.vtoISO && !d.cerrado){
+      txt += '<div id="qrCuenta" data-vto="' + esc(d.vtoISO) + '" ' +
+             'style="margin-top:8px;font-family:Consolas,monospace;font-size:22px;' +
+             'font-weight:700;letter-spacing:1px;line-height:1.1"></div>';
     }
     h += '<div style="margin:-4px 0 12px;padding:10px 12px;background:' + c[1] +
          ';border-left:4px solid ' + c[0] + ';color:' + c[0] +
@@ -700,6 +711,44 @@ function renderQR(){
   h += '</div></div>';
   h += '<div style="padding:0 18px 18px"><button class="qr-btn sec" onclick="salirQR()">Entrar con mi PIN</button></div>';
   document.getElementById('qrCard').innerHTML = h;
+  arrancarCuentaRegresiva();
+}
+
+// ---- CUENTA REGRESIVA -----------------------------------------------------
+// Un reloj que baja comunica urgencia mejor que "vence en 9 d". Solo se muestra
+// dentro de las ultimas 72 h: mas alla de eso el numero de dias es mas legible
+// y un contador permanente pierde fuerza.
+let QR_TIMER = null;
+function arrancarCuentaRegresiva(){
+  if(QR_TIMER){ clearInterval(QR_TIMER); QR_TIMER = null; }
+  const el = document.getElementById('qrCuenta');
+  if(!el) return;
+  const vto = new Date(el.dataset.vto);
+  if(isNaN(vto)) { el.style.display = 'none'; return; }
+
+  const dos = n => String(n).padStart(2, '0');
+
+  function pintar(){
+    const ms = vto - new Date();
+    if(ms <= 0){
+      const t = Math.abs(ms);
+      const dd = Math.floor(t / 86400000);
+      el.textContent = dd > 0 ? 'VENCIDO hace ' + dd + ' d' : 'VENCIDO';
+      el.style.color = '#a32d2d';
+      if(QR_TIMER){ clearInterval(QR_TIMER); QR_TIMER = null; }
+      return;
+    }
+    const h  = Math.floor(ms / 3600000);
+    if(h >= 72){ el.style.display = 'none'; return; }   // lejos: basta con los dias
+    el.style.display = '';
+    const m  = Math.floor((ms % 3600000) / 60000);
+    const s  = Math.floor((ms % 60000) / 1000);
+    el.textContent = dos(h) + ':' + dos(m) + ':' + dos(s);
+    el.style.color = h < 8 ? '#a32d2d' : (h < 24 ? '#a8500f' : '#8a6d1f');
+  }
+
+  pintar();
+  QR_TIMER = setInterval(pintar, 1000);
 }
 
 function filaQR(k, v){
