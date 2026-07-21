@@ -429,6 +429,10 @@
 const WEBAPP="https://script.google.com/macros/s/AKfycbyVHDQ8IuVHibz259AiEvZ-jUfVC7fxvSSqC-wfaiiq1_13C9_TK4dVtPK0SMW4sZoJ/exec";
 // Fecha ISO -> dd/mm/aa (ancla concreta, como el panel de proveedores)
 function fechaCorta(f){ f=String(f||''); const m=f.match(/(\d{4})-(\d{2})-(\d{2})/); return m?(m[3]+'/'+m[2]+'/'+m[1].slice(2)):''; }
+// Escapa texto que va al HTML de las tarjetas. Se define aqui arriba porque
+// cardPed y senalDemanda la usan y se ejecutan antes que los reportes, donde
+// vive repEsc_ (misma logica, otro nombre por historia del archivo).
+function esc(s){ return String(s==null?'':s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c])); }
 const DIAS=['LUNES','MARTES','MIERCOLES','JUEVES','VIERNES'];
 const USUARIO="Torre de Control";
 let DATA=null, TAB='lista', KPI_FILTRO='', chartCarga=null;
@@ -706,15 +710,20 @@ function renderLista(){
   // solo aparecen si se pide el estado explicitamente. Antes se filtraba por
   // triage y DESPUES se descartaban los cerrados: al elegir un nivel de triage
   // el resultado quedaba casi vacio y parecia que el filtro no servia.
-  const verCerrados = etapaCerrada || document.getElementById('fVista').value === 'cerrados';
-  const listaArr = (document.getElementById('fVista').value === 'cerrados')
-      ? arr.filter(p => p.cerrado)
-      : (verCerrados ? arr : arr.filter(p => !p.cerrado));
+  // Tres vistas explicitas. Antes 'todos' caia en el mismo camino que
+  // 'pendiente' y seguia ocultando los cerrados: la opcion no hacia nada.
+  const vista = document.getElementById('fVista').value;
+  const listaArr =
+      (vista === 'cerrados') ? arr.filter(p => p.cerrado)
+    : (vista === 'todos' || etapaCerrada) ? arr
+    : arr.filter(p => !p.cerrado);
   window.__ARR=listaArr;                          // el índice de las tarjetas mapea a este arreglo
   const cont=document.getElementById('listaCont');
   // T5: decir cuantos cerrados se estan ocultando. Antes desaparecian en
   // silencio y el conteo de la pestana no cuadraba con lo que se veia.
-  const ocultos = etapaCerrada ? 0 : (arr.length - listaArr.length);
+  // Solo se avisa en la vista 'pendiente': en las otras el usuario ya sabe
+  // que esta viendo cerrados, decirselo seria ruido.
+  const ocultos = (vista === 'pendiente' && !etapaCerrada) ? (arr.length - listaArr.length) : 0;
   const avisoCerrados = ocultos > 0
     ? '<div style="font-size:11px;color:#6b7684;background:#f2f4f7;border:1px solid #d8dde5;'+
       'padding:6px 10px;margin-bottom:8px;">Mostrando <b>'+listaArr.length.toLocaleString()+
@@ -733,6 +742,12 @@ function renderLista(){
     b.addEventListener('click',()=>verPorque(+b.dataset.porque)));
   cont.querySelectorAll('[data-fact]').forEach(b=>
     b.addEventListener('click',()=>confirmarListo((window.__ARR||[])[+b.dataset.fact].id)));
+  cont.querySelectorAll('[data-asis]').forEach(b=>
+    b.addEventListener('click',()=>marcarAsistencia(+b.dataset.asis)));
+  cont.querySelectorAll('[data-cita]').forEach(b=>
+    b.addEventListener('click',()=>confirmarCita(+b.dataset.cita)));
+  cont.querySelectorAll('[data-repro]').forEach(b=>
+    b.addEventListener('click',()=>reprogramarCita(+b.dataset.repro)));
 }
 
 function cardPed(p,i){
@@ -770,8 +785,16 @@ function cardPed(p,i){
       </div>
       <div class="ped-acciones">
         <button class="btn primary" data-det="${i}">Ver detalle F8</button>
-        ${p.cerrado ? '' : '<button class="btn" data-fact="'+i+'">Confirmar facturación</button>'}
+        ${p.cerrado ? '' : `
+          <button class="btn conf" data-fact="${i}">Confirmar facturación</button>
+          <button class="btn" data-cita="${i}">${p.cita ? 'Mover cita' : 'Confirmar cita'}</button>
+          <button class="btn difer" data-repro="${i}">Reprogramar</button>
+          <button class="btn" data-asis="${i}">Marcar asistencia</button>`}
       </div>
+      ${p.cita ? `<div style="font-size:11px;color:var(--azul-osc);background:#e8f0f8;
+        padding:4px 14px;border-top:1px solid #d4dce6;">
+        Cita de despacho comprometida: <b style="font-family:var(--mono)">${fechaCorta(p.cita)}</b>
+        · el OTIF se mide contra esta fecha</div>` : ''}
     </div>
     <div class="ipd-box ${cls}" data-porque="${i}">
       <div class="lbl">IPD</div>
@@ -1338,6 +1361,78 @@ async function confirmarListo(id){
     }else{
       alert('No se envió: '+(r.msg||r.correo_error||'error desconocido'));
     }
+  }catch(e){ alert('Sin conexión'); }
+}
+
+// ---- ACCIONES SOBRE LA F8 --------------------------------------------------
+// Las tres escriben en SEGUIMIENTO_PEDIDOS y recargan el panel al terminar.
+
+// La UE se presento a retirar: se registra la distribucion con su codigo de
+// salida. Cierra el reloj de la UE.
+async function marcarAsistencia(i){
+  const p=(window.__ARR||[])[i]; if(!p) return;
+  const cod=(prompt('Código de salida (SALMI) para '+p.id+':','')||'').trim();
+  const quien=(prompt('¿Quién despacha? (personal CEDIS):',USUARIO)||'').trim();
+  if(!quien) return;
+  const retira=(prompt('¿Quién retira por la UE? (opcional):','')||'').trim();
+  if(!confirm('Registrar asistencia de '+p.ue+'\n'+p.id+
+      (cod?'\nCódigo de salida: '+cod:'')+'\n\n¿Confirmar?')) return;
+  try{
+    const r=await jsonp(WEBAPP+'?file=despacho_asistencia&id='+encodeURIComponent(p.id)+
+      '&quien='+encodeURIComponent(quien)+'&codigo='+encodeURIComponent(cod)+
+      '&retiro='+encodeURIComponent(retira));
+    if(r.ok){ alert('Asistencia registrada.\n'+p.id+' · '+r.fecha); cargar(); }
+    else alert('No se pudo: '+(r.msg||'error'));
+  }catch(e){ alert('Sin conexión'); }
+}
+
+// Fija la fecha en que el pedido estara listo. A partir de aqui el OTIF se mide
+// contra ESTA fecha, no contra el cronograma: quien promete responde.
+async function confirmarCita(i){
+  const p=(window.__ARR||[])[i]; if(!p) return;
+  const sug=p.cita || p.fechaVentana || '';
+  const f=(prompt('Fecha de retiro comprometida para '+p.id+' (AAAA-MM-DD):',sug)||'').trim();
+  if(!f) return;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(f)){ alert('Formato inválido. Use AAAA-MM-DD.'); return; }
+  const quien=(prompt('¿Quién confirma?:',USUARIO)||'').trim();
+  if(!quien) return;
+  const avisar=confirm('¿Enviar correo a '+p.ue+' avisando la fecha?\n\n'+
+    'Aceptar = enviar · Cancelar = solo registrar');
+  try{
+    const r=await jsonp(WEBAPP+'?file=despacho_confirmar_cita&id='+encodeURIComponent(p.id)+
+      '&fecha='+encodeURIComponent(f)+'&quien='+encodeURIComponent(quien)+
+      '&avisar='+(avisar?'1':'0'));
+    if(r.ok){
+      let m='Cita '+(r.era_cambio?'movida':'confirmada')+' para el '+f+'.';
+      if(r.correo_enviado) m+='\nCorreo enviado a '+r.to;
+      else if(r.correo_error) m+='\nSin correo: '+r.correo_error;
+      m+='\n\nEl OTIF de esta F8 se medirá contra esta fecha.';
+      alert(m); cargar();
+    } else alert('No se pudo: '+(r.msg||'error'));
+  }catch(e){ alert('Sin conexión'); }
+}
+
+// Mueve una cita ya fijada. El motivo es obligatorio: si el almacen mueve la
+// misma F8 tres veces, tiene que verse en COMENTARIOS.
+async function reprogramarCita(i){
+  const p=(window.__ARR||[])[i]; if(!p) return;
+  if(!p.cita && !confirm('Esta F8 no tiene cita fijada.\n¿Fijar una nueva?')) return;
+  const f=(prompt('Nueva fecha de retiro para '+p.id+' (AAAA-MM-DD):',p.cita||'')||'').trim();
+  if(!f) return;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(f)){ alert('Formato inválido. Use AAAA-MM-DD.'); return; }
+  const motivo=(prompt('Motivo de la reprogramación (obligatorio):','')||'').trim();
+  if(!motivo){ alert('El motivo es obligatorio.'); return; }
+  const quien=(prompt('¿Quién reprograma?:',USUARIO)||'').trim();
+  if(!quien) return;
+  const avisar=confirm('¿Avisar a '+p.ue+' por correo?');
+  try{
+    const r=await jsonp(WEBAPP+'?file=despacho_reprogramar&id='+encodeURIComponent(p.id)+
+      '&fecha='+encodeURIComponent(f)+'&quien='+encodeURIComponent(quien)+
+      '&motivo='+encodeURIComponent(motivo)+'&avisar='+(avisar?'1':'0'));
+    if(r.ok){
+      alert('Reprogramada para el '+f+'.'+(r.correo_enviado?'\nCorreo enviado.':''));
+      cargar();
+    } else alert('No se pudo: '+(r.msg||'error'));
   }catch(e){ alert('Sin conexión'); }
 }
 
