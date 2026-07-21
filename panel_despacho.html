@@ -1134,31 +1134,70 @@ function reporteAgendaDia(){
 // ---- REPORTE 2: CARGA SEMANAL DE DESPACHO ----
 // Pedidos listos por día de retiro de la semana visible, agrupados por día,
 // con conteo de F8 y bultos por grupo.
+// ---- REPORTE 2: CARGA SEMANAL DE DESPACHO ----
+// Antes solo mostraba grupos y bultos agregados. Sin saber QUE UNIDADES vienen
+// cada dia, el reporte no sirve para planificar la bahia ni el transporte.
+// Ahora lista las UEs por dia, con sus F8, bultos, urgencias y saldo cero.
 function reporteCargaSemanal(){
   const fs=fechasSemana();
   const arr=(pedidosFiltrados()||[]).filter(p=>p.prelisto);
   let html=repHeadDesp_('Carga semanal '+fs.LUNES.iso,
     'Carga semanal de despacho · Torre de Control',
     'Semana: <b>'+fs.LUNES.fecha+'</b> al <b>'+fs.VIERNES.fecha+'</b>');
-  let totF8=0, totB=0;
+  let totF8=0, totB=0, totUE=0;
+
   DIAS.forEach(dia=>{
     const celda=fs[dia];
     const items=arr.filter(p=>(p.diasRetiro||[]).indexOf(dia)>=0 &&
       (!p.fechaVentana || isoDe_(p.fechaVentana)>=celda.iso));
     if(!items.length) return;
-    // agrupar por grupo
-    const g={}; let nB=0;
-    items.forEach(p=>{const k=String(p.grupo||'Sin grupo').trim()||'Sin grupo';
-      if(!g[k])g[k]={f8:0,b:0}; g[k].f8++; g[k].b+=(p.bultos||0); nB+=(p.bultos||0);});
-    totF8+=items.length; totB+=nB;
+
+    // Agrupar por UNIDAD EJECUTORA: es quien se presenta a la bahia.
+    const porUE={};
+    items.forEach(p=>{
+      const u=String(p.ue||'Sin unidad').trim()||'Sin unidad';
+      if(!porUE[u]) porUE[u]={f8:0,b:0,urg:0,cero:0,grupos:{},ipdMax:0};
+      const o=porUE[u];
+      o.f8++; o.b+=(p.bultos||0);
+      if(p.esUrg) o.urg++;
+      if(p.tieneCero) o.cero++;
+      if(p.ipd>o.ipdMax) o.ipdMax=p.ipd;
+      const g=String(p.grupo||'—').trim()||'—';
+      o.grupos[g]=(o.grupos[g]||0)+1;
+    });
+
+    const ues=Object.keys(porUE).sort((a,b)=>porUE[b].ipdMax-porUE[a].ipdMax);
+    let nB=0; items.forEach(p=>nB+=(p.bultos||0));
+    totF8+=items.length; totB+=nB; totUE+=ues.length;
+
     const cap=dia.charAt(0)+dia.slice(1).toLowerCase();
-    html+='<div class="grpttl">'+cap+' '+celda.fecha+' — '+items.length+' F8 · '+Math.round(nB).toLocaleString()+' bultos</div>';
-    html+='<table><thead><tr><th>Grupo</th><th class="num">F8</th><th class="num">Bultos</th></tr></thead><tbody>';
-    Object.keys(g).sort((a,b)=>{const na=parseFloat((a.match(/\d+/)||[99])[0]),nb=parseFloat((b.match(/\d+/)||[99])[0]);return na-nb||a.localeCompare(b);})
-      .forEach(k=>{html+='<tr><td>'+repEsc_(k)+'</td><td class="num">'+g[k].f8+'</td><td class="num">'+Math.round(g[k].b).toLocaleString()+'</td></tr>';});
+    html+='<div class="grpttl">'+cap+' '+celda.fecha+' — '+ues.length+' unidad(es) · '+
+      items.length+' F8 · '+Math.round(nB).toLocaleString()+' bultos</div>';
+    html+='<table><thead><tr><th>Unidad Ejecutora</th><th class="num">F8</th>'+
+      '<th class="num">Bultos</th><th class="num">Urg.</th><th>Grupos</th>'+
+      '<th class="num">IPD máx</th><th>Saldo</th></tr></thead><tbody>';
+    ues.forEach(u=>{
+      const o=porUE[u];
+      const gTxt=Object.keys(o.grupos).sort().map(g=>g+' ('+o.grupos[g]+')').join(', ');
+      html+='<tr>'+
+        '<td><b>'+repEsc_(u)+'</b></td>'+
+        '<td class="num">'+o.f8+'</td>'+
+        '<td class="num">'+Math.round(o.b).toLocaleString()+'</td>'+
+        '<td class="num'+(o.urg?' rojo':'')+'">'+(o.urg||'—')+'</td>'+
+        '<td style="font-size:9px;">'+repEsc_(gTxt)+'</td>'+
+        '<td class="num'+(o.ipdMax>=75?' rojo':'')+'">'+Math.round(o.ipdMax)+'</td>'+
+        '<td>'+(o.cero?'<span class="chip0">'+o.cero+' en 0</span>':'')+'</td></tr>';
+    });
+    html+='<tr class="tot"><td>TOTAL '+cap+'</td><td class="num">'+items.length+'</td>'+
+      '<td class="num">'+Math.round(nB).toLocaleString()+'</td>'+
+      '<td class="num">'+items.filter(p=>p.esUrg).length+'</td><td colspan="3"></td></tr>';
     html+='</tbody></table>';
   });
-  html+='<div class="resumenln" style="margin-top:14px;"><b>TOTAL semana:</b> '+totF8+' Forma(s) 8 · '+Math.round(totB).toLocaleString()+' bultos</div>';
+
+  html+='<div class="resumenln" style="margin-top:14px;"><b>TOTAL semana:</b> '+
+    totUE+' visita(s) de unidades · '+totF8+' Forma(s) 8 · '+
+    Math.round(totB).toLocaleString()+' bultos</div>';
+  html+='<div class="firma"><div>Preparado por (Torre de Control)</div><div>Recibido por (Distribución)</div></div>';
   repAbrir_(html);
 }
 
@@ -1436,29 +1475,60 @@ function renderCalResumenLateral(arrMes, porDia, y, m){
 function verDiaCalendario(iso, evs){
   const cont=document.getElementById('calResDia');
   const [yy,mm,dd]=iso.split('-');
+  // Vista acotada por UNIDAD, no una lista larga de F8 sueltas: es como se
+  // organiza la bahia. Cada UE se expande al hacer clic.
+  const porUE={};
+  evs.forEach(p=>{
+    const u=String(p.ue||'Sin unidad').trim()||'Sin unidad';
+    if(!porUE[u]) porUE[u]={f8:[],b:0,urg:0,cero:0,ipdMax:0};
+    const o=porUE[u];
+    o.f8.push(p); o.b+=(p.bultos||0);
+    if(p.esUrg) o.urg++;
+    if(p.tieneCero) o.cero++;
+    if(p.ipd>o.ipdMax) o.ipdMax=p.ipd;
+  });
+  const ues=Object.keys(porUE).sort((a,b)=>porUE[b].ipdMax-porUE[a].ipdMax);
   let bultos=0; evs.forEach(p=>bultos+=(p.bultos||0));
-  // mini-resumen por grupo del día
-  const rg={}; evs.forEach(p=>{const g=String(p.grupo||'Sin grupo').trim()||'Sin grupo'; if(!rg[g])rg[g]={f8:0,b:0}; rg[g].f8++; rg[g].b+=(p.bultos||0);});
-  const chips=Object.keys(rg).sort().map(g=>'<span style="display:inline-block;background:#eef4fb;border:1px solid #b8d0ea;border-radius:9px;padding:2px 9px;margin:2px;font-size:11px;color:var(--azul-osc)">'+g+': <b>'+rg[g].f8+'</b> F8 · '+Math.round(rg[g].b).toLocaleString()+' bultos</span>').join('');
-  let html='<div class="cal-res"><h4>Vencen el '+dd+'/'+mm+'/'+yy+' — '+evs.length+' Forma(s) 8 · '+Math.round(bultos).toLocaleString()+' bultos '+
+
+  let html='<div class="cal-res"><h4>Vencen el '+dd+'/'+mm+'/'+yy+' — '+
+    ues.length+' unidad(es) · '+evs.length+' F8 · '+Math.round(bultos).toLocaleString()+' bultos '+
     '<button class="btn noprint" style="float:right;padding:3px 10px;font-size:11px" onclick="imprimirDiaCal(\''+iso+'\')">🖨 Imprimir día</button></h4>';
-  if(chips) html+='<div style="margin-bottom:8px">'+chips+'</div>';
-  html+='<table class="tabla"><thead><tr><th>Nº F8</th><th>Unidad Ejecutora</th><th>Grupo</th><th>Tipo</th><th>Etapa</th><th style="text-align:right">Bultos</th><th>Triage</th></tr></thead><tbody>';
-  evs.slice().sort((a,b)=>b.ipd-a.ipd).forEach(p=>{
-    html+='<tr>'+
-      '<td style="font-family:var(--mono)">'+p.id+'</td>'+
-      '<td>'+p.ue+'</td>'+
-      '<td>'+p.grupo+'</td>'+
-      '<td>'+(p.esUrg?'<span style="color:var(--rojo);font-weight:600">Urgencia</span>':'Mensual')+'</td>'+
-      '<td>'+p.etapa+'</td>'+
-      '<td style="text-align:right;font-family:var(--mono)">'+(p.bultos>0?p.bultos.toLocaleString():'—')+'</td>'+
-      '<td><span style="font-size:10px;font-weight:700;color:#fff;padding:1px 7px;border-radius:9px;background:'+triColor(p.triage)+'">'+p.triage+'</span></td>'+
-    '</tr>';
+
+  html+='<table class="tabla"><thead><tr><th>Unidad Ejecutora</th>'+
+    '<th style="text-align:right">F8</th><th style="text-align:right">Bultos</th>'+
+    '<th style="text-align:right">Urg.</th><th style="text-align:right">IPD máx</th>'+
+    '<th>Saldo</th><th></th></tr></thead><tbody>';
+  ues.forEach((u,ix)=>{
+    const o=porUE[u];
+    html+='<tr style="cursor:pointer" onclick="toggleUEDia('+ix+')">'+
+      '<td><b>'+u+'</b></td>'+
+      '<td style="text-align:right;font-family:var(--mono)">'+o.f8.length+'</td>'+
+      '<td style="text-align:right;font-family:var(--mono)">'+Math.round(o.b).toLocaleString()+'</td>'+
+      '<td style="text-align:right;font-family:var(--mono);color:'+(o.urg?'var(--rojo)':'#999')+'">'+(o.urg||'—')+'</td>'+
+      '<td style="text-align:right;font-family:var(--mono);font-weight:700;color:'+triColor(o.ipdMax>=75?'ROJO':(o.ipdMax>=50?'NARANJA':'VERDE'))+'">'+Math.round(o.ipdMax)+'</td>'+
+      '<td>'+(o.cero?'<span style="background:#fde2e2;color:#7d2229;font-size:9px;padding:1px 5px;border-radius:3px;font-weight:bold">'+o.cero+' en 0</span>':'')+'</td>'+
+      '<td style="color:var(--azul);font-size:11px">ver F8 ▾</td></tr>';
+    // Fila expandible con el detalle de esa unidad
+    html+='<tr id="ueDia'+ix+'" class="hidden"><td colspan="7" style="background:#f7fafd;padding:6px 12px">'+
+      o.f8.slice().sort((a,b)=>b.ipd-a.ipd).map(p=>
+        '<div style="display:flex;gap:10px;padding:3px 0;font-size:11.5px;border-bottom:1px solid #e8eef4">'+
+        '<span style="font-family:var(--mono);min-width:130px">'+p.id+'</span>'+
+        '<span style="min-width:110px">'+p.grupo+'</span>'+
+        '<span style="min-width:70px;color:'+(p.esUrg?'var(--rojo)':'#666')+'">'+(p.esUrg?'Urgencia':'Mensual')+'</span>'+
+        '<span style="min-width:130px;color:#666">'+p.etapa+'</span>'+
+        '<span style="font-family:var(--mono);color:#666">'+(p.bultos>0?p.bultos.toLocaleString()+' blt':'')+'</span>'+
+        '</div>').join('')+'</td></tr>';
   });
   html+='</tbody></table></div>';
   cont.innerHTML=html;
   window.__CAL_DIA={iso,evs};
   cont.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+// Expande / contrae el detalle de F8 de una unidad en la vista diaria.
+function toggleUEDia(ix){
+  const el=document.getElementById('ueDia'+ix);
+  if(el) el.classList.toggle('hidden');
 }
 // Imprime solo el detalle del día en una ventana nueva (patrón del panel de proveedores).
 function imprimirDiaCal(iso){
