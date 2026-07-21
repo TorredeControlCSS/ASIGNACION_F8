@@ -115,6 +115,25 @@
   .badge.verde{background:var(--verde-bg);color:var(--verde);}
   .badge.ambar{background:var(--ambar-bg);color:var(--ambar);}
   .badge.gris{background:var(--gris-bg);color:#5F5E5A;}
+
+  /* ---- Franja "Señal de demanda" (patron del panel de proveedores) ---- */
+  .senal-dem{margin:0 14px 9px;border:1px solid var(--borde-suave);background:#fafafa;cursor:pointer;}
+  .senal-dem:hover{background:#f3f3f3;border-color:var(--borde);}
+  .senal-dem .sd-head{display:flex;justify-content:space-between;align-items:center;
+                      padding:5px 9px;border-bottom:1px solid #eee;}
+  .senal-dem .sd-head .ttl{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.6px;}
+  .senal-dem .sd-head .det{font-size:11px;color:var(--azul);font-weight:600;}
+  .senal-dem .sd-cols{display:flex;}
+  .senal-dem .sd-col{flex:1;padding:7px 10px;}
+  .senal-dem .sd-col+.sd-col{border-left:1px solid #eee;}
+  .senal-dem .sd-col .cap{font-size:10px;color:#888;margin-bottom:2px;}
+  .senal-dem .sd-col .num{font-family:var(--mono);font-size:16px;font-weight:700;}
+  .senal-dem .sd-col .desc{font-size:11px;}
+  .senal-dem .sd-col.rojo .num,.senal-dem .sd-col.rojo .desc{color:var(--rojo);}
+  .senal-dem .sd-col.ambar .num,.senal-dem .sd-col.ambar .desc{color:var(--ambar);}
+  .senal-dem .sd-col.verde .num,.senal-dem .sd-col.verde .desc{color:var(--verde);}
+  .senal-dem .sd-col.gris .num,.senal-dem .sd-col.gris .desc{color:#5F5E5A;}
+  .senal-dem .sd-nota{padding:4px 10px;border-top:1px solid #eee;font-size:11px;color:#666;}
   
   .vacio{padding:44px;text-align:center;color:#aaa;}
   .loading{padding:50px;text-align:center;color:#888;}
@@ -743,6 +762,7 @@ function cardPed(p,i){
         <div class="gcol"><div class="cap">Ventana retiro</div>
           <div class="val ${clsVent}">${txtVent}</div></div>
       </div>
+      ${senalDemanda(p,i)}
       <div class="badges" style="padding:0 14px 6px;">
         ${p.tieneCero && !p.cerrado ? '<span class="badge rojo">SALDO 0</span>' : ''}
         ${p.esUrg ? '<span class="badge ambar">Urgencia</span>' : '<span class="badge gris">Mensual</span>'}
@@ -760,7 +780,69 @@ function cardPed(p,i){
     </div>
   </div>`;
 }
+// Señal de demanda: combina lo que ya sabemos del pedido en una sola lectura.
+// Replica el patron del panel de proveedores: tres columnas y "ver detalle".
+//   SALDO EN LA UE  ->  tieneCero: hay renglon(es) sin existencias en la unidad
+//   COBERTURA F8    ->  brecha: cuanto de lo pedido se distribuyo
+//   TIPO / VENTANA  ->  urgencia + dias a la ventana de retiro
+function senalDemanda(p,i){
+  // Col 1: saldo en la unidad ejecutora
+  let c1;
+  if(p.cerrado){
+    c1='<div class="sd-col gris"><div class="cap">SALDO EN LA UE</div>'+
+       '<div class="num" style="font-size:13px">n/a</div>'+
+       '<div class="desc">pedido ya despachado</div></div>';
+  } else if(p.tieneCero){
+    c1='<div class="sd-col rojo"><div class="cap">SALDO EN LA UE</div>'+
+       '<div class="num">EN CERO</div>'+
+       '<div class="desc">renglón(es) sin existencias</div></div>';
+  } else {
+    c1='<div class="sd-col verde"><div class="cap">SALDO EN LA UE</div>'+
+       '<div class="num">CON STOCK</div>'+
+       '<div class="desc">sin renglones en cero</div></div>';
+  }
 
+  // Col 2: cobertura del documento (brecha solicitado vs distribuido)
+  let c2;
+  if(p.brecha && p.brecha.solicitado>0){
+    const pct=Math.round(100*(p.brecha.distribuido||0)/p.brecha.solicitado);
+    const cl = pct>=95?'verde' : (pct>=50?'ambar':'rojo');
+    c2='<div class="sd-col '+cl+'"><div class="cap">COBERTURA F8</div>'+
+       '<div class="num">'+pct+'%</div>'+
+       '<div class="desc">'+Number(p.brecha.distribuido||0).toLocaleString()+
+       ' de '+Number(p.brecha.solicitado).toLocaleString()+'</div></div>';
+  } else {
+    c2='<div class="sd-col gris"><div class="cap">COBERTURA F8</div>'+
+       '<div class="num" style="font-size:13px">s/d</div>'+
+       '<div class="desc">sin dato de distribución</div></div>';
+  }
+
+  // Col 3: tipo de pedido y ventana de retiro
+  const dv=p.diasVent;
+  let cl3='gris', txt3='—', des3='sin cronograma';
+  if(dv!=null){
+    if(dv<0){ cl3='rojo'; txt3='VENCIDA'; des3='hace '+Math.abs(dv)+' día(s)'; }
+    else if(dv===0){ cl3='rojo'; txt3='HOY'; des3='retira hoy'; }
+    else if(dv<=2){ cl3='ambar'; txt3='en '+dv+'d'; des3=(p.fechaVentana?fechaCorta(p.fechaVentana):''); }
+    else { cl3='verde'; txt3='en '+dv+'d'; des3=(p.fechaVentana?fechaCorta(p.fechaVentana):''); }
+  }
+  const c3='<div class="sd-col '+cl3+'"><div class="cap">'+
+    (p.esUrg?'URGENCIA · VENTANA':'MENSUAL · VENTANA')+'</div>'+
+    '<div class="num">'+txt3+'</div><div class="desc">'+des3+'</div></div>';
+
+  // Nota: cuando el pedido esta listo pero la UE no ha venido, la demora es de
+  // ella, no del almacen. Se dice explicitamente para no leerlo como falla propia.
+  const R=p.reloj||{};
+  const nota = (R.responsable==='UE' && R.diasUE!=null)
+    ? '<div class="sd-nota">Facturado y disponible. Esperando que la UE retire hace <b>'+R.diasUE+'</b> día(s).</div>'
+    : '';
+
+  return '<div class="senal-dem" data-det="'+i+'" title="Ver detalle de la F8">'+
+    '<div class="sd-head"><span class="ttl">Señal de demanda</span>'+
+    '<span class="det">Ver detalle ›</span></div>'+
+    '<div class="sd-cols">'+c1+c2+c3+'</div>'+nota+'</div>';
+}
+  
 // Colores triage para el encabezado del modal
 const TRI_COLOR={ROJO:'#c0281f',NARANJA:'#d97316',AMARILLO:'#c99700',VERDE:'#3a8c3a',AZUL:'#2a6db5'};
 
