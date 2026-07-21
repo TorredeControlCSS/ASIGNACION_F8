@@ -267,12 +267,18 @@
             <option value="">Todos</option><option value="1">Solo saldo CERO</option>
           </select>
         </div>
+        <div class="filtro-campo"><span class="et">Vista</span>
+          <select id="fVista" onchange="renderLista()" style="border:2px solid var(--azul);font-weight:600;color:var(--azul-osc);">
+            <option value="pendiente">Pendiente de despacho</option>
+            <option value="cerrados">Ya despachadas</option>
+            <option value="todos">Todas</option>
+          </select>
+        </div>
       </div>
       <div class="buscar-barra">
         <input type="text" id="q" placeholder="Buscar Unidad Ejecutora o Nº F8…" oninput="renderLista()">
         <button class="btn" onclick="cargar()">↻ Actualizar</button>
         <button class="btn" onclick="limpiarFiltros()">✕ Limpiar filtros</button>
-        <button class="btn chip" onclick="setFiltroRojo()">Solo ROJO</button>
         <button class="btn primary" onclick="notificarMasivo()">✉ Notificar UEs con pedido listo</button>
       </div>
       <div class="buscar-barra noprint" style="border-top:1px solid #e0e6ee;padding-top:8px;">
@@ -599,13 +605,11 @@ function poblarEtapas(){
   if(prev && ues.indexOf(prev)>=0) selU.value=prev;   // conservar selección tras recargar
 }
 
-function setFiltroRojo(){ document.getElementById('fTriage').value='ROJO'; renderLista(); }
-
 function limpiarFiltros(){
   ['fUE','fTriage','fEtapa','fGrupo','fTipo','fCero'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('fVista').value='pendiente';
   document.getElementById('q').value='';
-  KPI_FILTRO='';
-  renderKpis(); renderLista();
+  renderLista();
 }
 
 // Aplica todos los filtros activos y devuelve el arreglo. Reutilizado por lista, calendario y kanban.
@@ -627,7 +631,9 @@ function pedidosFiltrados(){
   if(fe) arr=arr.filter(p=>p.etapa===fe);
   if(fg) arr=arr.filter(p=>String(p.grupo||'').trim()===fg);
   if(fti==='URG') arr=arr.filter(p=>p.esUrg); else if(fti==='MEN') arr=arr.filter(p=>!p.esUrg);
-  if(fc==='1') arr=arr.filter(p=>p.tieneCero);
+  // El saldo en cero se mide sobre el estado ACTUAL de la UE. En un pedido ya
+  // despachado no significa nada: se ignora para no dar una alarma falsa.
+  if(fc==='1') arr=arr.filter(p=>p.tieneCero && !p.cerrado);
   if(q) arr=arr.filter(p=>p.ue.toUpperCase().includes(q)||p.id.toUpperCase().includes(q));
   return arr;
 }
@@ -642,7 +648,14 @@ function renderLista(){
   // salvo que el usuario filtre explícitamente por una etapa cerrada.
   const feEtapa=document.getElementById('fEtapa').value;
   const etapaCerrada=(feEtapa==='DESPACHADO'||feEtapa==='ENTREGADO');
-  const listaArr = etapaCerrada ? arr : arr.filter(p=>!p.cerrado);
+  // El universo por defecto es LO PENDIENTE. Los cerrados (63% de las filas)
+  // solo aparecen si se pide el estado explicitamente. Antes se filtraba por
+  // triage y DESPUES se descartaban los cerrados: al elegir un nivel de triage
+  // el resultado quedaba casi vacio y parecia que el filtro no servia.
+  const verCerrados = etapaCerrada || document.getElementById('fVista').value === 'cerrados';
+  const listaArr = (document.getElementById('fVista').value === 'cerrados')
+      ? arr.filter(p => p.cerrado)
+      : (verCerrados ? arr : arr.filter(p => !p.cerrado));
   window.__ARR=listaArr;                          // el índice de las tarjetas mapea a este arreglo
   const cont=document.getElementById('listaCont');
   // T5: decir cuantos cerrados se estan ocultando. Antes desaparecian en
@@ -661,41 +674,48 @@ function renderLista(){
 }
 
 function cardPed(p,i){
-  return '<div class="ped '+p.triage+'">'+
-    '<div class="ped-cuerpo">'+
-      '<div class="ped-info" onclick="verDetallePedido('+i+')" style="cursor:pointer" title="Ver detalle del pedido">'+
-        '<div class="ped-top"><div>'+
-          '<div class="ped-nombre">'+p.ue+'</div>'+
-          '<div class="ped-fol">'+p.id+'</div>'+
-        '</div></div>'+
-        '<div class="ped-cols">'+
-          '<div class="c"><span class="k">Etapa</span>'+p.etapa+'</div>'+
-          '<div class="c"><span class="k">Grupo</span>'+p.grupo+'</div>'+
-          '<div class="c"><span class="k">Bultos</span>'+(p.bultos>0?p.bultos.toLocaleString():'—')+'</div>'+
-          '<div class="c"><span class="k">Recibido</span>'+
-            (p.fechaRecepcion?fechaCorta(p.fechaRecepcion):'—')+
-            '<span style="color:#999"> · hace '+p.antig+'d</span></div>'+
-          '<div class="c"><span class="k">Ventana retiro</span>'+
-            (p.fechaVentana?fechaCorta(p.fechaVentana):'—')+
-            (p.diasVent!=null?'<span style="color:#999"> · en '+p.diasVent+'d</span>':'')+'</div>'+
-        '</div>'+
-        '<div class="ped-chips">'+
-          (p.tieneCero?'<span class="chip cero">SALDO 0</span>':'')+
-          '<span class="chip '+(p.esUrg?'urg':'men')+'">'+p.tipo+'</span></div>'+
-      '</div>'+
-      '<div class="ped-acciones">'+
-        (p.triage==='ROJO'&&p.defcon
-          ? '<button class="btn quitarojo" onclick="priorizar(\''+p.id+'\',false)">Quitar ROJO</button>'
-          : '<button class="btn rojo" onclick="priorizar(\''+p.id+'\',true)">● Marcar ROJO</button>')+
-        '<button class="btn conf" onclick="confirmarListo(\''+p.id+'\')">✓ Confirmar listo</button>'+
-      '</div>'+
-    '</div>'+
-    '<div class="ped-triage">'+
-      '<span class="lvl '+p.triage+'">'+p.triage+'</span>'+
-      '<div class="ipd">'+Math.round(p.ipd)+'</div><div class="lbl2">IPD</div>'+
-      '<div class="porque" onclick="verPorque('+i+')">¿por qué?</div>'+
-    '</div>'+
-  '</div>';
+  // Semaforo por IPD, igual que el IPR del panel de confirmacion.
+  const cls = p.ipd>=75 ? 'ipd-rojo' : (p.ipd>=50 ? 'ipd-ambar' : 'ipd-verde');
+  // Go / No-go: dias en el flujo y dias a la ventana de retiro.
+  const dv = p.diasVent;
+  const clsVent = (dv==null) ? '' : (dv<0 ? 'nogo' : (dv<=2 ? 'warn' : 'go'));
+  const txtVent = (dv==null) ? '—'
+    : (dv<0 ? 'VENCIDA hace '+Math.abs(dv)+'d' : (dv===0 ? 'HOY' : 'en '+dv+'d'));
+  const clsAnt = (p.antig==null) ? '' : (p.antig>30 ? 'nogo' : (p.antig>15 ? 'warn' : 'go'));
+
+  return `
+  <div class="ped ${cls}">
+    <div class="ped-cuerpo">
+      <div style="padding:10px 14px 0;">
+        <div style="font-weight:700;font-size:14px;">${esc(p.ue)}</div>
+        <div style="font-family:var(--mono);font-size:12px;color:#666;margin-top:2px;">${esc(p.id)}</div>
+      </div>
+      <div class="gonogo">
+        <div class="gcol"><div class="cap">Etapa</div>
+          <div class="val">${esc(p.etapa||'—')}</div></div>
+        <div class="gcol"><div class="cap">Grupo</div>
+          <div class="val" style="font-size:12px;">${esc(p.grupo||'—')}</div></div>
+        <div class="gcol"><div class="cap">Recibido</div>
+          <div class="val ${clsAnt}">${p.antig!=null?p.antig+' d':'—'}</div></div>
+        <div class="gcol"><div class="cap">Ventana retiro</div>
+          <div class="val ${clsVent}">${txtVent}</div></div>
+      </div>
+      <div class="badges" style="padding:0 14px 6px;">
+        ${p.tieneCero && !p.cerrado ? '<span class="badge rojo">SALDO 0</span>' : ''}
+        ${p.esUrg ? '<span class="badge ambar">Urgencia</span>' : '<span class="badge gris">Mensual</span>'}
+        ${p.cerrado ? '<span class="badge verde">Despachado</span>' : ''}
+      </div>
+      <div class="ped-acciones">
+        <button class="btn primary" data-det="${i}">Ver detalle F8</button>
+        ${p.cerrado ? '' : '<button class="btn" data-fact="'+i+'">Confirmar facturación</button>'}
+      </div>
+    </div>
+    <div class="ipd-box ${cls}" data-porque="${i}">
+      <div class="lbl">IPD</div>
+      <div class="n">${Math.round(p.ipd)}</div>
+      <div class="porque">¿por qué?</div>
+    </div>
+  </div>`;
 }
 
 // Colores triage para el encabezado del modal
