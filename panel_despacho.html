@@ -276,6 +276,7 @@
       <button class="btn" onclick="semanaHoy()" title="Volver a esta semana">Hoy</button>
     </div>
     <div class="carga-body"><canvas id="cargaChart"></canvas></div>
+    <div id="diagBultos" style="padding:5px 14px 8px;font-size:11px;border-top:1px solid #eee;"></div>
   </div>
 
   <div class="tabs">
@@ -596,6 +597,26 @@ function semanaHoy(){ SEMANA_OFFSET=0; renderLista(); }
 function renderCargaChart(arr){
   const rs=document.getElementById('rangoSemana'); if(rs) rs.textContent=rangoSemanaTexto();
   const c=cargaDesde(arr!=null?arr:(DATA.pedidos||[]));
+  // Diagnostico visible de la volumetria. Si la linea de bultos sale plana hay
+  // que poder distinguir "no hay dato en el origen" de "el dato no llego".
+  const dg=document.getElementById('diagBultos');
+  if(dg){
+    const db=DATA.diagBultos;
+    const totSem=DIAS.reduce((s,d)=>s+c[d].bultos,0);
+    if(!db){
+      dg.innerHTML='<span style="color:#8a5a00">Sin diagnóstico — el backend no está actualizado (falta redesplegar)</span>';
+    } else if(!db.conBultos){
+      dg.innerHTML='<span style="color:#a32d2d">Sin bultos en el origen: '+db.claves.toLocaleString()+
+        ' F8 leídas, ninguna con BULTOS_TERCIARIOS</span>';
+    } else if(!totSem){
+      dg.innerHTML='<span style="color:#8a5a00">'+db.conBultos.toLocaleString()+' F8 con bultos ('+
+        db.suma.toLocaleString()+' en total), pero ninguna cae en esta semana: '+
+        'sus ventanas de retiro ya pasaron o son de otra semana</span>';
+    } else {
+      dg.innerHTML='<span style="color:#0F6E56">'+totSem.toLocaleString()+' bultos esta semana · '+
+        db.conBultos.toLocaleString()+' F8 con volumetría registrada</span>';
+    }
+  }
   const fs=fechasSemana();
   const cap=d=>d.charAt(0)+d.slice(1,3).toLowerCase();          // LUNES -> Lun
   const labels=DIAS.map(d=>{ const f=fs[d]; return [cap(d)+(f?' '+f.fecha:''), f&&f.esHoy?'(hoy)':'']; });
@@ -750,6 +771,8 @@ function renderLista(){
     b.addEventListener('click',()=>confirmarCita(+b.dataset.cita)));
   cont.querySelectorAll('[data-repro]').forEach(b=>
     b.addEventListener('click',()=>reprogramarCita(+b.dataset.repro)));
+  cont.querySelectorAll('[data-cerrar]').forEach(b=>
+    b.addEventListener('click',()=>cerrarF8(+b.dataset.cerrar)));
 }
 
 function cardPed(p,i){
@@ -793,7 +816,9 @@ function cardPed(p,i){
           <button class="btn conf" data-fact="${i}">Confirmar facturación</button>
           <button class="btn" data-cita="${i}">${p.cita ? 'Mover cita' : 'Confirmar cita'}</button>
           <button class="btn difer" data-repro="${i}">Reprogramar</button>
-          <button class="btn" data-asis="${i}">Marcar asistencia</button>`}
+          <button class="btn" data-asis="${i}">Marcar asistencia</button>
+          <button class="btn" data-cerrar="${i}" style="border-color:#8a94a6;color:#5a6472;"
+            title="Sacar del pendiente sin despachar (anulada, la UE nunca vino, resuelta por fuera)">Cerrar F8</button>`}
       </div>
       ${p.cita ? `<div style="font-size:11px;color:var(--azul-osc);background:#e8f0f8;
         padding:4px 14px;border-top:1px solid #d4dce6;">
@@ -1495,6 +1520,39 @@ async function reprogramarCita(i){
       alert('Reprogramada para el '+f+'.'+(r.correo_enviado?'\nCorreo enviado.':''));
       cargar();
     } else alert('No se pudo: '+(r.msg||'error'));
+  }catch(e){ alert('Sin conexión'); }
+}
+
+// Saca del pendiente una F8 que ya no debe trabajarse. NO la marca como
+// despachada: queda con motivo explicito, consultable en "Ya despachadas".
+async function cerrarF8(i){
+  const p=(window.__ARR||[])[i]; if(!p) return;
+  const op=(prompt(
+    'Cerrar '+p.id+' — '+p.ue+'\n\n'+
+    'Motivo del cierre:\n'+
+    '  1  La UE nunca se presentó a retirar\n'+
+    '  2  Pedido anulado por la UE\n'+
+    '  3  Resuelto por fuera del sistema\n'+
+    '  4  Duplicado de otra F8\n'+
+    '  5  Otro (se escribe)\n\n'+
+    'Escriba el número:','1')||'').trim();
+  if(!op) return;
+  const MOT={'1':'La UE nunca se presentó a retirar','2':'Pedido anulado por la UE',
+    '3':'Resuelto por fuera del sistema','4':'Duplicado de otra F8'};
+  let motivo=MOT[op];
+  if(op==='5'||!motivo){
+    motivo=(prompt('Describa el motivo:','')||'').trim();
+    if(!motivo){ alert('El motivo es obligatorio.'); return; }
+  }
+  const quien=(prompt('¿Quién cierra?:',USUARIO)||'').trim();
+  if(!quien) return;
+  if(!confirm('CERRAR '+p.id+'\n\nMotivo: '+motivo+'\n\n'+
+     'Saldrá del pendiente. Seguirá consultable en la vista "Ya despachadas".\n\n¿Confirmar?')) return;
+  try{
+    const r=await jsonp(WEBAPP+'?file=despacho_cerrar&id='+encodeURIComponent(p.id)+
+      '&motivo='+encodeURIComponent(motivo)+'&quien='+encodeURIComponent(quien));
+    if(r.ok){ alert('F8 cerrada.\n'+p.id+'\nMotivo: '+motivo); cargar(); }
+    else alert('No se pudo: '+(r.msg||'error'));
   }catch(e){ alert('Sin conexión'); }
 }
 
