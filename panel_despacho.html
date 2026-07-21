@@ -108,6 +108,8 @@
   .gonogo .gcol+.gcol{border-left:1px solid #eee;}
   .gonogo .cap{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.4px;}
   .gonogo .val{font-family:var(--mono);font-size:14px;font-weight:700;}
+  /* La fecha es el ancla; los dias van debajo y llevan el color del semaforo. */
+  .gonogo .sub{font-family:var(--mono);font-size:11px;font-weight:700;margin-top:1px;}
   .gonogo .go{color:var(--verde);} .gonogo .nogo{color:var(--rojo);} .gonogo .warn{color:var(--ambar);}
   .badges{display:flex;gap:6px;flex-wrap:wrap;}
   .badge{font-size:11px;padding:2px 8px;border-radius:3px;}
@@ -772,10 +774,12 @@ function cardPed(p,i){
           <div class="val">${esc(p.etapa||'—')}</div></div>
         <div class="gcol"><div class="cap">Grupo</div>
           <div class="val" style="font-size:12px;">${esc(p.grupo||'—')}</div></div>
-        <div class="gcol"><div class="cap">Recibido</div>
-          <div class="val ${clsAnt}">${p.antig!=null?p.antig+' d':'—'}</div></div>
+        <div class="gcol"><div class="cap">Recibido en CEDIS</div>
+          <div class="val">${p.fechaRecepcion?fechaCorta(p.fechaRecepcion):'—'}</div>
+          <div class="sub ${clsAnt}">${p.antig!=null?'hace '+p.antig+' d':''}</div></div>
         <div class="gcol"><div class="cap">Ventana retiro</div>
-          <div class="val ${clsVent}">${txtVent}</div></div>
+          <div class="val">${p.fechaVentana?fechaCorta(p.fechaVentana):'—'}</div>
+          <div class="sub ${clsVent}">${txtVent}</div></div>
       </div>
       ${senalDemanda(p,i)}
       <div class="badges" style="padding:0 14px 6px;">
@@ -825,19 +829,34 @@ function senalDemanda(p,i){
        '<div class="desc">sin renglones en cero</div></div>';
   }
 
-  // Col 2: cobertura del documento (brecha solicitado vs distribuido)
+  // Col 2: dice quien tiene la pelota AHORA. Antes mostraba "COBERTURA F8",
+  // que se calcula sobre lo distribuido: en un pedido pendiente siempre salia
+  // "s/d · sin dato de distribucion". Ruido en el 100% de las tarjetas activas.
+  // Ahora se usa el reloj de responsabilidad, que si existe desde el dia uno.
+  const R0=p.reloj||{};
   let c2;
-  if(p.brecha && p.brecha.solicitado>0){
+  if(p.cerrado && p.brecha && p.brecha.solicitado>0){
+    // Cerrado: ahi si tiene sentido la cobertura, ya hay distribucion real.
     const pct=Math.round(100*(p.brecha.distribuido||0)/p.brecha.solicitado);
     const cl = pct>=95?'verde' : (pct>=50?'ambar':'rojo');
-    c2='<div class="sd-col '+cl+'"><div class="cap">COBERTURA F8</div>'+
+    c2='<div class="sd-col '+cl+'"><div class="cap">COBERTURA ENTREGADA</div>'+
        '<div class="num">'+pct+'%</div>'+
        '<div class="desc">'+Number(p.brecha.distribuido||0).toLocaleString()+
        ' de '+Number(p.brecha.solicitado).toLocaleString()+'</div></div>';
+  } else if(R0.responsable==='UE'){
+    c2='<div class="sd-col ambar"><div class="cap">TIEMPO · UNIDAD EJEC.</div>'+
+       '<div class="num">'+(R0.diasUE!=null?R0.diasUE+' d':'—')+'</div>'+
+       '<div class="desc">esperando que retire</div></div>';
+  } else if(R0.responsable==='SAFIRO'){
+    c2='<div class="sd-col ambar"><div class="cap">TIEMPO · FACTURACIÓN</div>'+
+       '<div class="num">'+(R0.diasSafiro!=null?R0.diasSafiro+' d':'—')+'</div>'+
+       '<div class="desc">en SAP SAFIRO</div></div>';
   } else {
-    c2='<div class="sd-col gris"><div class="cap">COBERTURA F8</div>'+
-       '<div class="num" style="font-size:13px">s/d</div>'+
-       '<div class="desc">sin dato de distribución</div></div>';
+    const dA=R0.diasAlmacen;
+    const cl = dA==null?'gris' : (dA>15?'rojo' : (dA>7?'ambar':'verde'));
+    c2='<div class="sd-col '+cl+'"><div class="cap">TIEMPO · ALMACÉN</div>'+
+       '<div class="num">'+(dA!=null?dA+' d':'—')+'</div>'+
+       '<div class="desc">en preparación</div></div>';
   }
 
   // Col 3: tipo de pedido y ventana de retiro
@@ -855,10 +874,18 @@ function senalDemanda(p,i){
 
   // Nota: cuando el pedido esta listo pero la UE no ha venido, la demora es de
   // ella, no del almacen. Se dice explicitamente para no leerlo como falla propia.
+  // La nota da el desglose completo del reloj cuando hay algo que explicar.
+  // Ya no repite "esperando que la UE retire": eso lo dice la columna 2.
   const R=p.reloj||{};
-  const nota = (R.responsable==='UE' && R.diasUE!=null)
-    ? '<div class="sd-nota">Facturado y disponible. Esperando que la UE retire hace <b>'+R.diasUE+'</b> día(s).</div>'
-    : '';
+  let nota='';
+  if(R.responsable==='UE'){
+    nota='<div class="sd-nota">Facturado y disponible desde hace <b>'+(R.diasUE||0)+
+      '</b> día(s). El almacén tardó <b>'+(R.diasAlmacen!=null?R.diasAlmacen:'—')+
+      '</b> día(s) en dejarlo listo.</div>';
+  } else if(R.responsable==='CERRADO' && R.diasAlmacen!=null){
+    nota='<div class="sd-nota">Ciclo cerrado: <b>'+R.diasAlmacen+'</b> día(s) de almacén'+
+      (R.diasUE!=null?' · <b>'+R.diasUE+'</b> día(s) hasta el retiro de la UE':'')+'.</div>';
+  }
 
   return '<div class="senal-dem" data-det="'+i+'" title="Ver detalle de la F8">'+
     '<div class="sd-head"><span class="ttl">Señal de demanda</span>'+
@@ -1217,21 +1244,56 @@ function reporteAgendaDia(){
   const items=arr.filter(p=>(p.diasRetiro||[]).indexOf(nom)>=0 &&
     (!p.fechaVentana || isoDe_(p.fechaVentana)>=iso));
   items.sort((a,b)=>b.ipd-a.ipd);
-  let bultos=0, cUrg=0; items.forEach(p=>{bultos+=(p.bultos||0); if(p.esUrg)cUrg++;});
   const [y,m,d]=iso.split('-');
+  // Agrupar por UNIDAD EJECUTORA: el bloque es la visita, las filas sus F8.
+  // Una lista vertical de F8 sueltas no sirve para recibir en la bahia.
+  const porUE={};
+  items.forEach(p=>{
+    const u=String(p.ue||'Sin unidad').trim()||'Sin unidad';
+    if(!porUE[u]) porUE[u]={f8:[],b:0,urg:0,cero:0,ipdMax:0};
+    const o=porUE[u];
+    o.f8.push(p); o.b+=(p.bultos||0);
+    if(p.esUrg) o.urg++;
+    if(p.tieneCero) o.cero++;
+    if(p.ipd>o.ipdMax) o.ipdMax=p.ipd;
+  });
+  const ues=Object.keys(porUE).sort((a,b)=>porUE[b].ipdMax-porUE[a].ipdMax);
+  let bultos=0, cUrg=0, cMen=0;
+  items.forEach(p=>{ bultos+=(p.bultos||0); if(p.esUrg)cUrg++; else cMen++; });
+
   let html=repHeadDesp_('Agenda despacho '+d+'/'+m+'/'+y,
     'Agenda de despacho a Unidades Ejecutoras',
     'Día: <b>'+d+'/'+m+'/'+y+'</b> ('+nom.charAt(0)+nom.slice(1).toLowerCase()+')');
-  html+='<div class="resumenln"><b>'+items.length+'</b> Forma(s) 8 para retiro · <b>'+Math.round(bultos).toLocaleString()+'</b> bultos · '+cUrg+' urgencia(s)</div>';
-  html+='<table><thead><tr><th>Nº F8</th><th>Unidad Ejecutora</th><th>Grupo</th><th>Tipo</th><th>Etapa</th><th>IPD</th><th class="num">Bultos</th><th>Saldo</th></tr></thead><tbody>';
-  html+=items.map(p=>'<tr>'+
-    '<td class="num">'+repEsc_(p.id)+'</td><td>'+repEsc_(p.ue)+'</td><td>'+repEsc_(p.grupo)+'</td>'+
-    '<td>'+repEsc_(p.tipo)+'</td><td>'+repEsc_(p.etapa)+'</td>'+
-    '<td class="num'+(p.triage==='ROJO'?' rojo':'')+'">'+Math.round(p.ipd)+'</td>'+
-    '<td class="num">'+(p.bultos>0?p.bultos.toLocaleString():'—')+'</td>'+
-    '<td>'+(p.tieneCero?'<span class="chip0">SALDO 0</span>':'')+'</td></tr>').join('')||
-    '<tr><td colspan="8" style="text-align:center;color:#888;">Sin F8 para retiro este día.</td></tr>';
-  html+='</tbody></table>';
+  html+='<div class="resumenln"><b>'+ues.length+'</b> unidad(es) · <b>'+items.length+
+    '</b> Forma(s) 8 · <b>'+Math.round(bultos).toLocaleString()+'</b> bultos'+
+    '  —  URGENCIA: '+cUrg+' F8 · MENSUAL: '+cMen+' F8</div>';
+
+  if(!ues.length){
+    html+='<table><tbody><tr><td style="text-align:center;color:#888;">Sin F8 para retiro este día.</td></tr></tbody></table>';
+  }
+  ues.forEach(u=>{
+    const o=porUE[u];
+    html+='<div class="grpttl">'+repEsc_(u)+' — '+o.f8.length+' F8 · '+
+      Math.round(o.b).toLocaleString()+' bultos'+
+      (o.urg?' · '+o.urg+' urgencia(s)':'')+
+      (o.cero?' · '+o.cero+' en saldo cero':'')+'</div>';
+    html+='<table><thead><tr><th>Nº F8</th><th>Grupo</th><th>Tipo</th><th>Etapa</th>'+
+      '<th class="num">Bultos</th><th class="num">IPD</th><th>Saldo</th>'+
+      '<th style="width:90px">Retirado por</th></tr></thead><tbody>';
+    html+=o.f8.map(p=>'<tr>'+
+      '<td class="num">'+repEsc_(p.id)+'</td>'+
+      '<td>'+repEsc_(p.grupo||'—')+'</td>'+
+      '<td'+(p.esUrg?' class="rojo"':'')+'>'+(p.esUrg?'Urgencia':'Mensual')+'</td>'+
+      '<td>'+repEsc_(p.etapa||'')+'</td>'+
+      '<td class="num">'+(p.bultos>0?Math.round(p.bultos).toLocaleString():'—')+'</td>'+
+      '<td class="num'+(p.triage==='ROJO'?' rojo':'')+'">'+Math.round(p.ipd)+'</td>'+
+      '<td>'+(p.tieneCero?'<span class="chip0">0</span>':'')+'</td>'+
+      '<td></td></tr>').join('');
+    html+='<tr class="tot"><td colspan="4">TOTAL '+repEsc_(u)+'</td>'+
+      '<td class="num">'+Math.round(o.b).toLocaleString()+'</td>'+
+      '<td colspan="3"></td></tr>';
+    html+='</tbody></table>';
+  });
   html+='<div class="firma"><div>Entregado por (CEDIS)</div><div>Recibido por (Unidad Ejecutora)</div></div>';
   repAbrir_(html);
 }
@@ -1708,20 +1770,69 @@ function toggleUEDia(ix){
   if(el) el.classList.toggle('hidden');
 }
 // Imprime solo el detalle del día en una ventana nueva (patrón del panel de proveedores).
+// AGENDA DE DESPACHO DEL DIA — misma estructura que la agenda de citas a
+// proveedores: encabezado institucional, linea de resumen por area, y las
+// filas AGRUPADAS POR UNIDAD EJECUTORA (quien viene), no una lista suelta de
+// F8. Cierra con el bloque de firmas Entregado / Recibido.
+// Antes se imprimia una tabla vertical de F8 sin agrupar y con "0 bultos" en
+// el encabezado: no servia para operar la bahia.
 function imprimirDiaCal(iso){
   const d=window.__CAL_DIA; if(!d||d.iso!==iso) return;
   const [yy,mm,dd]=iso.split('-');
-  let bultos=0; d.evs.forEach(p=>bultos+=(p.bultos||0));
-  let filas=d.evs.slice().sort((a,b)=>b.ipd-a.ipd).map(p=>'<tr><td>'+p.id+'</td><td>'+p.ue+'</td><td>'+p.grupo+'</td><td>'+(p.esUrg?'Urgencia':'Mensual')+'</td><td>'+p.etapa+'</td><td style="text-align:right">'+(p.bultos>0?p.bultos.toLocaleString():'—')+'</td></tr>').join('');
-  const w=window.open('','_blank');
-  w.document.write('<html><head><title>Vencimientos '+dd+'/'+mm+'/'+yy+'</title>'+
-    '<style>body{font-family:Arial;font-size:12px;padding:20px;}h2{color:#0C447C;}table{width:100%;border-collapse:collapse;}th{background:#0C447C;color:#fff;padding:6px;text-align:left;}td{padding:5px 6px;border-bottom:1px solid #eee;}</style></head><body>'+
-    '<h2>Vencimientos de despacho — '+dd+'/'+mm+'/'+yy+'</h2>'+
-    '<p>CEDIS Panamá · '+d.evs.length+' Forma(s) 8 · '+Math.round(bultos).toLocaleString()+' bultos</p>'+
-    '<table><thead><tr><th>Nº F8</th><th>Unidad Ejecutora</th><th>Grupo</th><th>Tipo</th><th>Etapa</th><th style="text-align:right">Bultos</th></tr></thead><tbody>'+filas+'</tbody></table>'+
-    '<button class="noprint" onclick="window.print()" style="margin-top:16px;padding:8px 16px;background:#1e5a9e;color:#fff;border:none;border-radius:3px;cursor:pointer;">Imprimir / Guardar PDF</button>'+
-    '</body></html>');
-  w.document.close();
+  const nomDia=['DOMINGO','LUNES','MARTES','MIÉRCOLES','JUEVES','VIERNES','SÁBADO'][new Date(iso+'T12:00:00').getDay()];
+
+  // Agrupar por unidad ejecutora, ordenadas por urgencia (IPD maximo).
+  const porUE={};
+  d.evs.forEach(p=>{
+    const u=String(p.ue||'Sin unidad').trim()||'Sin unidad';
+    if(!porUE[u]) porUE[u]={f8:[],b:0,urg:0,cero:0,ipdMax:0};
+    const o=porUE[u];
+    o.f8.push(p); o.b+=(p.bultos||0);
+    if(p.esUrg) o.urg++;
+    if(p.tieneCero) o.cero++;
+    if(p.ipd>o.ipdMax) o.ipdMax=p.ipd;
+  });
+  const ues=Object.keys(porUE).sort((a,b)=>porUE[b].ipdMax-porUE[a].ipdMax);
+
+  // Resumen por tipo, como la agenda de proveedores lo hace por area.
+  let totB=0, totUrg=0, totMen=0;
+  d.evs.forEach(p=>{ totB+=(p.bultos||0); if(p.esUrg) totUrg++; else totMen++; });
+
+  let html=repHeadDesp_('Agenda de despacho '+dd+'/'+mm+'/'+yy,
+    'Agenda de despacho a Unidades Ejecutoras',
+    'Día: <b>'+dd+'/'+mm+'/'+yy+'</b> · '+nomDia);
+  html+='<div class="resumenln"><b>'+ues.length+'</b> unidad(es) · <b>'+d.evs.length+
+    '</b> Forma(s) 8 · <b>'+Math.round(totB).toLocaleString()+'</b> bultos'+
+    '  —  URGENCIA: '+totUrg+' F8 · MENSUAL: '+totMen+' F8</div>';
+
+  // Una tabla por unidad: el bloque es la visita, las filas son sus F8.
+  ues.forEach(u=>{
+    const o=porUE[u];
+    html+='<div class="grpttl">'+repEsc_(u)+' — '+o.f8.length+' F8 · '+
+      Math.round(o.b).toLocaleString()+' bultos'+
+      (o.urg?' · <span style="color:#ffd9d9">'+o.urg+' urgencia(s)</span>':'')+
+      (o.cero?' · '+o.cero+' en saldo cero':'')+'</div>';
+    html+='<table><thead><tr><th>Nº F8</th><th>Grupo</th><th>Tipo</th><th>Etapa</th>'+
+      '<th class="num">Bultos</th><th class="num">IPD</th><th>Saldo</th>'+
+      '<th style="width:90px">Retirado por</th></tr></thead><tbody>';
+    html+=o.f8.slice().sort((a,b)=>b.ipd-a.ipd).map(p=>'<tr>'+
+      '<td class="num">'+repEsc_(p.id)+'</td>'+
+      '<td>'+repEsc_(p.grupo||'—')+'</td>'+
+      '<td'+(p.esUrg?' class="rojo"':'')+'>'+(p.esUrg?'Urgencia':'Mensual')+'</td>'+
+      '<td>'+repEsc_(p.etapa||'')+'</td>'+
+      '<td class="num">'+(p.bultos>0?Math.round(p.bultos).toLocaleString():'—')+'</td>'+
+      '<td class="num'+(p.triage==='ROJO'?' rojo':'')+'">'+Math.round(p.ipd)+'</td>'+
+      '<td>'+(p.tieneCero?'<span class="chip0">0</span>':'')+'</td>'+
+      '<td></td></tr>').join('');
+    html+='<tr class="tot"><td colspan="4">TOTAL '+repEsc_(u)+'</td>'+
+      '<td class="num">'+Math.round(o.b).toLocaleString()+'</td>'+
+      '<td colspan="3"></td></tr>';
+    html+='</tbody></table>';
+  });
+
+  html+='<div class="firma"><div>Entregado por (CEDIS)</div>'+
+    '<div>Recibido por (Unidad Ejecutora)</div></div>';
+  repAbrir_(html);
 }
 function triColor(t){ return {ROJO:'#c0281f',NARANJA:'#d97316',AMARILLO:'#c99700',VERDE:'#3a8c3a',AZUL:'#2a6db5'}[t]||'#888'; }
 
