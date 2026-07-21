@@ -192,8 +192,11 @@
 
   /* Supervisión / OTIF */
   .sup-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px;}
-  .sup-card{background:#fff;border:1px solid var(--borde-suave);border-top:4px solid var(--azul);border-radius:4px;padding:14px 16px;}
-  .sup-card.malo{border-top-color:var(--t-rojo);} .sup-card.medio{border-top-color:var(--t-naranja);} .sup-card.bueno{border-top-color:var(--t-verde);}
+  /* Tarjetas pastel: el color llena la tarjeta, sin la barra superior. */
+  .sup-card{background:#f7f9fb;border:1px solid var(--borde-suave);border-radius:6px;padding:14px 16px;}
+  .sup-card.malo{background:var(--rojo-bg);border-color:#eecccc;}
+  .sup-card.medio{background:var(--ambar-bg);border-color:#eddcbb;}
+  .sup-card.bueno{background:var(--verde-bg);border-color:#c5e0d6;}
   .sup-card .lbl{font-size:12px;color:#666;text-transform:uppercase;letter-spacing:.4px;}
   .sup-card .val{font-size:34px;font-weight:800;font-family:var(--mono);line-height:1.1;margin:4px 0;}
   .sup-card .val.malo{color:var(--t-rojo);} .sup-card .val.medio{color:var(--t-naranja);} .sup-card .val.bueno{color:var(--t-verde);}
@@ -485,8 +488,8 @@ function renderKpis(){
     ['retiroHoy','Retiro HOY',k.retiroHoy,'UE que vienen hoy'],
     ['urgente','Despacho urgente',k.urgente,'triage rojo / IPD≥75'],
     ['enCero','En saldo cero',k.enCero,'UE con renglón en 0'],
-    ['transito','F8 en tránsito',k.transito,'sin llegar al CEDIS'],
-    ['enProceso','En proceso',k.enProceso,'entre recepción y facturación']
+    ['enProceso','En proceso',k.enProceso,'entre recepción y facturación'],
+    ['pendiente','Pendiente total',(DATA.pedidos||[]).filter(p=>!p.cerrado).length,'sin despachar']
   ];
   document.getElementById('kpis').innerHTML=cards.map(c=>
     '<div class="kpi kpi-click'+(KPI_FILTRO===c[0]?' activo':'')+'" onclick="filtroKpi(\''+c[0]+'\')">'+
@@ -498,7 +501,7 @@ function filtroKpi(k){
   // mapear kpi a filtros de la lista
   document.getElementById('fTriage').value = (KPI_FILTRO==='urgente')?'ROJO':'';
   document.getElementById('fCero').value = (KPI_FILTRO==='enCero')?'1':'';
-  if(KPI_FILTRO==='transito'){ document.querySelector('.tab[data-tab=transito]').click(); }
+  if(KPI_FILTRO==='pendiente'){ document.getElementById('fVista').value='pendiente'; }
   renderKpis(); renderLista();
 }
 
@@ -1566,6 +1569,12 @@ function renderSupervision(){
     'Cada tarjeta indica sobre cuántos pedidos se midió.</div>';
 
   html+='<div class="sup-sec">OTIF — On-Time In-Full</div>';
+  html+='<div class="sup-nota" style="background:#fffdf5;border-color:#e8dcb8;">'+
+    '<b>Cómo se lee.</b> <b>On-Time</b>: llegó dentro de su ventana de retiro. '+
+    '<b>In-Full</b>: se entregó la cantidad completa. <b>OTIF</b> exige las dos: '+
+    'es el más exigente y siempre será el más bajo de los tres.<br>'+
+    'Verde ≥70% · ámbar 40-69% · rojo &lt;40%. Se mide solo sobre pedidos ya '+
+    'despachados desde el 1 de mayo, que es cuando arranca la trazabilidad confiable.</div>';
   html+='<div class="sup-grid">'+
     tarjetaPct('OTIF (a tiempo Y completo)', o.otifPct, 'Despachado antes de vencer y con cantidad completa', o.otifN)+
     tarjetaPct('On-Time (a tiempo)', o.onTimePct, 'Despachado en o antes de su fecha de vencimiento', o.onTimeN)+
@@ -1675,6 +1684,13 @@ function renderTermografia(){
   let maxCel=1;
   grupos.forEach(g=>TG_ETAPAS.forEach(e=>{ const v=porGrupo[g].etapas[e]||0; if(v>maxCel)maxCel=v; }));
   html+='<div class="sup-sec">Mapa de calor — F8 por grupo y etapa</div>';
+  html+='<div class="sup-nota" style="background:#fffdf5;border-color:#e8dcb8;margin-bottom:10px;">'+
+    '<b>Cómo se lee.</b> Cada fila es un grupo de esta unidad; cada columna, una etapa del flujo. '+
+    'El número es cuántas F8 están ahí <b>ahora mismo</b>.<br>'+
+    '<b>Rojo/ámbar</b> = detenidas aguas arriba (asignada, recolección, picking, reserva): '+
+    'todavía no llegan a facturación. <b>Azul</b> = ya avanzaron hacia despacho. '+
+    'Más intenso = más volumen.<br>'+
+    'Si una fila tiene todo el peso a la izquierda, ese grupo está atascado.</div>';
   html+='<table class="tg-matriz"><thead><tr><th class="grupo">Grupo</th>';
   TG_ETAPAS.forEach(e=>{ html+='<th>'+TG_ET_CORTA[e]+'</th>'; });
   html+='<th>Total</th></tr></thead><tbody>';
