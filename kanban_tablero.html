@@ -32,47 +32,56 @@
   .kpi.recol{background:var(--pc-recol);} .kpi.recol .val{color:#1f6bb8;}
   .kpi.fact{background:var(--pc-fact);}   .kpi.fact .val{color:#4c7519;}
   .kpi.dist{background:var(--pc-dist);}   .kpi.dist .val{color:#0d5a48;}
-  .lat{display:flex;align-items:center;gap:16px;background:#fff;border:1px solid var(--bord);border-left:4px solid var(--rojo);padding:11px 16px;margin-bottom:12px;}
-  .lat .big{font-size:26px;font-weight:700;font-family:Consolas,monospace;color:var(--rojo);}
-  .lat .desc{font-size:12px;color:var(--sub);} .lat .desc b{color:var(--txt);}
   .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;background:#fff;border:1px solid var(--bord);padding:9px 11px;margin-bottom:10px;}
   .toolbar label{font-size:11px;color:var(--sub);}
   .toolbar select,.toolbar input[type=text]{padding:5px 7px;border:1px solid var(--bord);font-size:12px;}
   .toolbar .btn{padding:6px 12px;border:1px solid var(--azul2);background:var(--azul);color:#fff;cursor:pointer;font-size:12px;font-weight:600;}
   .toolbar .btn.sec{background:#fff;color:var(--azul2);}
   .toolbar .spacer{flex:1;} .toolbar .count{font-size:11px;color:var(--sub);}
-  table.ue{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--bord);font-size:12px;}
-  table.ue th{background:var(--azul2);color:#fff;padding:7px 8px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.3px;position:sticky;top:56px;cursor:pointer;user-select:none;}
-  table.ue th.r{text-align:right;}table.ue th.c{text-align:center;}
-  table.ue td{padding:6px 8px;border-top:1px solid #eee;vertical-align:middle;}
-  tr.ue-row{cursor:pointer;} tr.ue-row:hover td{background:#f4f7fb;} tr.ue-row.abierta td{background:#eef3fa;}
-  .caret{display:inline-block;width:12px;color:var(--azul2);font-weight:700;transition:transform .1s;}
-  .caret.abierto{transform:rotate(90deg);}
-  .ue-name{font-weight:700;color:var(--azul2);}
-  .ue-meta{font-size:10px;color:var(--sub);}
-  .badge-hoy{display:inline-block;font-size:9px;font-weight:700;padding:1px 6px;background:#fcebeb;color:var(--rojo);margin-left:5px;}
-  .badge-man{display:inline-block;font-size:9px;font-weight:700;padding:1px 6px;background:#faeeda;color:#854F0B;margin-left:5px;}
-  td.n{font-family:Consolas,monospace;text-align:right;}
-  .prog{display:flex;height:18px;width:100%;min-width:170px;border:1px solid #ddd;overflow:hidden;background:#f6f6f6;}
-  .prog span{display:block;height:100%;}
-  .pend-alert{color:var(--rojo);font-weight:700;}
-  tr.grupo-row{cursor:pointer;} tr.grupo-row td{background:#fafbfc;border-top:1px dotted #dde;}
-  tr.grupo-row.abierta td{background:#f0f4f8;}
-  .grupo-name{padding-left:26px;font-size:11px;color:#2f4a5e;font-weight:700;}
-  .grupo-name .caret{font-size:10px;}
-  tr.f8-head td{background:#f3f6fa;font-size:9px;text-transform:uppercase;letter-spacing:.3px;color:#5a6b7a;font-weight:700;padding:4px 8px;}
-  tr.f8-row td{background:#fff;border-top:1px solid #f0f0f0;font-size:11px;}
-  .f8-id{padding-left:48px;font-family:Consolas,monospace;color:#333;}
-  .f8-etapa{display:inline-block;font-size:9px;font-weight:700;padding:1px 7px;border-radius:2px;color:#fff;}
-  .chip-tipo{font-size:9px;font-weight:700;padding:1px 6px;border-radius:2px;}
-  .tipo-urg{background:#fcebeb;color:var(--rojo);} .tipo-men{background:#eef2f6;color:#5a6b7a;}
-  .fecha-ent{font-family:Consolas,monospace;font-size:11px;}
-  .fecha-venc{color:var(--rojo);font-weight:700;}
-  .f8-load{padding-left:48px;color:var(--sub);font-style:italic;}
-  .empty{padding:36px;text-align:center;color:var(--sub);background:#fff;border:1px solid var(--bord);}
-  .loading{padding:26px;text-align:center;color:var(--sub);}
   .leyenda{display:flex;flex-wrap:wrap;gap:14px;margin:8px 2px 12px;font-size:10px;color:var(--sub);}
   .leyenda .dot{display:inline-block;width:9px;height:9px;margin-right:4px;vertical-align:middle;}
+  /* acordeón UE (patrón panel_confirmacion: toggle con CSS) */
+  .ue-group{background:#fff;border:1px solid var(--bord);margin-bottom:6px;}
+  .ue-head{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;position:relative;}
+  .ue-head:hover{background:#f4f7fb;}
+  .ue-group.open .ue-head{background:#eef3fa;}
+  .ue-head .chev{color:var(--azul2);font-weight:700;font-size:11px;transition:transform .1s;}
+  .ue-group.open .ue-head .chev{transform:rotate(90deg);}
+  .ue-name{font-weight:700;color:var(--azul2);font-size:13px;}
+  .ue-sub{font-size:10px;color:var(--sub);margin-left:4px;}
+  .badge-hoy{font-size:9px;font-weight:700;padding:1px 6px;background:#fcebeb;color:var(--rojo);margin-left:6px;}
+  .badge-man{font-size:9px;font-weight:700;padding:1px 6px;background:#faeeda;color:#854F0B;margin-left:6px;}
+  .ue-head .spacer{flex:1;}
+  .ue-metrics{display:flex;align-items:center;gap:10px;}
+  .prog{display:flex;height:16px;width:200px;border:1px solid #ddd;overflow:hidden;background:#f6f6f6;}
+  .prog span{display:block;height:100%;}
+  .mtot{font-family:Consolas,monospace;font-size:12px;min-width:52px;text-align:right;}
+  .mpend{font-family:Consolas,monospace;font-size:12px;min-width:60px;text-align:right;}
+  .pend-alert{color:var(--rojo);font-weight:700;}
+  .ue-body{display:none;padding:0 0 4px;}
+  .ue-group.open .ue-body{display:block;}
+  /* grupo dentro de UE */
+  .grupo-group{border-top:1px dotted #dde;}
+  .grupo-head{display:flex;align-items:center;gap:8px;padding:6px 12px 6px 30px;cursor:pointer;background:#fafbfc;}
+  .grupo-head:hover{background:#f0f4f8;}
+  .grupo-group.open .grupo-head{background:#f0f4f8;}
+  .grupo-head .chev{color:#2f4a5e;font-weight:700;font-size:10px;transition:transform .1s;}
+  .grupo-group.open .grupo-head .chev{transform:rotate(90deg);}
+  .grupo-name{font-size:11px;color:#2f4a5e;font-weight:700;}
+  .grupo-body{display:none;}
+  .grupo-group.open .grupo-body{display:block;}
+  /* tabla de F8 */
+  .f8-head,.f8-row{display:grid;grid-template-columns:1.4fr .6fr .5fr 1fr .8fr;gap:6px;padding:4px 12px 4px 48px;font-size:11px;align-items:center;}
+  .f8-head{background:#f3f6fa;font-size:9px;text-transform:uppercase;letter-spacing:.3px;color:#5a6b7a;font-weight:700;}
+  .f8-row{border-top:1px solid #f2f2f2;}
+  .f8-row:hover{background:#fafcff;}
+  .f8-id{font-family:Consolas,monospace;color:#333;}
+  .f8-etapa{display:inline-block;font-size:9px;font-weight:700;padding:1px 7px;border-radius:2px;color:#fff;justify-self:start;}
+  .chip-tipo{font-size:9px;font-weight:700;padding:1px 6px;border-radius:2px;justify-self:start;}
+  .tipo-urg{background:#fcebeb;color:var(--rojo);} .tipo-men{background:#eef2f6;color:#5a6b7a;}
+  .fecha-ent{font-family:Consolas,monospace;} .fecha-venc{color:var(--rojo);font-weight:700;}
+  .empty{padding:36px;text-align:center;color:var(--sub);background:#fff;border:1px solid var(--bord);}
+  .loading{padding:26px;text-align:center;color:var(--sub);}
   .err{background:#fdecea;border:1px solid #f5c6cb;color:#a11b11;padding:12px 16px;margin-bottom:10px;font-size:12px;}
 </style>
 </head>
@@ -86,33 +95,28 @@
 <div class="wrap">
   <div id="errBox"></div>
   <div class="kpis">
-    <div class="kpi recep"><div class="lbl">Recepci&oacute;n</div><div class="val num" id="k_recep">&ndash;</div></div>
-    <div class="kpi asig"><div class="lbl">Asignaci&oacute;n</div><div class="val num" id="k_asig">&ndash;</div></div>
-    <div class="kpi recol"><div class="lbl">Recolecci&oacute;n</div><div class="val num" id="k_recol">&ndash;</div></div>
-    <div class="kpi fact"><div class="lbl">Facturaci&oacute;n</div><div class="val num" id="k_fact">&ndash;</div></div>
-    <div class="kpi dist"><div class="lbl">Distribuci&oacute;n</div><div class="val num" id="k_dist">&ndash;</div></div>
+    <div class="kpi recep"><div class="lbl">Recepci&oacute;n</div><div class="val num" id="k_RECEPCION">&ndash;</div></div>
+    <div class="kpi asig"><div class="lbl">Asignaci&oacute;n</div><div class="val num" id="k_ASIGNACION">&ndash;</div></div>
+    <div class="kpi recol"><div class="lbl">Recolecci&oacute;n</div><div class="val num" id="k_RECOLECCION">&ndash;</div></div>
+    <div class="kpi fact"><div class="lbl">Facturaci&oacute;n</div><div class="val num" id="k_FACTURACION">&ndash;</div></div>
+    <div class="kpi dist"><div class="lbl">Distribuci&oacute;n</div><div class="val num" id="k_DISTRIBUCION">&ndash;</div></div>
   </div>
   <div class="toolbar">
     <label>CEDIS:</label><select id="fCedis"><option value="TODOS">&mdash; Todos &mdash;</option></select>
-    <label>Regi&oacute;n:</label><select id="fRegion"><option value="">&mdash; Todas &mdash;</option></select>
     <label>Grupo:</label><select id="fGrupo"><option value="">&mdash; Todos &mdash;</option></select>
     <label>Unidad Ejecutora:</label><select id="fUE"><option value="">&mdash; Todas &mdash;</option></select>
     <input type="text" id="fBuscar" placeholder="Buscar UE..."/>
-    <label><input type="checkbox" id="fHoyMan"/> Solo entregas hoy/ma&ntilde;ana</label>
+    <button class="btn sec" id="btnExpand">Expandir todo</button>
     <button class="btn sec" id="btnRefresh">&#8635; Actualizar</button>
     <div class="spacer"></div><span class="count" id="cnt"></span>
   </div>
   <div class="leyenda" id="leyenda"></div>
-  <div id="tabla"><div class="loading">Cargando tablero&hellip;</div></div>
+  <div id="lista"><div class="loading">Cargando tablero&hellip;</div></div>
 </div>
 <script>
 const WEBAPP_BASE = "https://script.google.com/macros/s/AKfycbyVHDQ8IuVHibz259AiEvZ-jUfVC7fxvSSqC-wfaiiq1_13C9_TK4dVtPK0SMW4sZoJ/exec";
-let DATA=null, UES=[], MACROS=[], sortCol=null, sortDir=1;
-const abiertas=new Set();        // UE expandidas
-const gruposAbiertos=new Set();  // "UE||GRUPO" expandidos
-const f8cache={};                // "UE||GRUPO" -> array de F8 (on-demand)
-
-const COLOR = {RECEPCION:'#888780',ASIGNACION:'#BA7517',RECOLECCION:'#378ADD',FACTURACION:'#639922',DISTRIBUCION:'#0F6E56'};
+let F8=[], MACROS=[], expandAll=false;
+const COLOR={};
 
 async function pedir(params){
   const url=`${WEBAPP_BASE}?${params}&_ts=${Date.now()}`;
@@ -121,34 +125,33 @@ async function pedir(params){
   return res.json();
 }
 async function cargar(){
-  document.getElementById('tabla').innerHTML='<div class="loading">Cargando tablero&hellip;</div>';
+  document.getElementById('lista').innerHTML='<div class="loading">Cargando tablero&hellip;</div>';
   document.getElementById('errBox').innerHTML='';
   try{
     const res=await pedir('file=kanban_tablero_almacen');
     if(!res||res.ok===false) throw new Error((res&&res.msg)||'Respuesta vac\u00eda');
-    DATA=res; UES=res.ues||[]; MACROS=res.macros||[];
-    document.getElementById('gen').innerHTML='Actualizado: '+(res.generado||'\u2014')+'<br>Hoy: '+(res.diaHoy||'\u2014')+' \u00b7 '+(res.totalGeneral||0)+' F8 activas';
-    pintarLeyenda(); pintarKPIs(res.resumen); poblarFiltros(); render();
+    F8=res.f8||[]; MACROS=res.macros||[];
+    MACROS.forEach(m=>COLOR[m.clave]=m.color);
+    document.getElementById('gen').innerHTML='Actualizado: '+(res.generado||'\u2014')+'<br>Hoy: '+(res.diaHoy||'\u2014')+' \u00b7 '+F8.length+' F8 activas';
+    pintarLeyenda(); pintarKPIs(); poblarFiltros(); render();
   }catch(err){
     document.getElementById('errBox').innerHTML='<div class="err">No se pudo cargar el tablero: '+err.message+'. Revisa que el endpoint <b>kanban_tablero_almacen</b> est\u00e9 desplegado en el WebApp.</div>';
-    document.getElementById('tabla').innerHTML='';
+    document.getElementById('lista').innerHTML='';
   }
 }
 function pintarLeyenda(){
   document.getElementById('leyenda').innerHTML=MACROS.map(m=>`<span><span class="dot" style="background:${m.color}"></span>${m.label}</span>`).join('');
 }
-function pintarKPIs(r){
-  if(!r)return;
-  const set=(id,k)=>{const el=document.getElementById(id); if(el) el.textContent=(r[k]||0).toLocaleString();};
-  set('k_recep','RECEPCION');set('k_asig','ASIGNACION');set('k_recol','RECOLECCION');set('k_fact','FACTURACION');set('k_dist','DISTRIBUCION');
+function pintarKPIs(){
+  const c={}; MACROS.forEach(m=>c[m.clave]=0);
+  F8.forEach(f=>{ if(c[f.macro]!=null) c[f.macro]++; });
+  MACROS.forEach(m=>{ const el=document.getElementById('k_'+m.clave); if(el) el.textContent=(c[m.clave]||0).toLocaleString(); });
 }
 function poblarFiltros(){
-  const cedis=[...new Set(UES.map(u=>u.cedis))].filter(Boolean).sort();
-  const regs=[...new Set(UES.map(u=>u.region).filter(Boolean))].sort();
-  const grupos=[...new Set(UES.flatMap(u=>(u.grupos||[]).map(g=>g.grupo)))].filter(Boolean).sort();
-  const ues=[...new Set(UES.map(u=>u.ue))].filter(Boolean).sort();
+  const cedis=[...new Set(F8.map(f=>f.cedis))].filter(Boolean).sort();
+  const grupos=[...new Set(F8.map(f=>f.grupo))].filter(Boolean).sort();
+  const ues=[...new Set(F8.map(f=>f.ue))].filter(Boolean).sort();
   fill('fCedis','TODOS','\u2014 Todos \u2014',cedis);
-  fill('fRegion','','\u2014 Todas \u2014',regs);
   fill('fGrupo','','\u2014 Todos \u2014',grupos);
   fill('fUE','','\u2014 Todas \u2014',ues);
 }
@@ -157,128 +160,123 @@ function fill(id,allVal,allLbl,arr){
   s.innerHTML=`<option value="${allVal}">${allLbl}</option>`+arr.map(x=>`<option>${x}</option>`).join('');
   s.value=[...s.options].some(o=>o.value===prev)?prev:allVal;
 }
-function proyectar(u,fg){
-  if(!fg) return u;
-  const g=(u.grupos||[]).find(x=>x.grupo===fg);
-  if(!g) return null;
-  return Object.assign({},u,{total:g.total,pend:g.pend,macro:g.macro,grupos:[g]});
+const ES_PEND={RECEPCION:1,ASIGNACION:1,RECOLECCION:1};
+function macroVacio(){ const m={}; MACROS.forEach(x=>m[x.clave]=0); return m; }
+function pendDe(macro){ let p=0; for(const k in ES_PEND) p+=(macro[k]||0); return p; }
+function barra(macro,total){
+  const t=total||1;
+  return `<div class="prog">${MACROS.map(m=>{const v=macro[m.clave]||0; return v>0?`<span style="width:${v/t*100}%;background:${m.color}" title="${m.label}: ${v}"></span>`:'';}).join('')}</div>`;
 }
+function fVenc(s){ return s? s.slice(5).replace('-','/') : '\u2014'; }
+
 function filtrados(){
   const fc=document.getElementById('fCedis').value;
-  const fr=document.getElementById('fRegion').value;
   const fg=document.getElementById('fGrupo').value;
   const fu=document.getElementById('fUE').value;
   const q=document.getElementById('fBuscar').value.trim().toLowerCase();
-  const hm=document.getElementById('fHoyMan').checked;
-  let arr=[];
-  UES.forEach(u=>{
-    if(fc && fc!=='TODOS' && u.cedis!==fc) return;
-    if(fr && u.region!==fr) return;
-    if(fu && u.ue!==fu) return;
-    if(q && !u.ue.toLowerCase().includes(q)) return;
-    if(hm && !(u.entregaHoy||u.entregaManana)) return;
-    const pu=proyectar(u,fg);
-    if(pu) arr.push(pu);
+  return F8.filter(f=>{
+    if(fc && fc!=='TODOS' && f.cedis!==fc) return false;
+    if(fg && f.grupo!==fg) return false;
+    if(fu && f.ue!==fu) return false;
+    if(q && !f.ue.toLowerCase().includes(q)) return false;
+    return true;
   });
-  if(sortCol){
-    arr=arr.slice().sort((a,b)=>{
-      let va,vb;
-      if(sortCol==='ue'){va=a.ue;vb=b.ue;}
-      else if(sortCol==='total'){va=a.total;vb=b.total;}
-      else if(sortCol==='pend'){va=a.pend;vb=b.pend;}
-      else {va=a.macro[sortCol]||0;vb=b.macro[sortCol]||0;}
-      if(va<vb)return -1*sortDir; if(va>vb)return 1*sortDir; return 0;
-    });
-  }
-  return arr;
 }
-function barra(macro,total){
-  const t=total||1;
-  const seg=m=>{const v=macro[m.clave]||0; return v>0?`<span style="width:${(v/t*100)}%;background:${m.color}" title="${m.label}: ${v}"></span>`:'';};
-  return `<div class="prog">${MACROS.map(seg).join('')}</div>`;
-}
-function celdasMacro(macro){ return MACROS.map(m=>`<td class="n">${macro[m.clave]||0}</td>`).join(''); }
-
 function render(){
-  const arr=filtrados();
-  document.getElementById('cnt').textContent=arr.length+' UE';
-  const cont=document.getElementById('tabla');
-  if(!arr.length){cont.innerHTML='<div class="empty">No hay unidades con este filtro.</div>';return;}
-  const th=(lbl,col,cls)=>`<th class="${cls||''}" onclick="setSort('${col}')">${lbl}${sortCol===col?(sortDir>0?' \u25b2':' \u25bc'):''}</th>`;
-  const thMacro=MACROS.map(m=>th(m.label.slice(0,6),m.clave,'r')).join('');
-  let html=`<table class="ue"><thead><tr>
-    ${th('Unidad Ejecutora','ue')}<th>Entrega</th>${th('Total','total','r')}${th('Pend.','pend','r')}
-    <th class="c">Termograf\u00eda</th>${thMacro}</tr></thead><tbody>`;
-  arr.forEach(u=>{
-    const abierta=abiertas.has(u.ue);
-    let badge='';
-    if(u.entregaHoy) badge='<span class="badge-hoy">HOY</span>';
-    else if(u.entregaManana) badge='<span class="badge-man">MA\u00d1ANA</span>';
-    const ueEsc=u.ue.replace(/'/g,"\\'");
-    html+=`<tr class="ue-row ${abierta?'abierta':''}" onclick="toggleUE('${ueEsc}')">
-      <td><span class="caret ${abierta?'abierto':''}">\u25b6</span> <span class="ue-name">${u.ue}</span>${badge}
-          <div class="ue-meta">${u.cedis} \u00b7 ${u.categ||''}</div></td>
-      <td style="font-size:11px">${u.dias||'\u2014'}</td>
-      <td class="n">${u.total}</td><td class="n ${u.pend>0?'pend-alert':''}">${u.pend}</td>
-      <td>${barra(u.macro,u.total)}</td>${celdasMacro(u.macro)}</tr>`;
-    if(abierta){
-      (u.grupos||[]).forEach(g=>{
-        const gk=u.ue+'||'+g.grupo;
-        const gAb=gruposAbiertos.has(gk);
-        const gEsc=g.grupo.replace(/'/g,"\\'");
-        html+=`<tr class="grupo-row ${gAb?'abierta':''}" onclick="toggleGrupo('${ueEsc}','${gEsc}')">
-          <td class="grupo-name"><span class="caret ${gAb?'abierto':''}">\u25b6</span> ${g.grupo}</td>
-          <td></td><td class="n">${g.total}</td><td class="n ${g.pend>0?'pend-alert':''}">${g.pend}</td>
-          <td>${barra(g.macro,g.total)}</td>${celdasMacro(g.macro)}</tr>`;
-        if(gAb){
-          const lista=f8cache[gk];
-          if(lista===undefined){
-            html+=`<tr class="f8-row"><td class="f8-load" colspan="10">Cargando Formas 8\u2026</td></tr>`;
-          } else if(lista.length===0){
-            html+=`<tr class="f8-row"><td class="f8-load" colspan="10">Sin Formas 8 en este grupo.</td></tr>`;
-          } else {
-            html+=`<tr class="f8-head"><td>Forma 8</td><td>Entrega</td><td>Tipo</td><td colspan="2">Etapa actual</td><td colspan="5">Recibida</td></tr>`;
-            lista.forEach(f=>{
-              const col=COLOR[f.macro]||'#888';
-              const fv=f.fechaVencimiento? f.fechaVencimiento.slice(5).replace('-','/') : '\u2014';
-              const fr=f.fechaRecepcion||'\u2014';
-              html+=`<tr class="f8-row">
-                <td class="f8-id">${f.id}</td>
-                <td class="fecha-ent ${f.vencido?'fecha-venc':''}">${fv}</td>
-                <td><span class="chip-tipo ${f.tipo==='URG'?'tipo-urg':'tipo-men'}">${f.tipo}</span></td>
-                <td colspan="2"><span class="f8-etapa" style="background:${col}">${f.etapa}</span></td>
-                <td colspan="5" class="fecha-ent">${fr}</td></tr>`;
-            });
-          }
-        }
-      });
-    }
+  const rows=filtrados();
+  const cont=document.getElementById('lista');
+  if(!rows.length){cont.innerHTML='<div class="empty">No hay Formas 8 con este filtro.</div>';document.getElementById('cnt').textContent='0 UE';return;}
+
+  // agrupar UE -> grupo -> [f8]  (patrón byUE de panel_confirmacion)
+  const byUE=new Map();
+  rows.forEach(f=>{
+    if(!byUE.has(f.ue)) byUE.set(f.ue,{cedis:f.cedis,dias:f.dias,grupos:new Map(),all:[]});
+    const u=byUE.get(f.ue);
+    u.all.push(f);
+    if(!u.grupos.has(f.grupo)) u.grupos.set(f.grupo,[]);
+    u.grupos.get(f.grupo).push(f);
   });
-  html+='</tbody></table>';
+
+  const hoy=new Date(); const dow=hoy.getDay();
+  const DIAS=['DOMINGO','LUNES','MARTES','MIERCOLES','JUEVES','VIERNES','SABADO'];
+  function entregaHoyMan(dias){
+    if(!dias) return {hoy:false,man:false};
+    const d=dias.toUpperCase();
+    const hoyN=DIAS[dow], manN=DIAS[(dow+1)%7];
+    return {hoy:d.indexOf(hoyN.slice(0,3))>=0, man:d.indexOf(manN.slice(0,3))>=0};
+  }
+
+  const ues=[...byUE.keys()].sort((a,b)=>{
+    const pa=pendDe(macroDe(byUE.get(a).all)), pb=pendDe(macroDe(byUE.get(b).all));
+    return pb-pa;
+  });
+  document.getElementById('cnt').textContent=ues.length+' UE';
+
+  let html='';
+  ues.forEach((ue,gi)=>{
+    const u=byUE.get(ue);
+    const mUE=macroDe(u.all), totUE=u.all.length, pendUE=pendDe(mUE);
+    const open=expandAll||gi===0;
+    const em=entregaHoyMan(u.dias);
+    let badge='';
+    if(em.hoy) badge='<span class="badge-hoy">HOY</span>';
+    else if(em.man) badge='<span class="badge-man">MA\u00d1ANA</span>';
+    html+=`<div class="ue-group${open?' open':''}">
+      <div class="ue-head" onclick="this.parentNode.classList.toggle('open')">
+        <span class="chev">\u25b6</span>
+        <span class="ue-name">${ue}</span>${badge}
+        <span class="ue-sub">${u.cedis} \u00b7 ${u.dias||'\u2014'}</span>
+        <span class="spacer"></span>
+        <span class="ue-metrics">
+          ${barra(mUE,totUE)}
+          <span class="mtot">${totUE}</span>
+          <span class="mpend ${pendUE>0?'pend-alert':''}">pend ${pendUE}</span>
+        </span>
+      </div>
+      <div class="ue-body">`;
+    // grupos ordenados por pendientes
+    const grupos=[...u.grupos.keys()].sort((a,b)=>pendDe(macroDe(u.grupos.get(b)))-pendDe(macroDe(u.grupos.get(a))));
+    grupos.forEach(g=>{
+      const lista=u.grupos.get(g), mG=macroDe(lista), totG=lista.length, pendG=pendDe(mG);
+      html+=`<div class="grupo-group">
+        <div class="grupo-head" onclick="this.parentNode.classList.toggle('open')">
+          <span class="chev">\u25b6</span>
+          <span class="grupo-name">${g}</span>
+          <span class="spacer" style="flex:1"></span>
+          <span class="ue-metrics">${barra(mG,totG)}<span class="mtot">${totG}</span><span class="mpend ${pendG>0?'pend-alert':''}">pend ${pendG}</span></span>
+        </div>
+        <div class="grupo-body">
+          <div class="f8-head"><span>Forma 8</span><span>Entrega</span><span>Tipo</span><span>Etapa actual</span><span>Recibida</span></div>`;
+      // F8 ordenados por fecha de entrega
+      lista.slice().sort((a,b)=>{
+        const fa=a.fechaVencimiento||'9999-99-99', fb=b.fechaVencimiento||'9999-99-99';
+        return fa<fb?-1:(fa>fb?1:0);
+      }).forEach(f=>{
+        html+=`<div class="f8-row">
+          <span class="f8-id">${f.id}</span>
+          <span class="fecha-ent ${f.vencido?'fecha-venc':''}">${fVenc(f.fechaVencimiento)}</span>
+          <span><span class="chip-tipo ${f.tipo==='URG'?'tipo-urg':'tipo-men'}">${f.tipo}</span></span>
+          <span><span class="f8-etapa" style="background:${COLOR[f.macro]||'#888'}">${f.etapa}</span></span>
+          <span class="fecha-ent">${f.fechaRecepcion||'\u2014'}</span>
+        </div>`;
+      });
+      html+=`</div></div>`;
+    });
+    html+=`</div></div>`;
+  });
   cont.innerHTML=html;
 }
-function toggleUE(ue){ if(abiertas.has(ue)) abiertas.delete(ue); else abiertas.add(ue); render(); }
-async function toggleGrupo(ue,grupo){
-  const gk=ue+'||'+grupo;
-  if(gruposAbiertos.has(gk)){ gruposAbiertos.delete(gk); render(); return; }
-  gruposAbiertos.add(gk); render();               // muestra "Cargando..."
-  if(f8cache[gk]===undefined){
-    try{
-      const res=await pedir('file=kanban_tablero_f8&ue='+encodeURIComponent(ue)+'&grupo='+encodeURIComponent(grupo));
-      f8cache[gk]=(res&&res.f8)?res.f8:[];
-    }catch(err){ f8cache[gk]=[]; }
-    render();
-  }
+function macroDe(lista){
+  const m=macroVacio();
+  lista.forEach(f=>{ if(m[f.macro]!=null) m[f.macro]++; });
+  return m;
 }
-function setSort(col){ if(sortCol===col) sortDir*=-1; else {sortCol=col; sortDir=1;} render(); }
 document.getElementById('btnRefresh').onclick=cargar;
-['fCedis','fRegion','fGrupo','fUE'].forEach(id=>document.getElementById(id).onchange=render);
-document.getElementById('fHoyMan').onchange=render;
+document.getElementById('btnExpand').onclick=function(){expandAll=!expandAll;this.textContent=expandAll?'Colapsar todo':'Expandir todo';render();};
+['fCedis','fGrupo','fUE'].forEach(id=>document.getElementById(id).onchange=render);
 document.getElementById('fBuscar').oninput=render;
 cargar();
-setInterval(()=>{ // refresco solo de agregados; respeta expandidos y caché F8
-  cargar();
-}, 180000);
+setInterval(cargar,180000);
 </script>
 </body>
 </html>
