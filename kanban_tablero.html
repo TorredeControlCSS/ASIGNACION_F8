@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Kanban de Seguimiento — Tablero del CEDIS Panamá por Unidad Ejecutora</title>
+<title>Kanban de Seguimiento — Tablero del Almacén por Unidad Ejecutora</title>
 <link rel="icon" href="./favicon.ico?v=1"/>
 <style>
   :root{
@@ -12,6 +12,7 @@
     --m-recep:#888780;--m-asig:#BA7517;--m-recol:#378ADD;--m-fact:#639922;--m-dist:#0F6E56;
     --rojo:#a12626;
     --pc-recep:#ececeb;--pc-asig:#f6ecd9;--pc-recol:#e2eefb;--pc-fact:#eaf3dd;--pc-dist:#dcefe8;
+    --t-rojo:#C00000;--t-naranja:#E36C09;--t-amarillo:#BF9000;--t-verde:#2e7d32;--t-azul:#1e5a9e;
   }
   *{box-sizing:border-box;}
   body{font-family:Arial,Helvetica,sans-serif;margin:0;background:var(--bg);color:var(--txt);}
@@ -22,7 +23,7 @@
   .topbar .sub{font-size:11px;opacity:.85;margin-top:2px;}
   .topbar .spacer{flex:1;}
   .topbar .gen{font-size:11px;opacity:.85;text-align:right;line-height:1.5;}
-  .wrap{max-width:1340px;margin:0 auto;padding:14px;}
+  .wrap{max-width:1500px;margin:0 auto;padding:14px;}
   .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:12px;}
   .kpi{border:1px solid var(--bord);padding:12px 14px;border-radius:2px;}
   .kpi .lbl{font-size:10px;color:#4a5560;text-transform:uppercase;letter-spacing:.4px;font-weight:700;}
@@ -40,27 +41,24 @@
   .toolbar .spacer{flex:1;} .toolbar .count{font-size:11px;color:var(--sub);}
   .leyenda{display:flex;flex-wrap:wrap;gap:14px;margin:8px 2px 12px;font-size:10px;color:var(--sub);}
   .leyenda .dot{display:inline-block;width:9px;height:9px;margin-right:4px;vertical-align:middle;}
-  /* acordeón UE (patrón panel_confirmacion: toggle con CSS) */
   .ue-group{background:#fff;border:1px solid var(--bord);margin-bottom:6px;}
-  .ue-head{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;position:relative;}
+  .ue-head{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;}
   .ue-head:hover{background:#f4f7fb;}
   .ue-group.open .ue-head{background:#eef3fa;}
   .ue-head .chev{color:var(--azul2);font-weight:700;font-size:11px;transition:transform .1s;}
   .ue-group.open .ue-head .chev{transform:rotate(90deg);}
   .ue-name{font-weight:700;color:var(--azul2);font-size:13px;}
   .ue-sub{font-size:10px;color:var(--sub);margin-left:4px;}
-  .badge-hoy{font-size:9px;font-weight:700;padding:1px 6px;background:#fcebeb;color:var(--rojo);margin-left:6px;}
-  .badge-man{font-size:9px;font-weight:700;padding:1px 6px;background:#faeeda;color:#854F0B;margin-left:6px;}
+  .ue-tot{font-size:10px;color:var(--sub);font-family:Consolas,monospace;margin-left:8px;}
+  .ue-tot b{color:var(--txt);}
   .ue-head .spacer{flex:1;}
   .ue-metrics{display:flex;align-items:center;gap:10px;}
-  .prog{display:flex;height:16px;width:200px;border:1px solid #ddd;overflow:hidden;background:#f6f6f6;}
+  .prog{display:flex;height:16px;width:190px;border:1px solid #ddd;overflow:hidden;background:#f6f6f6;}
   .prog span{display:block;height:100%;}
-  .mtot{font-family:Consolas,monospace;font-size:12px;min-width:52px;text-align:right;}
-  .mpend{font-family:Consolas,monospace;font-size:12px;min-width:60px;text-align:right;}
+  .mtot{font-family:Consolas,monospace;font-size:12px;min-width:46px;text-align:right;}
+  .mpend{font-family:Consolas,monospace;font-size:12px;min-width:58px;text-align:right;}
   .pend-alert{color:var(--rojo);font-weight:700;}
-  .ue-body{display:none;padding:0 0 4px;}
-  .ue-group.open .ue-body{display:block;}
-  /* grupo dentro de UE */
+  .ue-body{display:none;} .ue-group.open .ue-body{display:block;}
   .grupo-group{border-top:1px dotted #dde;}
   .grupo-head{display:flex;align-items:center;gap:8px;padding:6px 12px 6px 30px;cursor:pointer;background:#fafbfc;}
   .grupo-head:hover{background:#f0f4f8;}
@@ -68,18 +66,23 @@
   .grupo-head .chev{color:#2f4a5e;font-weight:700;font-size:10px;transition:transform .1s;}
   .grupo-group.open .grupo-head .chev{transform:rotate(90deg);}
   .grupo-name{font-size:11px;color:#2f4a5e;font-weight:700;}
-  .grupo-body{display:none;}
-  .grupo-group.open .grupo-body{display:block;}
-  /* tabla de F8 */
-  .f8-head,.f8-row{display:grid;grid-template-columns:1.4fr .6fr .5fr 1fr .8fr;gap:6px;padding:4px 12px 4px 48px;font-size:11px;align-items:center;}
-  .f8-head{background:#f3f6fa;font-size:9px;text-transform:uppercase;letter-spacing:.3px;color:#5a6b7a;font-weight:700;}
-  .f8-row{border-top:1px solid #f2f2f2;}
-  .f8-row:hover{background:#fafcff;}
-  .f8-id{font-family:Consolas,monospace;color:#333;}
-  .f8-etapa{display:inline-block;font-size:9px;font-weight:700;padding:1px 7px;border-radius:2px;color:#fff;justify-self:start;}
-  .chip-tipo{font-size:9px;font-weight:700;padding:1px 6px;border-radius:2px;justify-self:start;}
+  .grupo-body{display:none;overflow-x:auto;} .grupo-group.open .grupo-body{display:block;}
+  table.f8{width:100%;border-collapse:collapse;font-size:11px;min-width:1100px;}
+  table.f8 th{background:#f3f6fa;color:#5a6b7a;font-size:9px;text-transform:uppercase;letter-spacing:.3px;
+    font-weight:700;padding:4px 6px;text-align:left;white-space:nowrap;}
+  table.f8 th:first-child{padding-left:48px;}
+  table.f8 td{padding:3px 6px;border-top:1px solid #f2f2f2;white-space:nowrap;}
+  table.f8 td:first-child{padding-left:48px;font-family:Consolas,monospace;}
+  table.f8 tr:hover td{background:#fafcff;}
+  .f8-etapa{display:inline-block;font-size:9px;font-weight:700;padding:1px 6px;border-radius:2px;color:#fff;}
+  .chip-tipo{font-size:9px;font-weight:700;padding:1px 5px;border-radius:2px;}
   .tipo-urg{background:#fcebeb;color:var(--rojo);} .tipo-men{background:#eef2f6;color:#5a6b7a;}
-  .fecha-ent{font-family:Consolas,monospace;} .fecha-venc{color:var(--rojo);font-weight:700;}
+  .tri{display:inline-block;font-size:9px;font-weight:700;padding:1px 6px;border-radius:2px;color:#fff;}
+  .tri-ROJO{background:var(--t-rojo);} .tri-NARANJA{background:var(--t-naranja);}
+  .tri-AMARILLO{background:var(--t-amarillo);} .tri-VERDE{background:var(--t-verde);} .tri-AZUL{background:var(--t-azul);}
+  .num-cell{font-family:Consolas,monospace;text-align:right;}
+  .fecha-venc{color:var(--rojo);font-weight:700;}
+  .sinstock{color:var(--rojo);font-weight:700;}
   .empty{padding:36px;text-align:center;color:var(--sub);background:#fff;border:1px solid var(--bord);}
   .loading{padding:26px;text-align:center;color:var(--sub);}
   .err{background:#fdecea;border:1px solid #f5c6cb;color:#a11b11;padding:12px 16px;margin-bottom:10px;font-size:12px;}
@@ -104,6 +107,7 @@
   <div class="toolbar">
     <label>CEDIS:</label><select id="fCedis"><option value="TODOS">&mdash; Todos &mdash;</option></select>
     <label>Grupo:</label><select id="fGrupo"><option value="">&mdash; Todos &mdash;</option></select>
+    <label>Triage:</label><select id="fTriage"><option value="">&mdash; Todos &mdash;</option><option>ROJO</option><option>NARANJA</option><option>AMARILLO</option><option>VERDE</option><option>AZUL</option></select>
     <label>Unidad Ejecutora:</label><select id="fUE"><option value="">&mdash; Todas &mdash;</option></select>
     <input type="text" id="fBuscar" placeholder="Buscar UE..."/>
     <button class="btn sec" id="btnExpand">Expandir todo</button>
@@ -115,9 +119,8 @@
 </div>
 <script>
 const WEBAPP_BASE = "https://script.google.com/macros/s/AKfycbyVHDQ8IuVHibz259AiEvZ-jUfVC7fxvSSqC-wfaiiq1_13C9_TK4dVtPK0SMW4sZoJ/exec";
-let F8=[], MACROS=[], expandAll=false;
+let F8=[], MACROS=[], UETOT={}, expandAll=false;
 const COLOR={};
-
 async function pedir(params){
   const url=`${WEBAPP_BASE}?${params}&_ts=${Date.now()}`;
   const res=await fetch(url,{method:'GET',redirect:'follow'});
@@ -130,17 +133,18 @@ async function cargar(){
   try{
     const res=await pedir('file=kanban_tablero_almacen');
     if(!res||res.ok===false) throw new Error((res&&res.msg)||'Respuesta vac\u00eda');
-    F8=res.f8||[]; MACROS=res.macros||[];
+    F8=res.f8||[]; MACROS=res.macros||[]; UETOT=res.ueTotales||{};
     MACROS.forEach(m=>COLOR[m.clave]=m.color);
     document.getElementById('gen').innerHTML='Actualizado: '+(res.generado||'\u2014')+'<br>Hoy: '+(res.diaHoy||'\u2014')+' \u00b7 '+F8.length+' F8 activas';
     pintarLeyenda(); pintarKPIs(); poblarFiltros(); render();
   }catch(err){
-    document.getElementById('errBox').innerHTML='<div class="err">No se pudo cargar el tablero: '+err.message+'. Revisa que el endpoint <b>kanban_tablero_almacen</b> est\u00e9 desplegado en el WebApp.</div>';
+    document.getElementById('errBox').innerHTML='<div class="err">No se pudo cargar el tablero: '+err.message+'.</div>';
     document.getElementById('lista').innerHTML='';
   }
 }
 function pintarLeyenda(){
-  document.getElementById('leyenda').innerHTML=MACROS.map(m=>`<span><span class="dot" style="background:${m.color}"></span>${m.label}</span>`).join('');
+  document.getElementById('leyenda').innerHTML=MACROS.map(m=>`<span><span class="dot" style="background:${m.color}"></span>${m.label}</span>`).join('')
+    +' &nbsp;|&nbsp; '+['ROJO','NARANJA','AMARILLO','VERDE','AZUL'].map(t=>`<span><span class="dot tri-${t}" style="width:9px;height:9px"></span>${t}</span>`).join('');
 }
 function pintarKPIs(){
   const c={}; MACROS.forEach(m=>c[m.clave]=0);
@@ -163,20 +167,22 @@ function fill(id,allVal,allLbl,arr){
 const ES_PEND={RECEPCION:1,ASIGNACION:1,RECOLECCION:1};
 function macroVacio(){ const m={}; MACROS.forEach(x=>m[x.clave]=0); return m; }
 function pendDe(macro){ let p=0; for(const k in ES_PEND) p+=(macro[k]||0); return p; }
+function macroDe(lista){ const m=macroVacio(); lista.forEach(f=>{ if(m[f.macro]!=null) m[f.macro]++; }); return m; }
 function barra(macro,total){
   const t=total||1;
   return `<div class="prog">${MACROS.map(m=>{const v=macro[m.clave]||0; return v>0?`<span style="width:${v/t*100}%;background:${m.color}" title="${m.label}: ${v}"></span>`:'';}).join('')}</div>`;
 }
 function fVenc(s){ return s? s.slice(5).replace('-','/') : '\u2014'; }
-
 function filtrados(){
   const fc=document.getElementById('fCedis').value;
   const fg=document.getElementById('fGrupo').value;
+  const ft=document.getElementById('fTriage').value;
   const fu=document.getElementById('fUE').value;
   const q=document.getElementById('fBuscar').value.trim().toLowerCase();
   return F8.filter(f=>{
     if(fc && fc!=='TODOS' && f.cedis!==fc) return false;
     if(fg && f.grupo!==fg) return false;
+    if(ft && f.triage!==ft) return false;
     if(fu && f.ue!==fu) return false;
     if(q && !f.ue.toLowerCase().includes(q)) return false;
     return true;
@@ -186,94 +192,68 @@ function render(){
   const rows=filtrados();
   const cont=document.getElementById('lista');
   if(!rows.length){cont.innerHTML='<div class="empty">No hay Formas 8 con este filtro.</div>';document.getElementById('cnt').textContent='0 UE';return;}
-
-  // agrupar UE -> grupo -> [f8]  (patrón byUE de panel_confirmacion)
   const byUE=new Map();
   rows.forEach(f=>{
-    if(!byUE.has(f.ue)) byUE.set(f.ue,{cedis:f.cedis,dias:f.dias,grupos:new Map(),all:[]});
-    const u=byUE.get(f.ue);
-    u.all.push(f);
+    if(!byUE.has(f.ue)) byUE.set(f.ue,{cedis:f.cedis,dias:f.diasCrono,grupos:new Map(),all:[]});
+    const u=byUE.get(f.ue); u.all.push(f);
     if(!u.grupos.has(f.grupo)) u.grupos.set(f.grupo,[]);
     u.grupos.get(f.grupo).push(f);
   });
-
-  const hoy=new Date(); const dow=hoy.getDay();
-  const DIAS=['DOMINGO','LUNES','MARTES','MIERCOLES','JUEVES','VIERNES','SABADO'];
-  function entregaHoyMan(dias){
-    if(!dias) return {hoy:false,man:false};
-    const d=dias.toUpperCase();
-    const hoyN=DIAS[dow], manN=DIAS[(dow+1)%7];
-    return {hoy:d.indexOf(hoyN.slice(0,3))>=0, man:d.indexOf(manN.slice(0,3))>=0};
-  }
-
-  const ues=[...byUE.keys()].sort((a,b)=>{
-    const pa=pendDe(macroDe(byUE.get(a).all)), pb=pendDe(macroDe(byUE.get(b).all));
-    return pb-pa;
-  });
+  const ues=[...byUE.keys()].sort((a,b)=>pendDe(macroDe(byUE.get(b).all))-pendDe(macroDe(byUE.get(a).all)));
   document.getElementById('cnt').textContent=ues.length+' UE';
-
   let html='';
   ues.forEach((ue,gi)=>{
     const u=byUE.get(ue);
     const mUE=macroDe(u.all), totUE=u.all.length, pendUE=pendDe(mUE);
     const open=expandAll||gi===0;
-    const em=entregaHoyMan(u.dias);
-    let badge='';
-    if(em.hoy) badge='<span class="badge-hoy">HOY</span>';
-    else if(em.man) badge='<span class="badge-man">MA\u00d1ANA</span>';
+    const t=UETOT[ue]||{f8:totUE,urg:0,mens:0};
     html+=`<div class="ue-group${open?' open':''}">
       <div class="ue-head" onclick="this.parentNode.classList.toggle('open')">
         <span class="chev">\u25b6</span>
-        <span class="ue-name">${ue}</span>${badge}
-        <span class="ue-sub">${u.cedis} \u00b7 ${u.dias||'\u2014'}</span>
+        <span class="ue-name">${ue}</span>
+        <span class="ue-sub">${u.cedis||''} \u00b7 ${u.dias||'\u2014'}</span>
+        <span class="ue-tot">F8 <b>${t.f8}</b> \u00b7 urg <b>${t.urg}</b> \u00b7 mens <b>${t.mens}</b></span>
         <span class="spacer"></span>
-        <span class="ue-metrics">
-          ${barra(mUE,totUE)}
-          <span class="mtot">${totUE}</span>
-          <span class="mpend ${pendUE>0?'pend-alert':''}">pend ${pendUE}</span>
-        </span>
+        <span class="ue-metrics">${barra(mUE,totUE)}<span class="mtot">${totUE}</span><span class="mpend ${pendUE>0?'pend-alert':''}">pend ${pendUE}</span></span>
       </div>
       <div class="ue-body">`;
-    // grupos ordenados por pendientes
     const grupos=[...u.grupos.keys()].sort((a,b)=>pendDe(macroDe(u.grupos.get(b)))-pendDe(macroDe(u.grupos.get(a))));
     grupos.forEach(g=>{
       const lista=u.grupos.get(g), mG=macroDe(lista), totG=lista.length, pendG=pendDe(mG);
       html+=`<div class="grupo-group">
         <div class="grupo-head" onclick="this.parentNode.classList.toggle('open')">
-          <span class="chev">\u25b6</span>
-          <span class="grupo-name">${g}</span>
+          <span class="chev">\u25b6</span><span class="grupo-name">${g}</span>
           <span class="spacer" style="flex:1"></span>
           <span class="ue-metrics">${barra(mG,totG)}<span class="mtot">${totG}</span><span class="mpend ${pendG>0?'pend-alert':''}">pend ${pendG}</span></span>
         </div>
-        <div class="grupo-body">
-          <div class="f8-head"><span>Forma 8</span><span>Entrega</span><span>Tipo</span><span>Etapa actual</span><span>Recibida</span></div>`;
-      // F8 ordenados por fecha de entrega
-      lista.slice().sort((a,b)=>{
-        const fa=a.fechaVencimiento||'9999-99-99', fb=b.fechaVencimiento||'9999-99-99';
-        return fa<fb?-1:(fa>fb?1:0);
-      }).forEach(f=>{
-        html+=`<div class="f8-row">
-          <span class="f8-id">${f.id}</span>
-          <span class="fecha-ent ${f.vencido?'fecha-venc':''}">${fVenc(f.fechaVencimiento)}</span>
-          <span><span class="chip-tipo ${f.tipo==='URG'?'tipo-urg':'tipo-men'}">${f.tipo}</span></span>
-          <span><span class="f8-etapa" style="background:${COLOR[f.macro]||'#888'}">${f.etapa}</span></span>
-          <span class="fecha-ent">${f.fechaRecepcion||'\u2014'}</span>
-        </div>`;
+        <div class="grupo-body"><table class="f8"><thead><tr>
+          <th>Forma 8</th><th>IPD</th><th>Triage</th><th>Tipo</th><th>Etapa</th>
+          <th>Recibida</th><th>D\u00eda crono</th><th>Entrega</th><th>Fill</th><th>Sin stock</th><th>Situaci\u00f3n</th>
+        </tr></thead><tbody>`;
+      lista.slice().sort((a,b)=>(b.ipd||0)-(a.ipd||0)).forEach(f=>{
+        html+=`<tr>
+          <td>${f.id}</td>
+          <td class="num-cell">${f.ipd!=null?f.ipd:'\u2014'}</td>
+          <td>${f.triage?`<span class="tri tri-${f.triage}">${f.triage}</span>`:'\u2014'}</td>
+          <td><span class="chip-tipo ${f.tipo==='URG'?'tipo-urg':'tipo-men'}">${f.tipo}</span></td>
+          <td><span class="f8-etapa" style="background:${COLOR[f.macro]||'#888'}">${f.etapa}</span></td>
+          <td class="num-cell">${f.fechaRecepcion||'\u2014'}</td>
+          <td>${f.diasCrono||'\u2014'}</td>
+          <td class="num-cell ${f.vencido?'fecha-venc':''}">${fVenc(f.fechaVencimiento)}</td>
+          <td class="num-cell">${f.fillRate!=null?f.fillRate+'%':'\u2014'}</td>
+          <td class="${f.sinStock?'sinstock':''}">${f.sinStock||'\u2014'}</td>
+          <td>${f.situacion||'\u2014'}</td>
+        </tr>`;
       });
-      html+=`</div></div>`;
+      html+=`</tbody></table></div></div>`;
     });
     html+=`</div></div>`;
   });
   cont.innerHTML=html;
 }
-function macroDe(lista){
-  const m=macroVacio();
-  lista.forEach(f=>{ if(m[f.macro]!=null) m[f.macro]++; });
-  return m;
-}
 document.getElementById('btnRefresh').onclick=cargar;
 document.getElementById('btnExpand').onclick=function(){expandAll=!expandAll;this.textContent=expandAll?'Colapsar todo':'Expandir todo';render();};
-['fCedis','fGrupo','fUE'].forEach(id=>document.getElementById(id).onchange=render);
+['fCedis','fGrupo','fTriage','fUE'].forEach(id=>document.getElementById(id).onchange=render);
 document.getElementById('fBuscar').oninput=render;
 cargar();
 setInterval(cargar,180000);
