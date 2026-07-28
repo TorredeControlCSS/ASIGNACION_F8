@@ -26,17 +26,19 @@
   .wrap{max-width:1500px;margin:0 auto;padding:14px;}
   /* banda de acción del supervisor */
   .accion{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;}
-  .acc{border:1px solid var(--bord);border-left:4px solid var(--azul2);background:#fff;padding:10px 14px;cursor:pointer;transition:background .1s;}
-  .acc:hover{background:#f4f7fb;}
-  .acc.on{background:#eef3fa;border-left-width:6px;}
-  .acc .acc-lbl{font-size:10px;color:var(--sub);text-transform:uppercase;letter-spacing:.4px;font-weight:700;}
+  .acc{border:1px solid var(--bord);border-radius:2px;padding:10px 14px;cursor:pointer;transition:filter .1s,box-shadow .1s;}
+  .acc:hover{filter:brightness(.97);}
+  .acc.on{box-shadow:inset 0 0 0 2px var(--azul2);}
+  .acc .acc-lbl{font-size:10px;color:#4a5560;text-transform:uppercase;letter-spacing:.4px;font-weight:700;}
   .acc .acc-val{font-size:24px;font-weight:700;font-family:Consolas,monospace;line-height:1.15;margin-top:2px;}
   .acc .acc-sub{font-size:10px;color:var(--sub);margin-top:1px;}
-  .acc.vence{border-left-color:var(--rojo);} .acc.vence .acc-val{color:var(--rojo);}
-  .acc.cuello{border-left-color:#BA7517;} .acc.cuello .acc-val{color:#8a5810;}
-  .acc.stock{border-left-color:#7d1a1a;} .acc.stock .acc-val{color:#7d1a1a;}
+  .acc.vence{background:#fbe4e4;} .acc.vence .acc-val{color:var(--rojo);}
+  .acc.cuello{background:#f6ecd9;} .acc.cuello .acc-val{color:#8a5810;}
+  .acc.stock{background:#f6dede;} .acc.stock .acc-val{color:#7d1a1a;}
   .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:12px;}
-  .kpi{border:1px solid var(--bord);padding:12px 14px;border-radius:2px;}
+  .kpi{border:1px solid var(--bord);padding:12px 14px;border-radius:2px;cursor:pointer;transition:filter .1s,box-shadow .1s;}
+  .kpi:hover{filter:brightness(.97);}
+  .kpi.on{box-shadow:inset 0 0 0 2px var(--azul2);}
   .kpi .lbl{font-size:10px;color:#4a5560;text-transform:uppercase;letter-spacing:.4px;font-weight:700;}
   .kpi .val{font-size:26px;font-weight:700;font-family:Consolas,monospace;line-height:1.1;margin-top:2px;}
   .kpi.recep{background:var(--pc-recep);} .kpi.recep .val{color:#5f5e58;}
@@ -80,10 +82,14 @@
   .grupo-body{display:none;overflow-x:auto;} .grupo-group.open .grupo-body{display:block;}
   table.f8{width:100%;border-collapse:collapse;font-size:11px;min-width:1100px;}
   table.f8 th{background:#f3f6fa;color:#5a6b7a;font-size:9px;text-transform:uppercase;letter-spacing:.3px;
-    font-weight:700;padding:4px 6px;text-align:left;white-space:nowrap;}
-  table.f8 th:first-child{padding-left:48px;}
-  table.f8 td{padding:3px 6px;border-top:1px solid #f2f2f2;white-space:nowrap;}
-  table.f8 td:first-child{padding-left:48px;font-family:Consolas,monospace;}
+    font-weight:700;padding:4px 8px;white-space:nowrap;}
+  table.f8 td{padding:3px 8px;border-top:1px solid #f2f2f2;white-space:nowrap;}
+  table.f8 th:first-child,table.f8 td:first-child{padding-left:48px;}
+  table.f8 td:first-child{font-family:Consolas,monospace;}
+  /* alineación por columna: texto a la izq, números a la der, chips centrados */
+  table.f8 th.l,table.f8 td.l{text-align:left;}
+  table.f8 th.r,table.f8 td.r{text-align:right;}
+  table.f8 th.c,table.f8 td.c{text-align:center;}
   table.f8 tr:hover td{background:#fafcff;}
   .f8-etapa{display:inline-block;font-size:9px;font-weight:700;padding:1px 6px;border-radius:2px;color:#fff;}
   .chip-tipo{font-size:9px;font-weight:700;padding:1px 5px;border-radius:2px;}
@@ -126,11 +132,11 @@
     </div>
   </div>
   <div class="kpis">
-    <div class="kpi recep"><div class="lbl">Recepci&oacute;n</div><div class="val num" id="k_RECEPCION">&ndash;</div></div>
-    <div class="kpi asig"><div class="lbl">Asignaci&oacute;n</div><div class="val num" id="k_ASIGNACION">&ndash;</div></div>
-    <div class="kpi recol"><div class="lbl">Recolecci&oacute;n</div><div class="val num" id="k_RECOLECCION">&ndash;</div></div>
-    <div class="kpi fact"><div class="lbl">Facturaci&oacute;n</div><div class="val num" id="k_FACTURACION">&ndash;</div></div>
-    <div class="kpi dist"><div class="lbl">Distribuci&oacute;n</div><div class="val num" id="k_DISTRIBUCION">&ndash;</div></div>
+    <div class="kpi recep" id="kpi_RECEPCION" onclick="filtrarMacro('RECEPCION')"><div class="lbl">Recepci&oacute;n</div><div class="val num" id="k_RECEPCION">&ndash;</div></div>
+    <div class="kpi asig" id="kpi_ASIGNACION" onclick="filtrarMacro('ASIGNACION')"><div class="lbl">Asignaci&oacute;n</div><div class="val num" id="k_ASIGNACION">&ndash;</div></div>
+    <div class="kpi recol" id="kpi_RECOLECCION" onclick="filtrarMacro('RECOLECCION')"><div class="lbl">Recolecci&oacute;n</div><div class="val num" id="k_RECOLECCION">&ndash;</div></div>
+    <div class="kpi fact" id="kpi_FACTURACION" onclick="filtrarMacro('FACTURACION')"><div class="lbl">Facturaci&oacute;n</div><div class="val num" id="k_FACTURACION">&ndash;</div></div>
+    <div class="kpi dist" id="kpi_DISTRIBUCION" onclick="filtrarMacro('DISTRIBUCION')"><div class="lbl">Distribuci&oacute;n</div><div class="val num" id="k_DISTRIBUCION">&ndash;</div></div>
   </div>
   <div class="toolbar">
     <label>CEDIS:</label><select id="fCedis"><option value="TODOS">&mdash; Todos &mdash;</option></select>
@@ -138,6 +144,7 @@
     <label>Triage:</label><select id="fTriage"><option value="">&mdash; Todos &mdash;</option><option>ROJO</option><option>NARANJA</option><option>AMARILLO</option><option>VERDE</option><option>AZUL</option></select>
     <label>Unidad Ejecutora:</label><select id="fUE"><option value="">&mdash; Todas &mdash;</option></select>
     <input type="text" id="fBuscar" placeholder="Buscar UE..."/>
+    <button class="btn sec" id="btnLimpiar">Limpiar filtros</button>
     <button class="btn sec" id="btnExpand">Expandir todo</button>
     <button class="btn sec" id="btnRefresh">&#8635; Actualizar</button>
     <div class="spacer"></div><span class="count" id="cnt"></span>
@@ -150,6 +157,7 @@ const WEBAPP_BASE = "https://script.google.com/macros/s/AKfycbyVHDQ8IuVHibz259Ai
 let F8=[], MACROS=[], UETOT={}, expandAll=false;
 let accionFiltro='';  // '', 'vence', 'stock'
 let cuelloEtapa='';   // clave de macro-etapa del cuello (para filtrarCuello)
+let macroFiltro='';   // filtro por tarjeta KPI (macro-etapa)
 const COLOR={};
 function isoHoy(){ const d=new Date(); d.setHours(0,0,0,0); return d.toISOString().slice(0,10); }
 function isoManana(){ const d=new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()+1); return d.toISOString().slice(0,10); }
@@ -203,9 +211,28 @@ function pintarBanda(){
   const ss=F8.filter(f=>f.sinStock).length;
   document.getElementById('as_val').textContent=ss.toLocaleString();
 }
+function filtrarMacro(clave){
+  macroFiltro = (macroFiltro===clave) ? '' : clave;
+  // apagar otros filtros de tarjetas para no confundir
+  _cuelloActivo=false; document.getElementById('accCuello').classList.remove('on');
+  MACROS.forEach(m=>{ const el=document.getElementById('kpi_'+m.clave); if(el) el.classList.toggle('on', m.clave===macroFiltro); });
+  render();
+}
+function limpiarFiltros(){
+  accionFiltro=''; macroFiltro=''; _cuelloActivo=false;
+  document.getElementById('fCedis').value='TODOS';
+  document.getElementById('fGrupo').value='';
+  document.getElementById('fTriage').value='';
+  document.getElementById('fUE').value='';
+  document.getElementById('fBuscar').value='';
+  ['accVence','accStock','accCuello'].forEach(id=>document.getElementById(id).classList.remove('on'));
+  MACROS.forEach(m=>{ const el=document.getElementById('kpi_'+m.clave); if(el) el.classList.remove('on'); });
+  render();
+}
+
 function toggleAccion(tipo){
   accionFiltro = (accionFiltro===tipo) ? '' : tipo;
-  cuelloEtapa==='' ; // no tocar cuello aquí
+  macroFiltro=''; MACROS.forEach(m=>{const el=document.getElementById('kpi_'+m.clave); if(el) el.classList.remove('on');});
   document.getElementById('accVence').classList.toggle('on', accionFiltro==='vence');
   document.getElementById('accStock').classList.toggle('on', accionFiltro==='stock');
   document.getElementById('accCuello').classList.remove('on');
@@ -215,7 +242,8 @@ function toggleAccion(tipo){
 let _cuelloActivo=false;
 function filtrarCuello(){
   _cuelloActivo=!_cuelloActivo;
-  accionFiltro='';
+  accionFiltro=''; macroFiltro='';
+  MACROS.forEach(m=>{const el=document.getElementById('kpi_'+m.clave); if(el) el.classList.remove('on');});
   document.getElementById('accVence').classList.remove('on');
   document.getElementById('accStock').classList.remove('on');
   document.getElementById('accCuello').classList.toggle('on', _cuelloActivo);
@@ -265,6 +293,7 @@ function filtrados(){
     if(accionFiltro==='vence' && !venceHoyMan(f)) return false;
     if(accionFiltro==='stock' && !f.sinStock) return false;
     if(_cuelloActivo && f.macro!==cuelloEtapa) return false;
+    if(macroFiltro && f.macro!==macroFiltro) return false;
     return true;
   });
 }
@@ -318,22 +347,22 @@ function render(){
           <span class="ue-metrics">${barra(mG,totG)}<span class="mtot">${totG}</span><span class="mpend ${pendG>0?'pend-alert':''}">pend ${pendG}</span></span>
         </div>
         <div class="grupo-body"><table class="f8"><thead><tr>
-          <th>Forma 8</th><th>IPD</th><th>Triage</th><th>Tipo</th><th>Etapa</th>
-          <th>Recibida</th><th>D\u00eda crono</th><th>Entrega</th><th>Fill</th><th>Sin stock</th><th>Situaci\u00f3n</th>
+          <th class="l">Forma 8</th><th class="r">IPD</th><th class="c">Triage</th><th class="c">Tipo</th><th class="l">Etapa</th>
+          <th class="c">Recibida</th><th class="c">D\u00eda crono</th><th class="c">Entrega</th><th class="r">Fill</th><th class="c">Sin stock</th><th class="l">Situaci\u00f3n</th>
         </tr></thead><tbody>`;
       lista.slice().sort((a,b)=>(b.ipd||0)-(a.ipd||0)).forEach(f=>{
         html+=`<tr>
-          <td>${f.id}</td>
-          <td class="num-cell">${f.ipd!=null?f.ipd:'\u2014'}</td>
-          <td>${f.triage?`<span class="tri tri-${f.triage}">${f.triage}</span>`:'\u2014'}</td>
-          <td><span class="chip-tipo ${f.tipo==='URG'?'tipo-urg':'tipo-men'}">${f.tipo}</span></td>
-          <td><span class="f8-etapa" style="background:${COLOR[f.macro]||'#888'}">${f.etapa}</span></td>
-          <td class="num-cell">${f.fechaRecepcion||'\u2014'}</td>
-          <td>${f.diasCrono||'\u2014'}</td>
-          <td class="num-cell ${f.vencido?'fecha-venc':''}">${fVenc(f.fechaVencimiento)}</td>
-          <td class="num-cell">${f.fillRate!=null?f.fillRate+'%':'\u2014'}</td>
-          <td class="${f.sinStock?'sinstock':''}">${f.sinStock||'\u2014'}</td>
-          <td>${f.situacion||'\u2014'}</td>
+          <td class="l">${f.id}</td>
+          <td class="r">${f.ipd!=null?f.ipd:'\u2014'}</td>
+          <td class="c">${f.triage?`<span class="tri tri-${f.triage}">${f.triage}</span>`:'\u2014'}</td>
+          <td class="c"><span class="chip-tipo ${f.tipo==='URG'?'tipo-urg':'tipo-men'}">${f.tipo}</span></td>
+          <td class="l"><span class="f8-etapa" style="background:${COLOR[f.macro]||'#888'}">${f.etapa}</span></td>
+          <td class="c">${f.fechaRecepcion||'\u2014'}</td>
+          <td class="c">${f.diasCrono||'\u2014'}</td>
+          <td class="c ${f.vencido?'fecha-venc':''}">${fVenc(f.fechaVencimiento)}</td>
+          <td class="r">${f.fillRate!=null?f.fillRate+'%':'\u2014'}</td>
+          <td class="c ${f.sinStock?'sinstock':''}">${f.sinStock||'\u2014'}</td>
+          <td class="l">${f.situacion||'\u2014'}</td>
         </tr>`;
       });
       html+=`</tbody></table></div></div>`;
@@ -343,6 +372,7 @@ function render(){
   cont.innerHTML=html;
 }
 document.getElementById('btnRefresh').onclick=cargar;
+document.getElementById('btnLimpiar').onclick=limpiarFiltros;
 document.getElementById('btnExpand').onclick=function(){expandAll=!expandAll;this.textContent=expandAll?'Colapsar todo':'Expandir todo';render();};
 ['fCedis','fGrupo','fTriage','fUE'].forEach(id=>document.getElementById(id).onchange=render);
 document.getElementById('fBuscar').oninput=render;
