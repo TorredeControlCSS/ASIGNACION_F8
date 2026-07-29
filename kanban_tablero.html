@@ -97,6 +97,17 @@
   .tri{display:inline-block;font-size:9px;font-weight:700;padding:1px 6px;border-radius:2px;color:#fff;}
   .tri-ROJO{background:var(--t-rojo);} .tri-NARANJA{background:var(--t-naranja);}
   .tri-AMARILLO{background:var(--t-amarillo);} .tri-VERDE{background:var(--t-verde);} .tri-AZUL{background:var(--t-azul);}
+  /* relevancia del triage a nivel de fila: barra de color a la izquierda + tinte de fondo */
+  table.f8 td:first-child{border-left:3px solid transparent;}
+  tr.row-ROJO    td:first-child{border-left-color:var(--t-rojo);}
+  tr.row-NARANJA td:first-child{border-left-color:var(--t-naranja);}
+  tr.row-AMARILLO td:first-child{border-left-color:var(--t-amarillo);}
+  tr.row-VERDE   td:first-child{border-left-color:var(--t-verde);}
+  tr.row-AZUL    td:first-child{border-left-color:var(--t-azul);}
+  tr.row-ROJO    td{background:#fcf1f1;}
+  tr.row-NARANJA td{background:#fdf3e9;}
+  tr.row-ROJO:hover td,tr.row-NARANJA:hover td{background:#fafcff;}
+  tr.row-ROJO .tri-ROJO{box-shadow:0 0 0 1px rgba(0,0,0,.15);}
   .num-cell{font-family:Consolas,monospace;text-align:right;}
   .fecha-venc{color:var(--rojo);font-weight:700;}
   .sinstock{color:var(--rojo);font-weight:700;}
@@ -297,6 +308,23 @@ function filtrados(){
     return true;
   });
 }
+// prioridad de triage para ordenar (ROJO manda)
+const TRI_ORDEN={ROJO:0,NARANJA:1,AMARILLO:2,VERDE:3,AZUL:4};
+function triRank(f){ return f.triage!=null&&TRI_ORDEN[f.triage]!=null?TRI_ORDEN[f.triage]:9; }
+// clave temporal: fecha de recepción como número comparable (mayor = más reciente)
+function recNum(f){
+  if(!f.fechaRecepcion) return -1;
+  const d=String(f.fechaRecepcion).slice(0,10).replace(/[^0-9]/g,'');
+  return d?parseInt(d,10):-1;
+}
+// orden de filas: 1) triage (ROJO arriba), 2) más recientes arriba, 3) IPD como desempate
+function ordenFila(a,b){
+  const ta=triRank(a), tb=triRank(b);
+  if(ta!==tb) return ta-tb;
+  const ra=recNum(a), rb=recNum(b);
+  if(rb!==ra) return rb-ra;
+  return (b.ipd||0)-(a.ipd||0);
+}
 function render(){
   const rows=filtrados();
   const cont=document.getElementById('lista');
@@ -350,8 +378,8 @@ function render(){
           <th class="l">Forma 8</th><th class="r">IPD</th><th class="c">Triage</th><th class="c">Tipo</th><th class="l">Etapa</th>
           <th class="c">Recibida</th><th class="c">D\u00eda crono</th><th class="c">Entrega</th><th class="r">Fill</th><th class="c">Sin stock</th><th class="l">Situaci\u00f3n</th>
         </tr></thead><tbody>`;
-      lista.slice().sort((a,b)=>(b.ipd||0)-(a.ipd||0)).forEach(f=>{
-        html+=`<tr>
+      lista.slice().sort(ordenFila).forEach(f=>{
+        html+=`<tr class="${f.triage?'row-'+f.triage:''}">
           <td class="l">${f.id}</td>
           <td class="r">${f.ipd!=null?f.ipd:'\u2014'}</td>
           <td class="c">${f.triage?`<span class="tri tri-${f.triage}">${f.triage}</span>`:'\u2014'}</td>
