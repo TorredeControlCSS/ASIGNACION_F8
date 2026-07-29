@@ -234,7 +234,7 @@ async function cargar(){
     F8=res.f8||[]; MACROS=res.macros||[]; UETOT=res.ueTotales||{};
     MACROS.forEach(m=>COLOR[m.clave]=m.color);
     document.getElementById('gen').innerHTML='Actualizado: '+(res.generado||'\u2014')+'<br>Hoy: '+(res.diaHoy||'\u2014')+' \u00b7 '+F8.length+' F8 activas';
-    pintarLeyenda(); pintarKPIs(); pintarBanda(); poblarFiltros(); render();
+    pintarLeyenda(); poblarFiltros(); render();
   }catch(err){
     document.getElementById('errBox').innerHTML='<div class="err">No se pudo cargar el tablero: '+err.message+'.</div>';
     document.getElementById('lista').innerHTML='';
@@ -244,22 +244,36 @@ function pintarLeyenda(){
   document.getElementById('leyenda').innerHTML=MACROS.map(m=>`<span><span class="dot" style="background:${m.color}"></span>${m.label}</span>`).join('')
     +' &nbsp;|&nbsp; '+['ROJO','NARANJA','AMARILLO','VERDE','AZUL'].map(t=>`<span><span class="dot-tri" style="background:var(--t-${t.toLowerCase()})"></span>${t}</span>`).join('');
 }
+// subconjunto para las TARJETAS: reacciona a UE, grupo, triage y "solo pendiente",
+// pero NO a los filtros de tarjeta (si no, cada tarjeta se filtraría a sí misma).
+function baseTarjetas(){
+  const fg=document.getElementById('fGrupo').value;
+  const fu=document.getElementById('fUE').value;
+  return F8.filter(f=>{
+    if(fg && f.grupo!==fg) return false;
+    if(fu && f.ue!==fu) return false;
+    if(triFiltro && f.triage!==triFiltro) return false;
+    if(soloPendiente && f.macro==='DISTRIBUCION') return false;
+    return true;
+  });
+}
 function pintarBanda(){
+  const base=baseTarjetas();
   // Vence hoy/mañana (incluye vencidos) + cuántos ROJO
-  const venc=F8.filter(venceHoyMan);
+  const venc=base.filter(venceHoyMan);
   const vencRojo=venc.filter(f=>f.triage==='ROJO').length;
   document.getElementById('av_val').textContent=venc.length.toLocaleString();
   document.getElementById('av_sub').textContent=vencRojo+' en ROJO';
   // Cuello de botella = macro-etapa PENDIENTE (no distribución) con más F8
   const pend={RECEPCION:0,ASIGNACION:0,RECOLECCION:0,FACTURACION:0};
-  F8.forEach(f=>{ if(pend[f.macro]!=null) pend[f.macro]++; });
+  base.forEach(f=>{ if(pend[f.macro]!=null) pend[f.macro]++; });
   let maxK='', maxV=-1;
   for(const k in pend){ if(pend[k]>maxV){maxV=pend[k];maxK=k;} }
   cuelloEtapa=maxK;
   const lbl=(MACROS.find(m=>m.clave===maxK)||{}).label||maxK;
   document.getElementById('ac_val').textContent=lbl+': '+maxV.toLocaleString();
-  // Sin stock
-  const ss=F8.filter(f=>f.sinStock).length;
+  // En UE con desabasto
+  const ss=base.filter(f=>f.sinStock).length;
   document.getElementById('as_val').textContent=ss.toLocaleString();
 }
 function filtrarMacro(clave){
@@ -300,8 +314,9 @@ function filtrarCuello(){
 }
 
 function pintarKPIs(){
+  const base=baseTarjetas();
   const c={}; MACROS.forEach(m=>c[m.clave]=0);
-  F8.forEach(f=>{ if(c[f.macro]!=null) c[f.macro]++; });
+  base.forEach(f=>{ if(c[f.macro]!=null) c[f.macro]++; });
   MACROS.forEach(m=>{ const el=document.getElementById('k_'+m.clave); if(el) el.textContent=(c[m.clave]||0).toLocaleString(); });
 }
 function poblarFiltros(){
@@ -359,6 +374,7 @@ function ordenFila(a,b){
   return (b.ipd||0)-(a.ipd||0);
 }
 function render(){
+  pintarBanda(); pintarKPIs();   // las tarjetas reaccionan al contexto (UE/grupo/triage/pendiente)
   const rows=filtrados();
   const cont=document.getElementById('lista');
   if(!rows.length){cont.innerHTML='<div class="empty">No hay Formas 8 con este filtro.</div>';document.getElementById('cnt').textContent='0 UE';return;}
