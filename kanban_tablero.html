@@ -199,7 +199,7 @@
 </div>
 <script>
 const WEBAPP_BASE = "https://script.google.com/macros/s/AKfycbyVHDQ8IuVHibz259AiEvZ-jUfVC7fxvSSqC-wfaiiq1_13C9_TK4dVtPK0SMW4sZoJ/exec";
-let F8=[], MACROS=[], UETOT={}, expandAll=false;
+let F8=[], MACROS=[], UETOT={}, expandAll=false, colapsoManual=false;
 let accionFiltro='';  // '', 'vence', 'stock'
 let cuelloEtapa='';   // clave de macro-etapa del cuello (para filtrarCuello)
 let macroFiltro='';   // filtro por tarjeta KPI (macro-etapa)
@@ -379,7 +379,7 @@ function render(){
   ues.forEach((ue,gi)=>{
     const u=byUE.get(ue);
     const mUE=macroDe(u.all), totUE=u.all.length, pendUE=pendDe(mUE);
-    const open=expandAll||gi===0;
+    const open=expandAll||(gi===0 && !colapsoManual);
     const t=UETOT[ue]||{f8:totUE,urg:0,mens:0};
     html+=`<div class="ue-group${open?' open':''}">
       <div class="ue-head" onclick="this.parentNode.classList.toggle('open')">
@@ -394,7 +394,7 @@ function render(){
     const grupos=[...u.grupos.keys()].sort((a,b)=>pendDe(macroDe(u.grupos.get(b)))-pendDe(macroDe(u.grupos.get(a))));
     grupos.forEach(g=>{
       const lista=u.grupos.get(g), mG=macroDe(lista), totG=lista.length, pendG=pendDe(mG);
-      html+=`<div class="grupo-group">
+      html+=`<div class="grupo-group${expandAll?' open':''}">
         <div class="grupo-head" onclick="this.parentNode.classList.toggle('open')">
           <span class="chev">\u25b6</span><span class="grupo-name">${g}</span>
           <span class="spacer" style="flex:1"></span>
@@ -427,7 +427,12 @@ function render(){
 }
 document.getElementById('btnRefresh').onclick=cargar;
 document.getElementById('btnLimpiar').onclick=limpiarFiltros;
-document.getElementById('btnExpand').onclick=function(){expandAll=!expandAll;this.textContent=expandAll?'Colapsar todo':'Expandir todo';render();};
+document.getElementById('btnExpand').onclick=function(){
+  expandAll=!expandAll;
+  colapsoManual=!expandAll;   // colapsar => colapso total (incluye la primera UE)
+  this.textContent=expandAll?'Colapsar todo':'Expandir todo';
+  render();
+};
 ['fGrupo','fUE'].forEach(id=>document.getElementById(id).onchange=render);
 // chips de triage como filtro toggle (uno a la vez)
 document.querySelectorAll('.tri-f').forEach(btn=>{
