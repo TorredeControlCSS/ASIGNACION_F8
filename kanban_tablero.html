@@ -52,6 +52,26 @@
   .toolbar .btn{padding:6px 12px;border:1px solid var(--azul2);background:var(--azul);color:#fff;cursor:pointer;font-size:12px;font-weight:600;}
   .toolbar .btn.sec{background:#fff;color:var(--azul2);}
   .toolbar .spacer{flex:1;} .toolbar .count{font-size:11px;color:var(--sub);}
+  /* chips de triage como filtros clicables */
+  .tri-filtros{display:inline-flex;gap:5px;}
+  .tri-f{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:800;letter-spacing:.4px;
+    padding:4px 9px;border-radius:11px;border:1px solid var(--bord);background:#fff;color:#8a939c;
+    cursor:pointer;opacity:.75;transition:opacity .1s,box-shadow .1s;line-height:1;}
+  .tri-f:hover{opacity:1;}
+  .tri-f .tf-dot{width:8px;height:8px;border-radius:50%;flex:none;box-shadow:0 0 0 1px rgba(0,0,0,.12);}
+  .tri-f-ROJO     .tf-dot{background:var(--t-rojo);}
+  .tri-f-NARANJA  .tf-dot{background:var(--t-naranja);}
+  .tri-f-AMARILLO .tf-dot{background:var(--t-amarillo);}
+  .tri-f-VERDE    .tf-dot{background:var(--t-verde);}
+  .tri-f-AZUL     .tf-dot{background:var(--t-azul);}
+  /* chip activo: se pinta con su color y el texto en blanco */
+  .tri-f.on{opacity:1;color:#fff;border-color:transparent;box-shadow:0 1px 2px rgba(0,0,0,.2);}
+  .tri-f-ROJO.on     {background:var(--t-rojo);}
+  .tri-f-NARANJA.on  {background:var(--t-naranja);}
+  .tri-f-AMARILLO.on {background:var(--t-amarillo);}
+  .tri-f-VERDE.on    {background:var(--t-verde);}
+  .tri-f-AZUL.on     {background:var(--t-azul);}
+  .tri-f.on .tf-dot{background:rgba(255,255,255,.9);}
   .leyenda{display:flex;flex-wrap:wrap;gap:14px;margin:8px 2px 12px;font-size:10px;color:var(--sub);}
   .leyenda .dot{display:inline-block;width:9px;height:9px;margin-right:4px;vertical-align:middle;}
   .leyenda .dot-tri{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle;box-shadow:0 0 0 1px rgba(0,0,0,.1);}
@@ -159,11 +179,16 @@
     <div class="kpi dist" id="kpi_DISTRIBUCION" onclick="filtrarMacro('DISTRIBUCION')"><div class="lbl">Distribuci&oacute;n</div><div class="val num" id="k_DISTRIBUCION">&ndash;</div></div>
   </div>
   <div class="toolbar">
-    <label>CEDIS:</label><select id="fCedis"><option value="TODOS">&mdash; Todos &mdash;</option></select>
     <label>Grupo:</label><select id="fGrupo"><option value="">&mdash; Todos &mdash;</option></select>
-    <label>Triage:</label><select id="fTriage"><option value="">&mdash; Todos &mdash;</option><option>ROJO</option><option>NARANJA</option><option>AMARILLO</option><option>VERDE</option><option>AZUL</option></select>
     <label>Unidad Ejecutora:</label><select id="fUE"><option value="">&mdash; Todas &mdash;</option></select>
-    <input type="text" id="fBuscar" placeholder="Buscar UE..."/>
+    <label>Triage:</label>
+    <div class="tri-filtros" id="triFiltros">
+      <button class="tri-f tri-f-ROJO"     data-tri="ROJO"><span class="tf-dot"></span>ROJO</button>
+      <button class="tri-f tri-f-NARANJA"  data-tri="NARANJA"><span class="tf-dot"></span>NARANJA</button>
+      <button class="tri-f tri-f-AMARILLO" data-tri="AMARILLO"><span class="tf-dot"></span>AMARILLO</button>
+      <button class="tri-f tri-f-VERDE"    data-tri="VERDE"><span class="tf-dot"></span>VERDE</button>
+      <button class="tri-f tri-f-AZUL"     data-tri="AZUL"><span class="tf-dot"></span>AZUL</button>
+    </div>
     <button class="btn sec" id="btnLimpiar">Limpiar filtros</button>
     <button class="btn sec" id="btnExpand">Expandir todo</button>
     <button class="btn sec" id="btnRefresh">&#8635; Actualizar</button>
@@ -178,6 +203,7 @@ let F8=[], MACROS=[], UETOT={}, expandAll=false;
 let accionFiltro='';  // '', 'vence', 'stock'
 let cuelloEtapa='';   // clave de macro-etapa del cuello (para filtrarCuello)
 let macroFiltro='';   // filtro por tarjeta KPI (macro-etapa)
+let triFiltro='';     // filtro por chip de triage
 const COLOR={};
 function isoHoy(){ const d=new Date(); d.setHours(0,0,0,0); return d.toISOString().slice(0,10); }
 function isoManana(){ const d=new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()+1); return d.toISOString().slice(0,10); }
@@ -239,12 +265,10 @@ function filtrarMacro(clave){
   render();
 }
 function limpiarFiltros(){
-  accionFiltro=''; macroFiltro=''; _cuelloActivo=false;
-  document.getElementById('fCedis').value='TODOS';
+  accionFiltro=''; macroFiltro=''; _cuelloActivo=false; triFiltro='';
   document.getElementById('fGrupo').value='';
-  document.getElementById('fTriage').value='';
   document.getElementById('fUE').value='';
-  document.getElementById('fBuscar').value='';
+  document.querySelectorAll('.tri-f').forEach(b=>b.classList.remove('on'));
   ['accVence','accStock','accCuello'].forEach(id=>document.getElementById(id).classList.remove('on'));
   MACROS.forEach(m=>{ const el=document.getElementById('kpi_'+m.clave); if(el) el.classList.remove('on'); });
   render();
@@ -276,10 +300,8 @@ function pintarKPIs(){
   MACROS.forEach(m=>{ const el=document.getElementById('k_'+m.clave); if(el) el.textContent=(c[m.clave]||0).toLocaleString(); });
 }
 function poblarFiltros(){
-  const cedis=[...new Set(F8.map(f=>f.cedis))].filter(Boolean).sort();
   const grupos=[...new Set(F8.map(f=>f.grupo))].filter(Boolean).sort();
   const ues=[...new Set(F8.map(f=>f.ue))].filter(Boolean).sort();
-  fill('fCedis','TODOS','\u2014 Todos \u2014',cedis);
   fill('fGrupo','','\u2014 Todos \u2014',grupos);
   fill('fUE','','\u2014 Todas \u2014',ues);
 }
@@ -298,17 +320,12 @@ function barra(macro,total){
 }
 function fVenc(s){ return s? s.slice(5).replace('-','/') : '\u2014'; }
 function filtrados(){
-  const fc=document.getElementById('fCedis').value;
   const fg=document.getElementById('fGrupo').value;
-  const ft=document.getElementById('fTriage').value;
   const fu=document.getElementById('fUE').value;
-  const q=document.getElementById('fBuscar').value.trim().toLowerCase();
   return F8.filter(f=>{
-    if(fc && fc!=='TODOS' && f.cedis!==fc) return false;
     if(fg && f.grupo!==fg) return false;
-    if(ft && f.triage!==ft) return false;
+    if(triFiltro && f.triage!==triFiltro) return false;
     if(fu && f.ue!==fu) return false;
-    if(q && !f.ue.toLowerCase().includes(q)) return false;
     // filtros de la banda de acción
     if(accionFiltro==='vence' && !venceHoyMan(f)) return false;
     if(accionFiltro==='stock' && !f.sinStock) return false;
@@ -411,8 +428,16 @@ function render(){
 document.getElementById('btnRefresh').onclick=cargar;
 document.getElementById('btnLimpiar').onclick=limpiarFiltros;
 document.getElementById('btnExpand').onclick=function(){expandAll=!expandAll;this.textContent=expandAll?'Colapsar todo':'Expandir todo';render();};
-['fCedis','fGrupo','fTriage','fUE'].forEach(id=>document.getElementById(id).onchange=render);
-document.getElementById('fBuscar').oninput=render;
+['fGrupo','fUE'].forEach(id=>document.getElementById(id).onchange=render);
+// chips de triage como filtro toggle (uno a la vez)
+document.querySelectorAll('.tri-f').forEach(btn=>{
+  btn.onclick=function(){
+    const t=this.dataset.tri;
+    triFiltro=(triFiltro===t)?'':t;
+    document.querySelectorAll('.tri-f').forEach(b=>b.classList.toggle('on', b.dataset.tri===triFiltro));
+    render();
+  };
+});
 cargar();
 setInterval(cargar,180000);
 </script>
