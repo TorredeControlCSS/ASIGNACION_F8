@@ -25,7 +25,7 @@
   .topbar .gen{font-size:11px;opacity:.85;text-align:right;line-height:1.5;}
   .wrap{max-width:1500px;margin:0 auto;padding:14px;}
   /* banda de acción del supervisor */
-  .accion{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;}
+  .accion{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px;}
   .acc{border:1px solid var(--bord);border-radius:2px;padding:10px 14px;cursor:pointer;transition:filter .1s,box-shadow .1s;}
   .acc:hover{filter:brightness(.97);}
   .acc.on{box-shadow:inset 0 0 0 2px var(--azul2);}
@@ -35,6 +35,8 @@
   .acc.vence{background:#fbe4e4;} .acc.vence .acc-val{color:var(--rojo);}
   .acc.cuello{background:#f6ecd9;} .acc.cuello .acc-val{color:#8a5810;}
   .acc.stock{background:#f6dede;} .acc.stock .acc-val{color:#7d1a1a;}
+  .acc.otif{background:#e2eefb;cursor:default;} .acc.otif:hover{filter:none;} .acc.otif .acc-val{color:#0C447C;}
+  .acc.otif .otif-mini{font-size:10px;color:#4a5560;font-family:Consolas,monospace;margin-top:2px;}
   .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:12px;}
   .kpi{border:1px solid var(--bord);padding:12px 14px;border-radius:2px;cursor:pointer;transition:filter .1s,box-shadow .1s;}
   .kpi:hover{filter:brightness(.97);}
@@ -174,6 +176,11 @@
       <div class="acc-val num" id="as_val">&ndash;</div>
       <div class="acc-sub">F8 de unidades con alg&uacute;n rengl&oacute;n en cero</div>
     </div>
+    <div class="acc otif" id="accOtif">
+      <div class="acc-lbl">OTIF</div>
+      <div class="acc-val num" id="ot_val">&ndash;</div>
+      <div class="otif-mini" id="ot_mini">a tiempo &middot; completo</div>
+    </div>
   </div>
   <div class="kpis">
     <div class="kpi recep" id="kpi_RECEPCION" onclick="filtrarMacro('RECEPCION')"><div class="lbl">Recepci&oacute;n</div><div class="val num" id="k_RECEPCION">&ndash;</div></div>
@@ -275,6 +282,29 @@ function pintarBanda(){
   // En UE con desabasto
   const ss=base.filter(f=>f.sinStock).length;
   document.getElementById('as_val').textContent=ss.toLocaleString();
+  // OTIF reactivo: sobre F8 elegibles (despachadas, línea base >= mayo).
+  // Ignora "solo pendiente": el OTIF SIEMPRE mide lo ya despachado, ese es su punto.
+  const fg2=document.getElementById('fGrupo').value;
+  const fu2=document.getElementById('fUE').value;
+  const baseOtif=F8.filter(f=>{
+    if(fg2 && f.grupo!==fg2) return false;
+    if(fu2 && f.ue!==fu2) return false;
+    if(triFiltro && f.triage!==triFiltro) return false;
+    return true;
+  });
+  let onN=0,onOK=0, ifN=0,ifOK=0, otN=0,otOK=0;
+  baseOtif.forEach(f=>{
+    if(!f.otElegible) return;
+    if(f.otOnTime!=null){ onN++; if(f.otOnTime===1) onOK++; }
+    if(f.otInFull!=null){ ifN++; if(f.otInFull===1) ifOK++; }
+    if(f.otOnTime!=null && f.otInFull!=null){ otN++; if(f.otOnTime===1 && f.otInFull===1) otOK++; }
+  });
+  const pct=(n,d)=> d>0 ? Math.round(1000*n/d)/10 : null;
+  const otif=pct(otOK,otN), onT=pct(onOK,onN), inF=pct(ifOK,ifN);
+  document.getElementById('ot_val').textContent = (otif!=null? otif+'%' : '\u2014');
+  document.getElementById('ot_mini').textContent =
+    (otN>0 ? (otOK+'/'+otN+' F8 \u00b7 a tiempo '+(onT!=null?onT+'%':'\u2014')+' \u00b7 completo '+(inF!=null?inF+'%':'\u2014'))
+           : 'sin despachos en l\u00ednea base');
 }
 function filtrarMacro(clave){
   macroFiltro = (macroFiltro===clave) ? '' : clave;
