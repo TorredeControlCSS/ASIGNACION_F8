@@ -54,6 +54,7 @@
   .toolbar .spacer{flex:1;} .toolbar .count{font-size:11px;color:var(--sub);}
   .leyenda{display:flex;flex-wrap:wrap;gap:14px;margin:8px 2px 12px;font-size:10px;color:var(--sub);}
   .leyenda .dot{display:inline-block;width:9px;height:9px;margin-right:4px;vertical-align:middle;}
+  .leyenda .dot-tri{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle;box-shadow:0 0 0 1px rgba(0,0,0,.1);}
   .ue-group{background:#fff;border:1px solid var(--bord);margin-bottom:6px;}
   .ue-head{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;}
   .ue-head:hover{background:#f4f7fb;}
@@ -94,9 +95,18 @@
   .f8-etapa{display:inline-block;font-size:9px;font-weight:700;padding:1px 6px;border-radius:2px;color:#fff;}
   .chip-tipo{font-size:9px;font-weight:700;padding:1px 5px;border-radius:2px;}
   .tipo-urg{background:#fcebeb;color:var(--rojo);} .tipo-men{background:#eef2f6;color:#5a6b7a;}
-  .tri{display:inline-block;font-size:9px;font-weight:700;padding:1px 6px;border-radius:2px;color:#fff;}
+  /* TRIAGE — protagonista del tablero: chip destacado con punto tipo semáforo */
+  .tri{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:800;
+    padding:3px 9px;border-radius:11px;color:#fff;letter-spacing:.4px;line-height:1;
+    box-shadow:0 1px 2px rgba(0,0,0,.18);text-shadow:0 1px 1px rgba(0,0,0,.18);}
+  .tri::before{content:"";width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.9);
+    box-shadow:0 0 0 1px rgba(0,0,0,.12);flex:none;}
   .tri-ROJO{background:var(--t-rojo);} .tri-NARANJA{background:var(--t-naranja);}
   .tri-AMARILLO{background:var(--t-amarillo);} .tri-VERDE{background:var(--t-verde);} .tri-AZUL{background:var(--t-azul);}
+  /* el ROJO late suavemente para captar la atención sin ruido */
+  .tri-ROJO{animation:triPulse 1.8s ease-in-out infinite;}
+  @keyframes triPulse{0%,100%{box-shadow:0 1px 2px rgba(0,0,0,.18);}50%{box-shadow:0 0 0 3px rgba(192,0,0,.28),0 1px 2px rgba(0,0,0,.18);}}
+  @media (prefers-reduced-motion:reduce){.tri-ROJO{animation:none;}}
   /* relevancia del triage a nivel de fila: barra de color a la izquierda + tinte de fondo */
   table.f8 td:first-child{border-left:3px solid transparent;}
   tr.row-ROJO    td:first-child{border-left-color:var(--t-rojo);}
@@ -107,7 +117,6 @@
   tr.row-ROJO    td{background:#fcf1f1;}
   tr.row-NARANJA td{background:#fdf3e9;}
   tr.row-ROJO:hover td,tr.row-NARANJA:hover td{background:#fafcff;}
-  tr.row-ROJO .tri-ROJO{box-shadow:0 0 0 1px rgba(0,0,0,.15);}
   .num-cell{font-family:Consolas,monospace;text-align:right;}
   .fecha-venc{color:var(--rojo);font-weight:700;}
   .sinstock{color:var(--rojo);font-weight:700;}
@@ -202,7 +211,7 @@ async function cargar(){
 }
 function pintarLeyenda(){
   document.getElementById('leyenda').innerHTML=MACROS.map(m=>`<span><span class="dot" style="background:${m.color}"></span>${m.label}</span>`).join('')
-    +' &nbsp;|&nbsp; '+['ROJO','NARANJA','AMARILLO','VERDE','AZUL'].map(t=>`<span><span class="dot tri-${t}" style="width:9px;height:9px"></span>${t}</span>`).join('');
+    +' &nbsp;|&nbsp; '+['ROJO','NARANJA','AMARILLO','VERDE','AZUL'].map(t=>`<span><span class="dot-tri" style="background:var(--t-${t.toLowerCase()})"></span>${t}</span>`).join('');
 }
 function pintarBanda(){
   // Vence hoy/mañana (incluye vencidos) + cuántos ROJO
