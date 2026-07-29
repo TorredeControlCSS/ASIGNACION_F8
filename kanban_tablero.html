@@ -137,9 +137,9 @@
       <div class="acc-sub" id="ac_sub">etapa m&aacute;s acumulada</div>
     </div>
     <div class="acc stock" id="accStock" onclick="toggleAccion('stock')">
-      <div class="acc-lbl">Sin stock (trabados)</div>
+      <div class="acc-lbl">Detenidas por faltante</div>
       <div class="acc-val num" id="as_val">&ndash;</div>
-      <div class="acc-sub">no avanzan sin mercanc&iacute;a</div>
+      <div class="acc-sub">F8 con rengl&oacute;n sin existencia</div>
     </div>
   </div>
   <div class="kpis">
@@ -376,7 +376,7 @@ function render(){
         </div>
         <div class="grupo-body"><table class="f8"><thead><tr>
           <th class="l">Forma 8</th><th class="r">IPD</th><th class="c">Triage</th><th class="c">Tipo</th><th class="l">Etapa</th>
-          <th class="c">Recibida</th><th class="c">D\u00eda crono</th><th class="c">Entrega</th><th class="r">Fill</th><th class="c">Sin stock</th><th class="l">Situaci\u00f3n</th>
+          <th class="c">Recibida</th><th class="c">D\u00eda crono</th><th class="c">Entrega</th><th class="r">Fill</th><th class="c">Faltante</th><th class="l">Situaci\u00f3n</th>
         </tr></thead><tbody>`;
       lista.slice().sort(ordenFila).forEach(f=>{
         html+=`<tr class="${f.triage?'row-'+f.triage:''}">
