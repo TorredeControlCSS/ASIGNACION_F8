@@ -51,6 +51,10 @@
   .toolbar select,.toolbar input[type=text]{padding:5px 7px;border:1px solid var(--bord);font-size:12px;}
   .toolbar .btn{padding:6px 12px;border:1px solid var(--azul2);background:var(--azul);color:#fff;cursor:pointer;font-size:12px;font-weight:600;}
   .toolbar .btn.sec{background:#fff;color:var(--azul2);}
+  /* toggle Solo pendiente: apagado neutro, encendido azul sólido */
+  .toolbar .btn.pend-toggle{background:#fff;color:var(--azul2);border:1px solid var(--azul2);}
+  .toolbar .btn.pend-toggle.on{background:var(--azul2);color:#fff;box-shadow:inset 0 0 0 1px var(--azul2);}
+  .toolbar .btn.pend-toggle.on::before{content:"\2713 ";font-weight:700;}
   .toolbar .spacer{flex:1;} .toolbar .count{font-size:11px;color:var(--sub);}
   /* chips de triage como filtros clicables */
   .tri-filtros{display:inline-flex;gap:5px;}
@@ -189,6 +193,7 @@
       <button class="tri-f tri-f-VERDE"    data-tri="VERDE"><span class="tf-dot"></span>VERDE</button>
       <button class="tri-f tri-f-AZUL"     data-tri="AZUL"><span class="tf-dot"></span>AZUL</button>
     </div>
+    <button class="btn pend-toggle" id="btnPendiente">Solo pendiente</button>
     <button class="btn sec" id="btnLimpiar">Limpiar filtros</button>
     <button class="btn sec" id="btnExpand">Expandir todo</button>
     <button class="btn sec" id="btnRefresh">&#8635; Actualizar</button>
@@ -199,7 +204,7 @@
 </div>
 <script>
 const WEBAPP_BASE = "https://script.google.com/macros/s/AKfycbyVHDQ8IuVHibz259AiEvZ-jUfVC7fxvSSqC-wfaiiq1_13C9_TK4dVtPK0SMW4sZoJ/exec";
-let F8=[], MACROS=[], UETOT={}, expandAll=false, colapsoManual=false;
+let F8=[], MACROS=[], UETOT={}, expandAll=false, colapsoManual=false, soloPendiente=false;
 let accionFiltro='';  // '', 'vence', 'stock'
 let cuelloEtapa='';   // clave de macro-etapa del cuello (para filtrarCuello)
 let macroFiltro='';   // filtro por tarjeta KPI (macro-etapa)
@@ -326,6 +331,8 @@ function filtrados(){
     if(fg && f.grupo!==fg) return false;
     if(triFiltro && f.triage!==triFiltro) return false;
     if(fu && f.ue!==fu) return false;
+    // vista "solo pendiente": ocultar lo que ya salió del inventario (Distribución)
+    if(soloPendiente && f.macro==='DISTRIBUCION') return false;
     // filtros de la banda de acción
     if(accionFiltro==='vence' && !venceHoyMan(f)) return false;
     if(accionFiltro==='stock' && !f.sinStock) return false;
@@ -427,6 +434,11 @@ function render(){
 }
 document.getElementById('btnRefresh').onclick=cargar;
 document.getElementById('btnLimpiar').onclick=limpiarFiltros;
+document.getElementById('btnPendiente').onclick=function(){
+  soloPendiente=!soloPendiente;
+  this.classList.toggle('on', soloPendiente);
+  render();
+};
 document.getElementById('btnExpand').onclick=function(){
   expandAll=!expandAll;
   colapsoManual=!expandAll;   // colapsar => colapso total (incluye la primera UE)
