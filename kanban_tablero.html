@@ -149,6 +149,11 @@
   .gs-ue .gs-uen{font-weight:700;color:#333;display:block;line-height:1.2;}
   .gs-ue .gs-uev{color:#5a6b7a;font-family:Consolas,monospace;}
   .gs-ue .gs-uew{color:#BF9000;font-size:9px;}
+  .gs-flags{display:inline-flex;gap:3px;margin-left:4px;vertical-align:middle;}
+  .gs-flag{font-size:8px;font-weight:800;padding:0 4px;border-radius:2px;color:#fff;letter-spacing:.3px;}
+  .gf-atr{background:#C00000;}   /* sin servicio hace mucho */
+  .gf-urg{background:#E36C09;}   /* tiene urgencias */
+  .gf-ven{background:#7a1414;}   /* tiene F8 ya vencidas */
   .gs-vacio{color:#aaa;font-size:10px;text-align:center;padding:10px 4px;}
   .ue-metrics{display:flex;align-items:center;gap:10px;}
   .prog{display:flex;height:16px;width:190px;border:1px solid #ddd;overflow:hidden;background:#f6f6f6;}
@@ -251,6 +256,7 @@
     <label>Grupo:</label><select id="fGrupo"><option value="">&mdash; Todos &mdash;</option></select>
     <label>Unidad Ejecutora:</label><select id="fUE"><option value="">&mdash; Todas &mdash;</option></select>
     <label>Tipo:</label><select id="fTipo"><option value="">&mdash; Todos &mdash;</option><option value="URG">Urgencias</option><option value="MEN">Mensuales</option></select>
+    <label>Etapa:</label><select id="fEtapa"><option value="">&mdash; Todas &mdash;</option><option value="RECEPCION">Recepci&oacute;n</option><option value="ASIGNACION">Asignaci&oacute;n</option><option value="RECOLECCION">Recolecci&oacute;n</option><option value="FACTURACION">Facturaci&oacute;n</option><option value="DISTRIBUCION">Distribuci&oacute;n</option></select>
     <label>Ordenar:</label><select id="fOrden"><option value="urg">Urgencia (defecto)</option><option value="pend">Pendientes &darr;</option><option value="total">Total F8 &darr;</option><option value="nombre">Nombre A&ndash;Z</option></select>
     <label>Triage:</label>
     <div class="tri-filtros" id="triFiltros">
@@ -393,6 +399,7 @@ function limpiarFiltros(){
   document.getElementById('fGrupo').value='';
   document.getElementById('fUE').value='';
   { const el=document.getElementById('fTipo'); if(el) el.value=''; }
+  { const el=document.getElementById('fEtapa'); if(el) el.value=''; }
   document.querySelectorAll('.tri-f').forEach(b=>b.classList.remove('on'));
   ['accVence','accStock','accCuello'].forEach(id=>document.getElementById(id).classList.remove('on'));
   MACROS.forEach(m=>{ const el=document.getElementById('kpi_'+m.clave); if(el) el.classList.remove('on'); });
@@ -454,6 +461,7 @@ function filtrados(){
     if(triFiltro && f.triage!==triFiltro) return false;
     if(fu && f.ue!==fu) return false;
     if(ft && f.tipo!==ft) return false;
+    { const feEl=document.getElementById('fEtapa'); const fe=feEl?feEl.value:''; if(fe && f.macro!==fe) return false; }
     if(diaFiltro){
       const v=f.fechaVencimiento?String(f.fechaVencimiento).slice(0,10):'';
       if(diaFiltro==='__ATRASADAS__'){
@@ -486,6 +494,7 @@ function rowsParaGrilla(){
     if(triFiltro && f.triage!==triFiltro) return false;
     if(fu && f.ue!==fu) return false;
     if(ft && f.tipo!==ft) return false;
+    { const feEl=document.getElementById('fEtapa'); const fe=feEl?feEl.value:''; if(fe && f.macro!==fe) return false; }
     if(soloPendiente && f.macro==='DISTRIBUCION') return false;
     if(accionFiltro==='vence' && !venceHoyMan(f)) return false;
     if(accionFiltro==='stock' && !f.sinStock) return false;
@@ -541,6 +550,17 @@ function gsSemAnterior(){ if(!gsLunes)gsInicializarSemana(); gsLunes.setDate(gsL
 function gsSemSiguiente(){ if(!gsLunes)gsInicializarSemana(); gsLunes.setDate(gsLunes.getDate()+7); render(); }
 function gsSemHoy(){ gsInicializarSemana(); diaFiltro=''; render(); }
 
+// Flags automáticos por UE: sin servicio hace >=7d, con urgencias, con vencidas.
+function flagUE(ue, tieneUrg){
+  var f=[];
+  var us=(UETOT[ue]&&UETOT[ue].ultimoServicio)?UETOT[ue].ultimoServicio:null;
+  var dias=us?us.dias:null;
+  if(dias==null){ f.push('<span class="gs-flag gf-atr" title="Sin despacho registrado">SIN SERV</span>'); }
+  else if(dias>=7){ f.push('<span class="gs-flag gf-atr" title="'+dias+' días sin servicio">'+dias+'d</span>'); }
+  if(tieneUrg){ f.push('<span class="gs-flag gf-urg" title="Tiene urgencias">URG</span>'); }
+  return f.length?'<span class="gs-flags">'+f.join('')+'</span>':'';
+}
+
 function renderGrilla(rows){
   const cont=document.getElementById('grillaSemanal');
   if(!cont) return;
@@ -589,7 +609,7 @@ function renderGrilla(rows){
     html+='<div class="gs-body">';
     claves.forEach(ue=>{ const o=atrasadas[ue];
       html+='<div class="gs-ue urg" onclick="filtrarUEdesdeGrilla(\''+ue.replace(/'/g,"\\'")+'\')">'
-        +'<span class="gs-uen">'+ue+'</span><span class="gs-uev">'+o.n+' F8'+(o.urg?' &middot; '+o.urg+' urg':'')+'</span>'
+        +'<span class="gs-uen">'+ue+flagUE(ue,o.urg>0)+'</span><span class="gs-uev">'+o.n+' F8'+(o.urg?' &middot; '+o.urg+' urg':'')+'</span>'
         +(o.dias?' <span class="gs-uew">ventana: '+o.dias+'</span>':'')+'</div>';
     });
     html+='</div></div>';
@@ -610,7 +630,7 @@ function renderGrilla(rows){
     else claves.forEach(ue=>{ const o=ues[ue];
       const cu=o.urg>0?' urg':'';
       html+='<div class="gs-ue'+cu+'" onclick="filtrarUEdesdeGrilla(\''+ue.replace(/'/g,"\\'")+'\')">'
-        +'<span class="gs-uen">'+ue+'</span><span class="gs-uev">'+o.n+' F8'+(o.urg?' &middot; '+o.urg+' urg':'')+'</span>'
+        +'<span class="gs-uen">'+ue+flagUE(ue,o.urg>0)+'</span><span class="gs-uev">'+o.n+' F8'+(o.urg?' &middot; '+o.urg+' urg':'')+'</span>'
         +(o.dias?' <span class="gs-uew">ventana: '+o.dias+'</span>':'')+'</div>';
     });
     html+='</div></div>';
@@ -785,7 +805,7 @@ document.getElementById('btnExpand').onclick=function(){
   this.textContent=expandAll?'Colapsar todo':'Expandir todo';
   render();
 };
-['fGrupo','fUE','fTipo','fOrden'].forEach(id=>{const el=document.getElementById(id); if(el) el.onchange=render;});
+['fGrupo','fUE','fTipo','fOrden','fEtapa'].forEach(id=>{const el=document.getElementById(id); if(el) el.onchange=render;});
 // chips de triage como filtro toggle (uno a la vez)
 document.querySelectorAll('.tri-f').forEach(btn=>{
   btn.onclick=function(){
