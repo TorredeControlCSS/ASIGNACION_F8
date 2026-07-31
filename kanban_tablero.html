@@ -92,6 +92,17 @@
   .ue-tot{font-size:10px;color:var(--sub);font-family:Consolas,monospace;margin-left:8px;}
   .ue-tot b{color:var(--txt);}
   .ue-head .spacer{flex:1;}
+  .ult-serv{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 12px;padding:6px 12px;
+    background:#f4f7fb;border:1px solid #a8a8a8;border-left:4px solid #1e5a9e;font-size:11px;color:#333;}
+  .ult-serv.verde{border-left-color:#2e7d32;background:#f2f9f2;}
+  .ult-serv.ambar{border-left-color:#BF9000;background:#fffdf5;}
+  .ult-serv.rojo{border-left-color:#C00000;background:#fdf5f5;}
+  .ult-serv.sin{border-left-color:#888;background:#f5f5f5;color:#888;}
+  .ult-serv .ult-lbl{font-weight:700;color:#0C447C;text-transform:uppercase;font-size:9px;letter-spacing:.4px;}
+  .ult-serv .ult-val{font-family:Consolas,monospace;font-weight:700;}
+  .ult-serv .ult-dias{font-family:Consolas,monospace;}
+  .ult-serv .ult-sep{color:#a8a8a8;}
+  .ult-serv .ult-k{font-family:Consolas,monospace;color:#5a6b7a;}
   .ue-metrics{display:flex;align-items:center;gap:10px;}
   .prog{display:flex;height:16px;width:190px;border:1px solid #ddd;overflow:hidden;background:#f6f6f6;}
   .prog span{display:block;height:100%;}
@@ -429,6 +440,22 @@ function render(){
   });
   document.getElementById('cnt').textContent=ues.length+' UE';
   let html='';
+  function bannerUltimoServicio(us){
+    if(!us){ return `<div class="ult-serv sin">\u26a0 Sin despacho registrado a esta UE</div>`; }
+    const dd = (us.dias==null) ? '\u2014' : us.dias;
+    const cls = (us.dias==null) ? '' : (us.dias>=7 ? ' rojo' : (us.dias>=3 ? ' ambar' : ' verde'));
+    const grupos = (us.grupos&&us.grupos.length) ? us.grupos.join(', ') : '\u2014';
+    const items = (us.items||0).toLocaleString('es-PA');
+    return `<div class="ult-serv${cls}">
+      <span class="ult-lbl">\u00daltimo servicio</span>
+      <span class="ult-val">${us.fecha}</span>
+      <span class="ult-dias">hace ${dd} d\u00edas</span>
+      <span class="ult-sep">|</span>
+      <span class="ult-k">${us.pedidos} pedido(s)</span>
+      <span class="ult-k">${items} items</span>
+      <span class="ult-k">grupos: ${grupos}</span>
+    </div>`;
+  }
   ues.forEach((ue,gi)=>{
     const u=byUE.get(ue);
     const mUE=macroDe(u.all), totUE=u.all.length, pendUE=pendDe(mUE);
@@ -443,7 +470,7 @@ function render(){
         <span class="spacer"></span>
         <span class="ue-metrics">${barra(mUE,totUE)}<span class="mtot">${totUE}</span><span class="mpend ${pendUE>0?'pend-alert':''}">pend ${pendUE}</span></span>
       </div>
-      <div class="ue-body">`;
+      <div class="ue-body">${bannerUltimoServicio(t.ultimoServicio)}`;
     const grupos=[...u.grupos.keys()].sort((a,b)=>pendDe(macroDe(u.grupos.get(b)))-pendDe(macroDe(u.grupos.get(a))));
     grupos.forEach(g=>{
       const lista=u.grupos.get(g), mG=macroDe(lista), totG=lista.length, pendG=pendDe(mG);
