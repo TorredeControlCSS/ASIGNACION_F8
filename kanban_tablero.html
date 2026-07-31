@@ -103,6 +103,27 @@
   .ult-serv .ult-dias{font-family:Consolas,monospace;}
   .ult-serv .ult-sep{color:#a8a8a8;}
   .ult-serv .ult-k{font-family:Consolas,monospace;color:#5a6b7a;}
+  /* Grilla semanal por día de vencimiento */
+  .gs-wrap{margin-bottom:14px;border:1px solid #a8a8a8;background:#fff;}
+  .gs-head{background:#0C447C;color:#fff;padding:6px 12px;font-size:12px;font-weight:700;display:flex;align-items:center;gap:10px;}
+  .gs-head .gs-sub{font-weight:400;font-size:10px;opacity:.85;}
+  .gs-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:0;}
+  .gs-col{border-right:1px solid #e2e6ea;min-height:60px;}
+  .gs-col:last-child{border-right:none;}
+  .gs-col.hoy .gs-dia{background:#1e5a9e;}
+  .gs-dia{background:#eef3fa;color:#0C447C;font-size:11px;font-weight:700;text-align:center;padding:5px;text-transform:uppercase;letter-spacing:.4px;cursor:pointer;border-bottom:1px solid #d7dee7;}
+  .gs-col.hoy .gs-dia{color:#fff;}
+  .gs-dia:hover{background:#dce6f3;}
+  .gs-dia.activo{background:#0C447C;color:#fff;}
+  .gs-dia .gs-cnt{font-family:Consolas,monospace;font-size:13px;display:block;margin-top:2px;}
+  .gs-body{padding:4px;max-height:220px;overflow-y:auto;}
+  .gs-ue{font-size:10px;padding:3px 5px;margin-bottom:2px;border-left:3px solid #1e5a9e;background:#f7f9fc;cursor:pointer;}
+  .gs-ue:hover{background:#eef3fa;}
+  .gs-ue.urg{border-left-color:#C00000;}
+  .gs-ue .gs-uen{font-weight:700;color:#333;display:block;line-height:1.2;}
+  .gs-ue .gs-uev{color:#5a6b7a;font-family:Consolas,monospace;}
+  .gs-ue .gs-uew{color:#BF9000;font-size:9px;}
+  .gs-vacio{color:#aaa;font-size:10px;text-align:center;padding:10px 4px;}
   .ue-metrics{display:flex;align-items:center;gap:10px;}
   .prog{display:flex;height:16px;width:190px;border:1px solid #ddd;overflow:hidden;background:#f6f6f6;}
   .prog span{display:block;height:100%;}
@@ -203,6 +224,8 @@
   <div class="toolbar">
     <label>Grupo:</label><select id="fGrupo"><option value="">&mdash; Todos &mdash;</option></select>
     <label>Unidad Ejecutora:</label><select id="fUE"><option value="">&mdash; Todas &mdash;</option></select>
+    <label>Tipo:</label><select id="fTipo"><option value="">&mdash; Todos &mdash;</option><option value="URG">Urgencias</option><option value="MEN">Mensuales</option></select>
+    <label>Ordenar:</label><select id="fOrden"><option value="urg">Urgencia (defecto)</option><option value="pend">Pendientes &darr;</option><option value="total">Total F8 &darr;</option><option value="nombre">Nombre A&ndash;Z</option></select>
     <label>Triage:</label>
     <div class="tri-filtros" id="triFiltros">
       <button class="tri-f tri-f-ROJO"     data-tri="ROJO"><span class="tf-dot"></span>ROJO</button>
@@ -218,6 +241,7 @@
     <div class="spacer"></div><span class="count" id="cnt"></span>
   </div>
   <div class="leyenda" id="leyenda"></div>
+  <div id="grillaSemanal"></div>
   <div id="lista"><div class="loading">Cargando tablero&hellip;</div></div>
 </div>
 <script>
@@ -227,6 +251,8 @@ let accionFiltro='';  // '', 'vence', 'stock'
 let cuelloEtapa='';   // clave de macro-etapa del cuello (para filtrarCuello)
 let macroFiltro='';   // filtro por tarjeta KPI (macro-etapa)
 let triFiltro='';     // filtro por chip de triage
+let diaFiltro='';     // filtro por día de vencimiento (clic en grilla semanal)
+let ordenUE='urg';    // criterio de orden del acordeón de UEs
 const COLOR={};
 function isoHoy(){ const d=new Date(); d.setHours(0,0,0,0); return d.toISOString().slice(0,10); }
 function isoManana(){ const d=new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()+1); return d.toISOString().slice(0,10); }
@@ -325,9 +351,10 @@ function filtrarMacro(clave){
   render();
 }
 function limpiarFiltros(){
-  accionFiltro=''; macroFiltro=''; _cuelloActivo=false; triFiltro='';
+  accionFiltro=''; macroFiltro=''; _cuelloActivo=false; triFiltro=''; diaFiltro='';
   document.getElementById('fGrupo').value='';
   document.getElementById('fUE').value='';
+  { const el=document.getElementById('fTipo'); if(el) el.value=''; }
   document.querySelectorAll('.tri-f').forEach(b=>b.classList.remove('on'));
   ['accVence','accStock','accCuello'].forEach(id=>document.getElementById(id).classList.remove('on'));
   MACROS.forEach(m=>{ const el=document.getElementById('kpi_'+m.clave); if(el) el.classList.remove('on'); });
@@ -383,13 +410,36 @@ function fVenc(s){ return s? s.slice(5).replace('-','/') : '\u2014'; }
 function filtrados(){
   const fg=document.getElementById('fGrupo').value;
   const fu=document.getElementById('fUE').value;
+  const ftEl=document.getElementById('fTipo'); const ft=ftEl?ftEl.value:'';
   return F8.filter(f=>{
     if(fg && f.grupo!==fg) return false;
     if(triFiltro && f.triage!==triFiltro) return false;
     if(fu && f.ue!==fu) return false;
+    if(ft && f.tipo!==ft) return false;
+    if(diaFiltro && diaSemanaDe(f.fechaVencimiento)!==diaFiltro) return false;
     // vista "solo pendiente": ocultar lo que ya salió del inventario (Distribución)
     if(soloPendiente && f.macro==='DISTRIBUCION') return false;
     // filtros de la banda de acción
+    if(accionFiltro==='vence' && !venceHoyMan(f)) return false;
+    if(accionFiltro==='stock' && !f.sinStock) return false;
+    if(_cuelloActivo && f.macro!==cuelloEtapa) return false;
+    if(macroFiltro && f.macro!==macroFiltro) return false;
+    return true;
+  });
+}
+// Igual que filtrados() pero SIN aplicar diaFiltro: la grilla siempre muestra
+// la semana completa aunque el usuario haya clicado un día (ese clic filtra el
+// detalle de abajo, no la grilla de arriba).
+function rowsParaGrilla(){
+  const fg=document.getElementById('fGrupo').value;
+  const fu=document.getElementById('fUE').value;
+  const ftEl=document.getElementById('fTipo'); const ft=ftEl?ftEl.value:'';
+  return F8.filter(f=>{
+    if(fg && f.grupo!==fg) return false;
+    if(triFiltro && f.triage!==triFiltro) return false;
+    if(fu && f.ue!==fu) return false;
+    if(ft && f.tipo!==ft) return false;
+    if(soloPendiente && f.macro==='DISTRIBUCION') return false;
     if(accionFiltro==='vence' && !venceHoyMan(f)) return false;
     if(accionFiltro==='stock' && !f.sinStock) return false;
     if(_cuelloActivo && f.macro!==cuelloEtapa) return false;
@@ -414,9 +464,75 @@ function ordenFila(a,b){
   if(rb!==ra) return rb-ra;
   return (b.ipd||0)-(a.ipd||0);
 }
+// ── Grilla semanal por día de VENCIMIENTO ──────────────────────────────
+const GS_DIAS=['LUNES','MARTES','MIERCOLES','JUEVES','VIERNES'];
+const GS_DOW={1:'LUNES',2:'MARTES',3:'MIERCOLES',4:'JUEVES',5:'VIERNES'};
+function diaSemanaDe(iso){
+  if(!iso) return '';
+  const m=String(iso).slice(0,10).match(/(\\d{4})-(\\d{2})-(\\d{2})/);
+  if(!m) return '';
+  const d=new Date(+m[1],+m[2]-1,+m[3]);
+  return GS_DOW[d.getDay()]||'';   // sáb/dom quedan fuera de la grilla L-V
+}
+function renderGrilla(rows){
+  const cont=document.getElementById('grillaSemanal');
+  if(!cont) return;
+  // Solo cuenta lo que vence y no está distribuido
+  const porDia={}; GS_DIAS.forEach(d=>porDia[d]={});
+  let totSemana=0;
+  rows.forEach(f=>{
+    if(f.macro==='DISTRIBUCION') return;
+    const dia=diaSemanaDe(f.fechaVencimiento);
+    if(!dia || !porDia[dia]) return;
+    const ue=f.ue;
+    if(!porDia[dia][ue]) porDia[dia][ue]={n:0,urg:0,venc:f.fechaVencimiento,dias:f.diasCrono||''};
+    porDia[dia][ue].n++;
+    if(f.tipo==='URG') porDia[dia][ue].urg++;
+    totSemana++;
+  });
+  const hoyNom=(GS_DOW[new Date().getDay()]||'');
+  let html='<div class="gs-wrap"><div class="gs-head">Cronograma semanal &middot; vencimiento de Formas 8 por día'
+    +'<span class="gs-sub">Clic en un día para filtrar el detalle &middot; '+totSemana+' F8 esta semana</span></div><div class="gs-grid">';
+  GS_DIAS.forEach(dia=>{
+    const ues=porDia[dia];
+    const claves=Object.keys(ues).sort((a,b)=>ues[b].n-ues[a].n);
+    const totDia=claves.reduce((s,k)=>s+ues[k].n,0);
+    const esHoy = dia===hoyNom ? ' hoy':'';
+    const activo = diaFiltro===dia ? ' activo':'';
+    html+='<div class="gs-col'+esHoy+'">';
+    html+='<div class="gs-dia'+activo+'" onclick="toggleDiaGrilla(\''+dia+'\')">'+dia+'<span class="gs-cnt">'+totDia+'</span></div>';
+    html+='<div class="gs-body">';
+    if(!claves.length){ html+='<div class="gs-vacio">&mdash;</div>'; }
+    else claves.forEach(ue=>{
+      const o=ues[ue];
+      const cu=o.urg>0?' urg':'';
+      const ventana=o.dias?('<span class="gs-uew">ventana: '+o.dias+'</span>'):'';
+      html+='<div class="gs-ue'+cu+'" onclick="filtrarUEdesdeGrilla(\''+ue.replace(/'/g,"\\'")+'\')">'
+        +'<span class="gs-uen">'+ue+'</span>'
+        +'<span class="gs-uev">'+o.n+' F8'+(o.urg?' &middot; '+o.urg+' urg':'')+'</span> '+ventana
+        +'</div>';
+    });
+    html+='</div></div>';
+  });
+  html+='</div></div>';
+  cont.innerHTML=html;
+}
+function toggleDiaGrilla(dia){
+  diaFiltro = (diaFiltro===dia) ? '' : dia;
+  render();
+}
+function filtrarUEdesdeGrilla(ue){
+  const sel=document.getElementById('fUE');
+  if(sel){ sel.value=ue; }
+  render();
+  document.getElementById('lista').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
 function render(){
+  { const el=document.getElementById('fOrden'); if(el) ordenUE=el.value; }
   pintarBanda(); pintarKPIs();   // las tarjetas reaccionan al contexto (UE/grupo/triage/pendiente)
   const rows=filtrados();
+  renderGrilla(rowsParaGrilla());   // grilla semanal: usa filtros pero NO el filtro de día (para no vaciarse a sí misma)
   const cont=document.getElementById('lista');
   if(!rows.length){cont.innerHTML='<div class="empty">No hay Formas 8 con este filtro.</div>';document.getElementById('cnt').textContent='0 UE';return;}
   const byUE=new Map();
@@ -433,7 +549,11 @@ function render(){
     return {venc, rojo, pend:pendDe(macroDe(u.all))};
   }
   const ues=[...byUE.keys()].sort((a,b)=>{
+    if(ordenUE==='nombre') return a.localeCompare(b,'es');
     const ua=urgUE(byUE.get(a)), ub=urgUE(byUE.get(b));
+    if(ordenUE==='pend')  return ub.pend-ua.pend;
+    if(ordenUE==='total') return byUE.get(b).all.length-byUE.get(a).all.length;
+    // 'urg' (defecto): vencimientos hoy/mañana, luego ROJO, luego pendientes
     if(ub.venc!==ua.venc) return ub.venc-ua.venc;
     if(ub.rojo!==ua.rojo) return ub.rojo-ua.rojo;
     return ub.pend-ua.pend;
@@ -518,7 +638,7 @@ document.getElementById('btnExpand').onclick=function(){
   this.textContent=expandAll?'Colapsar todo':'Expandir todo';
   render();
 };
-['fGrupo','fUE'].forEach(id=>document.getElementById(id).onchange=render);
+['fGrupo','fUE','fTipo','fOrden'].forEach(id=>{const el=document.getElementById(id); if(el) el.onchange=render;});
 // chips de triage como filtro toggle (uno a la vez)
 document.querySelectorAll('.tri-f').forEach(btn=>{
   btn.onclick=function(){
