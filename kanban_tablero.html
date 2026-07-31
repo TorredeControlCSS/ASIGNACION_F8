@@ -107,6 +107,27 @@
   .gs-wrap{margin-bottom:14px;border:1px solid #a8a8a8;background:#fff;}
   .gs-head{background:#0C447C;color:#fff;padding:6px 12px;font-size:12px;font-weight:700;display:flex;align-items:center;gap:10px;}
   .gs-head .gs-sub{font-weight:400;font-size:10px;opacity:.85;}
+  .modal-bg{display:none;position:fixed;inset:0;background:rgba(12,44,124,.35);z-index:100;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;}
+  .modal-bg.open{display:flex;}
+  .modal{background:#fff;width:100%;max-width:760px;border:1px solid var(--bord,#a8a8a8);box-shadow:0 8px 30px rgba(0,0,0,.25);}
+  .mh{background:var(--azul,#0C447C);color:#fff;padding:10px 16px;display:flex;align-items:center;gap:10px;}
+  .mh .mt{font-weight:700;font-size:14px;} .mh .msub{font-size:10px;opacity:.85;}
+  .mh .x{margin-left:auto;cursor:pointer;font-size:18px;line-height:1;padding:0 4px;}
+  .mb{padding:14px 16px;max-height:70vh;overflow-y:auto;}
+  .m-serv{font-size:11px;background:#f4f7fb;border-left:3px solid var(--azul2,#1e5a9e);padding:6px 10px;margin-bottom:12px;}
+  .m-grp{margin-bottom:10px;border:1px solid #e2e6ea;}
+  .m-grp-h{background:#eef3fa;padding:5px 10px;font-weight:700;font-size:12px;color:var(--azul,#0C447C);display:flex;align-items:center;gap:8px;}
+  .m-grp-h .n{margin-left:auto;font-family:Consolas,monospace;font-size:11px;color:#5a6b7a;}
+  table.m-t{width:100%;border-collapse:collapse;font-size:11px;}
+  table.m-t th{background:#f7f9fc;color:#5a6b7a;font-size:9px;text-transform:uppercase;padding:4px 8px;text-align:left;border-bottom:1px solid #e2e6ea;}
+  table.m-t td{padding:3px 8px;border-top:1px solid #f2f2f2;} table.m-t td.mono{font-family:Consolas,monospace;}
+  .etapa-chip{display:inline-block;font-size:9px;font-weight:700;padding:1px 6px;border-radius:2px;color:#fff;}
+  .m-empty{padding:24px;text-align:center;color:#999;}
+  .vistas-sw{display:flex;gap:0;margin-bottom:10px;border:1px solid var(--bord);width:fit-content;}
+  .vsw-btn{padding:7px 18px;border:none;background:#fff;color:#5a6b7a;font-size:12px;font-weight:700;cursor:pointer;border-right:1px solid var(--bord);}
+  .vsw-btn:last-child{border-right:none;}
+  .vsw-btn.activa{background:var(--azul,#0C447C);color:#fff;}
+  .vsw-btn:not(.activa):hover{background:#eef3fa;}
   .gs-nav{background:rgba(255,255,255,.18);border:none;color:#fff;font-size:15px;font-weight:700;cursor:pointer;padding:1px 9px;border-radius:3px;line-height:1.4;}
   .gs-nav:hover{background:rgba(255,255,255,.32);}
   .gs-hoy-btn{font-size:10px;padding:2px 9px;}
@@ -245,9 +266,21 @@
     <button class="btn sec" id="btnRefresh">&#8635; Actualizar</button>
     <div class="spacer"></div><span class="count" id="cnt"></span>
   </div>
+  <div class="vistas-sw">
+    <button class="vsw-btn activa" data-vista="ue" onclick="cambiarVista('ue')">Por Unidad Ejecutora</button>
+    <button class="vsw-btn" data-vista="crono" onclick="cambiarVista('crono')">Cronograma semanal</button>
+  </div>
   <div class="leyenda" id="leyenda"></div>
-  <div id="grillaSemanal"></div>
-  <div id="lista"><div class="loading">Cargando tablero&hellip;</div></div>
+  <div id="vistaCrono" style="display:none;"><div id="grillaSemanal"></div></div>
+  <div id="vistaUE"><div id="lista"><div class="loading">Cargando tablero&hellip;</div></div></div>
+</div>
+
+<!-- MODAL detalle por UE (vista Cronograma) -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <div class="mh"><div><div class="mt" id="mTit">Unidad Ejecutora</div><div class="msub" id="mSub"></div></div><span class="x" id="mX">&#10005;</span></div>
+    <div class="mb" id="mBody"></div>
+  </div>
 </div>
 <script>
 const WEBAPP_BASE = "https://script.google.com/macros/s/AKfycbyVHDQ8IuVHibz259AiEvZ-jUfVC7fxvSSqC-wfaiiq1_13C9_TK4dVtPK0SMW4sZoJ/exec";
@@ -589,18 +622,64 @@ function toggleDiaGrilla(clave){
   diaFiltro = (diaFiltro===clave) ? '' : clave;
   render();
 }
-function filtrarUEdesdeGrilla(ue){
-  const sel=document.getElementById('fUE');
-  if(sel){ sel.value=ue; }
+function filtrarUEdesdeGrilla(ue){ abrirModalUE(ue); }   // en Cronograma, clic en UE => modal
+
+function _mLabel(mc){ const o=MACROS.find(x=>x.clave===mc); return o?o.label:mc; }
+function _mColor(mc){ const o=MACROS.find(x=>x.clave===mc); return o?o.color:'#888'; }
+function _esc(s){ return String(s==null?'':s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c])); }
+
+function abrirModalUE(ue){
+  // Pendientes = hasta FACTURACIÓN (Distribución es historia)
+  const propios=F8.filter(f=>f.ue===ue && f.macro!=='DISTRIBUCION');
+  const us=UETOT[ue] && UETOT[ue].ultimoServicio;
+  document.getElementById('mTit').textContent=ue;
+  const cedis=(F8.find(f=>f.ue===ue)||{}).cedis||'';
+  document.getElementById('mSub').textContent=(cedis?cedis+' \u00b7 ':'')+propios.length+' F8 pendientes';
+
+  let html='';
+  if(us){
+    html+='<div class="m-serv"><b>\u00daltimo servicio:</b> '+_esc(us.fecha)+' (hace '+(us.dias==null?'\u2014':us.dias)+' d\u00edas) \u00b7 '
+      +us.pedidos+' pedido(s) \u00b7 '+(us.items||0).toLocaleString('es-PA')+' items \u00b7 grupos: '+_esc((us.grupos||[]).join(', ')||'\u2014')+'</div>';
+  }else{
+    html+='<div class="m-serv" style="border-left-color:#888;color:#888;">Sin despacho registrado a esta UE</div>';
+  }
+  if(!propios.length){ html+='<div class="m-empty">No hay F8 pendientes.</div>'; document.getElementById('mBody').innerHTML=html; _abrir(); return; }
+
+  const porG={}; propios.forEach(f=>{ (porG[f.grupo]=porG[f.grupo]||[]).push(f); });
+  Object.keys(porG).sort().forEach(g=>{
+    const lista=porG[g].slice().sort((a,b)=>(b.ipd||0)-(a.ipd||0));
+    html+='<div class="m-grp"><div class="m-grp-h">'+_esc(g)+'<span class="n">'+lista.length+' F8</span></div>'
+      +'<table class="m-t"><thead><tr><th>Forma 8</th><th>Tipo</th><th>Etapa</th><th>Vence</th><th>IPD</th></tr></thead><tbody>';
+    lista.forEach(f=>{
+      const col=_mColor(f.macro);
+      html+='<tr><td class="mono">'+_esc(f.id)+'</td>'
+        +'<td style="color:'+(f.tipo==='URG'?'#C00000':'#5a6b7a')+';font-weight:'+(f.tipo==='URG'?'700':'400')+'">'+_esc(f.tipo)+'</td>'
+        +'<td><span class="etapa-chip" style="background:'+col+'">'+_esc(_mLabel(f.macro))+'</span> <span style="font-size:9px;color:#888">'+_esc(f.etapa||'')+'</span></td>'
+        +'<td class="mono">'+_esc((f.fechaVencimiento||'\u2014').slice(0,10))+'</td>'
+        +'<td class="mono">'+(f.ipd!=null?Math.round(f.ipd):'\u2014')+'</td></tr>';
+    });
+    html+='</tbody></table></div>';
+  });
+  document.getElementById('mBody').innerHTML=html;
+  _abrir();
+}
+function _abrir(){ document.getElementById('modalBg').classList.add('open'); }
+function _cerrarModal(){ document.getElementById('modalBg').classList.remove('open'); }
+
+let VISTA='ue';   // 'ue' (acordeón) | 'crono' (grilla semanal)
+function cambiarVista(v){
+  VISTA=v;
+  document.querySelectorAll('.vsw-btn').forEach(b=>b.classList.toggle('activa', b.getAttribute('data-vista')===v));
+  document.getElementById('vistaUE').style.display    = (v==='ue')   ? '' : 'none';
+  document.getElementById('vistaCrono').style.display = (v==='crono')? '' : 'none';
   render();
-  document.getElementById('lista').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 function render(){
   { const el=document.getElementById('fOrden'); if(el) ordenUE=el.value; }
   pintarBanda(); pintarKPIs();   // las tarjetas reaccionan al contexto (UE/grupo/triage/pendiente)
   const rows=filtrados();
-  renderGrilla(rowsParaGrilla());   // grilla semanal: usa filtros pero NO el filtro de día (para no vaciarse a sí misma)
+  if(VISTA==='crono'){ renderGrilla(rowsParaGrilla()); return; }   // grilla semanal; el acordeón no se dibuja en esta vista
   const cont=document.getElementById('lista');
   if(!rows.length){cont.innerHTML='<div class="empty">No hay Formas 8 con este filtro.</div>';document.getElementById('cnt').textContent='0 UE';return;}
   const byUE=new Map();
@@ -716,6 +795,9 @@ document.querySelectorAll('.tri-f').forEach(btn=>{
     render();
   };
 });
+document.getElementById('mX').onclick=_cerrarModal;
+document.getElementById('modalBg').onclick=function(e){ if(e.target===this) _cerrarModal(); };
+document.addEventListener('keydown',function(e){ if(e.key==='Escape') _cerrarModal(); });
 cargar();
 setInterval(cargar,180000);
 </script>
