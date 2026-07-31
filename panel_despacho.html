@@ -282,10 +282,6 @@
   <div class="tabs">
     <div class="tab activa" data-tab="lista">Lista priorizada <span class="cnt" id="cntLista">·</span></div>
     <div class="tab" data-tab="calendario">Calendario</div>
-    <div class="tab" data-tab="kanban">Kanban</div>
-    <div class="tab" data-tab="supervision">Supervisión · OTIF</div>
-    <div class="tab" data-tab="termografia">Termografía UE</div>
-    <div class="tab" data-tab="transito">F8 en tránsito <span class="cnt" id="cntTransito">·</span></div>
   </div>
 
   <div class="panel-body">
@@ -377,50 +373,6 @@
       </div>
     </div>
     <!-- KANBAN -->
-    <div id="tabKanban" class="hidden">
-      <p style="font-size:12px;color:#666;margin:0 0 10px;">Cada F8 en su etapa actual del flujo (12 etapas canónicas). Respeta los filtros de la lista priorizada.</p>
-      <div class="kb-scroll"><div class="kb-cols" id="kbCols"></div></div>
-    </div>
-    <!-- SUPERVISION / OTIF -->
-    <div id="tabSupervision" class="hidden">
-      <div id="supCont"><div class="loading">Cargando métricas de supervisión…</div></div>
-    </div>
-    <!-- TERMOGRAFIA POR UE -->
-    <div id="tabTermografia" class="hidden">
-      <div class="filtros-linea" style="margin-bottom:12px;">
-        <div class="filtro-campo" style="flex:1;min-width:260px"><span class="et">Unidad Ejecutora</span>
-          <select id="tgUE" onchange="renderTermografia()" style="width:100%"><option value="">— Selecciona una unidad —</option></select>
-        </div>
-        <button class="btn noprint" onclick="window.print()" style="align-self:flex-end">🖨 Imprimir</button>
-      </div>
-      <div id="tgCont"><div class="vacio">Selecciona una Unidad Ejecutora para ver su footprint de atención por grupo.</div></div>
-    </div>
-    <!-- TRANSITO -->
-    <div id="tabTransito" class="hidden">
-      <div class="filtros-linea" style="margin-bottom:0;">
-        <div class="filtro-campo" style="flex:1;min-width:200px"><span class="et">Unidad Ejecutora</span>
-          <select id="trUE" onchange="renderTransito()" style="width:100%"><option value="">Todas</option></select>
-        </div>
-        <div class="filtro-campo"><span class="et">Grupo</span>
-          <select id="trGrupo" onchange="renderTransito()"><option value="">Todos</option></select>
-        </div>
-        <div class="filtro-campo"><span class="et">Tipo</span>
-          <select id="trTipo" onchange="renderTransito()">
-            <option value="">Todos</option><option value="URG">Urgencia</option><option value="MEN">Mensual</option>
-          </select>
-        </div>
-        <div class="filtro-campo"><span class="et">Antigüedad</span>
-          <select id="trDias" onchange="renderTransito()">
-            <option value="">Cualquiera</option>
-            <option value="7">7+ días en tránsito</option>
-            <option value="15">15+ días</option>
-            <option value="30">30+ días</option>
-          </select>
-        </div>
-        <button class="btn" onclick="limpiarTransito()" style="align-self:flex-end">✕ Limpiar</button>
-      </div>
-      <div id="transitoCont"><div class="loading">Cargando F8 en tránsito…</div></div>
-    </div>
   </div>
 </div>
 
@@ -476,14 +428,10 @@ function jsonp(url, timeoutMs, sinCacheBuster){
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
   TAB=t.dataset.tab;
   document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('activa',x===t));
-  ['Lista','Calendario','Kanban','Supervision','Termografia','Transito'].forEach(v=>{
+  ['Lista','Calendario'].forEach(v=>{
     document.getElementById('tab'+v).classList.toggle('hidden', v.toLowerCase()!==TAB);
   });
-  if(TAB==='transito') renderTransito();
   if(TAB==='calendario') renderCalendario();
-  if(TAB==='kanban') renderKanban();
-  if(TAB==='supervision') cargarSupervision();
-  if(TAB==='termografia') poblarTermografiaUE();
 }));
 
 async function cargar(){
@@ -491,7 +439,7 @@ async function cargar(){
   try{
     DATA=await jsonp(WEBAPP+'?file=despacho_panel');
     document.getElementById('subAct').textContent='Actualizado '+(DATA.generado||'');
-    renderKpis(); poblarEtapas();
+    renderKpis();
     // T5 — WIP vs CERRADO. El contador decia 5,677 (todo el universo) mientras
     // la lista mostraba solo los activos: 63% de esas filas son DESPACHADO, ya
     // cerradas. Un tablero de trabajo debe contar lo que falta por hacer.
@@ -666,25 +614,6 @@ function renderCargaChart(arr){
   });
 }
 
-function poblarEtapas(){
-  const peds=DATA.pedidos||[];
-  const set=new Set(peds.map(p=>p.etapa));
-  const sel=document.getElementById('fEtapa');
-  sel.innerHTML='<option value="">Todas las etapas</option>'+[...set].map(e=>'<option value="'+e+'">'+e+'</option>').join('');
-  // Grupos: numéricos (1..10). Orden natural, no lexicográfico.
-  const gset=new Set(peds.map(p=>String(p.grupo||'').trim()).filter(Boolean));
-  const grupos=[...gset].sort((a,b)=>{ const na=parseFloat(a),nb=parseFloat(b);
-    if(!isNaN(na)&&!isNaN(nb)) return na-nb; return a.localeCompare(b); });
-  const selG=document.getElementById('fGrupo');
-  selG.innerHTML='<option value="">Todos los grupos</option>'+grupos.map(g=>'<option value="'+g+'">Grupo '+g+'</option>').join('');
-  // Unidades Ejecutoras: alfabético.
-  const uset=new Set(peds.map(p=>String(p.ue||'').trim()).filter(Boolean));
-  const ues=[...uset].sort((a,b)=>a.localeCompare(b,'es'));
-  const selU=document.getElementById('fUE');
-  const prev=selU.value;
-  selU.innerHTML='<option value="">Todas las unidades</option>'+ues.map(u=>'<option value="'+u.replace(/"/g,'&quot;')+'">'+u+'</option>').join('');
-  if(prev && ues.indexOf(prev)>=0) selU.value=prev;   // conservar selección tras recargar
-}
 
 function limpiarFiltros(){
   ['fUE','fTriage','fEtapa','fGrupo','fTipo','fCero'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
@@ -723,8 +652,7 @@ function renderLista(){
   if(!DATA) return;
   const arr=pedidosFiltrados();                 // universo filtrado (incluye cerrados)
   renderCargaChart(arr);                         // gráfico reacciona al filtro
-  if(TAB==='calendario') renderCalendario();     // calendario y kanban usan TODO (con cerrados)
-  if(TAB==='kanban') renderKanban();
+  if(TAB==='calendario') renderCalendario();
   // La lista PRIORIZADA no muestra cerrados (no se prioriza lo ya despachado),
   // salvo que el usuario filtre explícitamente por una etapa cerrada.
   const feEtapa=document.getElementById('fEtapa').value;
@@ -1571,79 +1499,7 @@ async function notificarMasivo(){
   finally{ if(btn){ btn.disabled=false; btn.textContent='✉ Notificar UEs con pedido listo'; } }
 }
 
-let TR_POBLADO=false;
-function poblarTransito(){
-  const arr=DATA.transito||[];
-  // UEs
-  const ues=[...new Set(arr.map(t=>String(t.ue||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
-  const selU=document.getElementById('trUE'); const pu=selU.value;
-  selU.innerHTML='<option value="">Todas</option>'+ues.map(u=>'<option value="'+u.replace(/"/g,'&quot;')+'">'+u+'</option>').join('');
-  if(pu&&ues.indexOf(pu)>=0) selU.value=pu;
-  // grupos (un doc puede tener varios separados por coma → separar)
-  const gset=new Set();
-  arr.forEach(t=>String(t.grupo||'').split(',').forEach(g=>{ g=g.trim(); if(g&&g!=='—')gset.add(g); }));
-  const grupos=[...gset].sort();
-  const selG=document.getElementById('trGrupo'); const pg=selG.value;
-  selG.innerHTML='<option value="">Todos</option>'+grupos.map(g=>'<option value="'+g+'">'+g+'</option>').join('');
-  if(pg&&grupos.indexOf(pg)>=0) selG.value=pg;
-  TR_POBLADO=true;
-}
-function limpiarTransito(){
-  ['trUE','trGrupo','trTipo','trDias'].forEach(id=>{const e=document.getElementById(id); if(e)e.value='';});
-  renderTransito();
-}
-function colorDias(d){
-  if(d==null) return '#888';
-  if(d>=30) return 'var(--t-rojo)'; if(d>=15) return 'var(--t-naranja)'; if(d>=7) return 'var(--t-amarillo)'; return '#3a8c3a';
-}
 
-function renderTransito(){
-  if(!DATA) return;
-  if(!TR_POBLADO) poblarTransito();
-  let arr=(DATA.transito||[]).slice();
-  const fu=document.getElementById('trUE').value;
-  const fg=document.getElementById('trGrupo').value;
-  const ft=document.getElementById('trTipo').value;
-  const fd=parseInt(document.getElementById('trDias').value||'0',10);
-  if(fu) arr=arr.filter(t=>String(t.ue||'').trim()===fu);
-  if(fg) arr=arr.filter(t=>String(t.grupo||'').split(',').map(x=>x.trim()).indexOf(fg)>=0);
-  if(ft==='URG') arr=arr.filter(t=>/URG/i.test(t.tipo||'')); else if(ft==='MEN') arr=arr.filter(t=>!/URG/i.test(t.tipo||''));
-  if(fd) arr=arr.filter(t=>t.diasTransito!=null && t.diasTransito>=fd);
-
-  const cont=document.getElementById('transitoCont');
-  if(!arr.length){ cont.innerHTML='<div class="vacio">No hay F8 en tránsito con este filtro.</div>'; return; }
-
-  // resumen
-  const conDias=arr.filter(t=>t.diasTransito!=null);
-  const prom=conDias.length?Math.round(conDias.reduce((s,t)=>s+t.diasTransito,0)/conDias.length):0;
-  const mas15=arr.filter(t=>t.diasTransito!=null&&t.diasTransito>=15).length;
-  const mas30=arr.filter(t=>t.diasTransito!=null&&t.diasTransito>=30).length;
-
-  let html='<p style="font-size:12px;color:#666;margin:0 0 10px">F8 generadas en el WMS que aún no han llegado físicamente al CEDIS (REQUISICIONES − BUFFER). Punto de Información normalizado; grupo inferido de los renglones. Solo UEs de CEDIS Panamá.</p>';
-  html+='<div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap">'+
-    '<div style="background:var(--fondo);border:1px solid var(--borde-suave);border-radius:3px;padding:7px 12px;font-size:12.5px"><b style="font-family:var(--mono);font-size:16px">'+arr.length+'</b> F8 en tránsito</div>'+
-    '<div style="background:var(--fondo);border:1px solid var(--borde-suave);border-radius:3px;padding:7px 12px;font-size:12.5px">Promedio <b style="font-family:var(--mono);font-size:16px">'+prom+'</b> días en tránsito</div>'+
-    '<div style="background:var(--ambar-bg);border:1px solid #e8d3a8;border-radius:3px;padding:7px 12px;font-size:12.5px;color:var(--ambar)"><b style="font-family:var(--mono);font-size:16px">'+mas15+'</b> con 15+ días</div>'+
-    (mas30?'<div style="background:var(--rojo-bg);border:1px solid #e6b0b0;border-radius:3px;padding:7px 12px;font-size:12.5px;color:var(--rojo)"><b style="font-family:var(--mono);font-size:16px">'+mas30+'</b> con 30+ días</div>':'')+
-  '</div>';
-  html+='<table class="tabla"><thead><tr><th>Nº Documento</th><th>Punto de Información</th><th>Grupo</th><th>Tipo</th><th style="text-align:right">Rengl.</th><th>Generada</th><th style="text-align:right">Días en tránsito</th></tr></thead><tbody>';
-  arr.forEach(t=>{
-    const f=(t.fecha&&String(t.fecha).length>10)?String(t.fecha).slice(0,10):(t.fecha||'');
-    const esUrg=/URG/i.test(t.tipo||'');
-    const dt=t.diasTransito;
-    html+='<tr>'+
-      '<td style="font-family:var(--mono)">'+t.id+'</td>'+
-      '<td>'+(t.ue||'—')+'</td>'+
-      '<td>'+(t.grupo||'—')+'</td>'+
-      '<td>'+(esUrg?'<span style="color:var(--rojo);font-weight:600">':'')+(t.tipo||'')+(esUrg?'</span>':'')+'</td>'+
-      '<td style="text-align:right;font-family:var(--mono)">'+(t.renglones!=null?t.renglones:'—')+'</td>'+
-      '<td style="font-family:var(--mono)">'+f+'</td>'+
-      '<td style="text-align:right;font-family:var(--mono);font-weight:700;color:'+colorDias(dt)+'">'+(dt!=null?dt+'d':'—')+'</td>'+
-    '</tr>';
-  });
-  html+='</tbody></table>';
-  cont.innerHTML=html;
-}
 
 // ===================== CALENDARIO MENSUAL =====================
 let calMes = new Date();  // mes visible
@@ -1913,41 +1769,9 @@ const KB_ETIQUETA={'RECEPCION':'Recepción','ASIGNADA':'Asignada',
   'EMPACADO':'Empacado','DISTRIBUCIÓN':'Distribución','DISTRIBUCION':'Distribución',
   'DESPACHADO':'Despacho físico','ENTREGADO':'Entregado'};
 
-function renderKanban(){
-  if(!DATA) return;
-  const cont=document.getElementById('kbCols');
-  if(!cont) return;
-  const arr=pedidosFiltrados();
-  const porEtapa={}; KB_FLUJO.forEach(e=>porEtapa[e]=[]);
-  arr.forEach(p=>{ (porEtapa[p.etapa]=porEtapa[p.etapa]||[]).push(p); });
-
-  const etapas=KB_FLUJO.filter(e=>porEtapa[e]).concat(Object.keys(porEtapa).filter(e=>KB_FLUJO.indexOf(e)<0));
-  cont.innerHTML=etapas.map(e=>{
-    const lista=(porEtapa[e]||[]).slice().sort((a,b)=>b.ipd-a.ipd);
-    const cards=lista.slice(0,50).map(p=>
-      '<div class="kb-card '+p.triage+'">'+
-        '<div class="ue">'+p.ue+'</div>'+
-        '<div class="id">'+p.id+'</div>'+
-        '<div class="meta">Grupo '+p.grupo+' · '+(p.esUrg?'Urg':'Men')+' · IPD '+Math.round(p.ipd)+(p.bultos>0?' · '+p.bultos+' bultos':'')+'</div>'+
-      '</div>').join('');
-    return '<div class="kb-col">'+
-      '<div class="kb-col-head"><span>'+(KB_ETIQUETA[e]||e)+'</span><span class="n">'+lista.length+'</span></div>'+
-      '<div class="kb-col-body">'+(lista.length?cards+(lista.length>50?'<div class="kb-col-vacia">+'+(lista.length-50)+' más…</div>':''):'<div class="kb-col-vacia">'+(KB_SIN_CAPTURA[e]?'Sin captura de fecha<br><span style="font-size:10px;">SALMI no registra esta etapa</span>':'—')+'</div>')+'</div>'+
-    '</div>';
-  }).join('');
-}
 
 // ===================== SUPERVISIÓN / OTIF =====================
 let SUP_DATA=null;
-async function cargarSupervision(){
-  const cont=document.getElementById('supCont');
-  if(SUP_DATA){ renderSupervision(); return; }
-  cont.innerHTML='<div class="loading">Cargando métricas de supervisión…</div>';
-  try{
-    SUP_DATA=await jsonp(WEBAPP+'?file=kanban_tablero');
-    renderSupervision();
-  }catch(e){ cont.innerHTML='<div class="vacio" style="color:#a32d2d">Sin conexión. Reintenta.</div>'; }
-}
 
 function clasePct(pct){
   if(pct==null) return '';
@@ -1965,68 +1789,6 @@ function tarjetaPct(lbl, pct, sub, n){
   '</div>';
 }
 
-function renderSupervision(){
-  const d=SUP_DATA||{};
-  const o=d.otif||{};
-  const cont=document.getElementById('supCont');
-
-  const lat = d.latenciaFacturacion;
-  const latCl = lat==null?'':(lat<=2?'bueno':(lat<=5?'medio':'malo'));
-  const latCard = '<div class="sup-card '+latCl+'">'+
-    '<div class="lbl">Latencia hand-off → facturación</div>'+
-    '<div class="val '+latCl+'">'+(lat==null?'—':lat.toFixed(1))+'</div>'+
-    '<div class="sub">días promedio desde que Cómputo recibe hasta que factura</div>'+
-    (d.latenciaN!=null?'<div class="n">sobre '+d.latenciaN.toLocaleString()+' pedidos con ambas fechas</div>':'')+
-  '</div>';
-
-  let html='';
-  html+='<div class="sup-nota"><b>Métricas de cumplimiento de despacho (OTIF).</b> Calculadas sobre pedidos ya despachados. '+
-    'Los números reflejan la operación real, respaldados por los registros de SEGUIMIENTO_PEDIDOS. '+
-    'Cada tarjeta indica sobre cuántos pedidos se midió.</div>';
-
-  html+='<div class="sup-sec">OTIF — On-Time In-Full</div>';
-  html+='<div class="sup-nota" style="background:#fffdf5;border-color:#e8dcb8;">'+
-    '<b>Cómo se lee.</b> <b>On-Time</b>: llegó dentro de su ventana de retiro. '+
-    '<b>In-Full</b>: se entregó la cantidad completa. <b>OTIF</b> exige las dos: '+
-    'es el más exigente y siempre será el más bajo de los tres.<br>'+
-    'Verde ≥70% · ámbar 40-69% · rojo &lt;40%. Se mide solo sobre pedidos ya '+
-    'despachados desde el 1 de mayo, que es cuando arranca la trazabilidad confiable.</div>';
-  html+='<div class="sup-grid">'+
-    tarjetaPct('OTIF (a tiempo Y completo)', o.otifPct, 'Despachado antes de vencer y con cantidad completa', o.otifN)+
-    tarjetaPct('On-Time (a tiempo)', o.onTimePct, 'Despachado en o antes de su fecha de vencimiento', o.onTimeN)+
-    tarjetaPct('In-Full (completo ≥99%)', o.inFullPct, 'Cantidad despachada = cantidad solicitada', o.inFullN)+
-  '</div>';
-
-  html+='<div class="sup-sec">Fill Rate — cobertura real de la demanda</div>';
-  const fr=o.fillRatePct;
-  const frCl=clasePct(fr);
-  html+='<div class="sup-grid">'+
-    '<div class="sup-card '+frCl+'">'+
-      '<div class="lbl">Delivery Fill Rate (por cantidad)</div>'+
-      '<div class="val '+frCl+'">'+(fr==null?'—':fr.toFixed(1)+'%')+'</div>'+
-      '<div class="sub">unidades despachadas ÷ unidades solicitadas</div>'+
-      (o.fillN!=null?'<div class="n">sobre '+o.fillN.toLocaleString()+' pedidos</div>':'')+
-    '</div>'+
-    '<div class="sup-card">'+
-      '<div class="lbl">Solicitado (unidades)</div>'+
-      '<div class="val" style="font-size:24px;color:#444">'+(o.fillSolicitado!=null?o.fillSolicitado.toLocaleString():'—')+'</div>'+
-      '<div class="sub">demanda total registrada</div>'+
-    '</div>'+
-    '<div class="sup-card">'+
-      '<div class="lbl">Despachado (unidades)</div>'+
-      '<div class="val" style="font-size:24px;color:var(--azul-osc)">'+(o.fillDespachado!=null?o.fillDespachado.toLocaleString():'—')+'</div>'+
-      '<div class="sub">volumen realmente entregado</div>'+
-    '</div>'+
-  '</div>';
-
-  html+='<div class="sup-sec">Latencia interna — evidencia de proceso</div>';
-  html+='<div class="sup-grid">'+latCard+'</div>';
-
-  html+='<div class="sup-nota" style="margin-top:8px;">Actualizado '+(d.generado||'')+
-    '. La latencia hand-off→facturación es la evidencia objetiva del tiempo entre que un pedido pasa a Cómputo y su facturación efectiva.</div>';
-
-  cont.innerHTML=html;
-}
 
 // ===================== TERMOGRAFÍA POR UE =====================
 // Etapas mostradas en la matriz de calor (subconjunto legible del flujo).
@@ -2038,132 +1800,11 @@ const TG_ET_CORTA={'ASIGNADA':'Asig.','RECOLECTADA':'Recol.','PICKING':'Picking'
   'RESERVA':'Reserva','FACTURACIÓN':'Fact.','EMPACADO':'Empac.',
   'DISTRIBUCIÓN':'Distr.','DESPACHADO':'Desp.','ENTREGADO':'Entr.'};
 
-function poblarTermografiaUE(){
-  const sel=document.getElementById('tgUE');
-  const prev=sel.value;
-  const ues=[...new Set((DATA.pedidos||[]).map(p=>String(p.ue||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
-  if(sel.dataset.n===String(ues.length)) return; // sin cambios: no repintar
-  sel.dataset.n=String(ues.length);
-  sel.innerHTML='<option value="">— Selecciona una unidad —</option>'+ues.map(u=>'<option value="'+u.replace(/"/g,'&quot;')+'">'+u+'</option>').join('');
-  if(prev && ues.indexOf(prev)>=0){ sel.value=prev; renderTermografia(); }
-}
 
 function ordenarGrupos(gs){
   return gs.sort((a,b)=>{const na=parseFloat((a.match(/\d+/)||[99])[0]),nb=parseFloat((b.match(/\d+/)||[99])[0]);return na-nb||a.localeCompare(b);});
 }
 
-function renderTermografia(){
-  const ue=document.getElementById('tgUE').value;
-  const cont=document.getElementById('tgCont');
-  if(!ue){ cont.innerHTML='<div class="vacio">Selecciona una Unidad Ejecutora para ver su footprint de atención por grupo.</div>'; return; }
-  const peds=(DATA.pedidos||[]).filter(p=>String(p.ue||'').trim()===ue);
-  if(!peds.length){ cont.innerHTML='<div class="vacio">Sin pedidos registrados para esta unidad.</div>'; return; }
-
-  // agrupar por grupo -> {etapa:count}, bultos, cerrados para OTIF
-  const porGrupo={};
-  peds.forEach(p=>{
-    const g=String(p.grupo||'Sin grupo').trim()||'Sin grupo';
-    if(!porGrupo[g]) porGrupo[g]={etapas:{},total:0,bultos:0,cerr:0,onTime:0,onTimeN:0,fillSol:0,fillAsig:0};
-    const o=porGrupo[g];
-    o.etapas[p.etapa]=(o.etapas[p.etapa]||0)+1;
-    o.total++; o.bultos+=(p.bultos||0);
-    if(p.cerrado){
-      o.cerr++;
-      // fill rate por cantidad (usa brecha si existe, si no asume completo)
-      if(p.brecha){ o.fillSol+=p.brecha.solicitado; o.fillAsig+=p.brecha.distribuido; }
-    }
-  });
-  const grupos=ordenarGrupos(Object.keys(porGrupo));
-
-  // KPIs de la unidad
-  const totF8=peds.length;
-  const totBultos=peds.reduce((s,p)=>s+(p.bultos||0),0);
-  const cerrados=peds.filter(p=>p.cerrado).length;
-  const enProceso=totF8-cerrados;
-  const crono=(peds[0].diasRetiro||[]).join(' · ')||'—';
-  const cedis=peds[0].cedis||'';
-
-  let html='';
-  html+='<div class="tg-head"><div class="t1">'+ue+'</div>'+
-    '<div class="t2">Footprint de atención por grupo · Cronograma de entrega: '+crono+(cedis?' · '+cedis:'')+'</div></div>';
-
-  html+='<div class="tg-kpis">'+
-    '<div class="tg-kpi"><div class="l">Total F8</div><div class="v">'+totF8+'</div></div>'+
-    '<div class="tg-kpi"><div class="l">En proceso</div><div class="v">'+enProceso+'</div></div>'+
-    '<div class="tg-kpi"><div class="l">Despachadas</div><div class="v">'+cerrados+'</div></div>'+
-    '<div class="tg-kpi"><div class="l">Grupos activos</div><div class="v">'+grupos.length+'</div></div>'+
-    '<div class="tg-kpi"><div class="l">Bultos totales</div><div class="v">'+Math.round(totBultos).toLocaleString()+'</div></div>'+
-  '</div>';
-
-  // === MATRIZ DE CALOR grupo x etapa ===
-  // máximo por celda para escalar intensidad
-  let maxCel=1;
-  grupos.forEach(g=>TG_ETAPAS.forEach(e=>{ const v=porGrupo[g].etapas[e]||0; if(v>maxCel)maxCel=v; }));
-  html+='<div class="sup-sec">Mapa de calor — F8 por grupo y etapa</div>';
-  html+='<div class="sup-nota" style="background:#fffdf5;border-color:#e8dcb8;margin-bottom:10px;">'+
-    '<b>Cómo se lee.</b> Cada fila es un grupo de esta unidad; cada columna, una etapa del flujo. '+
-    'El número es cuántas F8 están ahí <b>ahora mismo</b>.<br>'+
-    '<b>Rojo/ámbar</b> = detenidas aguas arriba (asignada, recolección, picking, reserva): '+
-    'todavía no llegan a facturación. <b>Azul</b> = ya avanzaron hacia despacho. '+
-    'Más intenso = más volumen.<br>'+
-    'Si una fila tiene todo el peso a la izquierda, ese grupo está atascado.</div>';
-  html+='<table class="tg-matriz"><thead><tr><th class="grupo">Grupo</th>';
-  TG_ETAPAS.forEach(e=>{ html+='<th>'+TG_ET_CORTA[e]+'</th>'; });
-  html+='<th>Total</th></tr></thead><tbody>';
-  grupos.forEach(g=>{
-    html+='<tr><td class="grupo">'+g+'</td>';
-    TG_ETAPAS.forEach(e=>{
-      const v=porGrupo[g].etapas[e]||0;
-      if(!v){ html+='<td class="cero">·</td>'; }
-      else{
-        const inten=v/maxCel; // 0..1
-        // celda azul si avanzado (despachado/entregado), ámbar/rojo si atascado en asignada/picking
-        // Atasco = se quedó aguas arriba, sin llegar a facturación.
-        const atascada=(e==='ASIGNADA'||e==='RECOLECTADA'||e==='PICKING'||e==='RESERVA');
-        const bg = atascada
-          ? 'rgba('+Math.round(192+ (255-192)*(1-inten))+','+Math.round(120*(1-inten)+40)+','+Math.round(31*(1-inten)+20)+','+(0.25+0.6*inten)+')'
-          : 'rgba(30,90,158,'+(0.15+0.55*inten)+')';
-        const col=inten>0.55?'#fff':'#333';
-        html+='<td style="background:'+bg+';color:'+col+'">'+v+'</td>';
-      }
-    });
-    html+='<td style="background:#f0f0f0">'+porGrupo[g].total+'</td></tr>';
-  });
-  html+='</tbody></table>';
-  html+='<div style="font-size:11px;color:#888;margin-bottom:6px">Rojo/ámbar = F8 detenidas aguas arriba (asignadas/picking sin avanzar). Azul = F8 que ya avanzaron hacia despacho. Intensidad = volumen.</div>';
-
-  // === TARJETAS POR GRUPO ===
-  html+='<div class="sup-sec">Detalle por grupo — progreso del flujo y cumplimiento</div>';
-  html+='<div class="tg-cards">';
-  grupos.forEach(g=>{
-    const o=porGrupo[g];
-    const cerr=o.etapas['DESPACHADO']||0, entr=o.etapas['ENTREGADO']||0, distr=o.etapas['DISTRIBUCIÓN']||0;
-    const salidos=cerr+entr+distr;
-    const enProc=o.total-salidos;
-    const pctSal=o.total?Math.round(100*salidos/o.total):0;
-    // barra de progreso: proceso (ámbar) vs salidos (azul)
-    const prog='<div class="prog">'+
-      (enProc?'<span style="flex:'+enProc+';background:var(--t-naranja)"></span>':'')+
-      (salidos?'<span style="flex:'+salidos+';background:var(--azul)"></span>':'')+'</div>';
-    // OTIF del grupo (fill rate)
-    const fill=o.fillSol>0?Math.round(100*o.fillAsig/o.fillSol):null;
-    const fillCl=fill==null?'':(fill>=70?'bueno':(fill>=40?'medio':'malo'));
-    html+='<div class="tg-card">'+
-      '<div class="g">'+g+'</div>'+
-      prog+
-      '<div class="row"><span>En proceso</span><b>'+enProc+'</b></div>'+
-      '<div class="row"><span>Despachadas/salidas</span><b>'+salidos+' ('+pctSal+'%)</b></div>'+
-      '<div class="row"><span>Bultos</span><b>'+Math.round(o.bultos).toLocaleString()+'</b></div>'+
-      '<div class="tg-otif">'+
-        '<div class="o"><div class="ov" style="color:'+(fillCl==='malo'?'var(--t-rojo)':fillCl==='medio'?'var(--t-naranja)':fillCl==='bueno'?'var(--t-verde)':'#999')+'">'+(fill==null?'—':fill+'%')+'</div><div class="ol">Fill rate</div></div>'+
-        '<div class="o"><div class="ov">'+o.cerr+'</div><div class="ol">Cerradas</div></div>'+
-      '</div>'+
-    '</div>';
-  });
-  html+='</div>';
-
-  cont.innerHTML=html;
-}
 
 cargar();
 </script>
