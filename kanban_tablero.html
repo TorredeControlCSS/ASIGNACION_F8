@@ -107,13 +107,13 @@
   .gs-wrap{margin-bottom:14px;border:1px solid #a8a8a8;background:#fff;}
   .gs-head{background:#0C447C;color:#fff;padding:6px 12px;font-size:12px;font-weight:700;display:flex;align-items:center;gap:10px;}
   .gs-head .gs-sub{font-weight:400;font-size:10px;opacity:.85;}
-  .modal-bg{display:none;position:fixed;inset:0;background:rgba(12,44,124,.35);z-index:100;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;}
+  .modal-bg{display:none;position:fixed;inset:0;background:rgba(12,44,124,.35);z-index:100;align-items:flex-start;justify-content:center;padding:24px 16px;overflow-y:auto;}
   .modal-bg.open{display:flex;}
-  .modal{background:#fff;width:100%;max-width:760px;border:1px solid var(--bord,#a8a8a8);box-shadow:0 8px 30px rgba(0,0,0,.25);}
-  .mh{background:var(--azul,#0C447C);color:#fff;padding:10px 16px;display:flex;align-items:center;gap:10px;}
+  .modal{background:#fff;width:100%;max-width:760px;border:1px solid var(--bord,#a8a8a8);box-shadow:0 8px 30px rgba(0,0,0,.25);max-height:calc(100vh - 48px);display:flex;flex-direction:column;}
+  .mh{background:var(--azul,#0C447C);color:#fff;padding:10px 16px;display:flex;align-items:center;gap:10px;flex:0 0 auto;}
   .mh .mt{font-weight:700;font-size:14px;} .mh .msub{font-size:10px;opacity:.85;}
   .mh .x{margin-left:auto;cursor:pointer;font-size:18px;line-height:1;padding:0 4px;}
-  .mb{padding:14px 16px;max-height:70vh;overflow-y:auto;}
+  .mb{padding:14px 16px;overflow-y:auto;flex:1 1 auto;min-height:0;}
   .m-serv{font-size:11px;background:#f4f7fb;border-left:3px solid var(--azul2,#1e5a9e);padding:6px 10px;margin-bottom:12px;}
   .m-grp{margin-bottom:10px;border:1px solid #e2e6ea;}
   .m-grp-h{background:#eef3fa;padding:5px 10px;font-weight:700;font-size:12px;color:var(--azul,#0C447C);display:flex;align-items:center;gap:8px;}
@@ -142,7 +142,19 @@
   .gs-hoy-btn{font-size:10px;padding:2px 9px;}
   .gs-col.atr .gs-dia{background:#7a1414;color:#fff;}
   .gs-col.atr .gs-dia.activo{background:#C00000;}
+  table.f8 th.ord{cursor:pointer;user-select:none;} table.f8 th.ord:hover{background:#eef3fa;} .ord-i{font-size:9px;color:#aaa;margin-left:2px;} .ord-i.on{color:#0C447C;font-weight:700;}
   .gs-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:0;}
+  .gs-atr-franja{border:1px solid #d9b0b0;border-top:none;background:#fdf5f5;}
+  .gs-atr-h{padding:7px 12px;font-size:11px;color:#7a1414;cursor:pointer;display:flex;align-items:center;gap:8px;border-bottom:1px solid #ecd4d4;}
+  .gs-atr-h:hover{background:#fbecec;}
+  .gs-atr-h.activo{background:#f6dede;}
+  .gs-atr-caret{font-size:9px;}
+  .gs-atr-n{font-family:Consolas,monospace;color:#a04040;}
+  .gs-atr-hint{margin-left:auto;font-size:10px;color:#C00000;text-decoration:underline;}
+  .gs-atr-body{display:none;padding:6px 10px;max-height:150px;overflow-y:auto;}
+  .gs-atr-body.open{display:flex;flex-wrap:wrap;gap:5px;}
+  .gs-atr-chip{margin:0;min-width:180px;}
+
   .gs-col{border-right:1px solid #e2e6ea;min-height:60px;}
   .gs-col:last-child{border-right:none;}
   .gs-col.hoy .gs-dia{background:#1e5a9e;}
@@ -306,7 +318,8 @@ let accionFiltro='';  // '', 'vence', 'stock'
 let cuelloEtapa='';   // clave de macro-etapa del cuello (para filtrarCuello)
 let macroFiltro='';   // filtro por tarjeta KPI (macro-etapa)
 let triFiltro='';     // filtro por chip de triage
-let diaFiltro='';     // filtro por día de vencimiento (clic en grilla semanal)
+let diaFiltro='';
+let gsAtrAbierto=false;   // franja de atrasadas colapsada por defecto     // filtro por día de vencimiento (clic en grilla semanal)
 let ordenUE='urg';    // criterio de orden del acordeón de UEs
 const COLOR={};
 function isoHoy(){ const d=new Date(); d.setHours(0,0,0,0); return d.toISOString().slice(0,10); }
@@ -525,6 +538,29 @@ function recNum(f){
   const d=String(f.fechaRecepcion).slice(0,10).replace(/[^0-9]/g,'');
   return d?parseInt(d,10):-1;
 }
+let ordenCol=null;      // columna activa de orden manual (null = ordenFila por defecto)
+let ordenDir=1;         // 1=asc, -1=desc
+function ordenarPor(col){
+  if(ordenCol===col){ ordenDir=-ordenDir; }   // mismo click: invierte
+  else { ordenCol=col; ordenDir=1; }
+  render();
+}
+function ordInd(col){
+  if(ordenCol!==col) return '<span class="ord-i">\u21C5</span>';       // ambos (inactivo)
+  return ordenDir===1 ? '<span class="ord-i on">\u25B2</span>' : '<span class="ord-i on">\u25BC</span>';
+}
+function ordenActivo(a,b){
+  if(!ordenCol) return ordenFila(a,b);       // sin orden manual: el de siempre
+  let va=a[ordenCol], vb=b[ordenCol];
+  // normalizar
+  if(ordenCol==='ipd'||ordenCol==='fillRate'||ordenCol==='sinStock'){
+    va=(va==null?-1:Number(va)); vb=(vb==null?-1:Number(vb));
+    return (va-vb)*ordenDir;
+  }
+  va=String(va==null?'':va); vb=String(vb==null?'':vb);
+  return va.localeCompare(vb,'es')*ordenDir;
+}
+
 // orden de filas: 1) triage (ROJO arriba), 2) más recientes arriba, 3) IPD como desempate
 function ordenFila(a,b){
   const ta=triRank(a), tb=triRank(b);
@@ -574,6 +610,7 @@ function flagUE(ue, tieneUrg){
   return f.length?'<span class="gs-flags">'+f.join('')+'</span>':'';
 }
 
+function gsToggleAtr(){ gsAtrAbierto=!gsAtrAbierto; render(); }
 function renderGrilla(rows){
   const cont=document.getElementById('grillaSemanal');
   if(!cont) return;
@@ -611,24 +648,29 @@ function renderGrilla(rows){
     +'<button class="gs-nav gs-hoy-btn" onclick="gsSemHoy()">Hoy</button>'
     +'<span class="gs-sub">'+totVis+' F8 pendientes esta semana'
     +(totAtr?(' &middot; <b style="color:#ffd0d0">'+totAtr+' atrasadas</b>'):'')
-    +' &middot; clic en un día filtra el detalle</span></div><div class="gs-grid">';
+    +' &middot; clic en un día filtra el detalle</span></div>';
 
-  // Columna ATRASADAS (solo si hay)
+  // FRANJA ATRASADAS separada (arriba, horizontal, colapsable). Ya NO comparte grid con los días.
   if(totAtr){
     const claves=Object.keys(atrasadas).sort((a,b)=>atrasadas[b].n-atrasadas[a].n);
+    const abierto = gsAtrAbierto ? ' open':'';
     const activo = diaFiltro==='__ATRASADAS__' ? ' activo':'';
-    html+='<div class="gs-col atr">';
-    html+='<div class="gs-dia'+activo+'" onclick="toggleDiaGrilla(\'__ATRASADAS__\')">ATRASADAS<span class="gs-cnt">'+totAtr+'</span></div>';
-    html+='<div class="gs-body">';
+    html+='<div class="gs-atr-franja">';
+    html+='<div class="gs-atr-h'+activo+'" onclick="gsToggleAtr()">'
+      +'<span class="gs-atr-caret">'+(gsAtrAbierto?'&#9662;':'&#9656;')+'</span>'
+      +'<b>ATRASADAS</b> <span class="gs-atr-n">'+totAtr+' F8 vencidas &middot; '+claves.length+' UE</span>'
+      +'<span class="gs-atr-hint" onclick="event.stopPropagation();toggleDiaGrilla(\'__ATRASADAS__\')">'+(diaFiltro==='__ATRASADAS__'?'quitar filtro':'filtrar detalle')+'</span>'
+      +'</div>';
+    html+='<div class="gs-atr-body'+abierto+'">';
     claves.forEach(ue=>{ const o=atrasadas[ue];
-      html+='<div class="gs-ue urg" onclick="filtrarUEdesdeGrilla(\''+ue.replace(/'/g,"\\'")+'\')">'
-        +'<span class="gs-uen">'+ue+flagUE(ue,o.urg>0)+'</span><span class="gs-uev">'+o.n+' F8'+(o.urg?' &middot; '+o.urg+' urg':'')+'</span>'
-        +(o.dias?' <span class="gs-uew">ventana: '+o.dias+'</span>':'')+'</div>';
+      html+='<div class="gs-ue urg gs-atr-chip" onclick="filtrarUEdesdeGrilla(\''+ue.replace(/'/g,"\\'")+'\')">'
+        +'<span class="gs-uen">'+ue+flagUE(ue,o.urg>0)+'</span><span class="gs-uev">'+o.n+' F8'+(o.urg?' &middot; '+o.urg+' urg':'')+'</span></div>';
     });
     html+='</div></div>';
   }
 
-  // Los 5 días
+  // Los 5 días — solos en su grid limpio
+  html+='<div class="gs-grid">';
   dias.forEach(x=>{
     const ues=porDia[x.iso];
     const claves=Object.keys(ues).sort((a,b)=>ues[b].n-ues[a].n);
@@ -832,10 +874,19 @@ function render(){
           <span class="ue-metrics">${barra(mG,totG)}<span class="mtot">${totG}</span><span class="mpend ${pendG>0?'pend-alert':''}">pend ${pendG}</span></span>
         </div>
         <div class="grupo-body"><table class="f8"><thead><tr>
-          <th class="l">Forma 8</th><th class="r">IPD</th><th class="c">Triage</th><th class="c">Tipo</th><th class="l">Etapa</th>
-          <th class="c">Recibida</th><th class="c">D\u00eda crono</th><th class="c">Entrega</th><th class="r">Fill</th><th class="c">UE desab.</th><th class="l">Situaci\u00f3n</th>
+          <th class="l ord" onclick="ordenarPor('id')">Forma 8${ordInd('id')}</th>
+          <th class="r ord" onclick="ordenarPor('ipd')">IPD${ordInd('ipd')}</th>
+          <th class="c ord" onclick="ordenarPor('triage')">Triage${ordInd('triage')}</th>
+          <th class="c ord" onclick="ordenarPor('tipo')">Tipo${ordInd('tipo')}</th>
+          <th class="l ord" onclick="ordenarPor('etapa')">Etapa${ordInd('etapa')}</th>
+          <th class="c ord" onclick="ordenarPor('fechaRecepcion')">Recibida${ordInd('fechaRecepcion')}</th>
+          <th class="c">D\u00eda crono</th>
+          <th class="c ord" onclick="ordenarPor('fechaVencimiento')">Entrega${ordInd('fechaVencimiento')}</th>
+          <th class="r ord" onclick="ordenarPor('fillRate')">Fill${ordInd('fillRate')}</th>
+          <th class="c ord" onclick="ordenarPor('sinStock')">UE desab.${ordInd('sinStock')}</th>
+          <th class="l">Situaci\u00f3n</th>
         </tr></thead><tbody>`;
-      lista.slice().sort(ordenFila).forEach(f=>{
+      lista.slice().sort(ordenActivo).forEach(f=>{
         html+=`<tr class="${f.triage?'row-'+f.triage:''}">
           <td class="l">${f.id}</td>
           <td class="r">${f.ipd!=null?f.ipd:'\u2014'}</td>
