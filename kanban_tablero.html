@@ -127,6 +127,15 @@
   .vsw-btn{padding:7px 18px;border:none;background:#fff;color:#5a6b7a;font-size:12px;font-weight:700;cursor:pointer;border-right:1px solid var(--bord);}
   .vsw-btn:last-child{border-right:none;}
   .vsw-btn.activa{background:var(--azul,#0C447C);color:#fff;}
+  .na-head{background:#7a1414;color:#fff;padding:8px 14px;font-size:12px;font-weight:700;margin-bottom:10px;}
+  .na-empty{padding:24px;text-align:center;color:#999;}
+  .na-ue{margin-bottom:10px;border:1px solid #e2e6ea;}
+  .na-ue-h{background:#f4f7fb;padding:6px 12px;font-weight:700;font-size:12px;color:#0C447C;display:flex;align-items:center;border-left:3px solid #C00000;}
+  .na-ue-h .na-n{margin-left:auto;font-family:Consolas,monospace;font-size:11px;color:#5a6b7a;}
+  table.na-t{width:100%;border-collapse:collapse;font-size:11px;}
+  table.na-t th{background:#f7f9fc;color:#5a6b7a;font-size:9px;text-transform:uppercase;padding:4px 10px;text-align:left;border-bottom:1px solid #e2e6ea;}
+  table.na-t td{padding:3px 10px;border-top:1px solid #f2f2f2;}
+  table.na-t td.mono{font-family:Consolas,monospace;}
   .vsw-btn:not(.activa):hover{background:#eef3fa;}
   .gs-nav{background:rgba(255,255,255,.18);border:none;color:#fff;font-size:15px;font-weight:700;cursor:pointer;padding:1px 9px;border-radius:3px;line-height:1.4;}
   .gs-nav:hover{background:rgba(255,255,255,.32);}
@@ -275,10 +284,12 @@
   <div class="vistas-sw">
     <button class="vsw-btn activa" data-vista="ue" onclick="cambiarVista('ue')">Por Unidad Ejecutora</button>
     <button class="vsw-btn" data-vista="crono" onclick="cambiarVista('crono')">Cronograma semanal</button>
+    <button class="vsw-btn" data-vista="noasig" onclick="cambiarVista('noasig')">No asignadas <span id="naBadge" style="font-family:Consolas;font-size:11px;opacity:.8"></span></button>
   </div>
   <div class="leyenda" id="leyenda"></div>
   <div id="vistaCrono" style="display:none;"><div id="grillaSemanal"></div></div>
   <div id="vistaUE"><div id="lista"><div class="loading">Cargando tablero&hellip;</div></div></div>
+  <div id="vistaNoAsig" style="display:none;"><div id="listaNoAsig"></div></div>
 </div>
 
 <!-- MODAL detalle por UE (vista Cronograma) -->
@@ -461,6 +472,7 @@ function filtrados(){
     if(triFiltro && f.triage!==triFiltro) return false;
     if(fu && f.ue!==fu) return false;
     if(ft && f.tipo!==ft) return false;
+    if(f.noAsignada) return false;   // Motor asignó 0: vive en su propia vista, fuera del operativo
     { const feEl=document.getElementById('fEtapa'); const fe=feEl?feEl.value:''; if(fe && f.macro!==fe) return false; }
     if(diaFiltro){
       const v=f.fechaVencimiento?String(f.fechaVencimiento).slice(0,10):'';
@@ -494,6 +506,7 @@ function rowsParaGrilla(){
     if(triFiltro && f.triage!==triFiltro) return false;
     if(fu && f.ue!==fu) return false;
     if(ft && f.tipo!==ft) return false;
+    if(f.noAsignada) return false;   // fuera del operativo
     { const feEl=document.getElementById('fEtapa'); const fe=feEl?feEl.value:''; if(fe && f.macro!==fe) return false; }
     if(soloPendiente && f.macro==='DISTRIBUCION') return false;
     if(accionFiltro==='vence' && !venceHoyMan(f)) return false;
@@ -690,9 +703,59 @@ let VISTA='ue';   // 'ue' (acordeón) | 'crono' (grilla semanal)
 function cambiarVista(v){
   VISTA=v;
   document.querySelectorAll('.vsw-btn').forEach(b=>b.classList.toggle('activa', b.getAttribute('data-vista')===v));
-  document.getElementById('vistaUE').style.display    = (v==='ue')   ? '' : 'none';
-  document.getElementById('vistaCrono').style.display = (v==='crono')? '' : 'none';
+  document.getElementById('vistaUE').style.display     = (v==='ue')    ? '' : 'none';
+  document.getElementById('vistaCrono').style.display  = (v==='crono') ? '' : 'none';
+  document.getElementById('vistaNoAsig').style.display = (v==='noasig')? '' : 'none';
   render();
+}
+
+// ── Vista independiente: F8 NO ASIGNADAS (Motor asignó 0) ──────────────
+function _escNA(s){ return String(s==null?'':s).replace(/[<>&"]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c];}); }
+function renderNoAsignadas(){
+  const cont=document.getElementById('listaNoAsig');
+  if(!cont) return;
+  // solo las no asignadas, respetando filtros de grupo/UE/tipo/etapa
+  const fg=document.getElementById('fGrupo').value;
+  const fu=document.getElementById('fUE').value;
+  const ftEl=document.getElementById('fTipo'); const ft=ftEl?ftEl.value:'';
+  const feEl=document.getElementById('fEtapa'); const fe=feEl?feEl.value:'';
+  const rows=F8.filter(f=>{
+    if(!f.noAsignada) return false;
+    if(fg && f.grupo!==fg) return false;
+    if(fu && f.ue!==fu) return false;
+    if(ft && f.tipo!==ft) return false;
+    if(fe && f.macro!==fe) return false;
+    return true;
+  });
+  // badge en el botón
+  const total=F8.filter(f=>f.noAsignada).length;
+  const bd=document.getElementById('naBadge'); if(bd) bd.textContent='('+total+')';
+
+  // agrupar por UE
+  const porUE={};
+  rows.forEach(f=>{ (porUE[f.ue]=porUE[f.ue]||[]).push(f); });
+  const ues=Object.keys(porUE).sort((a,b)=>porUE[b].length-porUE[a].length);
+
+  let html='<div class="na-head">F8 NO ASIGNADAS &mdash; el Motor asignó 0 (proceso terminó sin asignar). '
+    +rows.length+' de '+total+' mostradas &middot; fuera del pendiente operativo &middot; cuentan como falla en OTIF</div>';
+  if(!rows.length){ html+='<div class="na-empty">No hay F8 no asignadas con los filtros actuales.</div>'; cont.innerHTML=html; return; }
+
+  ues.forEach(ue=>{
+    const lista=porUE[ue].slice().sort((a,b)=>String(a.fechaVencimiento||'').localeCompare(String(b.fechaVencimiento||'')));
+    const urg=lista.filter(f=>f.tipo==='URG').length;
+    html+='<div class="na-ue"><div class="na-ue-h">'+_escNA(ue)+'<span class="na-n">'+lista.length+' F8'+(urg?' &middot; '+urg+' urg':'')+'</span></div>';
+    html+='<table class="na-t"><thead><tr><th>Forma 8</th><th>Tipo</th><th>Grupo</th><th>Etapa</th><th>Recibida</th><th>Vence</th></tr></thead><tbody>';
+    lista.forEach(f=>{
+      html+='<tr><td class="mono">'+_escNA(f.id)+'</td>'
+        +'<td style="color:'+(f.tipo==='URG'?'#C00000':'#5a6b7a')+';font-weight:'+(f.tipo==='URG'?'700':'400')+'">'+_escNA(f.tipo)+'</td>'
+        +'<td>'+_escNA(f.grupo)+'</td>'
+        +'<td style="font-size:10px;color:#666">'+_escNA(f.etapa||'')+'</td>'
+        +'<td class="mono">'+_escNA((f.fechaRecepcion||'—').slice(0,10))+'</td>'
+        +'<td class="mono">'+_escNA((f.fechaVencimiento||'—').slice(0,10))+'</td></tr>';
+    });
+    html+='</tbody></table></div>';
+  });
+  cont.innerHTML=html;
 }
 
 function render(){
@@ -700,6 +763,7 @@ function render(){
   pintarBanda(); pintarKPIs();   // las tarjetas reaccionan al contexto (UE/grupo/triage/pendiente)
   const rows=filtrados();
   if(VISTA==='crono'){ renderGrilla(rowsParaGrilla()); return; }   // grilla semanal; el acordeón no se dibuja en esta vista
+  if(VISTA==='noasig'){ renderNoAsignadas(); return; }             // sección independiente de F8 no asignadas
   const cont=document.getElementById('lista');
   if(!rows.length){cont.innerHTML='<div class="empty">No hay Formas 8 con este filtro.</div>';document.getElementById('cnt').textContent='0 UE';return;}
   const byUE=new Map();
