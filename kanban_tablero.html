@@ -107,6 +107,11 @@
   .gs-wrap{margin-bottom:14px;border:1px solid #a8a8a8;background:#fff;}
   .gs-head{background:#0C447C;color:#fff;padding:6px 12px;font-size:12px;font-weight:700;display:flex;align-items:center;gap:10px;}
   .gs-head .gs-sub{font-weight:400;font-size:10px;opacity:.85;}
+  .gs-nav{background:rgba(255,255,255,.18);border:none;color:#fff;font-size:15px;font-weight:700;cursor:pointer;padding:1px 9px;border-radius:3px;line-height:1.4;}
+  .gs-nav:hover{background:rgba(255,255,255,.32);}
+  .gs-hoy-btn{font-size:10px;padding:2px 9px;}
+  .gs-col.atr .gs-dia{background:#7a1414;color:#fff;}
+  .gs-col.atr .gs-dia.activo{background:#C00000;}
   .gs-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:0;}
   .gs-col{border-right:1px solid #e2e6ea;min-height:60px;}
   .gs-col:last-child{border-right:none;}
@@ -416,7 +421,16 @@ function filtrados(){
     if(triFiltro && f.triage!==triFiltro) return false;
     if(fu && f.ue!==fu) return false;
     if(ft && f.tipo!==ft) return false;
-    if(diaFiltro && diaSemanaDe(f.fechaVencimiento)!==diaFiltro) return false;
+    if(diaFiltro){
+      const v=f.fechaVencimiento?String(f.fechaVencimiento).slice(0,10):'';
+      if(diaFiltro==='__ATRASADAS__'){
+        // atrasadas = pendiente cuyo vencimiento ya pasó (antes de hoy) y no distribuido
+        const hoyISO=new Date().toISOString().slice(0,10);
+        if(!(v && v<hoyISO && f.macro!=='DISTRIBUCION')) return false;
+      } else {
+        if(v!==diaFiltro) return false;
+      }
+    }
     // vista "solo pendiente": ocultar lo que ya salió del inventario (Distribución)
     if(soloPendiente && f.macro==='DISTRIBUCION') return false;
     // filtros de la banda de acción
@@ -464,61 +478,115 @@ function ordenFila(a,b){
   if(rb!==ra) return rb-ra;
   return (b.ipd||0)-(a.ipd||0);
 }
-// ── Grilla semanal por día de VENCIMIENTO ──────────────────────────────
-const GS_DIAS=['LUNES','MARTES','MIERCOLES','JUEVES','VIERNES'];
-const GS_DOW={1:'LUNES',2:'MARTES',3:'MIERCOLES',4:'JUEVES',5:'VIERNES'};
-function diaSemanaDe(iso){
-  if(!iso) return '';
-  const m=String(iso).slice(0,10).match(/(\\d{4})-(\\d{2})-(\\d{2})/);
-  if(!m) return '';
-  const d=new Date(+m[1],+m[2]-1,+m[3]);
-  return GS_DOW[d.getDay()]||'';   // sáb/dom quedan fuera de la grilla L-V
+// ── Grilla semanal navegable por VENCIMIENTO ───────────────────────────
+// Muestra 5 días (Lun–Vie) de la semana visible. Navegable con flechas.
+// Agrupa las F8 PENDIENTES (no distribuidas) por su fecha de vencimiento.
+// Una columna extra "ATRASADAS" junta lo pendiente que ya venció antes del lunes visible.
+const GS_DOW_LBL=['DOM','LUN','MAR','MIÉ','JUE','VIE','SÁB'];
+let gsLunes=null;   // Date del lunes de la semana visible (se fija al cargar)
+
+function gsLunesDe(d){
+  // Lunes de la semana que contiene a d
+  const x=new Date(d.getFullYear(),d.getMonth(),d.getDate());
+  const dow=x.getDay();                 // 0=Dom..6=Sáb
+  const delta=(dow===0?-6:1-dow);       // retroceder al lunes
+  x.setDate(x.getDate()+delta);
+  return x;
 }
+function gsInicializarSemana(){
+  const hoy=new Date();
+  const dow=hoy.getDay();
+  // Si es viernes(5), sábado(6) o domingo(0): arrancar en la PRÓXIMA semana.
+  let base=new Date(hoy);
+  if(dow===5||dow===6||dow===0){ base.setDate(base.getDate()+ (8-((dow===0)?7:dow)) ); }
+  gsLunes=gsLunesDe(base);
+}
+function gsISO(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function gsFechaCorta(d){ return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'); }
+
+function gsSemAnterior(){ if(!gsLunes)gsInicializarSemana(); gsLunes.setDate(gsLunes.getDate()-7); render(); }
+function gsSemSiguiente(){ if(!gsLunes)gsInicializarSemana(); gsLunes.setDate(gsLunes.getDate()+7); render(); }
+function gsSemHoy(){ gsInicializarSemana(); diaFiltro=''; render(); }
+
 function renderGrilla(rows){
   const cont=document.getElementById('grillaSemanal');
   if(!cont) return;
-  // Solo cuenta lo que vence y no está distribuido
-  const porDia={}; GS_DIAS.forEach(d=>porDia[d]={});
-  let totSemana=0;
+  if(!gsLunes) gsInicializarSemana();
+
+  // Los 5 días visibles (Lun–Vie) como ISO
+  const dias=[];
+  for(let i=0;i<5;i++){ const d=new Date(gsLunes); d.setDate(d.getDate()+i); dias.push({iso:gsISO(d),d:d}); }
+  const isoLunes=dias[0].iso, isoVierMas=dias[4].iso;
+  const hoyISO=gsISO(new Date());
+
+  // Agrupar PENDIENTES por fecha de vencimiento
+  const porDia={}; dias.forEach(x=>porDia[x.iso]={});
+  const atrasadas={};        // pendiente cuyo vencimiento < lunes visible
+  let totVis=0, totAtr=0;
   rows.forEach(f=>{
-    if(f.macro==='DISTRIBUCION') return;
-    const dia=diaSemanaDe(f.fechaVencimiento);
-    if(!dia || !porDia[dia]) return;
+    if(f.macro==='DISTRIBUCION') return;         // ya despachado = historia, fuera
+    const v=f.fechaVencimiento?String(f.fechaVencimiento).slice(0,10):'';
+    if(!v) return;
     const ue=f.ue;
-    if(!porDia[dia][ue]) porDia[dia][ue]={n:0,urg:0,venc:f.fechaVencimiento,dias:f.diasCrono||''};
-    porDia[dia][ue].n++;
-    if(f.tipo==='URG') porDia[dia][ue].urg++;
-    totSemana++;
+    if(porDia[v]!==undefined){                   // vence en un día visible
+      if(!porDia[v][ue]) porDia[v][ue]={n:0,urg:0,dias:f.diasCrono||''};
+      porDia[v][ue].n++; if(f.tipo==='URG')porDia[v][ue].urg++; totVis++;
+    } else if(v<isoLunes){                        // venció antes: atrasada
+      if(!atrasadas[ue]) atrasadas[ue]={n:0,urg:0,dias:f.diasCrono||''};
+      atrasadas[ue].n++; if(f.tipo==='URG')atrasadas[ue].urg++; totAtr++;
+    }
   });
-  const hoyNom=(GS_DOW[new Date().getDay()]||'');
-  let html='<div class="gs-wrap"><div class="gs-head">Cronograma semanal &middot; vencimiento de Formas 8 por día'
-    +'<span class="gs-sub">Clic en un día para filtrar el detalle &middot; '+totSemana+' F8 esta semana</span></div><div class="gs-grid">';
-  GS_DIAS.forEach(dia=>{
-    const ues=porDia[dia];
+
+  const rango=gsFechaCorta(dias[0].d)+' – '+gsFechaCorta(dias[4].d);
+  let html='<div class="gs-wrap"><div class="gs-head">'
+    +'<button class="gs-nav" onclick="gsSemAnterior()">&lsaquo;</button>'
+    +'<span>Cronograma &middot; vence semana '+rango+'</span>'
+    +'<button class="gs-nav" onclick="gsSemSiguiente()">&rsaquo;</button>'
+    +'<button class="gs-nav gs-hoy-btn" onclick="gsSemHoy()">Hoy</button>'
+    +'<span class="gs-sub">'+totVis+' F8 pendientes esta semana'
+    +(totAtr?(' &middot; <b style="color:#ffd0d0">'+totAtr+' atrasadas</b>'):'')
+    +' &middot; clic en un día filtra el detalle</span></div><div class="gs-grid">';
+
+  // Columna ATRASADAS (solo si hay)
+  if(totAtr){
+    const claves=Object.keys(atrasadas).sort((a,b)=>atrasadas[b].n-atrasadas[a].n);
+    const activo = diaFiltro==='__ATRASADAS__' ? ' activo':'';
+    html+='<div class="gs-col atr">';
+    html+='<div class="gs-dia'+activo+'" onclick="toggleDiaGrilla(\'__ATRASADAS__\')">ATRASADAS<span class="gs-cnt">'+totAtr+'</span></div>';
+    html+='<div class="gs-body">';
+    claves.forEach(ue=>{ const o=atrasadas[ue];
+      html+='<div class="gs-ue urg" onclick="filtrarUEdesdeGrilla(\''+ue.replace(/'/g,"\\'")+'\')">'
+        +'<span class="gs-uen">'+ue+'</span><span class="gs-uev">'+o.n+' F8'+(o.urg?' &middot; '+o.urg+' urg':'')+'</span>'
+        +(o.dias?' <span class="gs-uew">ventana: '+o.dias+'</span>':'')+'</div>';
+    });
+    html+='</div></div>';
+  }
+
+  // Los 5 días
+  dias.forEach(x=>{
+    const ues=porDia[x.iso];
     const claves=Object.keys(ues).sort((a,b)=>ues[b].n-ues[a].n);
     const totDia=claves.reduce((s,k)=>s+ues[k].n,0);
-    const esHoy = dia===hoyNom ? ' hoy':'';
-    const activo = diaFiltro===dia ? ' activo':'';
+    const esHoy = x.iso===hoyISO ? ' hoy':'';
+    const activo = diaFiltro===x.iso ? ' activo':'';
+    const lbl=GS_DOW_LBL[x.d.getDay()];
     html+='<div class="gs-col'+esHoy+'">';
-    html+='<div class="gs-dia'+activo+'" onclick="toggleDiaGrilla(\''+dia+'\')">'+dia+'<span class="gs-cnt">'+totDia+'</span></div>';
+    html+='<div class="gs-dia'+activo+'" onclick="toggleDiaGrilla(\''+x.iso+'\')">'+lbl+' '+gsFechaCorta(x.d)+'<span class="gs-cnt">'+totDia+'</span></div>';
     html+='<div class="gs-body">';
     if(!claves.length){ html+='<div class="gs-vacio">&mdash;</div>'; }
-    else claves.forEach(ue=>{
-      const o=ues[ue];
+    else claves.forEach(ue=>{ const o=ues[ue];
       const cu=o.urg>0?' urg':'';
-      const ventana=o.dias?('<span class="gs-uew">ventana: '+o.dias+'</span>'):'';
       html+='<div class="gs-ue'+cu+'" onclick="filtrarUEdesdeGrilla(\''+ue.replace(/'/g,"\\'")+'\')">'
-        +'<span class="gs-uen">'+ue+'</span>'
-        +'<span class="gs-uev">'+o.n+' F8'+(o.urg?' &middot; '+o.urg+' urg':'')+'</span> '+ventana
-        +'</div>';
+        +'<span class="gs-uen">'+ue+'</span><span class="gs-uev">'+o.n+' F8'+(o.urg?' &middot; '+o.urg+' urg':'')+'</span>'
+        +(o.dias?' <span class="gs-uew">ventana: '+o.dias+'</span>':'')+'</div>';
     });
     html+='</div></div>';
   });
   html+='</div></div>';
   cont.innerHTML=html;
 }
-function toggleDiaGrilla(dia){
-  diaFiltro = (diaFiltro===dia) ? '' : dia;
+function toggleDiaGrilla(clave){
+  diaFiltro = (diaFiltro===clave) ? '' : clave;
   render();
 }
 function filtrarUEdesdeGrilla(ue){
