@@ -110,8 +110,8 @@
   .modal-bg{display:none;position:fixed;inset:0;background:rgba(12,44,124,.35);z-index:100;align-items:flex-start;justify-content:center;padding:24px 16px;overflow-y:auto;}
   .modal-bg.open{display:flex;}
   .modal{background:#fff;width:100%;max-width:760px;border:1px solid var(--bord,#a8a8a8);box-shadow:0 8px 30px rgba(0,0,0,.25);max-height:calc(100vh - 48px);display:flex;flex-direction:column;}
-  .mh{background:var(--azul,#0C447C);color:#fff;padding:10px 16px;display:flex;align-items:center;gap:10px;flex:0 0 auto;}
-  .mh .mt{font-weight:700;font-size:14px;} .mh .msub{font-size:10px;opacity:.85;}
+  .mh{background:var(--azul,#0C447C);color:#fff;padding:10px 16px;display:flex;align-items:center;gap:10px;flex:0 0 auto;position:sticky;top:0;z-index:2;}
+  .mh .mt{font-weight:700;font-size:14px;line-height:1.2;word-break:break-word;} .mh .msub{font-size:10px;opacity:.85;}
   .mh .x{margin-left:auto;cursor:pointer;font-size:18px;line-height:1;padding:0 4px;}
   .mb{padding:14px 16px;overflow-y:auto;flex:1 1 auto;min-height:0;}
   .m-serv{font-size:11px;background:#f4f7fb;border-left:3px solid var(--azul2,#1e5a9e);padding:6px 10px;margin-bottom:12px;}
@@ -679,7 +679,7 @@ function renderGrilla(rows){
       +'</div>';
     html+='<div class="gs-atr-body'+abierto+'">';
     claves.forEach(ue=>{ const o=atrasadas[ue];
-      html+='<div class="gs-ue urg gs-atr-chip" onclick="filtrarUEdesdeGrilla(\''+ue.replace(/'/g,"\\'")+'\')">'
+      html+='<div class="gs-ue urg gs-atr-chip" onclick="filtrarUEdesdeGrilla(\''+ue.replace(/'/g,"\\'")+'\',\'__ATRASADAS__\')">'
         +'<span class="gs-uen">'+ue+flagUE(ue,o.urg>0)+'</span><span class="gs-uev">'+o.n+' F8'+(o.urg?' &middot; '+o.urg+' urg':'')+'</span></div>';
     });
     html+='</div></div>';
@@ -700,7 +700,7 @@ function renderGrilla(rows){
     if(!claves.length){ html+='<div class="gs-vacio">&mdash;</div>'; }
     else claves.forEach(ue=>{ const o=ues[ue];
       const cu=o.urg>0?' urg':'';
-      html+='<div class="gs-ue'+cu+'" onclick="filtrarUEdesdeGrilla(\''+ue.replace(/'/g,"\\'")+'\')">'
+      html+='<div class="gs-ue'+cu+'" onclick="filtrarUEdesdeGrilla(\''+ue.replace(/'/g,"\\'")+'\',\''+x.iso+'\')">'
         +'<span class="gs-uen">'+ue+flagUE(ue,o.urg>0)+'</span><span class="gs-uev">'+o.n+' F8'+(o.urg?' &middot; '+o.urg+' urg':'')+'</span>'
         +(o.dias?' <span class="gs-uew">ventana: '+o.dias+'</span>':'')+'</div>';
     });
@@ -713,22 +713,35 @@ function toggleDiaGrilla(clave){
   diaFiltro = (diaFiltro===clave) ? '' : clave;
   render();
 }
-function filtrarUEdesdeGrilla(ue){ abrirModalUE(ue); }   // en Cronograma, clic en UE => modal
+function filtrarUEdesdeGrilla(ue,dia){ abrirModalUE(ue,dia); }   // en Cronograma, clic en UE => modal filtrado por día
 
 function _mLabel(mc){ const o=MACROS.find(x=>x.clave===mc); return o?o.label:mc; }
 function _mColor(mc){ const o=MACROS.find(x=>x.clave===mc); return o?o.color:'#888'; }
 function _esc(s){ return String(s==null?'':s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c])); }
 
 let _modalUE_lista=[];
-function abrirModalUE(ue){
-  const propios=F8.filter(f=>f.ue===ue && f.macro!=='DISTRIBUCION');
+function abrirModalUE(ue, dia){
+  // Base: pendientes de la UE (hasta FACTURACIÓN; Distribución es historia)
+  let propios=F8.filter(f=>f.ue===ue && f.macro!=='DISTRIBUCION');
+  // Si se hizo clic en un día concreto de la grilla, acotar a ESE día.
+  let etiqDia='';
+  if(dia){
+    if(dia==='__ATRASADAS__'){
+      const hoyISO=new Date().toISOString().slice(0,10);
+      propios=propios.filter(f=>{ const v=f.fechaVencimiento?String(f.fechaVencimiento).slice(0,10):''; return v && v<hoyISO; });
+      etiqDia=' · ATRASADAS';
+    }else{
+      propios=propios.filter(f=>String(f.fechaVencimiento||'').slice(0,10)===dia);
+      etiqDia=' · vence '+dia;
+    }
+  }
   _modalUE_lista=propios;
   const us=UETOT[ue] && UETOT[ue].ultimoServicio;
   const cedis=(F8.find(f=>f.ue===ue)||{}).cedis||'';
   const urg=propios.filter(f=>f.tipo==='URG').length;
 
   document.getElementById('mTit').textContent=ue;
-  document.getElementById('mSub').textContent=(cedis?cedis+' \u00b7 ':'')+propios.length+' F8 pendientes'+(urg?' \u00b7 '+urg+' urgentes':'');
+  document.getElementById('mSub').textContent=(cedis?cedis+' \u00b7 ':'')+propios.length+' F8'+etiqDia+(urg?' \u00b7 '+urg+' urgentes':'');
 
   let html='';
   if(us){
