@@ -719,7 +719,6 @@ function _mLabel(mc){ const o=MACROS.find(x=>x.clave===mc); return o?o.label:mc;
 function _mColor(mc){ const o=MACROS.find(x=>x.clave===mc); return o?o.color:'#888'; }
 function _esc(s){ return String(s==null?'':s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c])); }
 
-let _modalUE_lista=[];
 function abrirModalUE(ue, dia){
   // Base: pendientes de la UE (hasta FACTURACIÓN; Distribución es historia)
   let propios=F8.filter(f=>f.ue===ue && f.macro!=='DISTRIBUCION');
@@ -729,79 +728,48 @@ function abrirModalUE(ue, dia){
     if(dia==='__ATRASADAS__'){
       const hoyISO=new Date().toISOString().slice(0,10);
       propios=propios.filter(f=>{ const v=f.fechaVencimiento?String(f.fechaVencimiento).slice(0,10):''; return v && v<hoyISO; });
-      etiqDia=' · ATRASADAS';
+      etiqDia=' \u00b7 ATRASADAS';
     }else{
       propios=propios.filter(f=>String(f.fechaVencimiento||'').slice(0,10)===dia);
-      etiqDia=' · vence '+dia;
+      etiqDia=' \u00b7 vence '+dia;
     }
   }
-  _modalUE_lista=propios;
   const us=UETOT[ue] && UETOT[ue].ultimoServicio;
   const cedis=(F8.find(f=>f.ue===ue)||{}).cedis||'';
   const urg=propios.filter(f=>f.tipo==='URG').length;
+  const men=propios.length-urg;
 
   document.getElementById('mTit').textContent=ue;
-  document.getElementById('mSub').textContent=(cedis?cedis+' \u00b7 ':'')+propios.length+' F8'+etiqDia+(urg?' \u00b7 '+urg+' urgentes':'');
+  document.getElementById('mSub').textContent=(cedis?cedis+' \u00b7 ':'')+propios.length+' F8'+etiqDia
+    +' \u00b7 '+urg+' urg / '+men+' mens';
 
   let html='';
   if(us){
     html+='<div class="m-serv"><b>\u00daltimo servicio:</b> '+_esc(us.fecha)+' (hace '+(us.dias==null?'\u2014':us.dias)+' d\u00edas) \u00b7 '
-      +us.pedidos+' pedido(s) \u00b7 '+(us.items||0).toLocaleString('es-PA')+' items</div>';
+      +us.pedidos+' pedido(s)</div>';
   }else{
     html+='<div class="m-serv" style="border-left-color:#888;color:#888;">Sin despacho registrado a esta UE</div>';
   }
-  if(!propios.length){ html+='<div class="m-empty">No hay F8 pendientes.</div>'; document.getElementById('mBody').innerHTML=html; _abrir(); return; }
+  if(!propios.length){ html+='<div class="m-empty">No hay F8 para este d\u00eda.</div>'; document.getElementById('mBody').innerHTML=html; _abrir(); return; }
 
-  // RESUMEN POR ETAPA
-  const porEt={}; propios.forEach(f=>{ porEt[f.macro]=(porEt[f.macro]||0)+1; });
-  html+='<div class="m-sec">\u00bfD\u00f3nde est\u00e1 atascado?</div><div class="m-etapas">';
-  ['RECEPCION','ASIGNACION','RECOLECCION','FACTURACION'].forEach(m=>{
-    const n=porEt[m]||0;
-    html+='<div class="m-et'+(n===0?' vacio':'')+'"><span class="m-et-dot" style="background:'+_mColor(m)+'"></span>'
-      +'<span class="m-et-l">'+_mLabel(m)+'</span><span class="m-et-n">'+n+'</span></div>';
-  });
-  html+='</div>';
-
-  // DESGLOSE POR GRUPO
-  html+='<div class="m-sec">\u00bfQu\u00e9 hay que despachar?</div>';
-  const porG={}; propios.forEach(f=>{ (porG[f.grupo]=porG[f.grupo]||[]).push(f); });
-  const gruposOrd=Object.keys(porG).sort((a,b)=>porG[b].length-porG[a].length);
-  html+='<table class="m-resumen"><thead><tr><th>Grupo</th><th>F8</th><th>Urg</th><th>Etapa dominante</th></tr></thead><tbody>';
-  gruposOrd.forEach(g=>{
-    const l=porG[g]; const u=l.filter(f=>f.tipo==='URG').length;
-    const ec={}; l.forEach(f=>ec[f.macro]=(ec[f.macro]||0)+1);
-    const dom=Object.keys(ec).sort((a,b)=>ec[b]-ec[a])[0];
-    html+='<tr><td class="l"><b>'+_esc(g)+'</b></td><td class="mono">'+l.length+'</td>'
-      +'<td class="mono" style="color:'+(u?'#C00000':'#999')+'">'+(u||'\u2014')+'</td>'
-      +'<td><span class="etapa-chip" style="background:'+_mColor(dom)+'">'+_esc(_mLabel(dom))+'</span></td></tr>';
-  });
-  html+='</tbody></table>';
-
-  // LISTA COMPLETA colapsada
-  html+='<div class="m-toggle" onclick="_modalToggleLista()"><span id="mLcaret">\u25b8</span> Ver lista completa de '+propios.length+' F8</div>';
-  html+='<div id="mListaFull" style="display:none;">'+_modalListaFullHTML(propios)+'</div>';
-
-  document.getElementById('mBody').innerHTML=html;
-  document.getElementById('mBody').scrollTop=0;
-  _abrir();
-}
-function _modalListaFullHTML(lista){
-  let h='<table class="m-t"><thead><tr><th>Forma 8</th><th>Tipo</th><th>Etapa</th><th>Vence</th><th>IPD</th></tr></thead><tbody>';
-  lista.slice().sort((a,b)=>(b.ipd||0)-(a.ipd||0)).forEach(f=>{
-    h+='<tr><td class="mono">'+_esc(f.id)+'</td>'
+  // LISTA DIRECTA — Forma 8, Grupo, Tipo, Etapa, Vence, IPD. Urgencias primero, luego IPD.
+  html+='<table class="m-t"><thead><tr><th>Forma 8</th><th>Grupo</th><th>Tipo</th><th>Etapa</th><th>Vence</th><th>IPD</th></tr></thead><tbody>';
+  propios.slice().sort((a,b)=>{
+    if((a.tipo==='URG')!==(b.tipo==='URG')) return a.tipo==='URG'?-1:1;   // urgencias arriba
+    return (b.ipd||0)-(a.ipd||0);
+  }).forEach(f=>{
+    html+='<tr><td class="mono">'+_esc(f.id)+'</td>'
+      +'<td>'+_esc(f.grupo||'\u2014')+'</td>'
       +'<td style="color:'+(f.tipo==='URG'?'#C00000':'#5a6b7a')+';font-weight:'+(f.tipo==='URG'?'700':'400')+'">'+_esc(f.tipo)+'</td>'
       +'<td><span class="etapa-chip" style="background:'+_mColor(f.macro)+'">'+_esc(_mLabel(f.macro))+'</span></td>'
       +'<td class="mono">'+_esc((f.fechaVencimiento||'\u2014').slice(0,10))+'</td>'
       +'<td class="mono">'+(f.ipd!=null?Math.round(f.ipd):'\u2014')+'</td></tr>';
   });
-  return h+'</tbody></table>';
-}
-function _modalToggleLista(){
-  const el=document.getElementById('mListaFull'), c=document.getElementById('mLcaret');
-  if(!el) return;
-  const ab=el.style.display==='none';
-  el.style.display=ab?'':'none';
-  if(c) c.innerHTML=ab?'\u25be':'\u25b8';
+  html+='</tbody></table>';
+
+  document.getElementById('mBody').innerHTML=html;
+  document.getElementById('mBody').scrollTop=0;
+  _abrir();
 }
 function _abrir(){ document.getElementById('modalBg').classList.add('open'); }
 function _cerrarModal(){ document.getElementById('modalBg').classList.remove('open'); }
