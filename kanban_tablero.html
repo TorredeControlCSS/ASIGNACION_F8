@@ -109,10 +109,10 @@
   .gs-wrap{margin-bottom:14px;border:1px solid #a8a8a8;background:#fff;}
   .gs-head{background:#0C447C;color:#fff;padding:6px 12px;font-size:12px;font-weight:700;display:flex;align-items:center;gap:10px;}
   .gs-head .gs-sub{font-weight:400;font-size:10px;opacity:.85;}
-  .modal-bg{display:none;position:fixed;inset:0;background:rgba(12,44,124,.35);z-index:100;align-items:flex-start;justify-content:center;padding:24px 16px;overflow-y:auto;}
+  .modal-bg{display:none;position:fixed;inset:0;background:rgba(12,44,124,.35);z-index:100;align-items:center;justify-content:center;padding:24px 16px;}
   .modal-bg.open{display:flex;}
-  .modal{background:#fff;width:100%;max-width:760px;border:1px solid var(--bord,#a8a8a8);box-shadow:0 8px 30px rgba(0,0,0,.25);max-height:calc(100vh - 120px);display:flex;flex-direction:column;margin-top:8px;}
-  .mh{background:var(--azul,#0C447C);color:#fff;padding:10px 16px;display:flex;align-items:center;gap:10px;flex:0 0 auto;position:sticky;top:0;z-index:2;}
+  .modal{background:#fff;width:100%;max-width:760px;border:1px solid var(--bord,#a8a8a8);box-shadow:0 8px 30px rgba(0,0,0,.25);max-height:calc(100vh - 48px);display:flex;flex-direction:column;overflow:hidden;}
+  .mh{background:var(--azul,#0C447C);color:#fff;padding:10px 16px;display:flex;align-items:center;gap:10px;flex:0 0 auto;z-index:2;}
   .mh .mt{font-weight:700;font-size:14px;line-height:1.2;word-break:break-word;} .mh .msub{font-size:10px;opacity:.85;}
   .mh .x{margin-left:auto;cursor:pointer;font-size:18px;line-height:1;padding:0 4px;}
   .mb{padding:14px 16px;overflow-y:auto;flex:1 1 auto;min-height:0;}
@@ -776,7 +776,7 @@ function renderGrilla(rows){
     const activo = diaFiltro===x.iso ? ' activo':'';
     const lbl=GS_DOW_LBL[x.d.getDay()];
     html+='<div class="gs-col'+esHoy+'">';
-    html+='<div class="gs-dia'+activo+'" onclick="toggleDiaGrilla(\''+x.iso+'\')">'+lbl+' '+gsFechaCorta(x.d)+'<span class="gs-cnt">'+totDia+'</span></div>';
+    html+='<div class="gs-dia'+activo+'" onclick="abrirModalDia(\''+x.iso+'\')" title="Ver todos los pedidos de este d\u00eda">'+lbl+' '+gsFechaCorta(x.d)+'<span class="gs-cnt">'+totDia+'</span></div>';
     html+='<div class="gs-body">';
     if(!claves.length){ html+='<div class="gs-vacio">&mdash;</div>'; }
     else claves.forEach(ue=>{ const o=ues[ue];
@@ -847,6 +847,47 @@ function abrirModalUE(ue, dia){
       +'<td style="color:'+(f.tipo==='URG'?'#C00000':'#5a6b7a')+';font-weight:'+(f.tipo==='URG'?'700':'400')+'">'+_esc(f.tipo)+'</td>'
       +'<td><span class="etapa-chip" style="background:'+_mColor(f.macro)+'">'+_esc(_mLabel(f.macro))+'</span></td>'
       +'<td class="mono">'+_esc((f.fechaVencimiento||'\u2014').slice(0,10))+'</td>'
+      +'<td class="mono">'+(f.ipd!=null?Math.round(f.ipd):'\u2014')+'</td></tr>';
+  });
+  html+='</tbody></table>';
+
+  document.getElementById('mBody').innerHTML=html;
+  document.getElementById('mBody').scrollTop=0;
+  _abrir();
+}
+function abrirModalDia(iso){
+  // Vista agregada: TODOS los pedidos operativos que vencen ese d\u00eda, todas las
+  // UE juntas. Misma exclusi\u00f3n que el modal por UE: fuera Distribuci\u00f3n (ya sali\u00f3)
+  // y ceros por desabasto (viven en su propia vista).
+  let propios=F8.filter(f=>f.macro!=='DISTRIBUCION' && !f.noAsignada
+    && String(f.fechaVencimiento||'').slice(0,10)===iso);
+
+  const urg=propios.filter(f=>f.tipo==='URG').length;
+  const men=propios.length-urg;
+  const nUE=new Set(propios.map(f=>f.ue)).size;
+
+  document.getElementById('mTit').textContent='Vence '+iso;
+  document.getElementById('mSub').textContent=propios.length+' F8 \u00b7 '+nUE+' UE \u00b7 '
+    +urg+' urg / '+men+' mens';
+
+  let html='';
+  if(!propios.length){
+    html+='<div class="m-empty">No hay F8 que venzan este d\u00eda.</div>';
+    document.getElementById('mBody').innerHTML=html; _abrir(); return;
+  }
+
+  // Urgencias primero, luego por UE, luego por IPD desc.
+  html+='<table class="m-t"><thead><tr><th>Forma 8</th><th>UE</th><th>Grupo</th><th>Tipo</th><th>Etapa</th><th>IPD</th></tr></thead><tbody>';
+  propios.slice().sort((a,b)=>{
+    if((a.tipo==='URG')!==(b.tipo==='URG')) return a.tipo==='URG'?-1:1;
+    if(a.ue!==b.ue) return String(a.ue).localeCompare(String(b.ue));
+    return (b.ipd||0)-(a.ipd||0);
+  }).forEach(f=>{
+    html+='<tr><td class="mono">'+_esc(f.id)+'</td>'
+      +'<td>'+_esc(f.ue||'\u2014')+'</td>'
+      +'<td>'+_esc(f.grupo||'\u2014')+'</td>'
+      +'<td style="color:'+(f.tipo==='URG'?'#C00000':'#5a6b7a')+';font-weight:'+(f.tipo==='URG'?'700':'400')+'">'+_esc(f.tipo)+'</td>'
+      +'<td><span class="etapa-chip" style="background:'+_mColor(f.macro)+'">'+_esc(_mLabel(f.macro))+'</span></td>'
       +'<td class="mono">'+(f.ipd!=null?Math.round(f.ipd):'\u2014')+'</td></tr>';
   });
   html+='</tbody></table>';
