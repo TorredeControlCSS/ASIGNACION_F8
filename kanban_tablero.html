@@ -279,7 +279,7 @@
       <div class="acc-sub">F8 de unidades con alg&uacute;n rengl&oacute;n en cero</div>
     </div>
     <div class="acc otif" id="accOtif">
-      <div class="acc-lbl">OTIF</div>
+      <div class="acc-lbl">OTIF (mes en curso)</div>
       <div class="acc-val num" id="ot_val">&ndash;</div>
       <div class="otif-mini" id="ot_mini">a tiempo &middot; completo</div>
     </div>
@@ -396,8 +396,11 @@ function pintarBanda(){
   const vencRojo=venc.filter(f=>f.triage==='ROJO').length;
   document.getElementById('av_val').textContent=venc.length.toLocaleString();
   document.getElementById('av_sub').textContent=vencRojo+' en ROJO';
-  // Cuello de botella = macro-etapa PENDIENTE (no distribución) con más F8
-  const pend={RECEPCION:0,ASIGNACION:0,RECOLECCION:0,FACTURACION:0};
+  // Cuello de botella = fase ACCIONABLE del almacén con más F8.
+  // Solo las 4 accionables (el almacén las empuja). Facturación NO: su pelota
+  // es de Cómputo/SAFIRO, no es cuello del piso. Cero por desabasto tampoco:
+  // no es trabajo pendiente, es problema del Motor.
+  const pend={RECEPCION:0,ASIGNACION:0,RECOLECCION:0,PICKING:0};
   base.forEach(f=>{ if(pend[f.macro]!=null) pend[f.macro]++; });
   let maxK='', maxV=-1;
   for(const k in pend){ if(pend[k]>maxV){maxV=pend[k];maxK=k;} }
@@ -417,19 +420,31 @@ function pintarBanda(){
     if(triFiltro && f.triage!==triFiltro) return false;
     return true;
   });
+  // OTIF en DOS periodos: MES EN CURSO (operativo) y ACUMULADO desde mayo
+  // (estrategico). Se imputa por mes de RECEPCION, igual que el Nivel de
+  // Servicio. El numero grande = mes en curso; el subtexto trae el acumulado.
+  const mesActual = new Date().toISOString().slice(0,7);
   let onN=0,onOK=0, ifN=0,ifOK=0, otN=0,otOK=0;
+  let monN=0,monOK=0, mifN=0,mifOK=0, motN=0,motOK=0;
   baseOtif.forEach(f=>{
     if(!f.otElegible) return;
-    if(f.otOnTime!=null){ onN++; if(f.otOnTime===1) onOK++; }
-    if(f.otInFull!=null){ ifN++; if(f.otInFull===1) ifOK++; }
-    if(f.otOnTime!=null && f.otInFull!=null){ otN++; if(f.otOnTime===1 && f.otInFull===1) otOK++; }
+    const esMes = String(f.fechaRecepcion||'').slice(0,7) === mesActual;
+    if(f.otOnTime!=null){ onN++; if(f.otOnTime===1) onOK++; if(esMes){ monN++; if(f.otOnTime===1) monOK++; } }
+    if(f.otInFull!=null){ ifN++; if(f.otInFull===1) ifOK++; if(esMes){ mifN++; if(f.otInFull===1) mifOK++; } }
+    if(f.otOnTime!=null && f.otInFull!=null){
+      otN++; if(f.otOnTime===1 && f.otInFull===1) otOK++;
+      if(esMes){ motN++; if(f.otOnTime===1 && f.otInFull===1) motOK++; }
+    }
   });
   const pct=(n,d)=> d>0 ? Math.round(1000*n/d)/10 : null;
-  const otif=pct(otOK,otN), onT=pct(onOK,onN), inF=pct(ifOK,ifN);
-  document.getElementById('ot_val').textContent = (otif!=null? otif+'%' : '\u2014');
+  const otifAcum=pct(otOK,otN), onT=pct(onOK,onN), inF=pct(ifOK,ifN);
+  const otifMes =pct(motOK,motN), onTm=pct(monOK,monN), inFm=pct(mifOK,mifN);
+  const otifGrande = (motN>0 ? otifMes : otifAcum);
+  document.getElementById('ot_val').textContent = (otifGrande!=null? otifGrande+'%' : '\u2014');
   document.getElementById('ot_mini').textContent =
-    (otN>0 ? (otOK+'/'+otN+' F8 \u00b7 a tiempo '+(onT!=null?onT+'%':'\u2014')+' \u00b7 completo '+(inF!=null?inF+'%':'\u2014'))
-           : 'sin despachos en l\u00ednea base');
+    (motN>0 ? ('mes: a tiempo '+(onTm!=null?onTm+'%':'\u2014')+' \u00b7 completo '+(inFm!=null?inFm+'%':'\u2014')+' \u00b7 acum '+(otifAcum!=null?otifAcum+'%':'\u2014'))
+            : (otN>0 ? (otOK+'/'+otN+' F8 acum \u00b7 a tiempo '+(onT!=null?onT+'%':'\u2014')+' \u00b7 completo '+(inF!=null?inF+'%':'\u2014'))
+                     : 'sin despachos en l\u00ednea base'));
 }
 function filtrarMacro(clave){
   macroFiltro = (macroFiltro===clave) ? '' : clave;
