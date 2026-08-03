@@ -285,7 +285,7 @@
     </div>
   </div>
   <div class="kpis">
-    <div class="kpi sinasig" id="kpi_SIN_ASIGNAR" onclick="filtrarMacro('SIN_ASIGNAR')"><div class="lbl">Sin asignar</div><div class="val num" id="k_SIN_ASIGNAR">&ndash;</div></div>
+    <div class="kpi sinasig" id="kpi_SIN_ASIGNAR" onclick="filtrarMacro('SIN_ASIGNAR')"><div class="lbl">Cero por desabasto</div><div class="val num" id="k_SIN_ASIGNAR">&ndash;</div></div>
     <div class="kpi recep" id="kpi_RECEPCION" onclick="filtrarMacro('RECEPCION')"><div class="lbl">Recepci&oacute;n</div><div class="val num" id="k_RECEPCION">&ndash;</div></div>
     <div class="kpi asig" id="kpi_ASIGNACION" onclick="filtrarMacro('ASIGNACION')"><div class="lbl">Asignaci&oacute;n</div><div class="val num" id="k_ASIGNACION">&ndash;</div></div>
     <div class="kpi recol" id="kpi_RECOLECCION" onclick="filtrarMacro('RECOLECCION')"><div class="lbl">Recolecci&oacute;n</div><div class="val num" id="k_RECOLECCION">&ndash;</div></div>
@@ -297,7 +297,7 @@
     <label>Grupo:</label><select id="fGrupo"><option value="">&mdash; Todos &mdash;</option></select>
     <label>Unidad Ejecutora:</label><select id="fUE"><option value="">&mdash; Todas &mdash;</option></select>
     <label>Tipo:</label><select id="fTipo"><option value="">&mdash; Todos &mdash;</option><option value="URG">Urgencias</option><option value="MEN">Mensuales</option></select>
-    <label>Etapa:</label><select id="fEtapa"><option value="">&mdash; Todas &mdash;</option><option value="SIN_ASIGNAR">Sin asignar</option><option value="RECEPCION">Recepci&oacute;n</option><option value="ASIGNACION">Asignaci&oacute;n</option><option value="RECOLECCION">Recolecci&oacute;n</option><option value="PICKING">Picking</option><option value="FACTURACION">Facturaci&oacute;n</option><option value="DISTRIBUCION">Distribuci&oacute;n</option></select>
+    <label>Etapa:</label><select id="fEtapa"><option value="">&mdash; Todas &mdash;</option><option value="SIN_ASIGNAR">Cero por desabasto</option><option value="RECEPCION">Recepci&oacute;n</option><option value="ASIGNACION">Asignaci&oacute;n</option><option value="RECOLECCION">Recolecci&oacute;n</option><option value="PICKING">Picking</option><option value="FACTURACION">Facturaci&oacute;n</option><option value="DISTRIBUCION">Distribuci&oacute;n</option></select>
     <label>Ordenar:</label><select id="fOrden"><option value="urg">Urgencia (defecto)</option><option value="pend">Pendientes &darr;</option><option value="total">Total F8 &darr;</option><option value="nombre">Nombre A&ndash;Z</option></select>
     <label>Triage:</label>
     <div class="tri-filtros" id="triFiltros">
@@ -316,7 +316,7 @@
   <div class="vistas-sw">
     <button class="vsw-btn activa" data-vista="ue" onclick="cambiarVista('ue')">Por Unidad Ejecutora</button>
     <button class="vsw-btn" data-vista="crono" onclick="cambiarVista('crono')">Cronograma semanal</button>
-    <button class="vsw-btn" data-vista="noasig" onclick="cambiarVista('noasig')">No asignadas <span id="naBadge" style="font-family:Consolas;font-size:11px;opacity:.8"></span></button>
+    <button class="vsw-btn" data-vista="noasig" onclick="cambiarVista('noasig')">Cero por desabasto <span id="naBadge" style="font-family:Consolas;font-size:11px;opacity:.8"></span></button>
   </div>
   <div class="leyenda" id="leyenda"></div>
   <div id="vistaCrono" style="display:none;"><div id="grillaSemanal"></div></div>
@@ -795,12 +795,12 @@ function cambiarVista(v){
   render();
 }
 
-// ── Vista independiente: F8 NO ASIGNADAS (Motor asignó 0) ──────────────
+// ── Vista independiente: F8 con CERO POR DESABASTO (Motor asignó 0) ────
 function _escNA(s){ return String(s==null?'':s).replace(/[<>&"]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c];}); }
 function renderNoAsignadas(){
   const cont=document.getElementById('listaNoAsig');
   if(!cont) return;
-  // solo las no asignadas, respetando filtros de grupo/UE/tipo/etapa
+  // solo las de cero por desabasto, respetando filtros de grupo/UE/tipo/etapa
   const fg=document.getElementById('fGrupo').value;
   const fu=document.getElementById('fUE').value;
   const ftEl=document.getElementById('fTipo'); const ft=ftEl?ftEl.value:'';
@@ -822,9 +822,9 @@ function renderNoAsignadas(){
   rows.forEach(f=>{ (porUE[f.ue]=porUE[f.ue]||[]).push(f); });
   const ues=Object.keys(porUE).sort((a,b)=>porUE[b].length-porUE[a].length);
 
-  let html='<div class="na-head">F8 NO ASIGNADAS &mdash; el Motor asignó 0 (proceso terminó sin asignar). '
+  let html='<div class="na-head">F8 CON ASIGNACIÓN EN CERO POR DESABASTO &mdash; el Motor asignó 0 (no había stock para asignar). '
     +rows.length+' de '+total+' mostradas &middot; fuera del pendiente operativo &middot; cuentan como falla en OTIF</div>';
-  if(!rows.length){ html+='<div class="na-empty">No hay F8 no asignadas con los filtros actuales.</div>'; cont.innerHTML=html; return; }
+  if(!rows.length){ html+='<div class="na-empty">No hay F8 con cero por desabasto con los filtros actuales.</div>'; cont.innerHTML=html; return; }
 
   ues.forEach(ue=>{
     const lista=porUE[ue].slice().sort((a,b)=>String(a.fechaVencimiento||'').localeCompare(String(b.fechaVencimiento||'')));
@@ -849,7 +849,7 @@ function render(){
   pintarBanda(); pintarKPIs();   // las tarjetas reaccionan al contexto (UE/grupo/triage/pendiente)
   const rows=filtrados();
   if(VISTA==='crono'){ renderGrilla(rowsParaGrilla()); return; }   // grilla semanal; el acordeón no se dibuja en esta vista
-  if(VISTA==='noasig'){ renderNoAsignadas(); return; }             // sección independiente de F8 no asignadas
+  if(VISTA==='noasig'){ renderNoAsignadas(); return; }             // sección independiente de F8 con cero por desabasto
   const cont=document.getElementById('lista');
   if(!rows.length){cont.innerHTML='<div class="empty">No hay Formas 8 con este filtro.</div>';document.getElementById('cnt').textContent='0 UE';return;}
   const byUE=new Map();
