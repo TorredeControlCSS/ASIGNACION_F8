@@ -279,6 +279,48 @@
     <div id="diagBultos" style="padding:5px 14px 8px;font-size:11px;border-top:1px solid #eee;"></div>
   </div>
 
+  <!-- FILTROS COMPARTIDOS: aplican tanto a la Lista como al Calendario. Antes
+       vivían dentro de #tabLista y se ocultaban al pasar a Calendario, así que
+       en el calendario no se podían cambiar (solo el select URG/MEN). -->
+  <div class="filtros-linea">
+    <div class="filtro-campo" style="flex:1;min-width:220px"><span class="et">Unidad Ejecutora</span>
+      <select id="fUE" onchange="renderLista()" style="width:100%"><option value="">Todas las unidades</option></select>
+    </div>
+    <div class="filtro-campo filtro-tri"><span class="et">Nivel triage</span>
+      <select id="fTriage" onchange="renderLista()">
+        <option value="">Todos los niveles</option>
+        <option value="ROJO">🔴 Rojo (inmediata)</option>
+        <option value="NARANJA">🟠 Naranja o superior</option>
+        <option value="AMARILLO">🟡 Amarillo o superior</option>
+        <option value="VERDE">🟢 Verde o superior</option>
+        <option value="AZUL">🔵 Azul (todos)</option>
+      </select>
+    </div>
+    <div class="filtro-campo"><span class="et">Estado</span>
+      <select id="fEtapa" onchange="renderLista()"><option value="">Todas las etapas</option></select>
+    </div>
+    <div class="filtro-campo"><span class="et">Grupo</span>
+      <select id="fGrupo" onchange="renderLista()"><option value="">Todos los grupos</option></select>
+    </div>
+    <div class="filtro-campo"><span class="et">Tipo</span>
+      <select id="fTipo" onchange="renderLista()">
+        <option value="">Todos</option><option value="URG">Urgencia</option><option value="MEN">Mensual</option>
+      </select>
+    </div>
+    <div class="filtro-campo"><span class="et">Saldo</span>
+      <select id="fCero" onchange="renderLista()">
+        <option value="">Todos</option><option value="1">Solo saldo CERO</option>
+      </select>
+    </div>
+    <div class="filtro-campo"><span class="et">Vista</span>
+      <select id="fVista" onchange="renderLista()" style="border:2px solid var(--azul);font-weight:600;color:var(--azul-osc);">
+        <option value="pendiente">Pendiente de despacho</option>
+        <option value="cerrados">Ya despachadas</option>
+        <option value="todos">Todas</option>
+      </select>
+    </div>
+  </div>
+
   <div class="tabs">
     <div class="tab activa" data-tab="lista">Lista priorizada <span class="cnt" id="cntLista">·</span></div>
     <div class="tab" data-tab="calendario">Calendario</div>
@@ -287,44 +329,6 @@
   <div class="panel-body">
     <!-- LISTA -->
     <div id="tabLista">
-      <div class="filtros-linea">
-        <div class="filtro-campo" style="flex:1;min-width:220px"><span class="et">Unidad Ejecutora</span>
-          <select id="fUE" onchange="renderLista()" style="width:100%"><option value="">Todas las unidades</option></select>
-        </div>
-        <div class="filtro-campo filtro-tri"><span class="et">Nivel triage</span>
-          <select id="fTriage" onchange="renderLista()">
-            <option value="">Todos los niveles</option>
-            <option value="ROJO">🔴 Rojo (inmediata)</option>
-            <option value="NARANJA">🟠 Naranja o superior</option>
-            <option value="AMARILLO">🟡 Amarillo o superior</option>
-            <option value="VERDE">🟢 Verde o superior</option>
-            <option value="AZUL">🔵 Azul (todos)</option>
-          </select>
-        </div>
-        <div class="filtro-campo"><span class="et">Estado</span>
-          <select id="fEtapa" onchange="renderLista()"><option value="">Todas las etapas</option></select>
-        </div>
-        <div class="filtro-campo"><span class="et">Grupo</span>
-          <select id="fGrupo" onchange="renderLista()"><option value="">Todos los grupos</option></select>
-        </div>
-        <div class="filtro-campo"><span class="et">Tipo</span>
-          <select id="fTipo" onchange="renderLista()">
-            <option value="">Todos</option><option value="URG">Urgencia</option><option value="MEN">Mensual</option>
-          </select>
-        </div>
-        <div class="filtro-campo"><span class="et">Saldo</span>
-          <select id="fCero" onchange="renderLista()">
-            <option value="">Todos</option><option value="1">Solo saldo CERO</option>
-          </select>
-        </div>
-        <div class="filtro-campo"><span class="et">Vista</span>
-          <select id="fVista" onchange="renderLista()" style="border:2px solid var(--azul);font-weight:600;color:var(--azul-osc);">
-            <option value="pendiente">Pendiente de despacho</option>
-            <option value="cerrados">Ya despachadas</option>
-            <option value="todos">Todas</option>
-          </select>
-        </div>
-      </div>
       <div class="buscar-barra">
         <input type="text" id="q" placeholder="Buscar Unidad Ejecutora o Nº F8…" oninput="renderLista()">
         <button class="btn" onclick="cargar()">↻ Actualizar</button>
@@ -362,7 +366,7 @@
       <div class="cal-leyenda">
         <span><span class="cal-chip" style="background:var(--t-rojo)"></span>Urgencia (vence)</span>
         <span><span class="cal-chip" style="background:var(--azul)"></span>Mensual (vence)</span>
-        <span style="color:#999;">· Cada F8 cae en su fecha de vencimiento de despacho · respeta los filtros de la lista</span>
+        <span style="color:#999;">· Cada F8 cae en su fecha de vencimiento de despacho · respeta TODOS los filtros de arriba (UE, grupo, triage, tipo, saldo)</span>
       </div>
       <div class="cal-layout" style="margin-top:10px;">
         <div class="cal-main">
@@ -701,6 +705,16 @@ function renderLista(){
     b.addEventListener('click',()=>reprogramarCita(+b.dataset.repro)));
   cont.querySelectorAll('[data-cerrar]').forEach(b=>
     b.addEventListener('click',()=>cerrarF8(+b.dataset.cerrar)));
+  cont.querySelectorAll('[data-prio]').forEach(b=>
+    b.addEventListener('click',()=>{
+      const p=(window.__ARR||[])[+b.dataset.prio]; if(!p) return;
+      const activar=!p.defcon;   // si no está priorizada, la priorizamos; si ya, la quitamos
+      const msg=activar
+        ? '¿Forzar PRIORIDAD MÁXIMA a '+p.id+' — '+p.ue+'?\n\nSubirá a ROJO en la fila de despacho, por encima del IPD calculado.'
+        : '¿Quitar la prioridad manual de '+p.id+' — '+p.ue+'?\n\nVolverá a ordenarse por su IPD calculado.';
+      if(!confirm(msg)) return;
+      priorizar(p.id, activar);
+    }));
 }
 
 function cardPed(p,i){
@@ -741,6 +755,9 @@ function cardPed(p,i){
       <div class="ped-acciones">
         <button class="btn primary" data-det="${i}">Ver detalle F8</button>
         ${p.cerrado ? '' : `
+          <button class="btn ${p.defcon?'':'prio'}" data-prio="${i}"
+            style="${p.defcon?'border-color:#b00020;color:#b00020;font-weight:700;':'background:#b00020;color:#fff;border-color:#b00020;font-weight:700;'}"
+            title="${p.defcon?'Quitar la prioridad manual (DEFCON) de esta F8':'Forzar prioridad máxima: la F8 sube a ROJO en la fila de despacho'}">${p.defcon?'★ Quitar prioridad':'★ Priorizar'}</button>
           <button class="btn conf" data-fact="${i}">Confirmar facturación</button>
           <button class="btn" data-cita="${i}">${p.cita ? 'Mover cita' : 'Confirmar cita'}</button>
           <button class="btn difer" data-repro="${i}">Reprogramar</button>
