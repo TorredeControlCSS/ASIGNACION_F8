@@ -147,6 +147,18 @@
   .vsw-btn.activa{background:var(--azul,#0C447C);color:#fff;}
   .na-head{background:#7a1414;color:#fff;padding:8px 14px;font-size:12px;font-weight:700;margin-bottom:10px;}
   .na-empty{padding:24px;text-align:center;color:#999;}
+  .rp-head{background:#0C447C;color:#fff;padding:8px 14px;font-size:12px;font-weight:700;margin-bottom:12px;}
+  .rp-fase{margin-bottom:14px;border:1px solid #e2e6ea;border-radius:2px;overflow:hidden;}
+  .rp-fase-h{padding:8px 14px;font-weight:700;font-size:13px;display:flex;align-items:center;color:#fff;}
+  .rp-fase-h .rp-n{margin-left:auto;font-family:Consolas,monospace;font-size:12px;font-weight:400;}
+  .rp-sub{padding:5px 14px;font-size:11px;color:#5a6b7a;background:#f7f9fc;border-bottom:1px solid #e2e6ea;}
+  table.rp-t{width:100%;border-collapse:collapse;font-size:11px;}
+  table.rp-t th{background:#f7f9fc;color:#5a6b7a;font-size:9px;text-transform:uppercase;padding:4px 10px;text-align:left;border-bottom:1px solid #e2e6ea;}
+  table.rp-t td{padding:3px 10px;border-top:1px solid #f2f2f2;}
+  table.rp-t td.mono{font-family:Consolas,monospace;}
+  table.rp-t tr.urg td{background:#fdf3f3;}
+  .rp-atr{font-family:Consolas,monospace;font-weight:700;text-align:right;}
+  .rp-mas{padding:6px 14px;font-size:11px;color:#5a6b7a;background:#fafbfc;}
   .na-ue{margin-bottom:10px;border:1px solid #e2e6ea;}
   .na-ue-h{background:#f4f7fb;padding:6px 12px;font-weight:700;font-size:12px;color:#0C447C;display:flex;align-items:center;border-left:3px solid #C00000;}
   .na-ue-h .na-n{margin-left:auto;font-family:Consolas,monospace;font-size:11px;color:#5a6b7a;}
@@ -315,12 +327,14 @@
   </div>
   <div class="vistas-sw">
     <button class="vsw-btn activa" data-vista="ue" onclick="cambiarVista('ue')">Por Unidad Ejecutora</button>
+    <button class="vsw-btn" data-vista="reparto" onclick="cambiarVista('reparto')">Reparto por fase</button>
     <button class="vsw-btn" data-vista="crono" onclick="cambiarVista('crono')">Cronograma semanal</button>
     <button class="vsw-btn" data-vista="noasig" onclick="cambiarVista('noasig')">Cero por desabasto <span id="naBadge" style="font-family:Consolas;font-size:11px;opacity:.8"></span></button>
   </div>
   <div class="leyenda" id="leyenda"></div>
   <div id="vistaCrono" style="display:none;"><div id="grillaSemanal"></div></div>
   <div id="vistaUE"><div id="lista"><div class="loading">Cargando tablero&hellip;</div></div></div>
+  <div id="vistaReparto" style="display:none;"><div id="listaReparto"></div></div>
   <div id="vistaNoAsig" style="display:none;"><div id="listaNoAsig"></div></div>
 </div>
 
@@ -818,12 +832,87 @@ function cambiarVista(v){
   VISTA=v;
   document.querySelectorAll('.vsw-btn').forEach(b=>b.classList.toggle('activa', b.getAttribute('data-vista')===v));
   document.getElementById('vistaUE').style.display     = (v==='ue')    ? '' : 'none';
+  document.getElementById('vistaReparto').style.display = (v==='reparto')? '' : 'none';
   document.getElementById('vistaCrono').style.display  = (v==='crono') ? '' : 'none';
   document.getElementById('vistaNoAsig').style.display = (v==='noasig')? '' : 'none';
   render();
 }
 
-// ── Vista independiente: F8 con CERO POR DESABASTO (Motor asignó 0) ────
+// ── Vista REPARTO POR FASE (modo Supervisor) ──────────────────────────
+// Bolsones de trabajo accionable por fase, priorizados por atraso. El
+// supervisor ve cada fase como un bolsón que reparte en el momento.
+// Fases accionables (el almacén las empuja): Recepción, Asignación,
+// Recolección (capturador), Picking (almacenista). Facturación se muestra
+// aparte como cuello con pelota de Cómputo.
+const RP_FASES=[
+  {clave:'RECEPCION',   label:'Recepción',   equipo:'Recepción',    color:'#5f5e58'},
+  {clave:'ASIGNACION',  label:'Asignación',  equipo:'Analista',     color:'#8a5810'},
+  {clave:'RECOLECCION', label:'Recolección', equipo:'Capturadores', color:'#1f6bb8'},
+  {clave:'PICKING',     label:'Picking',     equipo:'Almacenistas', color:'#5e3a91'}
+];
+const RP_TOP=12;   // cuántos mostrar por fase antes de "… N más"
+function renderReparto(){
+  const cont=document.getElementById('listaReparto');
+  if(!cont) return;
+  // respeta filtros de grupo / UE / tipo
+  const fg=document.getElementById('fGrupo').value;
+  const fu=document.getElementById('fUE').value;
+  const ftEl=document.getElementById('fTipo'); const ft=ftEl?ftEl.value:'';
+  const base=F8.filter(f=>{
+    if(fg && f.grupo!==fg) return false;
+    if(fu && f.ue!==fu) return false;
+    if(ft && f.tipo!==ft) return false;
+    return true;
+  });
+  const totAcc=base.filter(f=>['RECEPCION','ASIGNACION','RECOLECCION','PICKING'].indexOf(f.macro)>=0).length;
+  let html='<div class="rp-head">REPARTO DE TRABAJO POR FASE &mdash; '+totAcc.toLocaleString()
+    +' pedidos accionables. Cada bolsón, priorizado por atraso, es el trabajo de un equipo. El supervisor reparte.</div>';
+
+  RP_FASES.forEach(F=>{
+    const lista=base.filter(f=>f.macro===F.clave)
+      .sort((a,b)=>{
+        const da=(a.diasAtraso!=null)?a.diasAtraso:-1e9, db=(b.diasAtraso!=null)?b.diasAtraso:-1e9;
+        if(da!==db) return db-da;
+        return (b.ipd||0)-(a.ipd||0);
+      });
+    if(!lista.length) return;   // no dibujar fases vacías (ej. Asignación=0)
+    const urg=lista.filter(f=>f.tipo==='URG').length;
+    const atrasados=lista.filter(f=>f.diasAtraso!=null && f.diasAtraso>0).length;
+    html+='<div class="rp-fase">';
+    html+='<div class="rp-fase-h" style="background:'+F.color+'">'+_escNA(F.label)
+      +' &mdash; equipo: '+_escNA(F.equipo)
+      +'<span class="rp-n">'+lista.length+' pedidos'+(urg?' &middot; '+urg+' urg':'')+'</span></div>';
+    html+='<div class="rp-sub">'+atrasados+' atrasados &middot; priorizado: más atrasado primero &middot; repartir entre '+_escNA(F.equipo.toLowerCase())+'</div>';
+    html+='<table class="rp-t"><thead><tr><th>Forma 8</th><th>UE</th><th>Grupo</th><th style="text-align:right">Atraso</th><th>Tipo</th><th>Vence</th></tr></thead><tbody>';
+    lista.slice(0,RP_TOP).forEach(f=>{
+      const atr=(f.diasAtraso!=null)? (f.diasAtraso>0? f.diasAtraso+' d' : (f.diasAtraso===0?'hoy':'—')) : '—';
+      const atrColor=(f.diasAtraso!=null && f.diasAtraso>0)?'#C00000':'#5a6b7a';
+      html+='<tr'+(f.tipo==='URG'?' class="urg"':'')+'>'
+        +'<td class="mono">'+_escNA(f.id)+'</td>'
+        +'<td>'+_escNA(f.ue)+'</td>'
+        +'<td>'+_escNA(f.grupo)+'</td>'
+        +'<td class="rp-atr" style="color:'+atrColor+'">'+atr+'</td>'
+        +'<td style="color:'+(f.tipo==='URG'?'#C00000':'#5a6b7a')+';font-weight:'+(f.tipo==='URG'?'700':'400')+'">'+_escNA(f.tipo)+'</td>'
+        +'<td class="mono">'+_escNA((f.fechaVencimiento||'—').slice(0,10))+'</td></tr>';
+    });
+    html+='</tbody></table>';
+    if(lista.length>RP_TOP){ html+='<div class="rp-mas">… '+(lista.length-RP_TOP)+' más en esta fase</div>'; }
+    html+='</div>';
+  });
+
+  // Facturación: cuello con pelota de Cómputo (informativo, no repartible)
+  const fact=base.filter(f=>f.macro==='FACTURACION');
+  if(fact.length){
+    html+='<div class="rp-fase" style="opacity:.8">';
+    html+='<div class="rp-fase-h" style="background:#4c7519">Facturación &mdash; cuello, pelota de Cómputo/SAFIRO'
+      +'<span class="rp-n">'+fact.length+' pedidos</span></div>';
+    html+='<div class="rp-sub">No es trabajo del piso: seguimiento con Cómputo. Se muestra para tener la foto completa.</div>';
+    html+='</div>';
+  }
+  cont.innerHTML=html;
+}
+
+
 function _escNA(s){ return String(s==null?'':s).replace(/[<>&"]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c];}); }
 function renderNoAsignadas(){
   const cont=document.getElementById('listaNoAsig');
@@ -877,6 +966,7 @@ function render(){
   pintarBanda(); pintarKPIs();   // las tarjetas reaccionan al contexto (UE/grupo/triage/pendiente)
   const rows=filtrados();
   if(VISTA==='crono'){ renderGrilla(rowsParaGrilla()); return; }   // grilla semanal; el acordeón no se dibuja en esta vista
+  if(VISTA==='reparto'){ renderReparto(); return; }                // bolsones por fase para repartir trabajo (modo Supervisor)
   if(VISTA==='noasig'){ renderNoAsignadas(); return; }             // sección independiente de F8 con cero por desabasto
   const cont=document.getElementById('lista');
   if(!rows.length){cont.innerHTML='<div class="empty">No hay Formas 8 con este filtro.</div>';document.getElementById('cnt').textContent='0 UE';return;}
