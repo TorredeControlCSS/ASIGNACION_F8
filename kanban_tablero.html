@@ -25,24 +25,24 @@
   .topbar .gen{font-size:11px;opacity:.85;text-align:right;line-height:1.5;}
   .wrap{max-width:1500px;margin:0 auto;padding:14px;}
   /* banda de acción del supervisor */
-  .accion{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px;}
-  .acc{border:1px solid var(--bord);border-radius:2px;padding:10px 14px;cursor:pointer;transition:filter .1s,box-shadow .1s;}
+  .accion{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px;}
+  .acc{border:1px solid var(--bord);border-radius:2px;padding:7px 12px;cursor:pointer;transition:filter .1s,box-shadow .1s;}
   .acc:hover{filter:brightness(.97);}
   .acc.on{box-shadow:inset 0 0 0 2px var(--azul2);}
-  .acc .acc-lbl{font-size:10px;color:#4a5560;text-transform:uppercase;letter-spacing:.4px;font-weight:700;}
-  .acc .acc-val{font-size:24px;font-weight:700;font-family:Consolas,monospace;line-height:1.15;margin-top:2px;}
+  .acc .acc-lbl{font-size:9px;color:#4a5560;text-transform:uppercase;letter-spacing:.3px;font-weight:700;}
+  .acc .acc-val{font-size:20px;font-weight:700;font-family:Consolas,monospace;line-height:1.15;margin-top:1px;}
   .acc .acc-sub{font-size:10px;color:var(--sub);margin-top:1px;}
   .acc.vence{background:#fbe4e4;} .acc.vence .acc-val{color:var(--rojo);}
   .acc.cuello{background:#f6ecd9;} .acc.cuello .acc-val{color:#8a5810;}
   .acc.stock{background:#f6dede;} .acc.stock .acc-val{color:#7d1a1a;}
   .acc.otif{background:#e2eefb;cursor:default;} .acc.otif:hover{filter:none;} .acc.otif .acc-val{color:#0C447C;}
   .acc.otif .otif-mini{font-size:10px;color:#4a5560;font-family:Consolas,monospace;margin-top:2px;}
-  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:12px;}
-  .kpi{border:1px solid var(--bord);padding:12px 14px;border-radius:2px;cursor:pointer;transition:filter .1s,box-shadow .1s;}
+  .kpis{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:12px;}
+  .kpi{border:1px solid var(--bord);padding:7px 10px;border-radius:2px;cursor:pointer;transition:filter .1s,box-shadow .1s;}
   .kpi:hover{filter:brightness(.97);}
   .kpi.on{box-shadow:inset 0 0 0 2px var(--azul2);}
-  .kpi .lbl{font-size:10px;color:#4a5560;text-transform:uppercase;letter-spacing:.4px;font-weight:700;}
-  .kpi .val{font-size:26px;font-weight:700;font-family:Consolas,monospace;line-height:1.1;margin-top:2px;}
+  .kpi .lbl{font-size:9px;color:#4a5560;text-transform:uppercase;letter-spacing:.3px;font-weight:700;}
+  .kpi .val{font-size:20px;font-weight:700;font-family:Consolas,monospace;line-height:1.1;margin-top:1px;}
   .kpi.sinasig{background:var(--pc-sinasig);} .kpi.sinasig .val{color:#9a2f2f;}
   .kpi.recep{background:var(--pc-recep);} .kpi.recep .val{color:#5f5e58;}
   .kpi.asig{background:var(--pc-asig);}   .kpi.asig .val{color:#8a5810;}
@@ -279,7 +279,7 @@
       <div class="acc-sub">F8 de unidades con alg&uacute;n rengl&oacute;n en cero</div>
     </div>
     <div class="acc otif" id="accOtif">
-      <div class="acc-lbl">OTIF (mes en curso)</div>
+      <div class="acc-lbl" id="ot_lbl">OTIF</div>
       <div class="acc-val num" id="ot_val">&ndash;</div>
       <div class="otif-mini" id="ot_mini">a tiempo &middot; completo</div>
     </div>
@@ -420,15 +420,24 @@ function pintarBanda(){
     if(triFiltro && f.triage!==triFiltro) return false;
     return true;
   });
-  // OTIF en DOS periodos: MES EN CURSO (operativo) y ACUMULADO desde mayo
-  // (estrategico). Se imputa por mes de RECEPCION, igual que el Nivel de
-  // Servicio. El numero grande = mes en curso; el subtexto trae el acumulado.
-  const mesActual = new Date().toISOString().slice(0,7);
+  // OTIF en DOS periodos. Se imputa por mes de RECEPCION (igual que el Nivel
+  // de Servicio). El numero grande = ULTIMO MES CON DATOS (no el calendario en
+  // curso: a inicio de mes ese esta vacio y saldria 0 enganoso). El subtexto
+  // trae el acumulado desde mayo. Meses en espanol para la etiqueta.
+  const MESES_ES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  // 1) hallar el ultimo mes (yyyy-mm) que tiene F8 elegibles
+  let ultMes='';
+  baseOtif.forEach(f=>{
+    if(!f.otElegible) return;
+    const ym=String(f.fechaRecepcion||'').slice(0,7);
+    if(ym && ym>ultMes) ultMes=ym;
+  });
+  // 2) acumular: total (acum) y solo el ultimo mes
   let onN=0,onOK=0, ifN=0,ifOK=0, otN=0,otOK=0;
   let monN=0,monOK=0, mifN=0,mifOK=0, motN=0,motOK=0;
   baseOtif.forEach(f=>{
     if(!f.otElegible) return;
-    const esMes = String(f.fechaRecepcion||'').slice(0,7) === mesActual;
+    const esMes = String(f.fechaRecepcion||'').slice(0,7) === ultMes;
     if(f.otOnTime!=null){ onN++; if(f.otOnTime===1) onOK++; if(esMes){ monN++; if(f.otOnTime===1) monOK++; } }
     if(f.otInFull!=null){ ifN++; if(f.otInFull===1) ifOK++; if(esMes){ mifN++; if(f.otInFull===1) mifOK++; } }
     if(f.otOnTime!=null && f.otInFull!=null){
@@ -439,10 +448,14 @@ function pintarBanda(){
   const pct=(n,d)=> d>0 ? Math.round(1000*n/d)/10 : null;
   const otifAcum=pct(otOK,otN), onT=pct(onOK,onN), inF=pct(ifOK,ifN);
   const otifMes =pct(motOK,motN), onTm=pct(monOK,monN), inFm=pct(mifOK,mifN);
+  // etiqueta dinamica del mes (ej. 'jul 2026')
+  let lblMes='';
+  if(ultMes){ const p=ultMes.split('-'); lblMes=MESES_ES[parseInt(p[1],10)-1]+' '+p[0]; }
+  const elLbl=document.getElementById('ot_lbl'); if(elLbl) elLbl.textContent='OTIF \u00b7 '+(lblMes||'mes');
   const otifGrande = (motN>0 ? otifMes : otifAcum);
   document.getElementById('ot_val').textContent = (otifGrande!=null? otifGrande+'%' : '\u2014');
   document.getElementById('ot_mini').textContent =
-    (motN>0 ? ('mes: a tiempo '+(onTm!=null?onTm+'%':'\u2014')+' \u00b7 completo '+(inFm!=null?inFm+'%':'\u2014')+' \u00b7 acum '+(otifAcum!=null?otifAcum+'%':'\u2014'))
+    (motN>0 ? ('a tiempo '+(onTm!=null?onTm+'%':'\u2014')+' \u00b7 completo '+(inFm!=null?inFm+'%':'\u2014')+' \u00b7 acum '+(otifAcum!=null?otifAcum+'%':'\u2014'))
             : (otN>0 ? (otOK+'/'+otN+' F8 acum \u00b7 a tiempo '+(onT!=null?onT+'%':'\u2014')+' \u00b7 completo '+(inF!=null?inF+'%':'\u2014'))
                      : 'sin despachos en l\u00ednea base'));
 }
