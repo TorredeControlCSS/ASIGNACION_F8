@@ -160,6 +160,11 @@
   table.rp-t td.mono{font-family:Consolas,monospace;}
   table.rp-t tr.urg td{background:#fdf3f3;}
   .rp-atr{font-family:Consolas,monospace;font-weight:700;text-align:right;}
+  td.rp-comp{padding:2px 6px;}
+  td.rp-comp.tiene{background:#e1f5ee;}
+  .comp-inp{font-family:Consolas,monospace;font-size:11px;padding:3px 4px;border:1px solid #b9c6d4;border-radius:4px;min-height:30px;width:128px;background:#fff;}
+  .comp-inp:hover{border-color:#0F6E56;}
+  td.rp-comp.tiene .comp-inp{border-color:#0F6E56;color:#0F6E56;font-weight:700;}
   .rp-mas{padding:6px 14px;font-size:11px;color:#5a6b7a;background:#fafbfc;}
   .rp-print{margin-left:14px;background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.5);border-radius:2px;font-size:10px;padding:3px 8px;cursor:pointer;font-weight:700;}
   .m-print{background:var(--azul,#0C447C);color:#fff;border:none;border-radius:2px;font-size:11px;padding:5px 12px;cursor:pointer;font-weight:700;margin-bottom:10px;}
@@ -1023,7 +1028,8 @@ function renderReparto(){
       +'<th class="ord" onclick="rpOrdenarPor(\'tipo\')">Tipo'+rpOrdInd('tipo')+'</th>'
       +'<th class="ord" onclick="rpOrdenarPor(\'fechaRecepcion\')">Recibida'+rpOrdInd('fechaRecepcion')+'</th>'
       +'<th class="ord" onclick="rpOrdenarPor(\'diasCrono\')">D\u00eda cronograma'+rpOrdInd('diasCrono')+'</th>'
-      +'<th class="ord" onclick="rpOrdenarPor(\'fechaVencimiento\')">F. Entrega'+rpOrdInd('fechaVencimiento')+'</th></tr></thead><tbody>';
+      +'<th class="ord" onclick="rpOrdenarPor(\'fechaVencimiento\')">F. Entrega'+rpOrdInd('fechaVencimiento')+'</th>'
+      +'<th style="background:#0F6E56">F. comprometida</th></tr></thead><tbody>';
     lista.slice().sort(rpOrdenActivo_).forEach(f=>{
       const atrColor=(f.diasAtraso!=null && f.diasAtraso>0)?'#C00000':'#5a6b7a';
       html+='<tr'+(f.tipo==='URG'?' class="urg"':'')+'>'
@@ -1034,13 +1040,55 @@ function renderReparto(){
         +'<td style="color:'+(f.tipo==='URG'?'#C00000':'#5a6b7a')+';font-weight:'+(f.tipo==='URG'?'700':'400')+'">'+_escNA(f.tipo)+'</td>'
         +'<td class="mono">'+_escNA((f.fechaRecepcion||'\u2014').slice(0,10))+'</td>'
         +'<td style="font-size:10px">'+_escNA(f.diasCrono||'\u2014')+'</td>'
-        +'<td class="mono">'+_escNA((f.fechaVencimiento||'\u2014').slice(0,10))+'</td></tr>';
+        +'<td class="mono">'+_escNA((f.fechaVencimiento||'\u2014').slice(0,10))+'</td>'
+        +'<td class="rp-comp'+(f.fechaComprometida?' tiene':'')+'">'
+          +'<input type="date" class="comp-inp" value="'+((f.fechaComprometida||'').slice(0,10))+'" '
+          +'onchange="comprometerFecha(\''+_esc(f.id)+'\', this)" '
+          +'title="'+(f.fechaComprometida?('Comprometida'+(f.comprometidaPor?(' por '+_esc(f.comprometidaPor)):'')):'Sin comprometer \u2014 usa la fecha estimada')+'"></td></tr>';
     });
     html+='</tbody></table></div></div></div>';
   });
 
   cont.innerHTML=html;
 }
+// ------- Fecha comprometida (Supervisor/Jefe con PIN) -------------------
+async function comprometerFecha(id, inp){
+  const fecha=(inp.value||'').slice(0,10);   // vacío = quitar compromiso
+  const accion = fecha ? ('fijar la fecha comprometida al '+fecha) : 'QUITAR la fecha comprometida';
+  const pin=prompt('Autorización de Supervisor o Jefe.\n\nF8: '+id+'\nAcción: '+accion+'\n\nDigita tu PIN (últimos 4 de la cédula):');
+  if(pin===null){ render(); return; }              // canceló → repinta valor previo
+  const p=String(pin).trim();
+  if(!/^\d{4}$/.test(p)){ alert('PIN inválido: deben ser 4 dígitos.'); render(); return; }
+  try{
+    const params='file=kanban_comprometer&id='+encodeURIComponent(id)+'&fecha='+encodeURIComponent(fecha)+'&pin='+encodeURIComponent(p);
+    const res=await pedir(params);
+    if(!res||res.ok===false){ alert('No se guardó: '+((res&&res.msg)||'error')); render(); return; }
+    // Éxito → actualización OPTIMISTA: el JSON se refresca luego, pero la vista
+    // ya refleja el cambio. La fecha comprometida pasa a ser la efectiva.
+    const f=F8.find(x=>String(x.id)===String(id));
+    if(f){
+      f.fechaComprometida = fecha;
+      f.comprometidaPor   = res.por || '';
+      if(fecha){ f.fechaVencimiento = fecha; }       // efectiva = comprometida
+      else if(f.fechaEstimada){ f.fechaVencimiento = f.fechaEstimada; }  // volver a estimada
+      recalcAtraso_(f);
+    }
+    render();
+  }catch(err){ alert('Sin conexión al guardar: '+err.message); render(); }
+}
+
+// Recalcula días de atraso del pedido contra su fecha efectiva (misma lógica
+// que el backend: atraso = hoy - fecha efectiva, solo si ya venció y no cerró).
+function recalcAtraso_(f){
+  const efec=(f.fechaVencimiento||'').slice(0,10);
+  if(!efec){ f.diasAtraso=null; return; }
+  const hoy=new Date(); hoy.setHours(0,0,0,0);
+  const m=efec.split('-'); const fe=new Date(+m[0],+m[1]-1,+m[2]);
+  const cerrado=(f.macro==='DISTRIBUCION'||f.macro==='CERRADO');
+  f.diasAtraso = cerrado ? null : Math.round((hoy-fe)/86400000);
+}
+
+
 function imprimirReparto(claveFase){
   const F=RP_FASES.find(x=>x.clave===claveFase); if(!F) return;
   const base=rpFiltrada_();
