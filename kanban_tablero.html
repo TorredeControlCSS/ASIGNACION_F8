@@ -1029,7 +1029,7 @@ function renderReparto(){
       +'<th class="ord" onclick="rpOrdenarPor(\'fechaRecepcion\')">Recibida'+rpOrdInd('fechaRecepcion')+'</th>'
       +'<th class="ord" onclick="rpOrdenarPor(\'diasCrono\')">D\u00eda cronograma'+rpOrdInd('diasCrono')+'</th>'
       +'<th class="ord" onclick="rpOrdenarPor(\'fechaVencimiento\')">F. Entrega'+rpOrdInd('fechaVencimiento')+'</th>'
-      +'<th style="background:#0F6E56">F. comprometida</th></tr></thead><tbody>';
+      +'<th style="background:#0F6E56;color:#fff">F. comprometida</th></tr></thead><tbody>';
     lista.slice().sort(rpOrdenActivo_).forEach(f=>{
       const atrColor=(f.diasAtraso!=null && f.diasAtraso>0)?'#C00000':'#5a6b7a';
       html+='<tr'+(f.tipo==='URG'?' class="urg"':'')+'>'
