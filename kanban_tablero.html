@@ -11,7 +11,7 @@
     --bg:#ececec;--bord:#a8a8a8;--txt:#20303f;--sub:#6b7684;
     --m-recep:#888780;--m-asig:#BA7517;--m-recol:#378ADD;--m-fact:#639922;--m-dist:#0F6E56;
     --rojo:#a12626;
-    --pc-recep:#ececeb;--pc-asig:#f6ecd9;--pc-recol:#e2eefb;--pc-fact:#eaf3dd;--pc-dist:#dcefe8;
+    --pc-recep:#ececeb;--pc-asig:#f6ecd9;--pc-recol:#e2eefb;--pc-pick:#ece4f5;--pc-fact:#eaf3dd;--pc-dist:#dcefe8;--pc-sinasig:#f5dede;
     --t-rojo:#C00000;--t-naranja:#E36C09;--t-amarillo:#BF9000;--t-verde:#2e7d32;--t-azul:#1e5a9e;
   }
   *{box-sizing:border-box;}
@@ -43,9 +43,11 @@
   .kpi.on{box-shadow:inset 0 0 0 2px var(--azul2);}
   .kpi .lbl{font-size:10px;color:#4a5560;text-transform:uppercase;letter-spacing:.4px;font-weight:700;}
   .kpi .val{font-size:26px;font-weight:700;font-family:Consolas,monospace;line-height:1.1;margin-top:2px;}
+  .kpi.sinasig{background:var(--pc-sinasig);} .kpi.sinasig .val{color:#9a2f2f;}
   .kpi.recep{background:var(--pc-recep);} .kpi.recep .val{color:#5f5e58;}
   .kpi.asig{background:var(--pc-asig);}   .kpi.asig .val{color:#8a5810;}
   .kpi.recol{background:var(--pc-recol);} .kpi.recol .val{color:#1f6bb8;}
+  .kpi.pick{background:var(--pc-pick);}   .kpi.pick .val{color:#5e3a91;}
   .kpi.fact{background:var(--pc-fact);}   .kpi.fact .val{color:#4c7519;}
   .kpi.dist{background:var(--pc-dist);}   .kpi.dist .val{color:#0d5a48;}
   .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;background:#fff;border:1px solid var(--bord);padding:9px 11px;margin-bottom:10px;}
@@ -283,9 +285,11 @@
     </div>
   </div>
   <div class="kpis">
+    <div class="kpi sinasig" id="kpi_SIN_ASIGNAR" onclick="filtrarMacro('SIN_ASIGNAR')"><div class="lbl">Sin asignar</div><div class="val num" id="k_SIN_ASIGNAR">&ndash;</div></div>
     <div class="kpi recep" id="kpi_RECEPCION" onclick="filtrarMacro('RECEPCION')"><div class="lbl">Recepci&oacute;n</div><div class="val num" id="k_RECEPCION">&ndash;</div></div>
     <div class="kpi asig" id="kpi_ASIGNACION" onclick="filtrarMacro('ASIGNACION')"><div class="lbl">Asignaci&oacute;n</div><div class="val num" id="k_ASIGNACION">&ndash;</div></div>
     <div class="kpi recol" id="kpi_RECOLECCION" onclick="filtrarMacro('RECOLECCION')"><div class="lbl">Recolecci&oacute;n</div><div class="val num" id="k_RECOLECCION">&ndash;</div></div>
+    <div class="kpi pick" id="kpi_PICKING" onclick="filtrarMacro('PICKING')"><div class="lbl">Picking</div><div class="val num" id="k_PICKING">&ndash;</div></div>
     <div class="kpi fact" id="kpi_FACTURACION" onclick="filtrarMacro('FACTURACION')"><div class="lbl">Facturaci&oacute;n</div><div class="val num" id="k_FACTURACION">&ndash;</div></div>
     <div class="kpi dist" id="kpi_DISTRIBUCION" onclick="filtrarMacro('DISTRIBUCION')"><div class="lbl">Distribuci&oacute;n</div><div class="val num" id="k_DISTRIBUCION">&ndash;</div></div>
   </div>
@@ -293,7 +297,7 @@
     <label>Grupo:</label><select id="fGrupo"><option value="">&mdash; Todos &mdash;</option></select>
     <label>Unidad Ejecutora:</label><select id="fUE"><option value="">&mdash; Todas &mdash;</option></select>
     <label>Tipo:</label><select id="fTipo"><option value="">&mdash; Todos &mdash;</option><option value="URG">Urgencias</option><option value="MEN">Mensuales</option></select>
-    <label>Etapa:</label><select id="fEtapa"><option value="">&mdash; Todas &mdash;</option><option value="RECEPCION">Recepci&oacute;n</option><option value="ASIGNACION">Asignaci&oacute;n</option><option value="RECOLECCION">Recolecci&oacute;n</option><option value="FACTURACION">Facturaci&oacute;n</option><option value="DISTRIBUCION">Distribuci&oacute;n</option></select>
+    <label>Etapa:</label><select id="fEtapa"><option value="">&mdash; Todas &mdash;</option><option value="SIN_ASIGNAR">Sin asignar</option><option value="RECEPCION">Recepci&oacute;n</option><option value="ASIGNACION">Asignaci&oacute;n</option><option value="RECOLECCION">Recolecci&oacute;n</option><option value="PICKING">Picking</option><option value="FACTURACION">Facturaci&oacute;n</option><option value="DISTRIBUCION">Distribuci&oacute;n</option></select>
     <label>Ordenar:</label><select id="fOrden"><option value="urg">Urgencia (defecto)</option><option value="pend">Pendientes &darr;</option><option value="total">Total F8 &darr;</option><option value="nombre">Nombre A&ndash;Z</option></select>
     <label>Triage:</label>
     <div class="tri-filtros" id="triFiltros">
@@ -483,7 +487,7 @@ function fill(id,allVal,allLbl,arr){
   s.innerHTML=`<option value="${allVal}">${allLbl}</option>`+arr.map(x=>`<option>${x}</option>`).join('');
   s.value=[...s.options].some(o=>o.value===prev)?prev:allVal;
 }
-const ES_PEND={RECEPCION:1,ASIGNACION:1,RECOLECCION:1};
+const ES_PEND={RECEPCION:1,ASIGNACION:1,RECOLECCION:1,PICKING:1};
 function macroVacio(){ const m={}; MACROS.forEach(x=>m[x.clave]=0); return m; }
 function pendDe(macro){ let p=0; for(const k in ES_PEND) p+=(macro[k]||0); return p; }
 function macroDe(lista){ const m=macroVacio(); lista.forEach(f=>{ if(m[f.macro]!=null) m[f.macro]++; }); return m; }
@@ -577,12 +581,19 @@ function ordenActivo(a,b){
   return va.localeCompare(vb,'es')*ordenDir;
 }
 
-// orden de filas: 1) triage (ROJO arriba), 2) más recientes arriba, 3) IPD como desempate
+// orden por avance de fase (para desempatar por dónde está trabado el flujo)
+const FASE_ORDEN={SIN_ASIGNAR:0,RECEPCION:1,ASIGNACION:2,RECOLECCION:3,PICKING:4,FACTURACION:5,DISTRIBUCION:6,CERRADO:7};
+// orden de filas UNIFICADO (mismo criterio que kbCmpPrioridad_ del backend):
+//   1) DÍAS DE ATRASO: el más atrasado arriba (null = ya salió, va al final)
+//   2) FASE: la menos avanzada primero (lo que falta empujar sube)
+//   3) IPD como último desempate
 function ordenFila(a,b){
-  const ta=triRank(a), tb=triRank(b);
-  if(ta!==tb) return ta-tb;
-  const ra=recNum(a), rb=recNum(b);
-  if(rb!==ra) return rb-ra;
+  const da=(a.diasAtraso!=null)?a.diasAtraso:-1e9;
+  const db=(b.diasAtraso!=null)?b.diasAtraso:-1e9;
+  if(da!==db) return db-da;                       // mayor atraso primero
+  const fa=FASE_ORDEN[a.macro]!=null?FASE_ORDEN[a.macro]:9;
+  const fb=FASE_ORDEN[b.macro]!=null?FASE_ORDEN[b.macro]:9;
+  if(fa!==fb) return fa-fb;                        // fase menos avanzada primero
   return (b.ipd||0)-(a.ipd||0);
 }
 // ── Grilla semanal navegable por VENCIMIENTO ───────────────────────────
