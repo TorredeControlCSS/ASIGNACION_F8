@@ -111,7 +111,7 @@
   .gs-head .gs-sub{font-weight:400;font-size:10px;opacity:.85;}
   .modal-bg{display:none;position:fixed;inset:0;background:rgba(12,44,124,.35);z-index:100;align-items:flex-start;justify-content:center;padding:24px 16px;overflow-y:auto;}
   .modal-bg.open{display:flex;}
-  .modal{background:#fff;width:100%;max-width:760px;border:1px solid var(--bord,#a8a8a8);box-shadow:0 8px 30px rgba(0,0,0,.25);max-height:calc(100vh - 48px);display:flex;flex-direction:column;}
+  .modal{background:#fff;width:100%;max-width:760px;border:1px solid var(--bord,#a8a8a8);box-shadow:0 8px 30px rgba(0,0,0,.25);max-height:calc(100vh - 120px);display:flex;flex-direction:column;margin-top:8px;}
   .mh{background:var(--azul,#0C447C);color:#fff;padding:10px 16px;display:flex;align-items:center;gap:10px;flex:0 0 auto;position:sticky;top:0;z-index:2;}
   .mh .mt{font-weight:700;font-size:14px;line-height:1.2;word-break:break-word;} .mh .msub{font-size:10px;opacity:.85;}
   .mh .x{margin-left:auto;cursor:pointer;font-size:18px;line-height:1;padding:0 4px;}
@@ -149,7 +149,9 @@
   .na-empty{padding:24px;text-align:center;color:#999;}
   .rp-head{background:#0C447C;color:#fff;padding:8px 14px;font-size:12px;font-weight:700;margin-bottom:12px;}
   .rp-fase{margin-bottom:14px;border:1px solid #e2e6ea;border-radius:2px;overflow:hidden;}
-  .rp-fase-h{padding:8px 14px;font-weight:700;font-size:13px;display:flex;align-items:center;color:#fff;}
+  .rp-fase-h{padding:8px 14px;font-weight:700;font-size:13px;display:flex;align-items:center;color:#fff;cursor:pointer;}
+  .rp-caret{margin-right:8px;font-size:11px;}
+  .rp-fase.colapsado .rp-cuerpo{display:none;}
   .rp-fase-h .rp-n{margin-left:auto;font-family:Consolas,monospace;font-size:12px;font-weight:400;}
   .rp-sub{padding:5px 14px;font-size:11px;color:#5a6b7a;background:#f7f9fc;border-bottom:1px solid #e2e6ea;}
   table.rp-t{width:100%;border-collapse:collapse;font-size:11px;}
@@ -730,8 +732,9 @@ function renderGrilla(rows){
     +(totAtr?(' &middot; <b style="color:#ffd0d0">'+totAtr+' atrasadas</b>'):'')
     +' &middot; clic en un día filtra el detalle</span></div>';
 
-  // FRANJA ATRASADAS: tabla estructurada, ordenada por urgencias y días de
-  // atraso (lo más crítico arriba). Ya no es una nube de chips sin orden.
+  // FRANJA ATRASADAS: se construye aquí pero se agrega ABAJO, después de la
+  // semana, para no distraer de la vista semanal (que es lo principal).
+  let htmlAtr='';
   if(totAtr){
     const claves=Object.keys(atrasadas).sort((a,b)=>{
       if(atrasadas[b].urg!==atrasadas[a].urg) return atrasadas[b].urg-atrasadas[a].urg;  // más urgencias primero
@@ -740,27 +743,27 @@ function renderGrilla(rows){
     });
     const abierto = gsAtrAbierto ? ' open':'';
     const activo = diaFiltro==='__ATRASADAS__' ? ' activo':'';
-    html+='<div class="gs-atr-franja">';
-    html+='<div class="gs-atr-h'+activo+'" onclick="gsToggleAtr()">'
+    htmlAtr+='<div class="gs-atr-franja">';
+    htmlAtr+='<div class="gs-atr-h'+activo+'" onclick="gsToggleAtr()">'
       +'<span class="gs-atr-caret">'+(gsAtrAbierto?'&#9662;':'&#9656;')+'</span>'
       +'<b>ATRASADAS</b> <span class="gs-atr-n">'+totAtr+' F8 vencidas &middot; '+claves.length+' UE</span>'
       +'<span class="gs-atr-hint" onclick="event.stopPropagation();toggleDiaGrilla(\'__ATRASADAS__\')">'+(diaFiltro==='__ATRASADAS__'?'quitar filtro':'filtrar detalle')+'</span>'
       +'</div>';
-    html+='<div class="gs-atr-body'+abierto+'">';
-    html+='<table class="gs-atr-t"><thead><tr>'
+    htmlAtr+='<div class="gs-atr-body'+abierto+'">';
+    htmlAtr+='<table class="gs-atr-t"><thead><tr>'
       +'<th>Unidad Ejecutora</th><th style="text-align:right">Vencidas</th>'
       +'<th style="text-align:right">Urgencias</th><th style="text-align:right">Atraso máx.</th>'
       +'<th>Día cronograma</th></tr></thead><tbody>';
     claves.forEach(ue=>{ const o=atrasadas[ue];
-      html+='<tr class="'+(o.urg>0?'urg':'')+'" onclick="filtrarUEdesdeGrilla(\''+ue.replace(/'/g,"\\'")+'\',\'__ATRASADAS__\')">'
+      htmlAtr+='<tr class="'+(o.urg>0?'urg':'')+'" onclick="filtrarUEdesdeGrilla(\''+ue.replace(/'/g,"\\'")+'\',\'__ATRASADAS__\')">'
         +'<td class="gs-atr-ue">'+ue+flagUE(ue,o.urg>0)+'</td>'
         +'<td class="gs-atr-num">'+o.n+'</td>'
         +'<td class="gs-atr-num" style="color:'+(o.urg>0?'#C00000':'#5a6b7a')+';font-weight:'+(o.urg>0?'700':'400')+'">'+(o.urg||'—')+'</td>'
         +'<td class="gs-atr-num" style="color:#C00000;font-weight:700">'+(o.maxAtr>0?o.maxAtr+' d':'—')+'</td>'
         +'<td style="font-size:10px;color:#5a6b7a">'+(o.dias||'—')+'</td></tr>';
     });
-    html+='</tbody></table>';
-    html+='</div></div>';
+    htmlAtr+='</tbody></table>';
+    htmlAtr+='</div></div>';
   }
 
   // Los 5 días — solos en su grid limpio
@@ -785,6 +788,7 @@ function renderGrilla(rows){
     html+='</div></div>';
   });
   html+='</div></div>';
+  html+=htmlAtr;   // atrasadas al final, debajo de la semana
   cont.innerHTML=html;
 }
 function toggleDiaGrilla(clave){
@@ -833,7 +837,7 @@ function abrirModalUE(ue, dia){
   if(!propios.length){ html+='<div class="m-empty">No hay F8 para este d\u00eda.</div>'; document.getElementById('mBody').innerHTML=html; _abrir(); return; }
 
   // LISTA DIRECTA — Forma 8, Grupo, Tipo, Etapa, Vence, IPD. Urgencias primero, luego IPD.
-  html+='<table class="m-t"><thead><tr><th>Forma 8</th><th>Grupo</th><th>Tipo</th><th>Etapa</th><th>Vence</th><th>IPD</th></tr></thead><tbody>';
+  html+='<table class="m-t"><thead><tr><th>Forma 8</th><th>Grupo</th><th>Tipo</th><th>Etapa</th><th>F. Entrega</th><th>IPD</th></tr></thead><tbody>';
   propios.slice().sort((a,b)=>{
     if((a.tipo==='URG')!==(b.tipo==='URG')) return a.tipo==='URG'?-1:1;   // urgencias arriba
     return (b.ipd||0)-(a.ipd||0);
@@ -899,6 +903,11 @@ function rpAtrasoTxt_(f){
   if(f.diasAtraso===0) return 'hoy';
   return 'en '+(-f.diasAtraso)+' d';
 }
+let rpColapsado={};   // fases colapsadas en la vista Reparto
+function rpToggle(clave){
+  rpColapsado[clave]=!rpColapsado[clave];
+  renderReparto();
+}
 function renderReparto(){
   const cont=document.getElementById('listaReparto');
   if(!cont) return;
@@ -912,16 +921,19 @@ function renderReparto(){
     if(!lista.length) return;
     const urg=lista.filter(f=>f.tipo==='URG').length;
     const atrasados=lista.filter(f=>f.diasAtraso!=null && f.diasAtraso>0).length;
-    html+='<div class="rp-fase" id="rpfase_'+F.clave+'">';
-    html+='<div class="rp-fase-h" style="background:'+F.color+'">'+_escNA(F.label)
-      +' &mdash; equipo: '+_escNA(F.equipo)
-      +'<button class="rp-print" onclick="imprimirReparto(\''+F.clave+'\')" title="Imprimir hoja de este equipo">&#128424; Imprimir hoja</button>'
+    const colap = rpColapsado[F.clave] ? ' colapsado':'';
+    html+='<div class="rp-fase'+colap+'" id="rpfase_'+F.clave+'">';
+    html+='<div class="rp-fase-h" style="background:'+F.color+'" onclick="rpToggle(\''+F.clave+'\')">'
+      +'<span class="rp-caret">'+(rpColapsado[F.clave]?'&#9656;':'&#9662;')+'</span>'
+      +_escNA(F.label)+' &mdash; equipo: '+_escNA(F.equipo)
+      +'<button class="rp-print" onclick="event.stopPropagation();imprimirReparto(\''+F.clave+'\')" title="Imprimir hoja de este equipo">&#128424; Imprimir hoja</button>'
       +'<span class="rp-n">'+lista.length+' pedidos'+(urg?' &middot; '+urg+' urg':'')+'</span></div>';
+    html+='<div class="rp-cuerpo">';
     html+='<div class="rp-sub">'+atrasados+' atrasados &middot; priorizado: m\u00e1s atrasado primero &middot; responsable: '+_escNA(F.equipo)+'</div>';
     html+='<div class="rp-scroll"><table class="rp-t"><thead><tr>'
       +'<th>Forma 8</th><th>Unidad Ejecutora</th><th>Grupo</th>'
       +'<th style="text-align:right">Atraso</th><th>Tipo</th>'
-      +'<th>Recibida</th><th>D\u00eda cronograma</th><th>Vence</th></tr></thead><tbody>';
+      +'<th>Recibida</th><th>D\u00eda cronograma</th><th>F. Entrega</th></tr></thead><tbody>';
     lista.forEach(f=>{
       const atrColor=(f.diasAtraso!=null && f.diasAtraso>0)?'#C00000':'#5a6b7a';
       html+='<tr'+(f.tipo==='URG'?' class="urg"':'')+'>'
@@ -934,7 +946,7 @@ function renderReparto(){
         +'<td style="font-size:10px">'+_escNA(f.diasCrono||'\u2014')+'</td>'
         +'<td class="mono">'+_escNA((f.fechaVencimiento||'\u2014').slice(0,10))+'</td></tr>';
     });
-    html+='</tbody></table></div></div>';
+    html+='</tbody></table></div></div></div>';
   });
 
   cont.innerHTML=html;
@@ -968,11 +980,15 @@ function imprimirReparto(claveFase){
     +'td{padding:4px 7px;border-bottom:1px solid #ddd;}td.m{font-family:Consolas,monospace;}td.r{text-align:right;font-weight:bold;}'
     +'tr.u td{background:#fdeaea;}tr.u td:nth-child(6){color:#C00000;font-weight:bold;}'
     +'td.firma{width:90px;border-bottom:1px solid #999;}'
-    +'.meta{font-size:11px;color:#555;margin-bottom:10px;}@media print{.noprint{display:none;}}</style></head><body>'
-    +'<h1>Hoja de trabajo \u2014 '+F.label+' (equipo: '+F.equipo+')</h1>'
-    +'<h2>Torre de Control \u00b7 DINALOG / CEDIS Panam\u00e1 \u00b7 '+hoy+'</h2>'
+    +'.meta{font-size:11px;color:#555;margin-bottom:10px;}'
+    +'.enc{display:flex;align-items:center;gap:14px;border-bottom:2px solid #0C447C;padding-bottom:10px;margin-bottom:14px;}'
+    +'.enc img{width:56px;height:56px;}'
+    +'@media print{.noprint{display:none;}}</style></head><body>'
+    +'<div class="enc"><img src="https://raw.githubusercontent.com/TorredeControlCSS/RH_BIOMETRICO/refs/heads/main/icons/icon-512.png" alt="logo" onerror="this.style.display=\'none\'"/>'
+    +'<div><h1>Hoja de trabajo \u2014 '+F.label+' (equipo: '+F.equipo+')</h1>'
+    +'<h2>Torre de Control \u00b7 DINALOG / CEDIS Panam\u00e1 \u00b7 '+hoy+'</h2></div></div>'
     +'<div class="meta">'+lista.length+' pedidos \u00b7 '+urg+' urgencias \u00b7 priorizado por atraso (m\u00e1s atrasado primero). Asignar cada rengl\u00f3n a un responsable.</div>'
-    +'<table><thead><tr><th>#</th><th>Forma 8</th><th>Unidad Ejecutora</th><th>Grupo</th><th>Atraso</th><th>Tipo</th><th>Recibida</th><th>D\u00eda cronograma</th><th>Vence</th><th>Responsable</th></tr></thead><tbody>'
+    +'<table><thead><tr><th>#</th><th>Forma 8</th><th>Unidad Ejecutora</th><th>Grupo</th><th>Atraso</th><th>Tipo</th><th>Recibida</th><th>D\u00eda cronograma</th><th>F. Entrega</th><th>Responsable</th></tr></thead><tbody>'
     +filas+'</tbody></table>'
     +'<p class="noprint" style="margin-top:16px;"><button onclick="window.print()" style="padding:8px 20px;font-size:13px;cursor:pointer;">Imprimir</button></p>'
     +'</body></html>');
@@ -990,15 +1006,15 @@ function renderNoAsignadas(){
   const ftEl=document.getElementById('fTipo'); const ft=ftEl?ftEl.value:'';
   const feEl=document.getElementById('fEtapa'); const fe=feEl?feEl.value:'';
   const rows=F8.filter(f=>{
-    if(!f.noAsignada) return false;
+    if(f.macro!=='SIN_ASIGNAR') return false;   // solo los que siguen en cero por desabasto (no los que ya salieron)
     if(fg && f.grupo!==fg) return false;
     if(fu && f.ue!==fu) return false;
     if(ft && f.tipo!==ft) return false;
     if(fe && f.macro!==fe) return false;
     return true;
   });
-  // badge en el botón
-  const total=F8.filter(f=>f.noAsignada).length;
+  // badge en el botón: coherente con la tarjeta (fase SIN_ASIGNAR)
+  const total=F8.filter(f=>f.macro==='SIN_ASIGNAR').length;
   const bd=document.getElementById('naBadge'); if(bd) bd.textContent='('+total+')';
 
   // agrupar por UE
@@ -1014,7 +1030,7 @@ function renderNoAsignadas(){
     const lista=porUE[ue].slice().sort((a,b)=>String(a.fechaVencimiento||'').localeCompare(String(b.fechaVencimiento||'')));
     const urg=lista.filter(f=>f.tipo==='URG').length;
     html+='<div class="na-ue"><div class="na-ue-h">'+_escNA(ue)+'<span class="na-n">'+lista.length+' F8'+(urg?' &middot; '+urg+' urg':'')+'</span></div>';
-    html+='<table class="na-t"><thead><tr><th>Forma 8</th><th>Tipo</th><th>Grupo</th><th>Etapa</th><th>Recibida</th><th>Vence</th></tr></thead><tbody>';
+    html+='<table class="na-t"><thead><tr><th>Forma 8</th><th>Tipo</th><th>Grupo</th><th>Etapa</th><th>Recibida</th><th>F. Entrega</th></tr></thead><tbody>';
     lista.forEach(f=>{
       html+='<tr><td class="mono">'+_escNA(f.id)+'</td>'
         +'<td style="color:'+(f.tipo==='URG'?'#C00000':'#5a6b7a')+';font-weight:'+(f.tipo==='URG'?'700':'400')+'">'+_escNA(f.tipo)+'</td>'
