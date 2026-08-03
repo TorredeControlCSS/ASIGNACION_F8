@@ -111,7 +111,7 @@
   .gs-head .gs-sub{font-weight:400;font-size:10px;opacity:.85;}
   .modal-bg{display:none;position:fixed;inset:0;background:rgba(12,44,124,.35);z-index:100;align-items:center;justify-content:center;padding:24px 16px;}
   .modal-bg.open{display:flex;}
-  .modal{background:#fff;width:100%;max-width:760px;border:1px solid var(--bord,#a8a8a8);box-shadow:0 8px 30px rgba(0,0,0,.25);max-height:calc(100vh - 48px);display:flex;flex-direction:column;overflow:hidden;}
+  .modal{background:#fff;width:100%;max-width:720px;border:1px solid var(--bord,#a8a8a8);box-shadow:0 8px 30px rgba(0,0,0,.25);max-height:calc(100vh - 48px);display:flex;flex-direction:column;overflow:hidden;}
   .mh{background:var(--azul,#0C447C);color:#fff;padding:10px 16px;display:flex;align-items:center;gap:10px;flex:0 0 auto;z-index:2;}
   .mh .mt{font-weight:700;font-size:14px;line-height:1.2;word-break:break-word;} .mh .msub{font-size:10px;opacity:.85;}
   .mh .x{margin-left:auto;cursor:pointer;font-size:18px;line-height:1;padding:0 4px;}
@@ -177,7 +177,7 @@
   .gs-hoy-btn{font-size:10px;padding:2px 9px;}
   .gs-col.atr .gs-dia{background:#7a1414;color:#fff;}
   .gs-col.atr .gs-dia.activo{background:#C00000;}
-  table.f8 th.ord{cursor:pointer;user-select:none;} table.f8 th.ord:hover{background:#eef3fa;} .ord-i{font-size:9px;color:#aaa;margin-left:2px;} .ord-i.on{color:#0C447C;font-weight:700;}
+  table.f8 th.ord,table.rp-t th.ord{cursor:pointer;user-select:none;} table.f8 th.ord:hover,table.rp-t th.ord:hover{background:#eef3fa;} .ord-i{font-size:9px;color:#aaa;margin-left:2px;} .ord-i.on{color:#0C447C;font-weight:700;}
   .gs-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:0;}
   .gs-atr-franja{border:1px solid #d9b0b0;border-top:none;background:#fdf5f5;}
   .gs-atr-h{padding:7px 12px;font-size:11px;color:#7a1414;cursor:pointer;display:flex;align-items:center;gap:8px;border-bottom:1px solid #ecd4d4;}
@@ -322,7 +322,7 @@
     <label>Unidad Ejecutora:</label><select id="fUE"><option value="">&mdash; Todas &mdash;</option></select>
     <label>Tipo:</label><select id="fTipo"><option value="">&mdash; Todos &mdash;</option><option value="URG">Urgencias</option><option value="MEN">Mensuales</option></select>
     <label>Etapa:</label><select id="fEtapa"><option value="">&mdash; Todas &mdash;</option><option value="SIN_ASIGNAR">Cero por desabasto</option><option value="RECEPCION">Recepci&oacute;n</option><option value="ASIGNACION">Asignaci&oacute;n</option><option value="RECOLECCION">Recolecci&oacute;n</option><option value="PICKING">Picking</option><option value="FACTURACION">Facturaci&oacute;n</option><option value="DISTRIBUCION">Distribuci&oacute;n</option></select>
-    <label>Ordenar:</label><select id="fOrden"><option value="urg">Urgencia (defecto)</option><option value="pend">Pendientes &darr;</option><option value="total">Total F8 &darr;</option><option value="nombre">Nombre A&ndash;Z</option></select>
+    <label>F. Entrega:</label><select id="fDiaEnt"><option value="">&mdash; Todos &mdash;</option><option value="1">Lunes</option><option value="2">Martes</option><option value="3">Mi&eacute;rcoles</option><option value="4">Jueves</option><option value="5">Viernes</option></select>
     <label>Triage:</label>
     <div class="tri-filtros" id="triFiltros">
       <button class="tri-f tri-f-ROJO"     data-tri="ROJO"><span class="tf-dot"></span>ROJO</button>
@@ -366,7 +366,7 @@ let macroFiltro='';   // filtro por tarjeta KPI (macro-etapa)
 let triFiltro='';     // filtro por chip de triage
 let diaFiltro='';
 let gsAtrAbierto=false;   // franja de atrasadas colapsada por defecto     // filtro por día de vencimiento (clic en grilla semanal)
-let ordenUE='urg';    // criterio de orden del acordeón de UEs
+
 const COLOR={};
 function isoHoy(){ const d=new Date(); d.setHours(0,0,0,0); return d.toISOString().slice(0,10); }
 function isoManana(){ const d=new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()+1); return d.toISOString().slice(0,10); }
@@ -433,8 +433,9 @@ function pintarBanda(){
   cuelloEtapa=maxK;
   const lbl=(MACROS.find(m=>m.clave===maxK)||{}).label||maxK;
   document.getElementById('ac_val').textContent=lbl+': '+maxV.toLocaleString();
-  // En UE con desabasto
-  const ss=base.filter(f=>f.sinStock).length;
+  // En UE con desabasto — solo PENDIENTES (las ya distribuidas salieron, no
+  // son problema vivo; contarlas inflaba el número, ej. 4712 vs 653).
+  const ss=base.filter(f=>f.sinStock && f.macro!=='DISTRIBUCION').length;
   document.getElementById('as_val').textContent=ss.toLocaleString();
   // OTIF reactivo: sobre F8 elegibles (despachadas, línea base >= mayo).
   // Ignora "solo pendiente": el OTIF SIEMPRE mide lo ya despachado, ese es su punto.
@@ -497,6 +498,7 @@ function limpiarFiltros(){
   document.getElementById('fGrupo').value='';
   document.getElementById('fUE').value='';
   { const el=document.getElementById('fTipo'); if(el) el.value=''; }
+  { const el=document.getElementById('fDiaEnt'); if(el) el.value=''; }
   { const el=document.getElementById('fEtapa'); if(el) el.value=''; }
   document.querySelectorAll('.tri-f').forEach(b=>b.classList.remove('on'));
   ['accVence','accStock','accCuello'].forEach(id=>document.getElementById(id).classList.remove('on'));
@@ -550,6 +552,16 @@ function barra(macro,total){
   return `<div class="prog">${MACROS.map(m=>{const v=macro[m.clave]||0; return v>0?`<span style="width:${v/t*100}%;background:${m.color}" title="${m.label}: ${v}"></span>`:'';}).join('')}</div>`;
 }
 function fVenc(s){ return s? s.slice(5).replace('-','/') : '\u2014'; }
+// Día de la semana de la F. Entrega (1=Lunes .. 7=Domingo), sin shift de zona
+// horaria: parseo la fecha ISO como fecha LOCAL. Devuelve 0 si no hay fecha.
+function diaSemanaEntrega_(f){
+  const s=String(f.fechaVencimiento||'').slice(0,10);
+  const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if(!m) return 0;
+  const d=new Date(+m[1], +m[2]-1, +m[3]);
+  const g=d.getDay();           // 0=Dom .. 6=Sáb
+  return g===0 ? 7 : g;         // 1=Lun .. 7=Dom
+}
 function filtrados(){
   const fg=document.getElementById('fGrupo').value;
   const fu=document.getElementById('fUE').value;
@@ -588,11 +600,13 @@ function rowsParaGrilla(){
   const fg=document.getElementById('fGrupo').value;
   const fu=document.getElementById('fUE').value;
   const ftEl=document.getElementById('fTipo'); const ft=ftEl?ftEl.value:'';
+  const fdEl=document.getElementById('fDiaEnt'); const fd=fdEl?fdEl.value:'';
   return F8.filter(f=>{
     if(fg && f.grupo!==fg) return false;
     if(triFiltro && f.triage!==triFiltro) return false;
     if(fu && f.ue!==fu) return false;
     if(ft && f.tipo!==ft) return false;
+    if(fd && String(diaSemanaEntrega_(f))!==fd) return false;   // filtro por día de entrega (1=Lun..5=Vie)
     if(f.noAsignada) return false;   // fuera del operativo
     { const feEl=document.getElementById('fEtapa'); const fe=feEl?feEl.value:''; if(fe && f.macro!==fe) return false; }
     if(soloPendiente && f.macro==='DISTRIBUCION') return false;
@@ -776,7 +790,7 @@ function renderGrilla(rows){
     const activo = diaFiltro===x.iso ? ' activo':'';
     const lbl=GS_DOW_LBL[x.d.getDay()];
     html+='<div class="gs-col'+esHoy+'">';
-    html+='<div class="gs-dia'+activo+'" onclick="abrirModalDia(\''+x.iso+'\')" title="Ver todos los pedidos de este d\u00eda">'+lbl+' '+gsFechaCorta(x.d)+'<span class="gs-cnt">'+totDia+'</span></div>';
+    html+='<div class="gs-dia'+activo+'" onclick="toggleDiaGrilla(\''+x.iso+'\')">'+lbl+' '+gsFechaCorta(x.d)+'<span class="gs-cnt">'+totDia+'</span></div>';
     html+='<div class="gs-body">';
     if(!claves.length){ html+='<div class="gs-vacio">&mdash;</div>'; }
     else claves.forEach(ue=>{ const o=ues[ue];
@@ -855,47 +869,6 @@ function abrirModalUE(ue, dia){
   document.getElementById('mBody').scrollTop=0;
   _abrir();
 }
-function abrirModalDia(iso){
-  // Vista agregada: TODOS los pedidos operativos que vencen ese d\u00eda, todas las
-  // UE juntas. Misma exclusi\u00f3n que el modal por UE: fuera Distribuci\u00f3n (ya sali\u00f3)
-  // y ceros por desabasto (viven en su propia vista).
-  let propios=F8.filter(f=>f.macro!=='DISTRIBUCION' && !f.noAsignada
-    && String(f.fechaVencimiento||'').slice(0,10)===iso);
-
-  const urg=propios.filter(f=>f.tipo==='URG').length;
-  const men=propios.length-urg;
-  const nUE=new Set(propios.map(f=>f.ue)).size;
-
-  document.getElementById('mTit').textContent='Vence '+iso;
-  document.getElementById('mSub').textContent=propios.length+' F8 \u00b7 '+nUE+' UE \u00b7 '
-    +urg+' urg / '+men+' mens';
-
-  let html='';
-  if(!propios.length){
-    html+='<div class="m-empty">No hay F8 que venzan este d\u00eda.</div>';
-    document.getElementById('mBody').innerHTML=html; _abrir(); return;
-  }
-
-  // Urgencias primero, luego por UE, luego por IPD desc.
-  html+='<table class="m-t"><thead><tr><th>Forma 8</th><th>UE</th><th>Grupo</th><th>Tipo</th><th>Etapa</th><th>IPD</th></tr></thead><tbody>';
-  propios.slice().sort((a,b)=>{
-    if((a.tipo==='URG')!==(b.tipo==='URG')) return a.tipo==='URG'?-1:1;
-    if(a.ue!==b.ue) return String(a.ue).localeCompare(String(b.ue));
-    return (b.ipd||0)-(a.ipd||0);
-  }).forEach(f=>{
-    html+='<tr><td class="mono">'+_esc(f.id)+'</td>'
-      +'<td>'+_esc(f.ue||'\u2014')+'</td>'
-      +'<td>'+_esc(f.grupo||'\u2014')+'</td>'
-      +'<td style="color:'+(f.tipo==='URG'?'#C00000':'#5a6b7a')+';font-weight:'+(f.tipo==='URG'?'700':'400')+'">'+_esc(f.tipo)+'</td>'
-      +'<td><span class="etapa-chip" style="background:'+_mColor(f.macro)+'">'+_esc(_mLabel(f.macro))+'</span></td>'
-      +'<td class="mono">'+(f.ipd!=null?Math.round(f.ipd):'\u2014')+'</td></tr>';
-  });
-  html+='</tbody></table>';
-
-  document.getElementById('mBody').innerHTML=html;
-  document.getElementById('mBody').scrollTop=0;
-  _abrir();
-}
 function _abrir(){ document.getElementById('modalBg').classList.add('open'); }
 function _cerrarModal(){ document.getElementById('modalBg').classList.remove('open'); }
 
@@ -926,10 +899,12 @@ function rpFiltrada_(){
   const fg=document.getElementById('fGrupo').value;
   const fu=document.getElementById('fUE').value;
   const ftEl=document.getElementById('fTipo'); const ft=ftEl?ftEl.value:'';
+  const fdEl=document.getElementById('fDiaEnt'); const fd=fdEl?fdEl.value:'';
   return F8.filter(f=>{
     if(fg && f.grupo!==fg) return false;
     if(fu && f.ue!==fu) return false;
     if(ft && f.tipo!==ft) return false;
+    if(fd && String(diaSemanaEntrega_(f))!==fd) return false;
     return true;
   });
 }
@@ -937,6 +912,29 @@ function rpOrden_(a,b){
   const da=(a.diasAtraso!=null)?a.diasAtraso:-1e9, db=(b.diasAtraso!=null)?b.diasAtraso:-1e9;
   if(da!==db) return db-da;
   return (b.ipd||0)-(a.ipd||0);
+}
+// Orden por columna en Reparto por fase (independiente del acordeón UE).
+let rpOrdenCol=null, rpOrdenDir=1;
+function rpOrdenarPor(col){
+  if(rpOrdenCol===col){ rpOrdenDir=-rpOrdenDir; }
+  else { rpOrdenCol=col; rpOrdenDir=1; }
+  renderReparto();
+}
+function rpOrdInd(col){
+  if(rpOrdenCol!==col) return '<span class="ord-i">\u21C5</span>';
+  return rpOrdenDir===1 ? '<span class="ord-i on">\u25B2</span>' : '<span class="ord-i on">\u25BC</span>';
+}
+function rpOrdenActivo_(a,b){
+  if(!rpOrdenCol) return rpOrden_(a,b);   // sin orden manual: prioridad por atraso
+  let va, vb;
+  if(rpOrdenCol==='diasAtraso'){
+    va=(a.diasAtraso!=null?a.diasAtraso:-1e9); vb=(b.diasAtraso!=null?b.diasAtraso:-1e9);
+    return (va-vb)*rpOrdenDir;
+  }
+  const MAP={id:'id',ue:'ue',grupo:'grupo',tipo:'tipo',fechaRecepcion:'fechaRecepcion',diasCrono:'diasCrono',fechaVencimiento:'fechaVencimiento'};
+  const key=MAP[rpOrdenCol]||rpOrdenCol;
+  va=String(a[key]==null?'':a[key]); vb=String(b[key]==null?'':b[key]);
+  return va.localeCompare(vb,'es')*rpOrdenDir;
 }
 function rpAtrasoTxt_(f){
   if(f.diasAtraso==null) return '\u2014';
@@ -972,10 +970,15 @@ function renderReparto(){
     html+='<div class="rp-cuerpo">';
     html+='<div class="rp-sub">'+atrasados+' atrasados &middot; priorizado: m\u00e1s atrasado primero &middot; responsable: '+_escNA(F.equipo)+'</div>';
     html+='<div class="rp-scroll"><table class="rp-t"><thead><tr>'
-      +'<th>Forma 8</th><th>Unidad Ejecutora</th><th>Grupo</th>'
-      +'<th style="text-align:right">Atraso</th><th>Tipo</th>'
-      +'<th>Recibida</th><th>D\u00eda cronograma</th><th>F. Entrega</th></tr></thead><tbody>';
-    lista.forEach(f=>{
+      +'<th class="ord" onclick="rpOrdenarPor(\'id\')">Forma 8'+rpOrdInd('id')+'</th>'
+      +'<th class="ord" onclick="rpOrdenarPor(\'ue\')">Unidad Ejecutora'+rpOrdInd('ue')+'</th>'
+      +'<th class="ord" onclick="rpOrdenarPor(\'grupo\')">Grupo'+rpOrdInd('grupo')+'</th>'
+      +'<th class="ord" style="text-align:right" onclick="rpOrdenarPor(\'diasAtraso\')">Atraso'+rpOrdInd('diasAtraso')+'</th>'
+      +'<th class="ord" onclick="rpOrdenarPor(\'tipo\')">Tipo'+rpOrdInd('tipo')+'</th>'
+      +'<th class="ord" onclick="rpOrdenarPor(\'fechaRecepcion\')">Recibida'+rpOrdInd('fechaRecepcion')+'</th>'
+      +'<th class="ord" onclick="rpOrdenarPor(\'diasCrono\')">D\u00eda cronograma'+rpOrdInd('diasCrono')+'</th>'
+      +'<th class="ord" onclick="rpOrdenarPor(\'fechaVencimiento\')">F. Entrega'+rpOrdInd('fechaVencimiento')+'</th></tr></thead><tbody>';
+    lista.slice().sort(rpOrdenActivo_).forEach(f=>{
       const atrColor=(f.diasAtraso!=null && f.diasAtraso>0)?'#C00000':'#5a6b7a';
       html+='<tr'+(f.tipo==='URG'?' class="urg"':'')+'>'
         +'<td class="mono">'+_escNA(f.id)+'</td>'
@@ -1086,7 +1089,6 @@ function renderNoAsignadas(){
 }
 
 function render(){
-  { const el=document.getElementById('fOrden'); if(el) ordenUE=el.value; }
   pintarBanda(); pintarKPIs();   // las tarjetas reaccionan al contexto (UE/grupo/triage/pendiente)
   const rows=filtrados();
   if(VISTA==='crono'){ renderGrilla(rowsParaGrilla()); return; }   // grilla semanal; el acordeón no se dibuja en esta vista
@@ -1108,11 +1110,8 @@ function render(){
     return {venc, rojo, pend:pendDe(macroDe(u.all))};
   }
   const ues=[...byUE.keys()].sort((a,b)=>{
-    if(ordenUE==='nombre') return a.localeCompare(b,'es');
     const ua=urgUE(byUE.get(a)), ub=urgUE(byUE.get(b));
-    if(ordenUE==='pend')  return ub.pend-ua.pend;
-    if(ordenUE==='total') return byUE.get(b).all.length-byUE.get(a).all.length;
-    // 'urg' (defecto): vencimientos hoy/mañana, luego ROJO, luego pendientes
+    // urgencia: vencimientos hoy/mañana, luego ROJO, luego pendientes
     if(ub.venc!==ua.venc) return ub.venc-ua.venc;
     if(ub.rojo!==ua.rojo) return ub.rojo-ua.rojo;
     return ub.pend-ua.pend;
@@ -1204,9 +1203,14 @@ document.getElementById('btnExpand').onclick=function(){
   expandAll=!expandAll;
   colapsoManual=!expandAll;   // colapsar => colapso total (incluye la primera UE)
   this.textContent=expandAll?'Colapsar todo':'Expandir todo';
+  // En vista Reparto por fase, el botón manda sobre TODOS los bolsones.
+  if(VISTA==='reparto'){
+    rpColapsado={};
+    if(!expandAll){ RP_FASES.forEach(F=>{ rpColapsado[F.clave]=true; }); }
+  }
   render();
 };
-['fGrupo','fUE','fTipo','fOrden','fEtapa'].forEach(id=>{const el=document.getElementById(id); if(el) el.onchange=render;});
+['fGrupo','fUE','fTipo','fDiaEnt','fEtapa'].forEach(id=>{const el=document.getElementById(id); if(el) el.onchange=render;});
 // chips de triage como filtro toggle (uno a la vez)
 document.querySelectorAll('.tri-f').forEach(btn=>{
   btn.onclick=function(){
