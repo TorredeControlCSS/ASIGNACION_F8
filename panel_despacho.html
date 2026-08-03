@@ -439,24 +439,48 @@ document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
 }));
 
 async function cargar(){
-  document.getElementById('listaCont').innerHTML='<div class="loading">Cargando pedidos…</div>';
+  const cont=document.getElementById('listaCont');
+  if(cont) cont.innerHTML='<div class="loading">Cargando pedidos…</div>';
+
+  // 1) FETCH — aquí sí puede fallar la RED. Si falla, es "sin conexión" de verdad.
   try{
-    DATA=await jsonp(WEBAPP+'?file=despacho_panel');
-    document.getElementById('subAct').textContent='Actualizado '+(DATA.generado||'');
+    DATA=await jsonp(WEBAPP+'?file=despacho_panel', 60000);
+  }catch(e){
+    if(cont) cont.innerHTML='<div class="vacio" style="color:#a32d2d">Sin conexión con el servidor. Reintenta. <span style="color:#888;font-size:11px">('+(e&&e.message?e.message:'error de red')+')</span></div>';
+    return;
+  }
+  if(DATA && DATA.avisoCache && (!DATA.pedidos || !DATA.pedidos.length)){
+    // Respuesta llegó pero sin caché lista. No es "sin conexión".
+    if(cont) cont.innerHTML='<div class="vacio" style="color:#8a5a00">'+esc(DATA.avisoCache)+'</div>';
+    return;
+  }
+
+  // 2) RENDER — si algo aquí falla, NO es la conexión: es el pintado. Cada
+  // acceso al DOM va protegido para que un elemento ausente no tumbe todo.
+  try{
+    const elSub=document.getElementById('subAct');
+    if(elSub) elSub.textContent='Actualizado '+(DATA.generado||'');
     renderKpis();
-    // T5 — WIP vs CERRADO. El contador decia 5,677 (todo el universo) mientras
-    // la lista mostraba solo los activos: 63% de esas filas son DESPACHADO, ya
-    // cerradas. Un tablero de trabajo debe contar lo que falta por hacer.
-    // Los cerrados siguen consultables filtrando por etapa DESPACHADO/ENTREGADO.
+
     var _todos = DATA.pedidos || [];
     var _wip = _todos.filter(function(p){ return !p.cerrado; }).length;
-    document.getElementById('cntLista').textContent = _wip;
-    document.getElementById('cntLista').title =
-      _wip.toLocaleString() + ' activos · ' + (_todos.length - _wip).toLocaleString() +
-      ' cerrados (filtra por etapa Despacho físico o Entregado para verlos)';
-    document.getElementById('cntTransito').textContent=(DATA.transito||[]).length;
+    const elCnt=document.getElementById('cntLista');
+    if(elCnt){
+      elCnt.textContent=_wip;
+      elCnt.title=_wip.toLocaleString()+' activos · '+(_todos.length-_wip).toLocaleString()+
+        ' cerrados (filtra por etapa Despacho físico o Entregado para verlos)';
+    }
+    const elTr=document.getElementById('cntTransito');   // este elemento puede no existir en el HTML
+    if(elTr) elTr.textContent=(DATA.transito||[]).length;
+
     renderLista();
-  }catch(e){ document.getElementById('listaCont').innerHTML='<div class="vacio" style="color:#a32d2d">Sin conexión. Reintenta.</div>'; }
+  }catch(e){
+    // Error de PINTADO, no de red. Se dice la causa real para poder depurar.
+    if(cont) cont.innerHTML='<div class="vacio" style="color:#a32d2d">Los datos llegaron ('+
+      ((DATA.pedidos||[]).length)+' pedidos) pero hubo un error al mostrarlos: <b>'+
+      esc(e&&e.message?e.message:String(e))+'</b>.<br><span style="font-size:11px;color:#888">Abre la consola (F12) para ver el detalle.</span></div>';
+    console.error('Error al renderizar el panel:', e);
+  }
 }
 
 function renderKpis(){
