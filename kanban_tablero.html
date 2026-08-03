@@ -121,7 +121,7 @@
   .m-grp-h{background:#eef3fa;padding:5px 10px;font-weight:700;font-size:12px;color:var(--azul,#0C447C);display:flex;align-items:center;gap:8px;}
   .m-grp-h .n{margin-left:auto;font-family:Consolas,monospace;font-size:11px;color:#5a6b7a;}
   table.m-t{width:100%;border-collapse:collapse;font-size:11px;}
-  table.m-t th{background:#f7f9fc;color:#5a6b7a;font-size:9px;text-transform:uppercase;padding:4px 8px;text-align:left;border-bottom:1px solid #e2e6ea;}
+  table.m-t th{background:#f7f9fc;color:#5a6b7a;font-size:9px;text-transform:uppercase;padding:4px 8px;text-align:left;border-bottom:1px solid #e2e6ea;position:sticky;top:0;z-index:1;}
   table.m-t td{padding:3px 8px;border-top:1px solid #f2f2f2;} table.m-t td.mono{font-family:Consolas,monospace;}
   .etapa-chip{display:inline-block;font-size:9px;font-weight:700;padding:1px 6px;border-radius:2px;color:#fff;}
   .m-empty{padding:24px;text-align:center;color:#999;}
@@ -798,8 +798,10 @@ function _mColor(mc){ const o=MACROS.find(x=>x.clave===mc); return o?o.color:'#8
 function _esc(s){ return String(s==null?'':s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c])); }
 
 function abrirModalUE(ue, dia){
-  // Base: pendientes de la UE (hasta FACTURACIÓN; Distribución es historia)
-  let propios=F8.filter(f=>f.ue===ue && f.macro!=='DISTRIBUCION');
+  // Base: pendientes OPERATIVOS de la UE. Excluye Distribución (ya salió, es
+  // historia) y los ceros por desabasto (noAsignada: viven en su propia vista,
+  // no cuentan como pendiente operativo — quedamos en eso).
+  let propios=F8.filter(f=>f.ue===ue && f.macro!=='DISTRIBUCION' && !f.noAsignada);
   // Si se hizo clic en un día concreto de la grilla, acotar a ESE día.
   let etiqDia='';
   if(dia){
@@ -864,16 +866,16 @@ function cambiarVista(v){
 }
 
 // ── Vista REPARTO POR FASE (modo Supervisor) ──────────────────────────
-// Bolsones de trabajo accionable por fase, priorizados por atraso. El
-// supervisor ve cada fase como un bolsón que reparte en el momento.
-// Fases accionables (el almacén las empuja): Recepción, Asignación,
-// Recolección (capturador), Picking (almacenista). Facturación se muestra
-// aparte como cuello con pelota de Cómputo.
+// Bolsones de trabajo por fase, priorizados por atraso. El supervisor es
+// dueño de que TODO el flujo avance, de principio a fin. Cada fase es un
+// bolsón que vigila y empuja, sin importar qué área la ejecuta (el capturador,
+// el almacenista, o Cómputo/SAFIRO en Facturación). Todas pesan igual.
 const RP_FASES=[
-  {clave:'RECEPCION',   label:'Recepción',   equipo:'Recepción',    color:'#5f5e58'},
-  {clave:'ASIGNACION',  label:'Asignación',  equipo:'Analista',     color:'#8a5810'},
-  {clave:'RECOLECCION', label:'Recolección', equipo:'Capturadores', color:'#1f6bb8'},
-  {clave:'PICKING',     label:'Picking',     equipo:'Almacenistas', color:'#5e3a91'}
+  {clave:'RECEPCION',   label:'Recepción',   equipo:'Recepción',     color:'#5f5e58'},
+  {clave:'ASIGNACION',  label:'Asignación',  equipo:'Analista',      color:'#8a5810'},
+  {clave:'RECOLECCION', label:'Recolección', equipo:'Capturadores',  color:'#1f6bb8'},
+  {clave:'PICKING',     label:'Picking',     equipo:'Almacenistas',  color:'#5e3a91'},
+  {clave:'FACTURACION', label:'Facturación', equipo:'SAP SAFIRO / Cómputo', color:'#4c7519'}
 ];
 function rpFiltrada_(){
   const fg=document.getElementById('fGrupo').value;
@@ -901,9 +903,9 @@ function renderReparto(){
   const cont=document.getElementById('listaReparto');
   if(!cont) return;
   const base=rpFiltrada_();
-  const totAcc=base.filter(f=>['RECEPCION','ASIGNACION','RECOLECCION','PICKING'].indexOf(f.macro)>=0).length;
+  const totAcc=base.filter(f=>['RECEPCION','ASIGNACION','RECOLECCION','PICKING','FACTURACION'].indexOf(f.macro)>=0).length;
   let html='<div class="rp-head">REPARTO DE TRABAJO POR FASE &mdash; '+totAcc.toLocaleString()
-    +' pedidos accionables. Cada bols\u00f3n, priorizado por atraso, es el trabajo de un equipo. El supervisor reparte e imprime la hoja de cada equipo.</div>';
+    +' pedidos en flujo. Cada bols\u00f3n, priorizado por atraso, es una etapa del proceso que el supervisor vigila y empuja. Reparte e imprime la hoja de cada equipo.</div>';
 
   RP_FASES.forEach(F=>{
     const lista=base.filter(f=>f.macro===F.clave).sort(rpOrden_);
@@ -915,7 +917,7 @@ function renderReparto(){
       +' &mdash; equipo: '+_escNA(F.equipo)
       +'<button class="rp-print" onclick="imprimirReparto(\''+F.clave+'\')" title="Imprimir hoja de este equipo">&#128424; Imprimir hoja</button>'
       +'<span class="rp-n">'+lista.length+' pedidos'+(urg?' &middot; '+urg+' urg':'')+'</span></div>';
-    html+='<div class="rp-sub">'+atrasados+' atrasados &middot; priorizado: m\u00e1s atrasado primero &middot; repartir entre '+_escNA(F.equipo.toLowerCase())+'</div>';
+    html+='<div class="rp-sub">'+atrasados+' atrasados &middot; priorizado: m\u00e1s atrasado primero &middot; responsable: '+_escNA(F.equipo)+'</div>';
     html+='<div class="rp-scroll"><table class="rp-t"><thead><tr>'
       +'<th>Forma 8</th><th>Unidad Ejecutora</th><th>Grupo</th>'
       +'<th style="text-align:right">Atraso</th><th>Tipo</th>'
@@ -935,14 +937,6 @@ function renderReparto(){
     html+='</tbody></table></div></div>';
   });
 
-  const fact=base.filter(f=>f.macro==='FACTURACION');
-  if(fact.length){
-    html+='<div class="rp-fase" style="opacity:.85">';
-    html+='<div class="rp-fase-h" style="background:#4c7519">Facturaci\u00f3n &mdash; cuello, pelota de C\u00f3mputo/SAFIRO'
-      +'<span class="rp-n">'+fact.length+' pedidos</span></div>';
-    html+='<div class="rp-sub">No es trabajo del piso: seguimiento con C\u00f3mputo. Se muestra para tener la foto completa.</div>';
-    html+='</div>';
-  }
   cont.innerHTML=html;
 }
 function imprimirReparto(claveFase){
