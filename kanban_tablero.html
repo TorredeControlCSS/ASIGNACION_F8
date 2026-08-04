@@ -390,8 +390,12 @@ async function pedir(params){
   if(!res.ok) throw new Error('HTTP '+res.status);
   return res.json();
 }
-async function cargar(){
-  document.getElementById('lista').innerHTML='<div class="loading">Cargando tablero&hellip;</div>';
+async function cargar(silencioso){
+  // Primera carga: muestra "Cargando". Auto-refresco (silencioso): NO borra la
+  // pantalla — actualiza los datos por detrás y repinta sin parpadeo.
+  if(!silencioso){
+    document.getElementById('lista').innerHTML='<div class="loading">Cargando tablero&hellip;</div>';
+  }
   document.getElementById('errBox').innerHTML='';
   try{
     const res=await pedir('file=kanban_tablero_almacen');
@@ -401,8 +405,12 @@ async function cargar(){
     document.getElementById('gen').innerHTML='Actualizado: '+(res.generado||'\u2014')+'<br>Hoy: '+(res.diaHoy||'\u2014')+' \u00b7 '+F8.length+' F8 activas';
     pintarLeyenda(); poblarFiltros(); render();
   }catch(err){
-    document.getElementById('errBox').innerHTML='<div class="err">No se pudo cargar el tablero: '+err.message+'.</div>';
-    document.getElementById('lista').innerHTML='';
+    // En refresco silencioso, un fallo de red NO borra lo que ya se ve:
+    // solo se registra; el usuario conserva los últimos datos buenos.
+    if(!silencioso){
+      document.getElementById('errBox').innerHTML='<div class="err">No se pudo cargar el tablero: '+err.message+'.</div>';
+      document.getElementById('lista').innerHTML='';
+    }
   }
 }
 function pintarLeyenda(){
@@ -1373,7 +1381,14 @@ document.getElementById('mX').onclick=_cerrarModal;
 document.getElementById('modalBg').onclick=function(e){ if(e.target===this) _cerrarModal(); };
 document.addEventListener('keydown',function(e){ if(e.key==='Escape') _cerrarModal(); });
 cargar();
-setInterval(cargar,180000);
+setInterval(function(){
+  // No refrescar si el usuario está en medio de editar una fecha comprometida:
+  // reconstruir la tabla le borraría lo que está escribiendo. Se salta este
+  // ciclo y refresca en el próximo.
+  var act=document.activeElement;
+  if(act && act.classList && act.classList.contains('comp-inp')) return;
+  cargar(true);
+}, 180000);   // refresco silencioso cada 3 min (sin parpadeo)
 </script>
 </body>
 </html>
