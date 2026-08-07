@@ -361,7 +361,7 @@
     <button class="vsw-btn" data-vista="reparto" onclick="cambiarVista('reparto')">Reparto por fase</button>
     <button class="vsw-btn" data-vista="crono" onclick="cambiarVista('crono')">Cronograma semanal</button>
     <button class="vsw-btn" data-vista="noasig" onclick="cambiarVista('noasig')">Cero por desabasto <span id="naBadge" style="font-family:Consolas;font-size:11px;opacity:.8"></span></button>
-    <button class="vsw-btn" data-vista="anulados" onclick="cambiarVista('anulados')">Anulados <span id="anBadge" style="font-family:Consolas;font-size:11px;opacity:.8"></span></button>
+    <button class="vsw-btn" data-vista="anulados" onclick="cambiarVista('anulados')">Retirados del ciclo <span id="anBadge" style="font-family:Consolas;font-size:11px;opacity:.8"></span></button>
   </div>
   <div class="leyenda" id="leyenda"></div>
   <div id="vistaCrono" style="display:none;"><div id="grillaSemanal"></div></div>
@@ -1052,13 +1052,13 @@ function renderReparto(){
       +'<th class="ord" onclick="rpOrdenarPor(\'id\')">Forma 8'+rpOrdInd('id')+'</th>'
       +'<th class="ord" onclick="rpOrdenarPor(\'ue\')">Unidad Ejecutora'+rpOrdInd('ue')+'</th>'
       +'<th class="ord" onclick="rpOrdenarPor(\'grupo\')">Grupo'+rpOrdInd('grupo')+'</th>'
-      +'<th class="ord" style="text-align:right" onclick="rpOrdenarPor(\'diasAtraso\')">Atraso'+rpOrdInd('diasAtraso')+'</th>'
+      +'<th class="ord" style="text-align:right" onclick="rpOrdenarPor(\'diasAtraso\')">D\u00edas para entrega'+rpOrdInd('diasAtraso')+'</th>'
       +'<th class="ord" onclick="rpOrdenarPor(\'tipo\')">Tipo'+rpOrdInd('tipo')+'</th>'
       +'<th class="ord" onclick="rpOrdenarPor(\'fechaRecepcion\')">Recibida'+rpOrdInd('fechaRecepcion')+'</th>'
       +'<th class="ord" onclick="rpOrdenarPor(\'diasCrono\')">D\u00eda cronograma'+rpOrdInd('diasCrono')+'</th>'
       +'<th class="ord" onclick="rpOrdenarPor(\'fechaVencimiento\')">F. Entrega'+rpOrdInd('fechaVencimiento')+'</th>'
       +'<th style="background:#0F6E56;color:#fff">F. comprometida</th>'
-      +'<th style="text-align:center;width:38px" title="Anular / sacar del flujo">Anular</th></tr></thead><tbody>';
+      +'<th style="text-align:center;width:70px" title="Retirar del ciclo (requiere Supervisor o Jefe)">Retirar del ciclo</th></tr></thead><tbody>';
     lista.slice().sort(rpOrdenActivo_).forEach(f=>{
       const atrColor=(f.diasAtraso!=null && f.diasAtraso>0)?'#C00000':'#5a6b7a';
       html+='<tr'+(f.tipo==='URG'?' class="urg"':'')+'>'
@@ -1074,7 +1074,7 @@ function renderReparto(){
           +'<input type="date" class="comp-inp" value="'+((f.fechaComprometida||'').slice(0,10))+'" '
           +'onchange="comprometerFecha(\''+_esc(f.id)+'\', this)" '
           +'title="'+(f.fechaComprometida?('Comprometida'+(f.comprometidaPor?(' por '+_esc(f.comprometidaPor)):'')):'Sin comprometer \u2014 usa la fecha estimada')+'"></td>'
-        +'<td style="text-align:center"><button class="btn-anular" onclick="anularPedido(\''+_esc(f.id)+'\')" title="Anular \u2014 sacar del flujo (requiere Supervisor o Jefe)">\u2715</button></td></tr>';
+        +'<td style="text-align:center"><button class="btn-anular" onclick="anularPedido(\''+_esc(f.id)+'\')" title="Retirar del ciclo (requiere Supervisor o Jefe)">\u2715</button></td></tr>';
     });
     html+='</tbody></table></div></div></div>';
   });
@@ -1125,12 +1125,12 @@ function recalcAtraso_(f){
 async function anularPedido(id){
   const f=F8.find(x=>String(x.id)===String(id));
   const ue=f?(' \\u00b7 '+f.ue):'';
-  const motivo=prompt('Anular pedido \\u2014 sacar del flujo activo.\n\nF8: '+id+ue+
+  const motivo=prompt('Retirar del ciclo \\u2014 sacar el pedido del flujo activo.\n\nF8: '+id+ue+
     '\n\nEscribe el MOTIVO (obligatorio). Este texto queda registrado:');
   if(motivo===null) return;                                  // canceló
   const mot=String(motivo).trim();
-  if(!mot){ alert('El motivo es obligatorio para anular.'); return; }
-  const pin=prompt('Autorización de Supervisor o Jefe.\n\nF8: '+id+'\nAcción: ANULAR\nMotivo: '+mot+
+  if(!mot){ alert('El motivo es obligatorio para retirar del ciclo.'); return; }
+  const pin=prompt('Autorización de Supervisor o Jefe.\n\nF8: '+id+'\nAcción: RETIRAR DEL CICLO\nMotivo: '+mot+
     '\n\nDigita tu PIN (últimos 4 de la cédula):');
   if(pin===null) return;
   const p=String(pin).trim();
@@ -1139,29 +1139,29 @@ async function anularPedido(id){
     const params='file=kanban_anular&id='+encodeURIComponent(id)+'&anular=SI'
       +'&motivo='+encodeURIComponent(mot)+'&pin='+encodeURIComponent(p);
     const res=await pedir(params);
-    if(!res||res.ok===false){ alert('No se anuló: '+((res&&res.msg)||'error')); return; }
+    if(!res||res.ok===false){ alert('No se retiró del ciclo: '+((res&&res.msg)||'error')); return; }
     // Actualización optimista: marcar en memoria y repintar sin esperar refresco.
     if(f){ f.anulado=true; f.anuladoPor=res.por||''; f.anuladoMotivo=mot;
            f.anuladoTs=(new Date()).toISOString().slice(0,16).replace('T',' '); }
     render();
-  }catch(err){ alert('Sin conexión al anular: '+err.message); }
+  }catch(err){ alert('Sin conexión al retirar del ciclo: '+err.message); }
 }
 
 async function reactivarPedido(id){
   const f=F8.find(x=>String(x.id)===String(id));
   const ue=f?(' \\u00b7 '+f.ue):'';
   const pin=prompt('Autorización de Supervisor o Jefe.\n\nF8: '+id+ue+
-    '\nAcción: REACTIVAR (devolver al flujo activo)\n\nDigita tu PIN (últimos 4 de la cédula):');
+    '\nAcción: DEVOLVER AL CICLO (reingresar al flujo activo)\n\nDigita tu PIN (últimos 4 de la cédula):');
   if(pin===null) return;
   const p=String(pin).trim();
   if(!/^\d{4}$/.test(p)){ alert('PIN inválido: deben ser 4 dígitos.'); return; }
   try{
     const params='file=kanban_anular&id='+encodeURIComponent(id)+'&anular=NO&pin='+encodeURIComponent(p);
     const res=await pedir(params);
-    if(!res||res.ok===false){ alert('No se reactivó: '+((res&&res.msg)||'error')); return; }
+    if(!res||res.ok===false){ alert('No se devolvió al ciclo: '+((res&&res.msg)||'error')); return; }
     if(f){ f.anulado=false; f.anuladoPor=''; f.anuladoMotivo=''; f.anuladoTs=''; }
     render();
-  }catch(err){ alert('Sin conexión al reactivar: '+err.message); }
+  }catch(err){ alert('Sin conexión al devolver al ciclo: '+err.message); }
 }
 
 function renderAnulados(){
@@ -1172,16 +1172,16 @@ function renderAnulados(){
   const lista=F8.filter(f=>f.anulado)
     .filter(f=>(!fg||f.grupo===fg) && (!fu||f.ue===fu))
     .sort((a,b)=>String(b.anuladoTs||'').localeCompare(String(a.anuladoTs||'')));
-  let html='<div class="an-head">PEDIDOS ANULADOS &mdash; '+lista.length.toLocaleString()
-    +' fuera del flujo activo. Cada uno penaliza el fill rate como no entregado. Un anulado no es un despacho: se sac\\u00f3 a prop\\u00f3sito y queda trazable. Puede reactivarse con autorizaci\\u00f3n.</div>';
+  let html='<div class="an-head">PEDIDOS RETIRADOS DEL CICLO &mdash; '+lista.length.toLocaleString()
+    +' fuera del flujo activo. Cada uno penaliza el fill rate como no entregado. Retirar no es despachar: se sac\\u00f3 a prop\\u00f3sito y queda trazable. Puede devolverse al ciclo con autorizaci\\u00f3n.</div>';
   if(!lista.length){
-    html+='<div class="an-vacio">No hay pedidos anulados'+((fg||fu)?' con los filtros actuales':'')+'.</div>';
+    html+='<div class="an-vacio">No hay pedidos retirados del ciclo'+((fg||fu)?' con los filtros actuales':'')+'.</div>';
     cont.innerHTML=html; return;
   }
   html+='<div class="an-sub">Filtrado por los mismos controles de Unidad Ejecutora y Grupo de la barra superior.</div>';
   html+='<div class="rp-scroll"><table class="an-t"><thead><tr>'
     +'<th>Forma 8</th><th>Unidad Ejecutora</th><th>Grupo</th><th>Tipo</th>'
-    +'<th>Motivo</th><th>Anulado por</th><th>Cuándo</th><th style="text-align:center">Reactivar</th>'
+    +'<th>Motivo</th><th>Retirado por</th><th>Cuándo</th><th style="text-align:center">Devolver al ciclo</th>'
     +'</tr></thead><tbody>';
   lista.forEach(f=>{
     html+='<tr>'
@@ -1192,7 +1192,7 @@ function renderAnulados(){
       +'<td class="motivo">'+_escNA(f.anuladoMotivo||'\\u2014')+'</td>'
       +'<td>'+_escNA(f.anuladoPor||'\\u2014')+'</td>'
       +'<td class="mono" style="font-size:10px">'+_escNA(f.anuladoTs||'\\u2014')+'</td>'
-      +'<td style="text-align:center"><button class="btn-react" onclick="reactivarPedido(\''+_esc(f.id)+'\')" title="Devolver al flujo activo (requiere Supervisor o Jefe)">\\u21BA Reactivar</button></td>'
+      +'<td style="text-align:center"><button class="btn-react" onclick="reactivarPedido(\''+_esc(f.id)+'\')" title="Devolver al ciclo (requiere Supervisor o Jefe)">\\u21BA Devolver al ciclo</button></td>'
       +'</tr>';
   });
   html+='</tbody></table></div>';
