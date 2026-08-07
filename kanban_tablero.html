@@ -60,6 +60,23 @@
   .toolbar .btn.pend-toggle.on{background:var(--azul2);color:#fff;box-shadow:inset 0 0 0 1px var(--azul2);}
   .toolbar .btn.pend-toggle.on::before{content:"\2713 ";font-weight:700;}
   .toolbar .spacer{flex:1;} .toolbar .count{font-size:11px;color:var(--sub);}
+  .buscador-wrap{position:relative;display:flex;align-items:center;}
+  #fBuscar{min-width:230px;padding:6px 26px 6px 9px;border:1px solid var(--azul2);font-size:12px;}
+  #fBuscar:focus{outline:none;border-color:var(--azul);box-shadow:0 0 0 2px rgba(12,68,124,.15);}
+  .busc-x{position:absolute;right:4px;top:50%;transform:translateY(-50%);border:none;background:none;color:#8a99a8;font-size:12px;cursor:pointer;padding:2px 4px;line-height:1;}
+  .busc-x:hover{color:#C00000;}
+  .busc-panel{position:absolute;top:calc(100% + 4px);left:0;z-index:50;width:520px;max-height:420px;overflow-y:auto;background:#fff;border:1px solid #a8a8a8;box-shadow:0 6px 18px rgba(0,0,0,.18);}
+  .busc-cab{background:var(--azul);color:#fff;font-size:11px;font-weight:700;padding:7px 11px;position:sticky;top:0;}
+  .busc-item{padding:9px 11px;border-bottom:1px solid #eef2f6;cursor:pointer;font-size:12px;}
+  .busc-item:last-child{border-bottom:none;}
+  .busc-item:hover{background:#eef3fa;}
+  .busc-item .bi-id{font-family:Consolas,monospace;font-weight:700;color:#0C447C;}
+  .busc-item .bi-ue{color:#333;}
+  .busc-item .bi-meta{font-size:10px;color:#5a6b7a;margin-top:3px;display:flex;flex-wrap:wrap;gap:4px 12px;}
+  .busc-item .bi-etapa{display:inline-block;padding:1px 7px;border-radius:3px;color:#fff;font-size:10px;font-weight:700;}
+  .busc-item .bi-ret{color:#7a2e2e;font-weight:700;}
+  .busc-vacio{padding:16px 11px;color:#5a6b7a;font-size:12px;text-align:center;}
+  .busc-mas{padding:7px 11px;font-size:10px;color:#5a6b7a;text-align:center;background:#f7f9fc;border-top:1px solid #eef2f6;}
   /* chips de triage como filtros clicables */
   .tri-filtros{display:inline-flex;gap:5px;}
   .tri-f{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:800;letter-spacing:.4px;
@@ -354,6 +371,11 @@
     <button class="btn sec" id="btnLimpiar">Limpiar filtros</button>
     <button class="btn sec" id="btnExpand">Expandir todo</button>
     <button class="btn sec" id="btnRefresh">&#8635; Actualizar</button>
+    <div class="buscador-wrap">
+      <input type="text" id="fBuscar" placeholder="Buscar Forma 8 o Unidad Ejecutora&hellip;" autocomplete="off" spellcheck="false">
+      <button class="busc-x" id="btnBuscarX" title="Limpiar b&uacute;squeda" style="display:none;">&#10005;</button>
+      <div class="busc-panel" id="buscPanel" style="display:none;"></div>
+    </div>
     <div class="spacer"></div><span class="count" id="cnt"></span>
   </div>
   <div class="vistas-sw">
@@ -534,6 +556,7 @@ function limpiarFiltros(){
   document.querySelectorAll('.tri-f').forEach(b=>b.classList.remove('on'));
   ['accVence','accStock','accCuello'].forEach(id=>document.getElementById(id).classList.remove('on'));
   MACROS.forEach(m=>{ const el=document.getElementById('kpi_'+m.clave); if(el) el.classList.remove('on'); });
+  { const b=document.getElementById('fBuscar'); if(b){ b.value=''; const bx=document.getElementById('btnBuscarX'); if(bx) bx.style.display='none'; const bp=document.getElementById('buscPanel'); if(bp){ bp.style.display='none'; bp.innerHTML=''; } } }
   render();
 }
 
@@ -1459,6 +1482,115 @@ function render(){
 }
 document.getElementById('btnRefresh').onclick=cargar;
 document.getElementById('btnLimpiar').onclick=limpiarFiltros;
+
+// ══════════════════════════════════════════════════════════════════════════
+//  BUSCADOR LOCALIZADOR (híbrido) — encuentra cualquier F8 entre todas las
+//  activas sin importar la vista. Busca por número de Forma 8 y por Unidad
+//  Ejecutora. Muestra un panel con las coincidencias y sus datos clave;
+//  incluye los retirados del ciclo (para depuración). Clic en un resultado
+//  abre el detalle del documento.
+// ══════════════════════════════════════════════════════════════════════════
+const BUSC_MAX=40;   // tope de resultados listados (evita paneles gigantes)
+function _buscNorm(s){ return String(s==null?'':s).trim().toUpperCase(); }
+function _etapaColor(f){
+  // color de la fase para el chip: usa el catálogo MACROS del backend.
+  const m=MACROS.find(x=>x.clave===f.macro);
+  return (m&&m.color) || '#5a6b7a';
+}
+function _etapaLabel(f){
+  const m=MACROS.find(x=>x.clave===f.macro);
+  return (m&&m.label) || f.macro || f.etapa || '\u2014';
+}
+function buscarDoc(){
+  const q=_buscNorm(document.getElementById('fBuscar').value);
+  const panel=document.getElementById('buscPanel');
+  const bx=document.getElementById('btnBuscarX');
+  bx.style.display = q ? '' : 'none';
+  if(!q){ panel.style.display='none'; panel.innerHTML=''; return; }
+
+  // Coincidencia por Forma 8 (contiene) o por Unidad Ejecutora (contiene).
+  const hits=F8.filter(f=> _buscNorm(f.id).indexOf(q)>=0 || _buscNorm(f.ue).indexOf(q)>=0 );
+  // Orden: primero coincidencias de F8 (más específicas), luego por UE.
+  hits.sort((a,b)=>{
+    const ai=_buscNorm(a.id).indexOf(q)>=0?0:1, bi=_buscNorm(b.id).indexOf(q)>=0?0:1;
+    if(ai!==bi) return ai-bi;
+    return _buscNorm(a.id).localeCompare(_buscNorm(b.id));
+  });
+
+  let html='<div class="busc-cab">'+hits.length.toLocaleString()+' resultado'+(hits.length===1?'':'s')
+    +' \u00b7 '+_esc(q)+'</div>';
+  if(!hits.length){
+    html+='<div class="busc-vacio">Ninguna Forma 8 o Unidad Ejecutora coincide con \u201c'+_esc(q)+'\u201d.</div>';
+    panel.innerHTML=html; panel.style.display=''; return;
+  }
+  hits.slice(0,BUSC_MAX).forEach(f=>{
+    const ret = f.anulado;
+    const etapaTxt = ret ? 'RETIRADO DEL CICLO' : _etapaLabel(f);
+    const etapaBg  = ret ? '#7a2e2e' : _etapaColor(f);
+    const venc = rpAtrasoTxt_(f);
+    const vencCol = (f.diasAtraso!=null && f.diasAtraso>=0) ? '#C00000' : '#5a6b7a';
+    let meta='<span class="bi-etapa" style="background:'+etapaBg+'">'+_escNA(etapaTxt)+'</span>'
+      +'<span>'+_escNA(f.tipo==='URG'?'Urgencia':'Mensual')+'</span>'
+      +'<span>Grupo: '+_escNA(f.grupo||'\u2014')+'</span>'
+      +'<span style="color:'+vencCol+'">Entrega: '+_escNA(venc)+'</span>';
+    if(ret && f.anuladoMotivo) meta+='<span class="bi-ret">Motivo: '+_escNA(f.anuladoMotivo)+'</span>';
+    html+='<div class="busc-item" onclick="verDoc(\''+_esc(f.id)+'\')">'
+      +'<div><span class="bi-id">'+_escNA(f.id)+'</span> &middot; <span class="bi-ue">'+_escNA(f.ue)+'</span></div>'
+      +'<div class="bi-meta">'+meta+'</div></div>';
+  });
+  if(hits.length>BUSC_MAX){
+    html+='<div class="busc-mas">Mostrando los primeros '+BUSC_MAX+' de '+hits.length.toLocaleString()
+      +'. Afina la b\u00fasqueda para ver el resto.</div>';
+  }
+  panel.innerHTML=html; panel.style.display='';
+}
+
+// Detalle del documento localizado — reusa el modal general.
+function verDoc(id){
+  const f=F8.find(x=>String(x.id)===String(id));
+  if(!f){ alert('Documento no encontrado: '+id); return; }
+  const ret=f.anulado;
+  document.getElementById('mTit').textContent=f.id;
+  document.getElementById('mSub').textContent=f.ue+(f.cedis?(' \u00b7 '+f.cedis):'');
+  const etapaTxt = ret ? 'RETIRADO DEL CICLO' : _etapaLabel(f);
+  const etapaBg  = ret ? '#7a2e2e' : _etapaColor(f);
+  const venc = rpAtrasoTxt_(f);
+  const vencCol = (f.diasAtraso!=null && f.diasAtraso>=0) ? '#C00000' : '#5a6b7a';
+  function fila(k,v,col){ return '<tr><td style="color:#5a6b7a;padding:5px 12px 5px 0;white-space:nowrap">'+k
+    +'</td><td style="padding:5px 0;font-weight:600'+(col?(';color:'+col):'')+'">'+v+'</td></tr>'; }
+  let body='<table style="font-size:12px;border-collapse:collapse;width:100%">';
+  body+=fila('Etapa actual','<span class="bi-etapa" style="background:'+etapaBg+'">'+_escNA(etapaTxt)+'</span>');
+  body+=fila('Tipo', _escNA(f.tipo==='URG'?'Urgencia':'Mensual'), f.tipo==='URG'?'#C00000':null);
+  body+=fila('Grupo', _escNA(f.grupo||'\u2014'));
+  body+=fila('Recibida', _escNA((f.fechaRecepcion||'\u2014').slice(0,10)));
+  body+=fila('F. entrega efectiva', _escNA((f.fechaVencimiento||'\u2014').slice(0,10)));
+  if(f.fechaComprometida) body+=fila('F. comprometida', _escNA(f.fechaComprometida.slice(0,10))+(f.comprometidaPor?(' \u00b7 '+_escNA(f.comprometidaPor)):''), '#0F6E56');
+  body+=fila('D\u00edas para entrega', _escNA(venc), vencCol);
+  body+=fila('Triage', _escNA(f.triageLabel||f.triage||'\u2014'));
+  if(ret){
+    body+=fila('Estado','<span class="bi-ret">RETIRADO DEL CICLO</span>','#7a2e2e');
+    if(f.anuladoMotivo) body+=fila('Motivo', _escNA(f.anuladoMotivo));
+    if(f.anuladoPor)    body+=fila('Retirado por', _escNA(f.anuladoPor));
+    if(f.anuladoTs)     body+=fila('Cu\u00e1ndo', _escNA(f.anuladoTs));
+  }
+  body+='</table>';
+  document.getElementById('mBody').innerHTML=body;
+  document.getElementById('modalBg').classList.add('open');
+  // cerrar el panel de búsqueda al abrir el detalle
+  document.getElementById('buscPanel').style.display='none';
+}
+
+document.getElementById('fBuscar').addEventListener('input', buscarDoc);
+document.getElementById('fBuscar').addEventListener('focus', function(){ if(this.value.trim()) buscarDoc(); });
+document.getElementById('btnBuscarX').onclick=function(){
+  const inp=document.getElementById('fBuscar'); inp.value=''; buscarDoc(); inp.focus();
+};
+// Cerrar el panel al hacer clic fuera del buscador.
+document.addEventListener('click', function(e){
+  const wrap=document.querySelector('.buscador-wrap');
+  if(wrap && !wrap.contains(e.target)) document.getElementById('buscPanel').style.display='none';
+});
+
 document.getElementById('btnPendiente').onclick=function(){
   soloPendiente=!soloPendiente;
   this.classList.toggle('on', soloPendiente);
@@ -1487,7 +1619,7 @@ document.querySelectorAll('.tri-f').forEach(btn=>{
 });
 document.getElementById('mX').onclick=_cerrarModal;
 document.getElementById('modalBg').onclick=function(e){ if(e.target===this) _cerrarModal(); };
-document.addEventListener('keydown',function(e){ if(e.key==='Escape') _cerrarModal(); });
+document.addEventListener('keydown',function(e){ if(e.key==='Escape'){ _cerrarModal(); const bp=document.getElementById('buscPanel'); if(bp) bp.style.display='none'; } });
 cargar();
 setInterval(function(){
   // No refrescar si el usuario está en medio de editar una fecha comprometida:
