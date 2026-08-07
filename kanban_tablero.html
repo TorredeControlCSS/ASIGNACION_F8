@@ -1017,9 +1017,9 @@ function rpOrdenActivo_(a,b){
 }
 function rpAtrasoTxt_(f){
   if(f.diasAtraso==null) return '\u2014';
-  if(f.diasAtraso>0) return f.diasAtraso+' d';
+  if(f.diasAtraso>0) return 'hace '+f.diasAtraso+' d';   // ya venció: pasado
   if(f.diasAtraso===0) return 'hoy';
-  return 'en '+(-f.diasAtraso)+' d';
+  return 'en '+(-f.diasAtraso)+' d';                      // aún hay margen: futuro
 }
 let rpColapsado={};   // fases colapsadas en la vista Reparto
 function rpToggle(clave){
@@ -1060,7 +1060,7 @@ function renderReparto(){
       +'<th style="background:#0F6E56;color:#fff">F. comprometida</th>'
       +'<th style="text-align:center;width:70px" title="Retirar del ciclo (requiere Supervisor o Jefe)">Retirar del ciclo</th></tr></thead><tbody>';
     lista.slice().sort(rpOrdenActivo_).forEach(f=>{
-      const atrColor=(f.diasAtraso!=null && f.diasAtraso>0)?'#C00000':'#5a6b7a';
+      const atrColor=(f.diasAtraso!=null && f.diasAtraso>=0)?'#C00000':'#5a6b7a';
       html+='<tr'+(f.tipo==='URG'?' class="urg"':'')+'>'
         +'<td class="mono">'+_escNA(f.id)+'</td>'
         +'<td>'+_escNA(f.ue)+'</td>'
