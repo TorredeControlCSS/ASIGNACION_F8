@@ -194,6 +194,21 @@
   .btn-react{border:1px solid #a8c2a8;background:#fff;color:#1c6b3a;font-size:11px;font-weight:700;padding:4px 10px;border-radius:4px;cursor:pointer;white-space:nowrap;}
   .btn-react:hover{background:#1c6b3a;color:#fff;border-color:#1c6b3a;}
   .an-vacio{padding:26px 14px;text-align:center;color:#5a6b7a;font-size:12px;}
+  .en-head{background:#0F6E56;color:#fff;padding:10px 14px;font-size:12px;font-weight:700;border-radius:4px 4px 0 0;}
+  .en-sub{font-size:11px;color:#5a6b7a;padding:6px 14px;background:#f2f8f5;border-bottom:1px solid #cfe6db;}
+  .en-secc{font-size:11px;font-weight:700;color:#0F6E56;padding:9px 14px 4px;text-transform:uppercase;letter-spacing:.03em;}
+  .en-secc.hecha{color:#5a6b7a;}
+  table.en-t{width:100%;border-collapse:collapse;font-size:11px;}
+  table.en-t th{background:#eef5f2;color:#0F6E56;font-size:9px;text-transform:uppercase;padding:5px 10px;text-align:left;border-bottom:1px solid #cfe6db;position:sticky;top:0;}
+  table.en-t td{padding:6px 10px;border-top:1px solid #f2f2f2;vertical-align:middle;}
+  table.en-t td.mono{font-family:Consolas,monospace;}
+  table.en-t tr.hecha td{color:#7a8a99;background:#fafcfb;}
+  .btn-entregar{border:1px solid #0F6E56;background:#0F6E56;color:#fff;font-size:11px;font-weight:700;padding:5px 12px;border-radius:4px;cursor:pointer;white-space:nowrap;}
+  .btn-entregar:hover{background:#0c5a46;border-color:#0c5a46;}
+  .btn-revertir{border:1px solid #c9b48a;background:#fff;color:#8a6d2f;font-size:10px;font-weight:700;padding:4px 9px;border-radius:4px;cursor:pointer;white-space:nowrap;}
+  .btn-revertir:hover{background:#8a6d2f;color:#fff;border-color:#8a6d2f;}
+  .en-ata{font-family:Consolas,monospace;color:#0F6E56;font-weight:700;}
+  .en-espera{font-family:Consolas,monospace;font-weight:700;}
   .rp-mas{padding:6px 14px;font-size:11px;color:#5a6b7a;background:#fafbfc;}
   .rp-print{margin-left:14px;background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.5);border-radius:2px;font-size:10px;padding:3px 8px;cursor:pointer;font-weight:700;}
   .m-print{background:var(--azul,#0C447C);color:#fff;border:none;border-radius:2px;font-size:11px;padding:5px 12px;cursor:pointer;font-weight:700;margin-bottom:10px;}
@@ -384,6 +399,7 @@
     <button class="vsw-btn" data-vista="crono" onclick="cambiarVista('crono')">Cronograma semanal</button>
     <button class="vsw-btn" data-vista="noasig" onclick="cambiarVista('noasig')">Cero por desabasto <span id="naBadge" style="font-family:Consolas;font-size:11px;opacity:.8"></span></button>
     <button class="vsw-btn" data-vista="anulados" onclick="cambiarVista('anulados')">Retirados del ciclo <span id="anBadge" style="font-family:Consolas;font-size:11px;opacity:.8"></span></button>
+    <button class="vsw-btn" data-vista="entregas" onclick="cambiarVista('entregas')">Entregas <span id="enBadge" style="font-family:Consolas;font-size:11px;opacity:.8"></span></button>
   </div>
   <div class="leyenda" id="leyenda"></div>
   <div id="vistaCrono" style="display:none;"><div id="grillaSemanal"></div></div>
@@ -391,6 +407,7 @@
   <div id="vistaReparto" style="display:none;"><div id="listaReparto"></div></div>
   <div id="vistaNoAsig" style="display:none;"><div id="listaNoAsig"></div></div>
   <div id="vistaAnulados" style="display:none;"><div id="listaAnulados"></div></div>
+  <div id="vistaEntregas" style="display:none;"><div id="listaEntregas"></div></div>
 </div>
 
 <!-- MODAL detalle por UE (vista Cronograma) -->
@@ -981,6 +998,7 @@ function cambiarVista(v){
   document.getElementById('vistaCrono').style.display  = (v==='crono') ? '' : 'none';
   document.getElementById('vistaNoAsig').style.display = (v==='noasig')? '' : 'none';
   document.getElementById('vistaAnulados').style.display = (v==='anulados')? '' : 'none';
+  document.getElementById('vistaEntregas').style.display = (v==='entregas')? '' : 'none';
   render();
 }
 
@@ -1223,6 +1241,146 @@ function renderAnulados(){
 }
 
 
+// ══════════════════════════════════════════════════════════════════════════
+//  ENTREGAS (Fase C) — confirmar la entrega real en la UE (ATA con fecha+hora).
+//  Es el evento que sigue al DESPACHO. La vista lista los pedidos que ya
+//  salieron del CEDIS (despachados) y aún no tienen entrega confirmada, y —
+//  en una sección aparte — los que ya se confirmaron, con su ATA y opción de
+//  revertir. Respeta los filtros de UE y Grupo de la barra superior.
+// ══════════════════════════════════════════════════════════════════════════
+function _diasDesde_(iso){
+  if(!iso) return null;
+  const s=String(iso).slice(0,10); const m=s.split('-');
+  if(m.length<3) return null;
+  const d=new Date(+m[0],+m[1]-1,+m[2]); const hoy=new Date(); hoy.setHours(0,0,0,0);
+  const n=Math.round((hoy-d)/86400000);
+  return isNaN(n)?null:n;
+}
+function _esperaTxt_(iso){
+  const n=_diasDesde_(iso);
+  if(n==null) return '\u2014';
+  if(n<=0) return 'hoy';
+  return 'hace '+n+' d';
+}
+function renderEntregas(){
+  const cont=document.getElementById('listaEntregas');
+  if(!cont) return;
+  const fg=document.getElementById('fGrupo').value;
+  const fu=document.getElementById('fUE').value;
+  const pasa=f=>(!fg||f.grupo===fg)&&(!fu||f.ue===fu)&&!f.anulado;
+  // Pendientes: despachados y no entregados. Los más viejos (más días de espera) arriba.
+  const pend=F8.filter(f=>f.despachado && !f.entregado).filter(pasa)
+    .sort((a,b)=>{ const da=_diasDesde_(a.fDespacho)||0, db=_diasDesde_(b.fDespacho)||0; return db-da; });
+  // Ya confirmadas: entregadas (con ATA). Las más recientes arriba.
+  const hechas=F8.filter(f=>f.entregado).filter(pasa)
+    .sort((a,b)=>String(b.fEntrega||'').localeCompare(String(a.fEntrega||'')));
+
+  let html='<div class="en-head">CONFIRMACI\u00d3N DE ENTREGA (ATA) &mdash; '+pend.length.toLocaleString()
+    +' pedido'+(pend.length===1?'':'s')+' despachado'+(pend.length===1?'':'s')+' esperan confirmaci\u00f3n de entrega en la UE. '
+    +'Registrar la entrega no la despacha: confirma que lleg\u00f3, con su fecha y hora reales.</div>';
+  html+='<div class="en-sub">Filtrado por los mismos controles de Unidad Ejecutora y Grupo de la barra superior.</div>';
+
+  if(!pend.length && !hechas.length){
+    html+='<div class="an-vacio">No hay pedidos despachados pendientes de confirmar entrega'+((fg||fu)?' con los filtros actuales':'')+'.</div>';
+    cont.innerHTML=html; return;
+  }
+
+  // ---- Sección: por confirmar ----
+  if(pend.length){
+    html+='<div class="en-secc">Por confirmar &middot; '+pend.length.toLocaleString()+'</div>';
+    html+='<div class="rp-scroll"><table class="en-t"><thead><tr>'
+      +'<th>Forma 8</th><th>Unidad Ejecutora</th><th>Grupo</th><th>Tipo</th>'
+      +'<th>Despachado</th><th>En espera</th><th style="text-align:center">Acci\u00f3n</th>'
+      +'</tr></thead><tbody>';
+    pend.forEach(f=>{
+      const esp=_diasDesde_(f.fDespacho);
+      const espCol=(esp!=null&&esp>=3)?'#C00000':'#5a6b7a';
+      html+='<tr>'
+        +'<td class="mono">'+_escNA(f.id)+'</td>'
+        +'<td>'+_escNA(f.ue)+'</td>'
+        +'<td>'+_escNA(f.grupo||'\u2014')+'</td>'
+        +'<td style="color:'+(f.tipo==='URG'?'#C00000':'#5a6b7a')+';font-weight:'+(f.tipo==='URG'?'700':'400')+'">'+_escNA(f.tipo)+'</td>'
+        +'<td class="mono">'+_escNA((f.fDespacho||'\u2014').slice(0,10))+'</td>'
+        +'<td class="en-espera" style="color:'+espCol+'">'+_escNA(_esperaTxt_(f.fDespacho))+'</td>'
+        +'<td style="text-align:center"><button class="btn-entregar" onclick="registrarEntrega(\''+_esc(f.id)+'\')" title="Registrar la entrega con fecha y hora reales (requiere PIN)">Registrar entrega</button></td>'
+        +'</tr>';
+    });
+    html+='</tbody></table></div>';
+  }
+
+  // ---- Sección: ya confirmadas ----
+  if(hechas.length){
+    html+='<div class="en-secc hecha">Ya confirmadas &middot; '+hechas.length.toLocaleString()+'</div>';
+    html+='<div class="rp-scroll"><table class="en-t"><thead><tr>'
+      +'<th>Forma 8</th><th>Unidad Ejecutora</th><th>Grupo</th><th>Tipo</th>'
+      +'<th>Entregado (ATA)</th><th style="text-align:center">Acci\u00f3n</th>'
+      +'</tr></thead><tbody>';
+    hechas.forEach(f=>{
+      html+='<tr class="hecha">'
+        +'<td class="mono">'+_escNA(f.id)+'</td>'
+        +'<td>'+_escNA(f.ue)+'</td>'
+        +'<td>'+_escNA(f.grupo||'\u2014')+'</td>'
+        +'<td>'+_escNA(f.tipo)+'</td>'
+        +'<td class="en-ata">'+_escNA(f.fEntrega||'\u2014')+'</td>'
+        +'<td style="text-align:center"><button class="btn-revertir" onclick="revertirEntrega(\''+_esc(f.id)+'\')" title="Deshacer la entrega (marcada por error)">Revertir</button></td>'
+        +'</tr>';
+    });
+    html+='</tbody></table></div>';
+  }
+  cont.innerHTML=html;
+}
+
+// Diálogo de fecha+hora prellenada en "ahora", editable, y PIN. El ATA fiel es
+// la hora real de entrega, no la de captura: por eso se puede ajustar.
+async function registrarEntrega(id){
+  const f=F8.find(x=>String(x.id)===String(id));
+  const ue=f?(' \u00b7 '+f.ue):'';
+  // Prellenar "ahora" en formato yyyy-MM-ddTHH:mm (hora local).
+  const d=new Date(); d.setSeconds(0,0);
+  const pad=n=>String(n).padStart(2,'0');
+  const ahora=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes());
+  const ata=prompt('Registrar ENTREGA en la UE (ATA).\n\nF8: '+id+ue+
+    '\n\nFecha y hora REALES de la entrega (ajusta si no fue ahora).\nFormato: AAAA-MM-DD HH:MM', ahora.replace('T',' '));
+  if(ata===null) return;
+  const ataN=String(ata).trim().replace(' ','T');
+  if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(ataN)){
+    alert('Formato inv\u00e1lido. Usa AAAA-MM-DD HH:MM (ej. 2026-08-07 15:30).'); return;
+  }
+  const pin=prompt('Autorizaci\u00f3n (quien distribuye, Supervisor o Jefe).\n\nF8: '+id+
+    '\nEntrega: '+ata+
+    '\n\nDigita tu PIN (\u00faltimos 4 de la c\u00e9dula):');
+  if(pin===null) return;
+  const p=String(pin).trim();
+  if(!/^\d{4}$/.test(p)){ alert('PIN inv\u00e1lido: deben ser 4 d\u00edgitos.'); return; }
+  try{
+    const params='file=kanban_entregar&id='+encodeURIComponent(id)+'&entregar=SI'
+      +'&ata='+encodeURIComponent(ataN)+'&pin='+encodeURIComponent(p);
+    const res=await pedir(params);
+    if(!res||res.ok===false){ alert('No se registr\u00f3 la entrega: '+((res&&res.msg)||'error')); return; }
+    // Optimista: marcar en memoria y repintar.
+    if(f){ f.entregado=true; f.fEntrega=res.ata||ataN.replace('T',' '); }
+    render();
+  }catch(err){ alert('Sin conexi\u00f3n al registrar la entrega: '+err.message); }
+}
+
+async function revertirEntrega(id){
+  const f=F8.find(x=>String(x.id)===String(id));
+  const ue=f?(' \u00b7 '+f.ue):'';
+  const pin=prompt('Deshacer la entrega (marcada por error).\n\nF8: '+id+ue+
+    '\n\nDigita tu PIN (\u00faltimos 4 de la c\u00e9dula):');
+  if(pin===null) return;
+  const p=String(pin).trim();
+  if(!/^\d{4}$/.test(p)){ alert('PIN inv\u00e1lido: deben ser 4 d\u00edgitos.'); return; }
+  try{
+    const params='file=kanban_entregar&id='+encodeURIComponent(id)+'&entregar=NO&pin='+encodeURIComponent(p);
+    const res=await pedir(params);
+    if(!res||res.ok===false){ alert('No se revirti\u00f3: '+((res&&res.msg)||'error')); return; }
+    if(f){ f.entregado=false; f.fEntrega=''; }
+    render();
+  }catch(err){ alert('Sin conexi\u00f3n al revertir: '+err.message); }
+}
+
+
 function imprimirReparto(claveFase){
   const F=RP_FASES.find(x=>x.clave===claveFase); if(!F) return;
   const base=rpFiltrada_();
@@ -1377,11 +1535,15 @@ function render(){
   // Badge de Anulados: se actualiza siempre, se vea la vista que se vea.
   const nAn=F8.filter(f=>f.anulado).length;
   const ab=document.getElementById('anBadge'); if(ab) ab.textContent=nAn?('('+nAn+')'):'';
+  // Badge de Entregas: pendientes por confirmar (despachados, no entregados, no retirados).
+  const nEn=F8.filter(f=>f.despachado && !f.entregado && !f.anulado).length;
+  const eb=document.getElementById('enBadge'); if(eb) eb.textContent=nEn?('('+nEn+')'):'';
   const rows=filtrados();
   if(VISTA==='crono'){ renderGrilla(rowsParaGrilla()); return; }   // grilla semanal; el acordeón no se dibuja en esta vista
   if(VISTA==='reparto'){ renderReparto(); return; }                // bolsones por fase para repartir trabajo (modo Supervisor)
   if(VISTA==='noasig'){ renderNoAsignadas(); return; }             // sección independiente de F8 con cero por desabasto
   if(VISTA==='anulados'){ renderAnulados(); return; }              // pedidos sacados del flujo (Fase B)
+  if(VISTA==='entregas'){ renderEntregas(); return; }              // confirmar entrega en UE / ATA (Fase C)
   const cont=document.getElementById('lista');
   if(!rows.length){cont.innerHTML='<div class="empty">No hay Formas 8 con este filtro.</div>';document.getElementById('cnt').textContent='0 UE';return;}
   const byUE=new Map();
@@ -1572,6 +1734,14 @@ function verDoc(id){
     if(f.anuladoMotivo) body+=fila('Motivo', _escNA(f.anuladoMotivo));
     if(f.anuladoPor)    body+=fila('Retirado por', _escNA(f.anuladoPor));
     if(f.anuladoTs)     body+=fila('Cu\u00e1ndo', _escNA(f.anuladoTs));
+  }
+  // Fase C — estado de entrega en el detalle.
+  if(!ret){
+    if(f.entregado){
+      body+=fila('Entrega (ATA)','<span class="en-ata">'+_escNA(f.fEntrega||'\u2014')+'</span>','#0F6E56');
+    }else if(f.despachado){
+      body+=fila('Entrega','<button class="btn-entregar" onclick="_cerrarModal();registrarEntrega(\''+_esc(f.id)+'\')">Registrar entrega</button>');
+    }
   }
   body+='</table>';
   document.getElementById('mBody').innerHTML=body;
