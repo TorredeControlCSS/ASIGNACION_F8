@@ -209,6 +209,16 @@
   .btn-revertir:hover{background:#8a6d2f;color:#fff;border-color:#8a6d2f;}
   .en-ata{font-family:Consolas,monospace;color:#0F6E56;font-weight:700;}
   .en-espera{font-family:Consolas,monospace;font-weight:700;}
+  .en-form-row{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid #eef2f6;font-size:12px;}
+  .en-form-lbl{color:#5a6b7a;} .en-form-val{font-weight:600;text-align:right;}
+  .en-form-hint{font-size:11px;color:#5a6b7a;background:#f2f8f5;border:1px solid #cfe6db;padding:8px 10px;border-radius:4px;margin:12px 0;line-height:1.45;}
+  .en-form-grid{display:flex;gap:12px;margin-bottom:10px;}
+  .en-form-grid>div{flex:1;}
+  .en-form-lbl2{display:block;font-size:10px;color:#5a6b7a;text-transform:uppercase;letter-spacing:.03em;margin-bottom:3px;}
+  .en-form-grid input{width:100%;padding:7px 8px;border:1px solid #a8a8a8;font-size:13px;font-family:Consolas,monospace;box-sizing:border-box;}
+  .en-form-grid input:focus{outline:none;border-color:#0F6E56;box-shadow:0 0 0 2px rgba(15,110,86,.15);}
+  .en-form-err{color:#C00000;font-size:11px;font-weight:600;min-height:15px;margin:2px 0 8px;}
+  .en-form-btns{display:flex;justify-content:flex-end;gap:8px;margin-top:6px;}
   .rp-mas{padding:6px 14px;font-size:11px;color:#5a6b7a;background:#fafbfc;}
   .rp-print{margin-left:14px;background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.5);border-radius:2px;font-size:10px;padding:3px 8px;cursor:pointer;font-weight:700;}
   .m-print{background:var(--azul,#0C447C);color:#fff;border:none;border-radius:2px;font-size:11px;padding:5px 12px;cursor:pointer;font-weight:700;margin-bottom:10px;}
@@ -415,6 +425,31 @@
   <div class="modal">
     <div class="mh"><div><div class="mt" id="mTit">Unidad Ejecutora</div><div class="msub" id="mSub"></div></div><span class="x" id="mX">&#10005;</span></div>
     <div class="mb" id="mBody"></div>
+  </div>
+</div>
+
+<!-- Modal de ENTREGA (Fase C) — registra el ATA con fecha+hora separadas + PIN.
+     Estética del panel de confirmación de cita del SÍGUELO. -->
+<div class="modal-bg" id="entregaBg">
+  <div class="modal" style="max-width:460px;">
+    <div class="mh"><div><div class="mt">Registrar entrega en la UE</div><div class="msub" id="enModSub"></div></div><span class="x" id="enModX">&#10005;</span></div>
+    <div class="mb">
+      <div class="en-form-row"><span class="en-form-lbl">Forma 8</span><span class="en-form-val mono" id="enModF8">&mdash;</span></div>
+      <div class="en-form-row"><span class="en-form-lbl">Unidad Ejecutora</span><span class="en-form-val" id="enModUE">&mdash;</span></div>
+      <div class="en-form-hint">Fecha y hora <b>reales</b> de la entrega. Vienen prellenadas en &ldquo;ahora&rdquo;; aj&uacute;stalas si la entrega ocurri&oacute; en otro momento.</div>
+      <div class="en-form-grid">
+        <div><label class="en-form-lbl2">Fecha de entrega</label><input type="date" id="enModFecha"></div>
+        <div><label class="en-form-lbl2">Hora de entrega</label><input type="time" id="enModHora"></div>
+      </div>
+      <div class="en-form-grid">
+        <div><label class="en-form-lbl2">PIN (quien distribuye, Supervisor o Jefe)</label><input type="password" id="enModPin" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="&#9679;&#9679;&#9679;&#9679;"></div>
+      </div>
+      <div class="en-form-err" id="enModErr"></div>
+      <div class="en-form-btns">
+        <button class="btn sec" id="enModCancel">Cancelar</button>
+        <button class="btn" id="enModOk" style="background:#0F6E56;border-color:#0F6E56;">Confirmar entrega</button>
+      </div>
+    </div>
   </div>
 </div>
 <script>
@@ -1330,37 +1365,44 @@ function renderEntregas(){
   cont.innerHTML=html;
 }
 
-// Diálogo de fecha+hora prellenada en "ahora", editable, y PIN. El ATA fiel es
-// la hora real de entrega, no la de captura: por eso se puede ajustar.
-async function registrarEntrega(id){
+// Abre el modal de entrega prellenado en "ahora". La confirmación (fecha+hora
+// editables + PIN) la resuelve _enModConfirmar_ al pulsar el botón.
+let _enModId=null;
+function registrarEntrega(id){
   const f=F8.find(x=>String(x.id)===String(id));
-  const ue=f?(' \u00b7 '+f.ue):'';
-  // Prellenar "ahora" en formato yyyy-MM-ddTHH:mm (hora local).
+  _enModId=id;
   const d=new Date(); d.setSeconds(0,0);
   const pad=n=>String(n).padStart(2,'0');
-  const ahora=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes());
-  const ata=prompt('Registrar ENTREGA en la UE (ATA).\n\nF8: '+id+ue+
-    '\n\nFecha y hora REALES de la entrega (ajusta si no fue ahora).\nFormato: AAAA-MM-DD HH:MM', ahora.replace('T',' '));
-  if(ata===null) return;
-  const ataN=String(ata).trim().replace(' ','T');
-  if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(ataN)){
-    alert('Formato inv\u00e1lido. Usa AAAA-MM-DD HH:MM (ej. 2026-08-07 15:30).'); return;
-  }
-  const pin=prompt('Autorizaci\u00f3n (quien distribuye, Supervisor o Jefe).\n\nF8: '+id+
-    '\nEntrega: '+ata+
-    '\n\nDigita tu PIN (\u00faltimos 4 de la c\u00e9dula):');
-  if(pin===null) return;
-  const p=String(pin).trim();
-  if(!/^\d{4}$/.test(p)){ alert('PIN inv\u00e1lido: deben ser 4 d\u00edgitos.'); return; }
+  document.getElementById('enModF8').textContent=id;
+  document.getElementById('enModUE').textContent=f?f.ue:'\u2014';
+  document.getElementById('enModSub').textContent=f?(f.grupo||''):'';
+  document.getElementById('enModFecha').value=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+  document.getElementById('enModHora').value=pad(d.getHours())+':'+pad(d.getMinutes());
+  document.getElementById('enModPin').value='';
+  document.getElementById('enModErr').textContent='';
+  document.getElementById('entregaBg').classList.add('open');
+  setTimeout(()=>{ const el=document.getElementById('enModFecha'); if(el) el.focus(); },50);
+}
+function _enModCerrar(){ document.getElementById('entregaBg').classList.remove('open'); _enModId=null; }
+async function _enModConfirmar(){
+  const id=_enModId; if(!id) return;
+  const fecha=document.getElementById('enModFecha').value;
+  const hora=document.getElementById('enModHora').value;
+  const pin=String(document.getElementById('enModPin').value||'').trim();
+  const err=document.getElementById('enModErr');
+  if(!fecha || !hora){ err.textContent='Indica la fecha y la hora de la entrega.'; return; }
+  if(!/^\d{4}$/.test(pin)){ err.textContent='El PIN son 4 d\u00edgitos.'; return; }
+  const ataN=fecha+'T'+hora;   // yyyy-MM-ddTHH:mm
+  const f=F8.find(x=>String(x.id)===String(id));
+  const btn=document.getElementById('enModOk'); btn.disabled=true; err.textContent='';
   try{
     const params='file=kanban_entregar&id='+encodeURIComponent(id)+'&entregar=SI'
-      +'&ata='+encodeURIComponent(ataN)+'&pin='+encodeURIComponent(p);
+      +'&ata='+encodeURIComponent(ataN)+'&pin='+encodeURIComponent(pin);
     const res=await pedir(params);
-    if(!res||res.ok===false){ alert('No se registr\u00f3 la entrega: '+((res&&res.msg)||'error')); return; }
-    // Optimista: marcar en memoria y repintar.
+    if(!res||res.ok===false){ err.textContent=(res&&res.msg)||'No se registr\u00f3 la entrega.'; btn.disabled=false; return; }
     if(f){ f.entregado=true; f.fEntrega=res.ata||ataN.replace('T',' '); }
-    render();
-  }catch(err){ alert('Sin conexi\u00f3n al registrar la entrega: '+err.message); }
+    _enModCerrar(); render();
+  }catch(ex){ err.textContent='Sin conexi\u00f3n al registrar la entrega.'; btn.disabled=false; }
 }
 
 async function revertirEntrega(id){
@@ -1789,7 +1831,13 @@ document.querySelectorAll('.tri-f').forEach(btn=>{
 });
 document.getElementById('mX').onclick=_cerrarModal;
 document.getElementById('modalBg').onclick=function(e){ if(e.target===this) _cerrarModal(); };
-document.addEventListener('keydown',function(e){ if(e.key==='Escape'){ _cerrarModal(); const bp=document.getElementById('buscPanel'); if(bp) bp.style.display='none'; } });
+// Modal de entrega (Fase C)
+document.getElementById('enModX').onclick=_enModCerrar;
+document.getElementById('enModCancel').onclick=_enModCerrar;
+document.getElementById('enModOk').onclick=_enModConfirmar;
+document.getElementById('entregaBg').onclick=function(e){ if(e.target===this) _enModCerrar(); };
+document.getElementById('enModPin').addEventListener('keydown',function(e){ if(e.key==='Enter') _enModConfirmar(); });
+document.addEventListener('keydown',function(e){ if(e.key==='Escape'){ _cerrarModal(); _enModCerrar(); const bp=document.getElementById('buscPanel'); if(bp) bp.style.display='none'; } });
 cargar();
 setInterval(function(){
   // No refrescar si el usuario está en medio de editar una fecha comprometida:
