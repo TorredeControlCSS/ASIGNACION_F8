@@ -184,6 +184,10 @@
   td.rp-comp.tiene .comp-inp{border-color:#0F6E56;color:#0F6E56;font-weight:700;}
   .btn-anular{border:1px solid #d8b0b0;background:#fff;color:#C00000;font-size:12px;font-weight:700;line-height:1;width:26px;height:26px;border-radius:4px;cursor:pointer;padding:0;}
   .btn-anular:hover{background:#C00000;color:#fff;border-color:#C00000;}
+  .btn-sanear{border:1px solid #0C447C;background:#fff;color:#0C447C;font-size:11px;font-weight:700;line-height:1;border-radius:4px;cursor:pointer;padding:5px 7px;margin-right:4px;}
+  .btn-sanear:hover{background:#0C447C;color:#fff;}
+  .btn-entregadohoy{border:1px solid #0F6E56;background:#fff;color:#0F6E56;font-size:11px;font-weight:700;line-height:1;border-radius:4px;cursor:pointer;padding:5px 7px;margin-right:4px;}
+  .btn-entregadohoy:hover{background:#0F6E56;color:#fff;}
   .an-head{background:#7a2e2e;color:#fff;padding:10px 14px;font-size:12px;font-weight:700;border-radius:4px 4px 0 0;}
   .an-sub{font-size:11px;color:#5a6b7a;padding:6px 14px;background:#faf3f3;border-bottom:1px solid #e7d5d5;}
   table.an-t{width:100%;border-collapse:collapse;font-size:11px;}
@@ -1134,7 +1138,7 @@ function renderReparto(){
       +'<th class="ord" onclick="rpOrdenarPor(\'diasCrono\')">D\u00eda cronograma'+rpOrdInd('diasCrono')+'</th>'
       +'<th class="ord" onclick="rpOrdenarPor(\'fechaVencimiento\')">F. Entrega'+rpOrdInd('fechaVencimiento')+'</th>'
       +'<th style="background:#0F6E56;color:#fff">F. comprometida</th>'
-      +'<th style="text-align:center;width:70px" title="Retirar del ciclo (requiere Supervisor o Jefe)">Retirar del ciclo</th></tr></thead><tbody>';
+      +'<th style="text-align:center;width:220px" title="Saneamiento y acciones (requiere Supervisor o Jefe)">Acciones (Supervisor)</th></tr></thead><tbody>';
     lista.slice().sort(rpOrdenActivo_).forEach(f=>{
       const atrColor=(f.diasAtraso!=null && f.diasAtraso>=0)?'#C00000':'#5a6b7a';
       html+='<tr'+(f.tipo==='URG'?' class="urg"':'')+'>'
@@ -1150,7 +1154,11 @@ function renderReparto(){
           +'<input type="date" class="comp-inp" value="'+((f.fechaComprometida||'').slice(0,10))+'" '
           +'onchange="comprometerFecha(\''+_esc(f.id)+'\', this)" '
           +'title="'+(f.fechaComprometida?('Comprometida'+(f.comprometidaPor?(' por '+_esc(f.comprometidaPor)):'')):'Sin comprometer \u2014 usa la fecha estimada')+'"></td>'
-        +'<td style="text-align:center"><button class="btn-anular" onclick="anularPedido(\''+_esc(f.id)+'\')" title="Retirar del ciclo (requiere Supervisor o Jefe)">\u2715</button></td></tr>';
+        +'<td style="text-align:center;white-space:nowrap">'
+          +'<button class="btn-sanear" onclick="sanearDesdeFila(\''+_esc(f.id)+'\')" title="Registrar una etapa que qued\u00f3 sin marcar (Supervisor o Jefe)">\ud83d\udd27 Sanear</button>'
+          +'<button class="btn-entregadohoy" onclick="entregadoHoy(\''+_esc(f.id)+'\')" title="Marcar como entregado HOY en un clic (Supervisor o Jefe)">\u2713 Entregado hoy</button>'
+          +'<button class="btn-anular" onclick="anularPedido(\''+_esc(f.id)+'\')" title="Retirar del ciclo (requiere Supervisor o Jefe)">\u2715</button>'
+        +'</td></tr>';
     });
     html+='</tbody></table></div></div></div>';
   });
@@ -1818,6 +1826,33 @@ async function llmMuerto(id){
     msg.style.color='#1c6b3a'; msg.textContent='Pedido declarado muerto. Por '+(res.por||'')+'.';
     setTimeout(()=>{ _cerrarModal(); cargar(true); }, 1200);
   }catch(ex){ msg.style.color='#C00000'; msg.textContent='Sin conexi\u00f3n.'; }
+}
+
+// Desde una fila del tablero: abre el detalle del pedido, que ya trae la
+// sección de saneamiento. Así el supervisor no tiene que buscar el número.
+function sanearDesdeFila(id){ verDoc(id); }
+
+// Atajo de un clic: marca el pedido como ENTREGADO con la fecha de HOY.
+// Para el caso frecuente (la UE retiró hoy). Pide PIN una sola vez.
+async function entregadoHoy(id){
+  const f=F8.find(x=>String(x.id)===String(id));
+  const ue=f?(' \u00b7 '+f.ue):'';
+  const pin=prompt('Marcar ENTREGADO HOY (la UE retir\u00f3/recibi\u00f3).\n\nF8: '+id+ue+
+    '\n\nDigita tu PIN de Supervisor o Jefe (4 d\u00edgitos):');
+  if(pin===null) return;
+  if(!/^\d{4}$/.test(String(pin).trim())){ alert('El PIN son 4 d\u00edgitos.'); return; }
+  try{
+    const hoy=new Date();
+    const yyyy=hoy.getFullYear(), mm=String(hoy.getMonth()+1).padStart(2,'0'), dd=String(hoy.getDate()).padStart(2,'0');
+    const fechaHoy=yyyy+'-'+mm+'-'+dd;
+    const params='file=kb_llave_hito&id='+encodeURIComponent(id)+'&etapa=ENTREGADO'
+      +'&fecha='+encodeURIComponent(fechaHoy)+'&pin='+encodeURIComponent(String(pin).trim())
+      +'&nota='+encodeURIComponent('Entregado hoy (atajo)');
+    const res=await pedir(params);
+    if(!res||res.ok===false){ alert((res&&res.msg)||'No se pudo registrar.'); return; }
+    if(f){ f.entregado=true; }
+    cargar(true);
+  }catch(ex){ alert('Sin conexi\u00f3n al registrar.'); }
 }
 
 // Detalle del documento localizado — reusa el modal general.
