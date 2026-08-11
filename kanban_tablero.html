@@ -1749,6 +1749,77 @@ function buscarDoc(){
   panel.innerHTML=html; panel.style.display='';
 }
 
+// ── LLAVE MAESTRA (saneamiento del supervisor) ────────────────────────────
+// Etapas que el supervisor puede registrar retroactivamente.
+const LLM_ETAPAS=[
+  {v:'RECOLECTADA',t:'Recolecci\u00f3n'},{v:'PICKING',t:'Picking'},{v:'RESERVA',t:'Reserva'},
+  {v:'HANDOFF_FACTURACION',t:'Entregado a Facturaci\u00f3n'},{v:'FACTURACI\u00d3N',t:'Facturaci\u00f3n'},
+  {v:'EMPACADO',t:'Empacado'},{v:'DISTRIBUCI\u00d3N',t:'Distribuci\u00f3n'},
+  {v:'DESPACHADO',t:'Despachado'},{v:'ENTREGADO',t:'Entregado en la UE'}
+];
+function _llaveMaestraHTML(id){
+  const eid=_esc(id);
+  let opts=LLM_ETAPAS.map(e=>'<option value="'+e.v+'">'+e.t+'</option>').join('');
+  return ''+
+  '<div style="margin-top:14px;border-top:2px solid #0C447C;padding-top:10px;">'+
+    '<div style="font-size:12px;font-weight:700;color:#0C447C;margin-bottom:2px;">Saneamiento (Supervisor)</div>'+
+    '<div style="font-size:11px;color:#777;margin-bottom:8px;">Registra una etapa que qued\u00f3 sin marcar, con su fecha real. Requiere PIN de Supervisor o Jefe.</div>'+
+    '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;">'+
+      '<div><label style="font-size:10px;color:#555;display:block;">Etapa a registrar</label>'+
+        '<select id="llmEtapa" style="font-size:12px;padding:4px;border:1px solid #a8a8a8;border-radius:3px;">'+opts+'</select></div>'+
+      '<div><label style="font-size:10px;color:#555;display:block;">Fecha real (si la conoce)</label>'+
+        '<input type="date" id="llmFecha" style="font-size:12px;padding:3px;border:1px solid #a8a8a8;border-radius:3px;"></div>'+
+      '<div><label style="font-size:10px;color:#555;display:block;">PIN</label>'+
+        '<input type="password" id="llmPin" inputmode="numeric" maxlength="4" placeholder="&#9679;&#9679;&#9679;&#9679;" style="font-size:12px;padding:4px;width:70px;border:1px solid #a8a8a8;border-radius:3px;"></div>'+
+    '</div>'+
+    '<div style="margin-top:6px;"><label style="font-size:10px;color:#555;display:block;">Nota (opcional)</label>'+
+      '<input type="text" id="llmNota" placeholder="observaci\u00f3n del saneamiento" style="font-size:12px;padding:4px;width:100%;box-sizing:border-box;border:1px solid #a8a8a8;border-radius:3px;"></div>'+
+    '<div style="margin-top:6px;font-size:10px;color:#999;">Si deja la fecha vac\u00eda se registra con la fecha de hoy, marcada como registro tard\u00edo.</div>'+
+    '<div style="display:flex;gap:8px;margin-top:8px;">'+
+      '<button onclick="llmRegistrar(\''+eid+'\')" style="border:1px solid #0F6E56;background:#0F6E56;color:#fff;font-size:12px;font-weight:700;padding:6px 12px;border-radius:4px;cursor:pointer;">Registrar etapa</button>'+
+      '<button onclick="llmMuerto(\''+eid+'\')" style="border:1px solid #C00000;background:#fff;color:#C00000;font-size:12px;font-weight:700;padding:6px 12px;border-radius:4px;cursor:pointer;">Declarar muerto</button>'+
+    '</div>'+
+    '<div id="llmMsg" style="font-size:11px;margin-top:6px;"></div>'+
+  '</div>';
+}
+async function llmRegistrar(id){
+  const etapa=document.getElementById('llmEtapa').value;
+  const fecha=document.getElementById('llmFecha').value; // YYYY-MM-DD o ''
+  const pin=String(document.getElementById('llmPin').value||'').trim();
+  const nota=String(document.getElementById('llmNota').value||'').trim();
+  const msg=document.getElementById('llmMsg');
+  if(!/^\d{4}$/.test(pin)){ msg.style.color='#C00000'; msg.textContent='El PIN son 4 d\u00edgitos.'; return; }
+  msg.style.color='#555'; msg.textContent='Registrando\u2026';
+  try{
+    let params='file=kb_llave_hito&id='+encodeURIComponent(id)+'&etapa='+encodeURIComponent(etapa)
+      +'&pin='+encodeURIComponent(pin);
+    if(fecha) params+='&fecha='+encodeURIComponent(fecha);
+    if(nota)  params+='&nota='+encodeURIComponent(nota);
+    const res=await pedir(params);
+    if(!res||res.ok===false){ msg.style.color='#C00000'; msg.textContent=(res&&res.msg)||'No se registr\u00f3.'; return; }
+    msg.style.color='#1c6b3a';
+    msg.textContent='Registrado: '+etapa+(res.tardio?' (registro tard\u00edo)':' \u00b7 '+(res.fecha||''))+'. Por '+(res.por||'')+'.';
+    setTimeout(()=>{ _cerrarModal(); cargar(true); }, 1200);
+  }catch(ex){ msg.style.color='#C00000'; msg.textContent='Sin conexi\u00f3n.'; }
+}
+async function llmMuerto(id){
+  const motivo=prompt('Motivo por el que se declara MUERTO este pedido:');
+  if(motivo===null) return;
+  if(!String(motivo).trim()){ alert('Debe indicar un motivo.'); return; }
+  const pin=String(document.getElementById('llmPin').value||'').trim();
+  const msg=document.getElementById('llmMsg');
+  if(!/^\d{4}$/.test(pin)){ msg.style.color='#C00000'; msg.textContent='Escriba el PIN (4 d\u00edgitos) antes de declarar muerto.'; return; }
+  msg.style.color='#555'; msg.textContent='Procesando\u2026';
+  try{
+    const params='file=kb_llave_muerto&id='+encodeURIComponent(id)+'&pin='+encodeURIComponent(pin)
+      +'&motivo='+encodeURIComponent(String(motivo).trim());
+    const res=await pedir(params);
+    if(!res||res.ok===false){ msg.style.color='#C00000'; msg.textContent=(res&&res.msg)||'No se pudo.'; return; }
+    msg.style.color='#1c6b3a'; msg.textContent='Pedido declarado muerto. Por '+(res.por||'')+'.';
+    setTimeout(()=>{ _cerrarModal(); cargar(true); }, 1200);
+  }catch(ex){ msg.style.color='#C00000'; msg.textContent='Sin conexi\u00f3n.'; }
+}
+
 // Detalle del documento localizado — reusa el modal general.
 function verDoc(id){
   const f=F8.find(x=>String(x.id)===String(id));
@@ -1783,9 +1854,19 @@ function verDoc(id){
       body+=fila('Entrega (ATA)','<span class="en-ata">'+_escNA(f.fEntrega||'\u2014')+'</span>','#0F6E56');
     }else if(f.despachado){
       body+=fila('Entrega','<button class="btn-entregar" onclick="_cerrarModal();registrarEntrega(\''+_esc(f.id)+'\')">Registrar entrega</button>');
+    }else{
+      // Aún no despachado: explicar por qué no se puede registrar la entrega todavía.
+      body+=fila('Entrega','<span style="color:#8a6d2f;font-size:12px;">A\u00fan en <b>'+_escNA(_etapaLabel(f))+'</b>. La entrega se podr\u00e1 registrar cuando el pedido sea despachado.</span>');
     }
   }
   body+='</table>';
+
+  // ── LLAVE MAESTRA (saneamiento del supervisor) ──────────────────────────
+  // Registrar etapas que quedaron sin registro (con fecha real) o declarar el
+  // pedido muerto. Requiere PIN de Supervisor/Jefe.
+  if(!ret && !f.entregado){
+    body+=_llaveMaestraHTML(f.id);
+  }
   document.getElementById('mBody').innerHTML=body;
   document.getElementById('modalBg').classList.add('open');
   // cerrar el panel de búsqueda al abrir el detalle
