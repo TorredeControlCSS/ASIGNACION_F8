@@ -1862,12 +1862,20 @@ async function entregadoHoy(id){
       +'&fecha='+encodeURIComponent(fechaHoy)+'&pin='+encodeURIComponent(String(pin).trim())
       +'&nota='+encodeURIComponent('Entregado hoy (atajo)');
     const res=await pedir(params);
-    if(!res||res.ok===false){ alert((res&&res.msg)||'No se pudo registrar.'); return; }
-    // Actualización optimista: marcar en memoria y repintar la vista activa.
-    // No recargamos todo el tablero (eso causaba la latencia).
+    if(!res||res.ok===false){
+      alert('El servidor NO guardó el registro.\n\nRespuesta: '+JSON.stringify(res||'sin respuesta')+
+            '\n\nSi dice "is not defined" o similar, faltan las 2 líneas del router (kb_llave_hito) en Código.gs.');
+      return;
+    }
+    // Confirmación real del backend (no solo optimista).
     if(f){ f.entregado=true; f.fEntrega=fechaHoy; }
     render();
-  }catch(ex){ alert('Sin conexi\u00f3n al registrar.'); }
+    // Aviso breve de éxito con confirmación del servidor.
+    const tst=document.createElement('div');
+    tst.textContent='\u2713 Guardado en el sistema: '+id+' entregado ('+(res.por||'')+')';
+    tst.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#0F6E56;color:#fff;padding:10px 18px;border-radius:6px;font-size:13px;font-weight:600;z-index:99999;box-shadow:0 2px 8px rgba(0,0,0,.3);';
+    document.body.appendChild(tst); setTimeout(()=>tst.remove(), 3500);
+  }catch(ex){ alert('Sin conexi\u00f3n al registrar: '+ex.message); }
 }
 
 // Detalle del documento localizado — reusa el modal general.
