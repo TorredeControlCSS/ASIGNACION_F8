@@ -1732,8 +1732,12 @@ function buscarDoc(){
   let html='<div class="busc-cab">'+hits.length.toLocaleString()+' resultado'+(hits.length===1?'':'s')
     +' \u00b7 '+_esc(q)+'</div>';
   if(!hits.length){
-    html+='<div class="busc-vacio">Ninguna Forma 8 o Unidad Ejecutora coincide con \u201c'+_esc(q)+'\u201d.</div>';
-    panel.innerHTML=html; panel.style.display=''; return;
+    // No está en los activos → buscar en los CERRADOS (entregados/despachados)
+    // vía backend, para que el supervisor rastree su trabajo ya hecho.
+    html+='<div class="busc-vacio">Buscando en pedidos ya cerrados\u2026</div>';
+    panel.innerHTML=html; panel.style.display='';
+    buscarCerrados(q, panel);
+    return;
   }
   hits.slice(0,BUSC_MAX).forEach(f=>{
     const ret = f.anulado;
@@ -1758,6 +1762,41 @@ function buscarDoc(){
       +'. Afina la b\u00fasqueda para ver el resto.</div>';
   }
   panel.innerHTML=html; panel.style.display='';
+}
+
+// Busca en pedidos CERRADOS (entregados/despachados) vía backend. Se llama
+// cuando el buscador no halla el pedido en el universo activo. Así el
+// supervisor rastrea su trabajo ya hecho sin engordar el tablero.
+async function buscarCerrados(q, panel){
+  try{
+    const res=await pedir('file=kb_buscar_cerrado&q='+encodeURIComponent(q));
+    const hits=(res&&res.hits)||[];
+    let html='<div class="busc-cab">'+hits.length+' pedido'+(hits.length===1?'':'s')+' cerrado'+(hits.length===1?'':'s')+' \u00b7 '+_esc(q)+'</div>';
+    if(!hits.length){
+      html+='<div class="busc-vacio">Ninguna Forma 8 o Unidad Ejecutora coincide con \u201c'+_esc(q)+'\u201d, ni activa ni cerrada.</div>';
+      panel.innerHTML=html; return;
+    }
+    hits.forEach(f=>{
+      let etTxt, etBg;
+      if(f.anulado){ etTxt='RETIRADO DEL CICLO'; etBg='#7a2e2e'; }
+      else if(f.etapa==='ENTREGADO'){ etTxt='\u2713 ENTREGADO'+(f.fEntrega?(' \u00b7 '+f.fEntrega):''); etBg='#0F6E56'; }
+      else if(f.etapa==='DESPACHADO'){ etTxt='DESPACHADO'+(f.fDespacho?(' \u00b7 '+f.fDespacho):''); etBg='#1E5A9E'; }
+      else if(f.etapa==='DISTRIBUCIÓN'||f.etapa==='DISTRIBUCION'){ etTxt='DISTRIBUCI\u00d3N'+(f.fDistribucion?(' \u00b7 '+f.fDistribucion):''); etBg='#0F6E56'; }
+      else { etTxt=_escNA(f.etapa); etBg='#5a6b7a'; }
+      let meta='<span class="bi-etapa" style="background:'+etBg+'">'+etTxt+'</span>'
+        +'<span>'+_escNA(f.tipo==='URG'||f.tipo==='Urgencia'?'Urgencia':'Mensual')+'</span>'
+        +'<span>Grupo: '+_escNA(f.grupo||'\u2014')+'</span>';
+      if(f.recibidoPor)  meta+='<span>Recibi\u00f3: '+_escNA(f.recibidoPor)+'</span>';
+      if(f.despachadoPor && !f.recibidoPor) meta+='<span>Despach\u00f3: '+_escNA(f.despachadoPor)+'</span>';
+      html+='<div class="busc-item" style="cursor:default;">'
+        +'<div><span class="bi-id">'+_escNA(f.id)+'</span> &middot; <span class="bi-ue">'+_escNA(f.ue)+'</span></div>'
+        +'<div class="bi-meta">'+meta+'</div></div>';
+    });
+    html+='<div class="busc-mas">Pedidos ya cerrados (fuera del flujo activo). Constancia de trabajo realizado.</div>';
+    panel.innerHTML=html;
+  }catch(ex){
+    panel.innerHTML='<div class="busc-cab">'+_esc(q)+'</div><div class="busc-vacio">No se pudo consultar pedidos cerrados. Reintenta.</div>';
+  }
 }
 
 // ── LLAVE MAESTRA (saneamiento del supervisor) ────────────────────────────
