@@ -1737,14 +1737,17 @@ function buscarDoc(){
   }
   hits.slice(0,BUSC_MAX).forEach(f=>{
     const ret = f.anulado;
-    const etapaTxt = ret ? 'RETIRADO DEL CICLO' : _etapaLabel(f);
-    const etapaBg  = ret ? '#7a2e2e' : _etapaColor(f);
+    const entregado = f.entregado && !ret;
+    let etapaTxt, etapaBg;
+    if(ret){ etapaTxt='RETIRADO DEL CICLO'; etapaBg='#7a2e2e'; }
+    else if(entregado){ etapaTxt='\u2713 ENTREGADO'+(f.fEntrega?(' \u00b7 '+String(f.fEntrega).slice(0,10)):''); etapaBg='#0F6E56'; }
+    else { etapaTxt=_etapaLabel(f); etapaBg=_etapaColor(f); }
     const venc = rpAtrasoTxt_(f);
     const vencCol = (f.diasAtraso!=null && f.diasAtraso>=0) ? '#C00000' : '#5a6b7a';
     let meta='<span class="bi-etapa" style="background:'+etapaBg+'">'+_escNA(etapaTxt)+'</span>'
       +'<span>'+_escNA(f.tipo==='URG'?'Urgencia':'Mensual')+'</span>'
-      +'<span>Grupo: '+_escNA(f.grupo||'\u2014')+'</span>'
-      +'<span style="color:'+vencCol+'">Entrega: '+_escNA(venc)+'</span>';
+      +'<span>Grupo: '+_escNA(f.grupo||'\u2014')+'</span>';
+    if(!entregado) meta+='<span style="color:'+vencCol+'">Entrega: '+_escNA(venc)+'</span>';
     if(ret && f.anuladoMotivo) meta+='<span class="bi-ret">Motivo: '+_escNA(f.anuladoMotivo)+'</span>';
     html+='<div class="busc-item" onclick="verDoc(\''+_esc(f.id)+'\')">'
       +'<div><span class="bi-id">'+_escNA(f.id)+'</span> &middot; <span class="bi-ue">'+_escNA(f.ue)+'</span></div>'
@@ -1807,7 +1810,14 @@ async function llmRegistrar(id){
     if(!res||res.ok===false){ msg.style.color='#C00000'; msg.textContent=(res&&res.msg)||'No se registr\u00f3.'; return; }
     msg.style.color='#1c6b3a';
     msg.textContent='Registrado: '+etapa+(res.tardio?' (registro tard\u00edo)':' \u00b7 '+(res.fecha||''))+'. Por '+(res.por||'')+'.';
-    setTimeout(()=>{ _cerrarModal(); cargar(true); }, 1200);
+    // Update optimista: reflejar la etapa saneada en memoria sin recargar todo.
+    const f=F8.find(x=>String(x.id)===String(id));
+    if(f){
+      if(etapa==='ENTREGADO'){ f.entregado=true; f.fEntrega=(res.fecha||''); }
+      else if(etapa==='DESPACHADO' || etapa==='DISTRIBUCI\u00d3N'){ f.despachado=true; }
+      if(res.fecha) f.etapaSaneada=etapa;
+    }
+    setTimeout(()=>{ _cerrarModal(); render(); }, 1000);
   }catch(ex){ msg.style.color='#C00000'; msg.textContent='Sin conexi\u00f3n.'; }
 }
 async function llmMuerto(id){
@@ -1824,7 +1834,10 @@ async function llmMuerto(id){
     const res=await pedir(params);
     if(!res||res.ok===false){ msg.style.color='#C00000'; msg.textContent=(res&&res.msg)||'No se pudo.'; return; }
     msg.style.color='#1c6b3a'; msg.textContent='Pedido declarado muerto. Por '+(res.por||'')+'.';
-    setTimeout(()=>{ _cerrarModal(); cargar(true); }, 1200);
+    // Update optimista: marcarlo retirado/muerto en memoria sin recargar todo.
+    const f=F8.find(x=>String(x.id)===String(id));
+    if(f){ f.anulado=true; f.anuladoPor=res.por||''; f.anuladoMotivo='MUERTO (saneamiento): '+String(motivo).trim(); }
+    setTimeout(()=>{ _cerrarModal(); render(); }, 1000);
   }catch(ex){ msg.style.color='#C00000'; msg.textContent='Sin conexi\u00f3n.'; }
 }
 
@@ -1850,8 +1863,10 @@ async function entregadoHoy(id){
       +'&nota='+encodeURIComponent('Entregado hoy (atajo)');
     const res=await pedir(params);
     if(!res||res.ok===false){ alert((res&&res.msg)||'No se pudo registrar.'); return; }
-    if(f){ f.entregado=true; }
-    cargar(true);
+    // Actualización optimista: marcar en memoria y repintar la vista activa.
+    // No recargamos todo el tablero (eso causaba la latencia).
+    if(f){ f.entregado=true; f.fEntrega=fechaHoy; }
+    render();
   }catch(ex){ alert('Sin conexi\u00f3n al registrar.'); }
 }
 
