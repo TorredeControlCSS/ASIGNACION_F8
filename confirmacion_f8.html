@@ -327,16 +327,33 @@ let CEDIS_ACTUAL = "CEDIS PANAMA";
 let expandAll = false;
 let OPERATIVO = "";        // se pide al confirmar, se recuerda en sesion
 
+// MIGRADO JSONP -> fetch (13-ago-2026). Mismo nombre y firma: las 6 llamadas
+// existentes no cambian. JSONP fallaba en silencio en equipos con varias
+// cuentas Google (/u/0, /u/1...). fetch con redirect:'follow' resuelve eso.
+// El backend (doGet) devuelve JSON puro cuando NO se manda callback.
 function loadJsonp(url, timeoutMs){
   return new Promise((resolve,reject)=>{
-    const cb='cb_'+Math.random().toString(36).slice(2);
-    const s=document.createElement('script'); let done=false;
-    const cleanup=()=>{try{delete window[cb];}catch(e){window[cb]=undefined;} if(s.parentNode)s.remove();};
-    const t=setTimeout(()=>{if(done)return;done=true;cleanup();reject(new Error('Timeout'));},timeoutMs||90000);
-    s.src=`${url}&callback=${cb}&_ts=${Date.now()}`;
-    s.onerror=()=>{if(done)return;done=true;clearTimeout(t);cleanup();reject(new Error('Script error'));};
-    window[cb]=(d)=>{if(done)return;done=true;clearTimeout(t);cleanup();resolve(d);};
-    document.body.appendChild(s);
+    const ctrl = new AbortController();
+    const t = setTimeout(()=>{ ctrl.abort(); reject(new Error('Timeout')); }, timeoutMs||90000);
+    const sep = url.indexOf('?')>=0 ? '&' : '?';
+    fetch(`${url}${sep}_ts=${Date.now()}`, { method:'GET', redirect:'follow', signal:ctrl.signal })
+      .then(res=>{
+        if(!res.ok) throw new Error('HTTP '+res.status);
+        return res.text();
+      })
+      .then(txt=>{
+        clearTimeout(t);
+        // El backend responde JSON puro. Si por MimeType viniera envuelto en
+        // callback(...) (por compatibilidad), lo desenvolvemos por si acaso.
+        let s = txt.trim();
+        const a = s.indexOf('('), b = s.lastIndexOf(')');
+        if(!(s.charAt(0)==='{'||s.charAt(0)==='[') && a>0 && b>a){ s = s.slice(a+1,b); }
+        resolve(JSON.parse(s));
+      })
+      .catch(err=>{
+        clearTimeout(t);
+        reject(err.name==='AbortError' ? new Error('Timeout') : err);
+      });
   });
 }
 function toast(msg,isErr){const t=document.createElement('div');t.className='toast'+(isErr?' err':'');t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),4500);}
