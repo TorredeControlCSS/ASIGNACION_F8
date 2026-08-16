@@ -555,7 +555,6 @@ async function cargarUECanonicas(){
       return UE_CANONICAS;
     }
   }catch(e){ /* silencioso: usa fallback */ }
-  // Fallback: las UE que ya aparecen en los docs del panel.
   UE_CANONICAS = [...new Set(DOCS.map(d=>d.puntoInfo))].sort();
   return UE_CANONICAS;
 }
@@ -567,7 +566,7 @@ function poblarFormularioManual(){
     if(selUE && ues && ues.length){
       const actual = selUE.value;
       selUE.innerHTML='<option value="">— Seleccione —</option>'+ues.map(u=>`<option>${u}</option>`).join('');
-      if(actual) selUE.value = actual;   // preserva selección si la había
+      if(actual) selUE.value = actual;
     }
   });
   const grupos=(PANEL&&PANEL.grupos)?PANEL.grupos:[];
@@ -649,17 +648,35 @@ function dHoy(){
 async function dCargar(lote){
   document.getElementById('dLista').innerHTML='<div class="loading">Cargando…</div>';
   document.getElementById('dCap').innerHTML='';
+  const dia = lote || dHoy();
+  // ESTRATEGIA JSON POR DIA: primero se intenta leer el JSON publicado en
+  // GitHub Pages (instantaneo, sin GAS, sin timeout). Si ese dia aun no tiene
+  // JSON (recien creado y no regenerado), se cae al endpoint buffer_detalle en
+  // vivo como respaldo. Asi nunca se rompe la lectura.
   try{
-    const url=`${WEBAPP_BASE}?file=buffer_detalle&lote=${encodeURIComponent(lote||dHoy())}`;
-    const r=await loadJsonp(url,90000);
-    if(!r||!r.ok){toast('No se pudo cargar el detalle del día.',true);return;}
-    DIA_DATA=r; DIA_CARGADO=true;
-    dPoblarLotes(r);
-    dPoblarUE(r);
-    dPintarCierre(r.resumen);
-    dRender();
-  }catch(err){
-    document.getElementById('dLista').innerHTML='<div class="dia-vacio">No se pudo cargar: '+err.message+'</div>';
+    const jsonUrl = `detalle_dia/detalle_${encodeURIComponent(dia)}.json?_ts=${Date.now()}`;
+    const res = await fetch(jsonUrl, { cache:'no-store' });
+    if(res.ok){
+      const r = await res.json();
+      if(r && r.ok){
+        DIA_DATA=r; DIA_CARGADO=true;
+        dPoblarLotes(r); dPoblarUE(r); dPintarCierre(r.resumen); dRender();
+        return;
+      }
+    }
+    // Si el JSON no existe (404) o vino mal, se usa el respaldo en vivo.
+    throw new Error('sin-json');
+  }catch(_e){
+    // FALLBACK: lectura en vivo por buffer_detalle (mas lenta, pero segura).
+    try{
+      const url=`${WEBAPP_BASE}?file=buffer_detalle&lote=${encodeURIComponent(dia)}`;
+      const r=await loadJsonp(url,90000);
+      if(!r||!r.ok){toast('No se pudo cargar el detalle del día.',true);return;}
+      DIA_DATA=r; DIA_CARGADO=true;
+      dPoblarLotes(r); dPoblarUE(r); dPintarCierre(r.resumen); dRender();
+    }catch(err){
+      document.getElementById('dLista').innerHTML='<div class="dia-vacio">No se pudo cargar: '+err.message+'</div>';
+    }
   }
 }
 
