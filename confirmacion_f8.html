@@ -541,12 +541,35 @@ function switchTab(which){
 
 /* ===== Captura manual (fila de producción, un grupo por F8) ===== */
 let manualLogArr = [];
+let UE_CANONICAS = null;   // cache en memoria de la lista canónica del país
+
+// Carga la lista canónica de UE (todas las del país) desde el backend, para
+// que el supervisor SELECCIONE y nunca teclee una variante no-canónica. Si el
+// endpoint falla, cae a las UE que ya tienen docs (comportamiento anterior).
+async function cargarUECanonicas(){
+  if(UE_CANONICAS) return UE_CANONICAS;
+  try{
+    const r = await loadJsonp(`${WEBAPP_BASE}?file=ue_canonicas`, 30000);
+    if(r && r.ok && Array.isArray(r.ue) && r.ue.length){
+      UE_CANONICAS = r.ue;
+      return UE_CANONICAS;
+    }
+  }catch(e){ /* silencioso: usa fallback */ }
+  // Fallback: las UE que ya aparecen en los docs del panel.
+  UE_CANONICAS = [...new Set(DOCS.map(d=>d.puntoInfo))].sort();
+  return UE_CANONICAS;
+}
+
 function poblarFormularioManual(){
-  const ues=[...new Set(DOCS.map(d=>d.puntoInfo))].sort();
   const selUE=document.getElementById('mUE');
-  if(selUE.options.length<=1 && ues.length){
-    selUE.innerHTML='<option value="">— Seleccione —</option>'+ues.map(u=>`<option>${u}</option>`).join('');
-  }
+  // Poblar con la lista canónica del país (async). Mientras carga, no bloquea.
+  cargarUECanonicas().then(function(ues){
+    if(selUE && ues && ues.length){
+      const actual = selUE.value;
+      selUE.innerHTML='<option value="">— Seleccione —</option>'+ues.map(u=>`<option>${u}</option>`).join('');
+      if(actual) selUE.value = actual;   // preserva selección si la había
+    }
+  });
   const grupos=(PANEL&&PANEL.grupos)?PANEL.grupos:[];
   const selG=document.getElementById('mGrupo');
   if(selG.options.length<=1 && grupos.length){
@@ -626,35 +649,17 @@ function dHoy(){
 async function dCargar(lote){
   document.getElementById('dLista').innerHTML='<div class="loading">Cargando…</div>';
   document.getElementById('dCap').innerHTML='';
-  const dia = lote || dHoy();
-  // ESTRATEGIA JSON POR DIA: primero se intenta leer el JSON publicado en
-  // GitHub Pages (instantaneo, sin GAS, sin timeout). Si ese dia aun no tiene
-  // JSON (recien creado y no regenerado), se cae al endpoint buffer_detalle en
-  // vivo como respaldo. Asi nunca se rompe la lectura.
   try{
-    const jsonUrl = `detalle_dia/detalle_${encodeURIComponent(dia)}.json?_ts=${Date.now()}`;
-    const res = await fetch(jsonUrl, { cache:'no-store' });
-    if(res.ok){
-      const r = await res.json();
-      if(r && r.ok){
-        DIA_DATA=r; DIA_CARGADO=true;
-        dPoblarLotes(r); dPoblarUE(r); dPintarCierre(r.resumen); dRender();
-        return;
-      }
-    }
-    // Si el JSON no existe (404) o vino mal, se usa el respaldo en vivo.
-    throw new Error('sin-json');
-  }catch(_e){
-    // FALLBACK: lectura en vivo por buffer_detalle (mas lenta, pero segura).
-    try{
-      const url=`${WEBAPP_BASE}?file=buffer_detalle&lote=${encodeURIComponent(dia)}`;
-      const r=await loadJsonp(url,90000);
-      if(!r||!r.ok){toast('No se pudo cargar el detalle del día.',true);return;}
-      DIA_DATA=r; DIA_CARGADO=true;
-      dPoblarLotes(r); dPoblarUE(r); dPintarCierre(r.resumen); dRender();
-    }catch(err){
-      document.getElementById('dLista').innerHTML='<div class="dia-vacio">No se pudo cargar: '+err.message+'</div>';
-    }
+    const url=`${WEBAPP_BASE}?file=buffer_detalle&lote=${encodeURIComponent(lote||dHoy())}`;
+    const r=await loadJsonp(url,90000);
+    if(!r||!r.ok){toast('No se pudo cargar el detalle del día.',true);return;}
+    DIA_DATA=r; DIA_CARGADO=true;
+    dPoblarLotes(r);
+    dPoblarUE(r);
+    dPintarCierre(r.resumen);
+    dRender();
+  }catch(err){
+    document.getElementById('dLista').innerHTML='<div class="dia-vacio">No se pudo cargar: '+err.message+'</div>';
   }
 }
 
