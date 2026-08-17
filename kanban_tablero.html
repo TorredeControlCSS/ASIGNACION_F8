@@ -408,12 +408,11 @@
     <div class="spacer"></div><span class="count" id="cnt"></span>
   </div>
   <div class="vistas-sw">
-    <button class="vsw-btn activa" data-vista="ue" onclick="cambiarVista('ue')">Por Unidad Ejecutora</button>
-    <button class="vsw-btn" data-vista="reparto" onclick="cambiarVista('reparto')">Reparto por fase</button>
-    <button class="vsw-btn" data-vista="crono" onclick="cambiarVista('crono')">Cronograma semanal</button>
+    <button class="vsw-btn activa" data-vista="reparto" onclick="cambiarVista('reparto')">Reparto por fase</button>
+    <button class="vsw-btn" data-vista="crono" onclick="cambiarVista('crono')">Plan de Entregas</button>
+    <button class="vsw-btn" data-vista="entregas" onclick="cambiarVista('entregas')">Entregas <span id="enBadge" style="font-family:Consolas;font-size:11px;opacity:.8"></span></button>
     <button class="vsw-btn" data-vista="noasig" onclick="cambiarVista('noasig')">Cero por desabasto <span id="naBadge" style="font-family:Consolas;font-size:11px;opacity:.8"></span></button>
     <button class="vsw-btn" data-vista="anulados" onclick="cambiarVista('anulados')">Retirados del ciclo <span id="anBadge" style="font-family:Consolas;font-size:11px;opacity:.8"></span></button>
-    <button class="vsw-btn" data-vista="entregas" onclick="cambiarVista('entregas')">Entregas <span id="enBadge" style="font-family:Consolas;font-size:11px;opacity:.8"></span></button>
   </div>
   <div class="leyenda" id="leyenda"></div>
   <div id="vistaCrono" style="display:none;"><div id="grillaSemanal"></div></div>
@@ -1034,7 +1033,7 @@ function abrirModalDia(iso){
 function _abrir(){ document.getElementById('modalBg').classList.add('open'); }
 function _cerrarModal(){ document.getElementById('modalBg').classList.remove('open'); }
 
-let VISTA='ue';   // 'ue' (acordeón) | 'crono' (grilla semanal)
+let VISTA='reparto';   // vista principal: Reparto por fase (Por UE fue retirada)
 let BUSCA_NAV=''; // texto de búsqueda que filtra la vista actual (navegación)
 function cambiarVista(v){
   VISTA=v;
@@ -1769,6 +1768,12 @@ function buscarDoc(){
   BUSCA_NAV = q;
   if(_prev !== BUSCA_NAV){ try{ render(); }catch(e){} }
   if(!q){ panel.style.display='none'; panel.innerHTML=''; return; }
+
+  // FILTRO PURO: si hay coincidencias en el universo activo, la vista ya quedó
+  // filtrada arriba (render con BUSCA_NAV). No se muestra panel flotante que
+  // tape la vista. Solo si NO hay ninguna activa se consulta cerrados (abajo).
+  const _hayActivos = F8.some(f=> !f.anulado && (_buscNorm(f.id).indexOf(q)>=0 || _buscNorm(f.ue).indexOf(q)>=0));
+  if(_hayActivos){ panel.style.display='none'; panel.innerHTML=''; return; }
 
   // Coincidencia por Forma 8 (contiene) o por Unidad Ejecutora (contiene).
   const hits=F8.filter(f=> _buscNorm(f.id).indexOf(q)>=0 || _buscNorm(f.ue).indexOf(q)>=0 );
