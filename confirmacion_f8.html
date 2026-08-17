@@ -645,6 +645,23 @@ function dHoy(){
   return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
 }
 
+// Fuerza la lectura en vivo (buffer_detalle) del día indicado. Se usa solo si
+// el usuario sospecha que HOY ya tiene recepciones que el JSON aún no refleja.
+// Puede tardar (lee el buffer completo), por eso es opt-in, no automático.
+async function dCargarEnVivo(lote){
+  const dia = lote || dHoy();
+  document.getElementById('dLista').innerHTML='<div class="loading">Buscando recepciones del día en vivo… (puede tardar)</div>';
+  try{
+    const url=`${WEBAPP_BASE}?file=buffer_detalle&lote=${encodeURIComponent(dia)}`;
+    const r=await loadJsonp(url,90000);
+    if(!r||!r.ok){ document.getElementById('dLista').innerHTML='<div class="dia-vacio">No se pudo cargar el detalle del día.</div>'; return; }
+    DIA_DATA=r; DIA_CARGADO=true;
+    dPoblarLotes(r); dPoblarUE(r); dPintarCierre(r.resumen); dRender();
+  }catch(err){
+    document.getElementById('dLista').innerHTML='<div class="dia-vacio">No se pudo cargar: '+err.message+'</div>';
+  }
+}
+
 async function dCargar(lote){
   document.getElementById('dLista').innerHTML='<div class="loading">Cargando…</div>';
   document.getElementById('dCap').innerHTML='';
@@ -667,7 +684,28 @@ async function dCargar(lote){
     // Si el JSON no existe (404) o vino mal, se usa el respaldo en vivo.
     throw new Error('sin-json');
   }catch(_e){
-    // FALLBACK: lectura en vivo por buffer_detalle (mas lenta, pero segura).
+    // INTELIGENTE: si el día pedido es HOY y su JSON aún no existe, es porque
+    // el turno está iniciando y todavía no hay recepciones. NO tiene sentido
+    // esperar 20+ segundos al fallback en vivo para traer cero datos: se muestra
+    // un mensaje honesto al instante. El JSON de hoy se generará al llegar el
+    // primer documento del día.
+    if(dia === dHoy()){
+      DIA_DATA={ok:true, dia:dia, docs:[], resumen:{}}; DIA_CARGADO=true;
+      try{ dPoblarLotes(DIA_DATA); }catch(e){}
+      try{ dPoblarUE(DIA_DATA); }catch(e){}
+      document.getElementById('dLista').innerHTML=
+        '<div class="dia-vacio" style="padding:34px;text-align:center;color:#5a6b7a;line-height:1.5;">'
+        +'<div style="font-size:14px;font-weight:600;color:#0C447C;margin-bottom:6px;">El turno de hoy está iniciando</div>'
+        +'Aún no hay recepciones registradas para hoy ('+dia+').<br>'
+        +'Esta vista se actualizará automáticamente conforme lleguen las Formas 8 del día.<br>'
+        +'<button class="btn" style="margin-top:14px" onclick="dCargar(\''+dia+'\')">Actualizar ahora</button>'
+        +'<div style="margin-top:10px;font-size:11px;">¿Ya hay recepciones y no aparecen? '
+        +'<a href="#" onclick="dCargarEnVivo(\''+dia+'\');return false;" style="color:#1e5a9e;">Buscar en vivo</a> '
+        +'(puede tardar).</div>'
+        +'</div>';
+      return;
+    }
+    // FALLBACK (solo días pasados sin JSON): lectura en vivo por buffer_detalle.
     try{
       const url=`${WEBAPP_BASE}?file=buffer_detalle&lote=${encodeURIComponent(dia)}`;
       const r=await loadJsonp(url,90000);
