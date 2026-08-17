@@ -1191,6 +1191,43 @@ async function comprometerFecha(id, inp){
   }catch(err){ alert('Sin conexión al guardar: '+err.message); render(); }
 }
 
+// Comprometer fecha DESDE EL MODAL (buscador → detalle → acción). Reusa el
+// mismo endpoint kanban_comprometer. Cierra el modal y refresca al terminar.
+async function comprometerDesdeModal(id){
+  const inp=document.getElementById('mCompInp');
+  if(!inp){ return; }
+  const fecha=(inp.value||'').slice(0,10);
+  if(!fecha){ alert('Elige una fecha, o usa "Quitar" para borrar el compromiso.'); return; }
+  const pin=prompt('Autorización de Supervisor o Jefe.\n\nF8: '+id+'\nFijar entrega comprometida al '+fecha+'\n\nDigita tu PIN (últimos 4 de la cédula):');
+  if(pin===null) return;
+  const p=String(pin).trim();
+  if(!/^\d{4}$/.test(p)){ alert('PIN inválido: deben ser 4 dígitos.'); return; }
+  try{
+    const res=await pedir('file=kanban_comprometer&id='+encodeURIComponent(id)+'&fecha='+encodeURIComponent(fecha)+'&pin='+encodeURIComponent(p));
+    if(!res||res.ok===false){ alert('No se guardó: '+((res&&res.msg)||'error')); return; }
+    const f=F8.find(x=>String(x.id)===String(id));
+    if(f){ f.fechaComprometida=fecha; f.comprometidaPor=res.por||''; f.fechaVencimiento=fecha; recalcAtraso_(f); }
+    alert('Fecha comprometida guardada: '+fecha);
+    _cerrarModal(); render();
+  }catch(err){ alert('Sin conexión al guardar: '+err.message); }
+}
+
+async function quitarCompromisoDesdeModal(id){
+  if(!confirm('¿Quitar la fecha comprometida de '+id+'? Volverá a usar la fecha teórica del cronograma.')) return;
+  const pin=prompt('Autorización de Supervisor o Jefe.\n\nF8: '+id+'\nQUITAR la fecha comprometida\n\nDigita tu PIN:');
+  if(pin===null) return;
+  const p=String(pin).trim();
+  if(!/^\d{4}$/.test(p)){ alert('PIN inválido: deben ser 4 dígitos.'); return; }
+  try{
+    const res=await pedir('file=kanban_comprometer&id='+encodeURIComponent(id)+'&fecha=&pin='+encodeURIComponent(p));
+    if(!res||res.ok===false){ alert('No se guardó: '+((res&&res.msg)||'error')); return; }
+    const f=F8.find(x=>String(x.id)===String(id));
+    if(f){ f.fechaComprometida=''; f.comprometidaPor=''; if(f.fechaEstimada) f.fechaVencimiento=f.fechaEstimada; recalcAtraso_(f); }
+    alert('Compromiso quitado. Vuelve a la fecha teórica.');
+    _cerrarModal(); render();
+  }catch(err){ alert('Sin conexión al guardar: '+err.message); }
+}
+
 // Recalcula días de atraso del pedido contra su fecha efectiva (misma lógica
 // que el backend: atraso = hoy - fecha efectiva, solo si ya venció y no cerró).
 function recalcAtraso_(f){
@@ -1957,6 +1994,23 @@ function verDoc(id){
     }
   }
   body+='</table>';
+
+  // ── COMPROMETER FECHA DE ENTREGA (flexibilidad del supervisor) ──────────
+  // Permite fijar/cambiar la fecha comprometida DIRECTO desde el detalle, para
+  // que el supervisor ubique el pedido con el buscador y actúe sin buscarlo de
+  // nuevo en Reparto por fase. Requiere PIN. NO dispara notificaciones a la UE.
+  if(!ret && !f.entregado){
+    const fcomp = (f.fechaComprometida||'').slice(0,10);
+    body+='<div style="margin-top:14px;padding:12px;background:#eef4fb;border:1px solid #cfe0f2;">'
+      +'<div style="font-size:11px;font-weight:700;color:#0C447C;letter-spacing:.3px;margin-bottom:7px;">FECHA COMPROMETIDA DE ENTREGA</div>'
+      +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
+      +'<input type="date" id="mCompInp" value="'+fcomp+'" style="padding:6px 9px;border:1px solid #a8a8a8;font-size:13px;font-family:Consolas,monospace;">'
+      +'<button class="btn-entregar" style="background:#0C447C;" onclick="comprometerDesdeModal(\''+_esc(f.id)+'\')">Guardar fecha</button>'
+      +(fcomp?('<button class="btn-entregar" style="background:#8a6d2f;" onclick="quitarCompromisoDesdeModal(\''+_esc(f.id)+'\')">Quitar</button>'):'')
+      +'</div>'
+      +'<div style="font-size:11px;color:#5a6b7a;margin-top:6px;">Sobrescribe la fecha te\u00f3rica del cronograma. No notifica a la UE.</div>'
+      +'</div>';
+  }
 
   // ── LLAVE MAESTRA (saneamiento del supervisor) ──────────────────────────
   // Registrar etapas que quedaron sin registro (con fecha real) o declarar el
