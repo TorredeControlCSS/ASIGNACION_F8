@@ -163,6 +163,11 @@
   .vsw-btn{padding:7px 18px;border:none;background:#fff;color:#5a6b7a;font-size:12px;font-weight:700;cursor:pointer;border-right:1px solid var(--bord);}
   .busc-badge{display:inline-block;margin-left:6px;background:#C00000;color:#fff;font-size:10px;font-weight:800;padding:1px 7px;border-radius:10px;font-family:Consolas,monospace;vertical-align:middle;}
   .plan-cab{background:#0C447C;color:#fff;padding:10px 14px;font-size:12px;line-height:1.4;margin-bottom:12px;}
+  .en-toggle{display:flex;gap:0;margin:10px 0 4px;border:1px solid var(--bord);width:fit-content;}
+  .en-tg{padding:7px 16px;border:none;background:#fff;color:#5a6b7a;font-size:12px;font-weight:700;cursor:pointer;border-right:1px solid var(--bord);}
+  .en-tg:last-child{border-right:none;}
+  .en-tg.on{background:#0C447C;color:#fff;}
+  .en-tg b{font-family:Consolas,monospace;margin-left:5px;}
   .plan-dia{margin-bottom:16px;border:1px solid var(--bord);}
   .plan-dia-h{color:#fff;padding:7px 12px;font-size:13px;font-weight:700;}
   table.plan-t{width:100%;border-collapse:collapse;font-size:12px;background:#fff;}
@@ -1118,6 +1123,27 @@ function _cerrarModal(){ document.getElementById('modalBg').classList.remove('op
 
 let VISTA='reparto';   // vista principal: Reparto por fase (Por UE fue retirada)
 let BUSCA_NAV=''; // texto de búsqueda que filtra la vista actual (navegación)
+let EN_TAB='pend'; // sección activa en Entregas: 'pend' (por confirmar) | 'hechas' (memoria)
+let ENTREGADOS_MEM=null;   // memoria histórica de entregados (del JSON estático)
+let ENTREGADOS_CARGANDO=false;
+
+// Carga la memoria de entregados desde el JSON estático (GitHub Pages).
+// Historia inmutable → lectura instantánea, sin castigar al Motor. Si el JSON
+// no existe aún (404), deja la memoria vacía y la vista cae a filtrar F8.
+async function cargarEntregadosJSON(force){
+  if(ENTREGADOS_MEM && !force) return ENTREGADOS_MEM;
+  if(ENTREGADOS_CARGANDO) return ENTREGADOS_MEM;
+  ENTREGADOS_CARGANDO=true;
+  try{
+    const r=await fetch('entregados/entregados.json?_ts='+Date.now(),{cache:'no-store'});
+    if(r.ok){
+      const j=await r.json();
+      if(j && j.ok && Array.isArray(j.entregados)) ENTREGADOS_MEM=j.entregados;
+    }
+  }catch(e){ /* silencioso: cae a F8 */ }
+  ENTREGADOS_CARGANDO=false;
+  return ENTREGADOS_MEM;
+}
 function cambiarVista(v){
   VISTA=v;
   document.querySelectorAll('.vsw-btn').forEach(b=>b.classList.toggle('activa', b.getAttribute('data-vista')===v));
@@ -1441,22 +1467,33 @@ function renderEntregas(){
   // Pendientes: despachados y no entregados. Los más viejos (más días de espera) arriba.
   const pend=F8.filter(f=>f.despachado && !f.entregado).filter(pasa)
     .sort((a,b)=>{ const da=_diasDesde_(a.fDespacho)||0, db=_diasDesde_(b.fDespacho)||0; return db-da; });
-  // Ya confirmadas: entregadas (con ATA). Las más recientes arriba.
-  const hechas=F8.filter(f=>f.entregado).filter(pasa)
-    .sort((a,b)=>String(b.fEntrega||'').localeCompare(String(a.fEntrega||'')));
+  // Ya confirmadas: memoria histórica. Preferir el JSON estático (instantáneo,
+  // escala a miles); si no cargó aún, caer a filtrar F8 (los entregados activos).
+  let hechas;
+  if(EN_TAB==='hechas' && ENTREGADOS_MEM){
+    hechas=ENTREGADOS_MEM.filter(f=>(!fg||f.grupo===fg)&&(!fu||f.ue===fu)
+      &&(!BUSCA_NAV||_buscNorm(f.id).indexOf(BUSCA_NAV)>=0||_buscNorm(f.ue).indexOf(BUSCA_NAV)>=0));
+  } else {
+    hechas=F8.filter(f=>f.entregado).filter(pasa)
+      .sort((a,b)=>String(b.fEntrega||'').localeCompare(String(a.fEntrega||'')));
+  }
 
-  let html='<div class="en-head">CONFIRMACI\u00d3N DE ENTREGA (ATA) &mdash; '+pend.length.toLocaleString()
-    +' pedido'+(pend.length===1?'':'s')+' despachado'+(pend.length===1?'':'s')+' esperan confirmaci\u00f3n de entrega en la UE. '
-    +'Registrar la entrega no la despacha: confirma que lleg\u00f3, con su fecha y hora reales.</div>';
-  html+='<div class="en-sub">Filtrado por los mismos controles de Unidad Ejecutora y Grupo de la barra superior.</div>';
+  let html='<div class="en-head">CONFIRMACI\u00d3N Y MEMORIA DE ENTREGAS &mdash; el supervisor confirma aqu\u00ed los pedidos que la UE ya recibi\u00f3. '
+    +'Los del PDF de seguimiento se ubican con el buscador y se marcan entregados; pasan a la memoria.</div>';
+  // Toggle de sección: Por confirmar (accionable) | Entregadas (memoria histórica).
+  html+='<div class="en-toggle">'
+    +'<button class="en-tg'+(EN_TAB==='pend'?' on':'')+'" onclick="EN_TAB=\'pend\';render();">Por confirmar <b>'+pend.length.toLocaleString()+'</b></button>'
+    +'<button class="en-tg'+(EN_TAB==='hechas'?' on':'')+'" onclick="EN_TAB=\'hechas\';cargarEntregadosJSON().then(()=>render());">Entregadas (memoria) <b>'+((EN_TAB==='hechas'&&ENTREGADOS_MEM)?ENTREGADOS_MEM.length:hechas.length).toLocaleString()+'</b></button>'
+    +'</div>';
+  html+='<div class="en-sub">Se aplican los filtros de la barra (Unidad Ejecutora, Grupo, Tipo) y el buscador.</div>';
 
   if(!pend.length && !hechas.length){
-    html+='<div class="an-vacio">No hay pedidos despachados pendientes de confirmar entrega'+((fg||fu)?' con los filtros actuales':'')+'.</div>';
+    html+='<div class="an-vacio">No hay pedidos'+((fg||fu||BUSCA_NAV)?' con los filtros actuales':'')+'.</div>';
     cont.innerHTML=html; return;
   }
 
-  // ---- Sección: por confirmar ----
-  if(pend.length){
+  // ---- Sección: por confirmar (solo si el toggle está en 'pend') ----
+  if(EN_TAB==='pend' && pend.length){
     html+='<div class="en-secc">Por confirmar &middot; '+pend.length.toLocaleString()+'</div>';
     html+='<div class="rp-scroll"><table class="en-t"><thead><tr>'
       +'<th>Forma 8</th><th>Unidad Ejecutora</th><th>Grupo</th><th>Tipo</th>'
@@ -1478,9 +1515,9 @@ function renderEntregas(){
     html+='</tbody></table></div>';
   }
 
-  // ---- Sección: ya confirmadas ----
-  if(hechas.length){
-    html+='<div class="en-secc hecha">Ya confirmadas &middot; '+hechas.length.toLocaleString()+'</div>';
+  // ---- Sección: entregadas / memoria (solo si el toggle está en 'hechas') ----
+  if(EN_TAB==='hechas' && hechas.length){
+    html+='<div class="en-secc hecha">Entregadas &middot; '+hechas.length.toLocaleString()+'</div>';
     html+='<div class="rp-scroll"><table class="en-t"><thead><tr>'
       +'<th>Forma 8</th><th>Unidad Ejecutora</th><th>Grupo</th><th>Tipo</th>'
       +'<th>Entregado (ATA)</th><th style="text-align:center">Acci\u00f3n</th>'
@@ -1492,16 +1529,22 @@ function renderEntregas(){
         +'<td>'+_escNA(f.grupo||'\u2014')+'</td>'
         +'<td>'+_escNA(f.tipo)+'</td>'
         +'<td class="en-ata">'+_escNA(f.fEntrega||'\u2014')+'</td>'
-        +'<td style="text-align:center"><button class="btn-revertir" onclick="revertirEntrega(\''+_esc(f.id)+'\')" title="Deshacer la entrega (marcada por error)">Revertir</button></td>'
+        +'<td style="text-align:center">'+(F8.some(x=>String(x.id)===String(f.id))
+            ? '<button class="btn-revertir" onclick="revertirEntrega(\''+_esc(f.id)+'\')" title="Deshacer la entrega (marcada por error)">Revertir</button>'
+            : '<button class="btn-entregar" style="padding:3px 9px;font-size:10px;background:#5a6b7a" onclick="verDoc(\''+_esc(f.id)+'\')">Ver</button>')+'</td>'
         +'</tr>';
     });
     html+='</tbody></table></div>';
   }
+  // Mensaje si la sección activa del toggle está vacía.
+  if(EN_TAB==='pend' && !pend.length){
+    html+='<div class="an-vacio">No hay pedidos por confirmar'+((fg||fu||BUSCA_NAV)?' con los filtros actuales':'')+'. Cambia a "Entregadas" para ver la memoria.</div>';
+  }
+  if(EN_TAB==='hechas' && !hechas.length){
+    html+='<div class="an-vacio">A\u00fan no hay entregas confirmadas'+((fg||fu||BUSCA_NAV)?' con los filtros actuales':'')+'. Confirma pedidos en "Por confirmar" y aparecer\u00e1n aqu\u00ed.</div>';
+  }
   cont.innerHTML=html;
 }
-
-// Abre el modal de entrega prellenado en "ahora". La confirmación (fecha+hora
-// editables + PIN) la resuelve _enModConfirmar_ al pulsar el botón.
 let _enModId=null;
 function registrarEntrega(id){
   const f=F8.find(x=>String(x.id)===String(id));
