@@ -74,6 +74,7 @@
   .busc-item .bi-ue{color:#333;}
   .busc-item .bi-meta{font-size:10px;color:#5a6b7a;margin-top:3px;display:flex;flex-wrap:wrap;gap:4px 12px;}
   .busc-item .bi-etapa{display:inline-block;padding:1px 7px;border-radius:3px;color:#fff;font-size:10px;font-weight:700;}
+  .bi-etapa{display:inline-block;padding:2px 9px;border-radius:3px;color:#fff !important;font-size:11px;font-weight:700;text-shadow:0 1px 1px rgba(0,0,0,.35);}
   .busc-item .bi-ret{color:#7a2e2e;font-weight:700;}
   .busc-vacio{padding:16px 11px;color:#5a6b7a;font-size:12px;text-align:center;}
   .busc-mas{padding:7px 11px;font-size:10px;color:#5a6b7a;text-align:center;background:#f7f9fc;border-top:1px solid #eef2f6;}
@@ -160,6 +161,7 @@
 
   .vistas-sw{display:flex;gap:0;margin-bottom:10px;border:1px solid var(--bord);width:fit-content;}
   .vsw-btn{padding:7px 18px;border:none;background:#fff;color:#5a6b7a;font-size:12px;font-weight:700;cursor:pointer;border-right:1px solid var(--bord);}
+  .busc-badge{display:inline-block;margin-left:6px;background:#C00000;color:#fff;font-size:10px;font-weight:800;padding:1px 7px;border-radius:10px;font-family:Consolas,monospace;vertical-align:middle;}
   .vsw-btn:last-child{border-right:none;}
   .vsw-btn.activa{background:var(--azul,#0C447C);color:#fff;}
   .na-head{background:#7a1414;color:#fff;padding:8px 14px;font-size:12px;font-weight:700;margin-bottom:10px;}
@@ -386,16 +388,7 @@
     <label>Grupo:</label><select id="fGrupo"><option value="">&mdash; Todos &mdash;</option></select>
     <label>Unidad Ejecutora:</label><select id="fUE"><option value="">&mdash; Todas &mdash;</option></select>
     <label>Tipo:</label><select id="fTipo"><option value="">&mdash; Todos &mdash;</option><option value="URG">Urgencias</option><option value="MEN">Mensuales</option></select>
-    <label>Etapa:</label><select id="fEtapa"><option value="">&mdash; Todas &mdash;</option><option value="SIN_ASIGNAR">Cero por desabasto</option><option value="RECEPCION">Recepci&oacute;n</option><option value="ASIGNACION">Asignaci&oacute;n</option><option value="RECOLECCION">Recolecci&oacute;n</option><option value="PICKING">Picking</option><option value="FACTURACION">Facturaci&oacute;n</option><option value="DISTRIBUCION">Distribuci&oacute;n</option></select>
     <label>F. Entrega:</label><select id="fDiaEnt"><option value="">&mdash; Todos &mdash;</option><option value="1">Lunes</option><option value="2">Martes</option><option value="3">Mi&eacute;rcoles</option><option value="4">Jueves</option><option value="5">Viernes</option></select>
-    <label>Triage:</label>
-    <div class="tri-filtros" id="triFiltros">
-      <button class="tri-f tri-f-ROJO"     data-tri="ROJO"><span class="tf-dot"></span>ROJO</button>
-      <button class="tri-f tri-f-NARANJA"  data-tri="NARANJA"><span class="tf-dot"></span>NARANJA</button>
-      <button class="tri-f tri-f-AMARILLO" data-tri="AMARILLO"><span class="tf-dot"></span>AMARILLO</button>
-      <button class="tri-f tri-f-VERDE"    data-tri="VERDE"><span class="tf-dot"></span>VERDE</button>
-      <button class="tri-f tri-f-AZUL"     data-tri="AZUL"><span class="tf-dot"></span>AZUL</button>
-    </div>
     <button class="btn pend-toggle" id="btnPendiente">Solo pendiente</button>
     <button class="btn sec" id="btnLimpiar">Limpiar filtros</button>
     <button class="btn sec" id="btnExpand">Expandir todo</button>
@@ -1144,7 +1137,7 @@ function renderReparto(){
       +'<th class="ord" onclick="rpOrdenarPor(\'fechaRecepcion\')">Recibida'+rpOrdInd('fechaRecepcion')+'</th>'
       +'<th class="ord" onclick="rpOrdenarPor(\'diasCrono\')">D\u00eda cronograma'+rpOrdInd('diasCrono')+'</th>'
       +'<th class="ord" onclick="rpOrdenarPor(\'fechaVencimiento\')">F. Entrega'+rpOrdInd('fechaVencimiento')+'</th>'
-      +'<th style="background:#0F6E56;color:#fff">F. comprometida</th>'
+      +'<th style="background:#0F6E56;color:#fff">F. prometida</th>'
       +'<th style="text-align:center;width:220px" title="Saneamiento y acciones (requiere Supervisor o Jefe)">Acciones (Supervisor)</th></tr></thead><tbody>';
     lista.slice().sort(rpOrdenActivo_).forEach(f=>{
       const atrColor=(f.diasAtraso!=null && f.diasAtraso>=0)?'#C00000':'#5a6b7a';
@@ -1175,7 +1168,7 @@ function renderReparto(){
 // ------- Fecha comprometida (Supervisor/Jefe con PIN) -------------------
 async function comprometerFecha(id, inp){
   const fecha=(inp.value||'').slice(0,10);   // vacío = quitar compromiso
-  const accion = fecha ? ('fijar la fecha comprometida al '+fecha) : 'QUITAR la fecha comprometida';
+  const accion = fecha ? ('fijar la fecha prometida al '+fecha) : 'QUITAR la fecha prometida';
   const pin=prompt('Autorización de Supervisor o Jefe.\n\nF8: '+id+'\nAcción: '+accion+'\n\nDigita tu PIN (últimos 4 de la cédula):');
   if(pin===null){ render(); return; }              // canceló → repinta valor previo
   const p=String(pin).trim();
@@ -1205,7 +1198,7 @@ async function comprometerDesdeModal(id){
   if(!inp){ return; }
   const fecha=(inp.value||'').slice(0,10);
   if(!fecha){ alert('Elige una fecha, o usa "Quitar" para borrar el compromiso.'); return; }
-  const pin=prompt('Autorización de Supervisor o Jefe.\n\nF8: '+id+'\nFijar entrega comprometida al '+fecha+'\n\nDigita tu PIN (últimos 4 de la cédula):');
+  const pin=prompt('Autorización de Supervisor o Jefe.\n\nF8: '+id+'\nFijar entrega prometida al '+fecha+'\n\nDigita tu PIN (últimos 4 de la cédula):');
   if(pin===null) return;
   const p=String(pin).trim();
   if(!/^\d{4}$/.test(p)){ alert('PIN inválido: deben ser 4 dígitos.'); return; }
@@ -1220,8 +1213,8 @@ async function comprometerDesdeModal(id){
 }
 
 async function quitarCompromisoDesdeModal(id){
-  if(!confirm('¿Quitar la fecha comprometida de '+id+'? Volverá a usar la fecha teórica del cronograma.')) return;
-  const pin=prompt('Autorización de Supervisor o Jefe.\n\nF8: '+id+'\nQUITAR la fecha comprometida\n\nDigita tu PIN:');
+  if(!confirm('¿Quitar la fecha prometida de '+id+'? Volverá a usar la fecha teórica del cronograma.')) return;
+  const pin=prompt('Autorización de Supervisor o Jefe.\n\nF8: '+id+'\nQUITAR la fecha prometida\n\nDigita tu PIN:');
   if(pin===null) return;
   const p=String(pin).trim();
   if(!/^\d{4}$/.test(p)){ alert('PIN inválido: deben ser 4 dígitos.'); return; }
@@ -1757,6 +1750,35 @@ function _etapaLabel(f){
   const m=MACROS.find(x=>x.clave===f.macro);
   return (m&&m.label) || f.macro || f.etapa || '\u2014';
 }
+// Muestra, en cada pestaña, cuántos pedidos coinciden con la búsqueda actual.
+// Así el supervisor sabe DÓNDE hay resultados sin adivinar entre pestañas.
+function _actualizarBadgesBusqueda(q){
+  const btns=document.querySelectorAll('.vsw-btn');
+  if(!q){
+    // Sin búsqueda: quitar todos los badges de conteo.
+    btns.forEach(b=>{ const bd=b.querySelector('.busc-badge'); if(bd) bd.remove(); });
+    return;
+  }
+  // Contar coincidencias por vista (mismos criterios que cada vista usa).
+  const match=f=> _buscNorm(f.id).indexOf(q)>=0 || _buscNorm(f.ue).indexOf(q)>=0;
+  const cont={
+    reparto:  F8.filter(f=>!f.anulado && f.macro!=='DISTRIBUCION' && match(f)).length,
+    crono:    F8.filter(f=>!f.anulado && match(f)).length,
+    entregas: F8.filter(f=>(f.despachado||f.entregado) && !f.anulado && match(f)).length,
+    noasig:   F8.filter(f=>f.ceroDesabasto && match(f)).length,
+    anulados: F8.filter(f=>f.anulado && match(f)).length
+  };
+  btns.forEach(b=>{
+    const v=b.getAttribute('data-vista');
+    let bd=b.querySelector('.busc-badge');
+    const n=cont[v]||0;
+    if(n>0){
+      if(!bd){ bd=document.createElement('span'); bd.className='busc-badge'; b.appendChild(bd); }
+      bd.textContent=n;
+    } else if(bd){ bd.remove(); }
+  });
+}
+
 function buscarDoc(){
   const q=_buscNorm(document.getElementById('fBuscar').value);
   const panel=document.getElementById('buscPanel');
@@ -1767,6 +1789,7 @@ function buscarDoc(){
   const _prev = BUSCA_NAV;
   BUSCA_NAV = q;
   if(_prev !== BUSCA_NAV){ try{ render(); }catch(e){} }
+  _actualizarBadgesBusqueda(q);
   if(!q){ panel.style.display='none'; panel.innerHTML=''; return; }
 
   // FILTRO PURO: si hay coincidencias en el universo activo, la vista ya quedó
@@ -1991,7 +2014,7 @@ function verDoc(id){
   body+=fila('Grupo', _escNA(f.grupo||'\u2014'));
   body+=fila('Recibida', _escNA((f.fechaRecepcion||'\u2014').slice(0,10)));
   body+=fila('F. entrega efectiva', _escNA((f.fechaVencimiento||'\u2014').slice(0,10)));
-  if(f.fechaComprometida) body+=fila('F. comprometida', _escNA(f.fechaComprometida.slice(0,10))+(f.comprometidaPor?(' \u00b7 '+_escNA(f.comprometidaPor)):''), '#0F6E56');
+  if(f.fechaComprometida) body+=fila('F. prometida', _escNA(f.fechaComprometida.slice(0,10))+(f.comprometidaPor?(' \u00b7 '+_escNA(f.comprometidaPor)):''), '#0F6E56');
   body+=fila('D\u00edas para entrega', _escNA(venc), vencCol);
   body+=fila('Triage', _escNA(f.triageLabel||f.triage||'\u2014'));
   if(ret){
@@ -2034,7 +2057,7 @@ function verDoc(id){
   if(!ret && !f.entregado){
     const fcomp = (f.fechaComprometida||'').slice(0,10);
     body+='<div style="margin-top:14px;padding:12px;background:#eef4fb;border:1px solid #cfe0f2;">'
-      +'<div style="font-size:11px;font-weight:700;color:#0C447C;letter-spacing:.3px;margin-bottom:7px;">FECHA COMPROMETIDA DE ENTREGA</div>'
+      +'<div style="font-size:11px;font-weight:700;color:#0C447C;letter-spacing:.3px;margin-bottom:7px;">FECHA PROMETIDA DE ENTREGA</div>'
       +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
       +'<input type="date" id="mCompInp" value="'+fcomp+'" style="padding:6px 9px;border:1px solid #a8a8a8;font-size:13px;font-family:Consolas,monospace;">'
       +'<button class="btn-entregar" style="background:#0C447C;" onclick="comprometerDesdeModal(\''+_esc(f.id)+'\')">Guardar fecha</button>'
@@ -2083,7 +2106,7 @@ document.getElementById('btnExpand').onclick=function(){
   }
   render();
 };
-['fGrupo','fUE','fTipo','fDiaEnt','fEtapa'].forEach(id=>{const el=document.getElementById(id); if(el) el.onchange=render;});
+['fGrupo','fUE','fTipo','fDiaEnt'].forEach(id=>{const el=document.getElementById(id); if(el) el.onchange=render;});
 // chips de triage como filtro toggle (uno a la vez)
 document.querySelectorAll('.tri-f').forEach(btn=>{
   btn.onclick=function(){
