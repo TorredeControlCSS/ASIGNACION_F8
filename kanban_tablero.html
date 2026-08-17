@@ -484,9 +484,40 @@ function venceHoyMan(f){
 
 async function pedir(params){
   const url=`${WEBAPP_BASE}?${params}&_ts=${Date.now()}`;
-  const res=await fetch(url,{method:'GET',redirect:'follow'});
-  if(!res.ok) throw new Error('HTTP '+res.status);
-  return res.json();
+  // Indicador de latencia: si la respuesta tarda, avisar al usuario que la
+  // conexión está lenta (crítico en el almacén, con internet pobre) para que
+  // no crea que se colgó y no repita la acción.
+  const _lat=setTimeout(()=>_latMostrar(true), 4000);
+  try{
+    const res=await fetch(url,{method:'GET',redirect:'follow'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    return await res.json();
+  } finally {
+    clearTimeout(_lat); _latMostrar(false);
+  }
+}
+// Overlay discreto de "conexión lenta". Se muestra tras 4s de espera.
+function _latMostrar(on){
+  let el=document.getElementById('latBar');
+  if(on){
+    if(!el){
+      el=document.createElement('div'); el.id='latBar';
+      el.style.cssText='position:fixed;left:0;right:0;bottom:0;background:#8a6d2f;color:#fff;'
+        +'font-size:12px;font-weight:600;text-align:center;padding:8px;z-index:9999;'
+        +'box-shadow:0 -2px 8px rgba(0,0,0,.2);';
+      el.textContent='La conexión está lenta… esperando al servidor. No repitas la acción, sigue procesando.';
+      document.body.appendChild(el);
+    }
+  } else if(el){ el.remove(); }
+}
+// Notificación breve no bloqueante (aparece 4s arriba a la derecha).
+function toast_(msg){
+  let t=document.createElement('div');
+  t.style.cssText='position:fixed;top:16px;right:16px;background:#0F6E56;color:#fff;'
+    +'font-size:13px;font-weight:600;padding:12px 16px;border-radius:6px;z-index:10000;'
+    +'box-shadow:0 3px 12px rgba(0,0,0,.25);max-width:340px;line-height:1.4;';
+  t.textContent=msg; document.body.appendChild(t);
+  setTimeout(()=>{ t.style.transition='opacity .4s'; t.style.opacity='0'; setTimeout(()=>t.remove(),400); }, 4000);
 }
 async function cargar(silencioso){
   // Primera carga: muestra "Cargando". Auto-refresco (silencioso): NO borra la
@@ -1579,7 +1610,13 @@ async function _enModConfirmar(){
     const res=await pedir(params);
     if(!res||res.ok===false){ err.textContent=(res&&res.msg)||'No se registr\u00f3 la entrega.'; btn.disabled=false; return; }
     if(f){ f.entregado=true; f.fEntrega=res.ata||ataN.replace('T',' '); }
-    _enModCerrar(); render();
+    _enModCerrar();
+    // Marcar la memoria como "sucia" para recargar el JSON la próxima vez que
+    // el supervisor abra "Entregadas" (el backend lo regenera en segundo plano).
+    ENTREGADOS_MEM=null;
+    render();
+    // Feedback claro: el pedido salió de "por confirmar" y está en la memoria.
+    toast_('Entrega registrada. El pedido pas\u00f3 a Entregas \u2192 \"Entregadas (memoria)\".');
   }catch(ex){ err.textContent='Sin conexi\u00f3n al registrar la entrega.'; btn.disabled=false; }
 }
 
