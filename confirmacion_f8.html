@@ -648,6 +648,27 @@ function dHoy(){
 // Fuerza la lectura en vivo (buffer_detalle) del día indicado. Se usa solo si
 // el usuario sospecha que HOY ya tiene recepciones que el JSON aún no refleja.
 // Puede tardar (lee el buffer completo), por eso es opt-in, no automático.
+// "Actualizar ahora" en el mensaje de turno iniciando: reintenta el JSON de hoy
+// UNA vez, con feedback visible. Si sigue sin datos, vuelve al mensaje (sin bucle).
+async function dReintentarHoy(dia){
+  const cont=document.getElementById('dLista');
+  cont.innerHTML='<div class="loading">Buscando recepciones del d\u00eda\u2026</div>';
+  try{
+    const res=await fetch(`detalle_dia/detalle_${encodeURIComponent(dia)}.json?_ts=${Date.now()}`,{cache:'no-store'});
+    if(res.ok){
+      const r=await res.json();
+      if(r && r.ok){
+        DIA_DATA=r; DIA_CARGADO=true;
+        dPoblarLotes(r); dPoblarUE(r); dPintarCierre(r.resumen); dRender();
+        return;
+      }
+    }
+  }catch(e){}
+  // Sigue sin JSON: volver a mostrar el mensaje (dCargar reingresa a la rama de hoy).
+  DIA_CARGADO=false;
+  dCargar(dia);
+}
+
 async function dCargarEnVivo(lote){
   const dia = lote || dHoy();
   document.getElementById('dLista').innerHTML='<div class="loading">Buscando recepciones del día en vivo… (puede tardar)</div>';
@@ -690,16 +711,17 @@ async function dCargar(lote){
     // un mensaje honesto al instante. El JSON de hoy se generará al llegar el
     // primer documento del día.
     if(dia === dHoy()){
-      DIA_DATA={ok:true, dia:dia, docs:[], resumen:{}}; DIA_CARGADO=true;
-      try{ dPoblarLotes(DIA_DATA); }catch(e){}
-      try{ dPoblarUE(DIA_DATA); }catch(e){}
+      // Día de hoy sin JSON: turno iniciando, sin recepciones aún. Mensaje
+      // honesto e inmediato (NO llamar dPoblarLotes/dPoblarUE aquí: reconstruyen
+      // el dropdown y disparan su onchange → dCargar de nuevo → bucle de 404).
+      DIA_DATA={ok:true, dia:dia, docs:[], renglones:[], resumen:{}}; DIA_CARGADO=true;
       document.getElementById('dLista').innerHTML=
         '<div class="dia-vacio" style="padding:34px;text-align:center;color:#5a6b7a;line-height:1.5;">'
-        +'<div style="font-size:14px;font-weight:600;color:#0C447C;margin-bottom:6px;">El turno de hoy está iniciando</div>'
-        +'Aún no hay recepciones registradas para hoy ('+dia+').<br>'
-        +'Esta vista se actualizará automáticamente conforme lleguen las Formas 8 del día.<br>'
-        +'<button class="btn" style="margin-top:14px" onclick="dCargar(\''+dia+'\')">Actualizar ahora</button>'
-        +'<div style="margin-top:10px;font-size:11px;">¿Ya hay recepciones y no aparecen? '
+        +'<div style="font-size:14px;font-weight:600;color:#0C447C;margin-bottom:6px;">El turno de hoy est\u00e1 iniciando</div>'
+        +'A\u00fan no hay recepciones registradas para hoy ('+dia+').<br>'
+        +'Esta vista se actualizar\u00e1 conforme lleguen las Formas 8 del d\u00eda.<br>'
+        +'<button class="btn" style="margin-top:14px" onclick="dReintentarHoy(\''+dia+'\')">Actualizar ahora</button>'
+        +'<div style="margin-top:10px;font-size:11px;">\u00bfYa hay recepciones y no aparecen? '
         +'<a href="#" onclick="dCargarEnVivo(\''+dia+'\');return false;" style="color:#1e5a9e;">Buscar en vivo</a> '
         +'(puede tardar).</div>'
         +'</div>';
