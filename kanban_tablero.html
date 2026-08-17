@@ -1253,7 +1253,7 @@ function recalcAtraso_(f){
 async function anularPedido(id){
   const f=F8.find(x=>String(x.id)===String(id));
   const ue=f?(' \\u00b7 '+f.ue):'';
-  const motivo=prompt('Retirar del ciclo \\u2014 sacar el pedido del flujo activo.\n\nF8: '+id+ue+
+  const motivo=prompt('Retirar del ciclo \u2014 sacar el pedido del flujo activo.\n\nF8: '+id+ue+
     '\n\nEscribe el MOTIVO (obligatorio). Este texto queda registrado:');
   if(motivo===null) return;                                  // canceló
   const mot=String(motivo).trim();
@@ -1301,7 +1301,7 @@ function renderAnulados(){
     .filter(f=>(!fg||f.grupo===fg) && (!fu||f.ue===fu))
     .sort((a,b)=>String(b.anuladoTs||'').localeCompare(String(a.anuladoTs||'')));
   let html='<div class="an-head">PEDIDOS RETIRADOS DEL CICLO &mdash; '+lista.length.toLocaleString()
-    +' fuera del flujo activo. Cada uno penaliza el fill rate como no entregado. Retirar no es despachar: se sac\\u00f3 a prop\\u00f3sito y queda trazable. Puede devolverse al ciclo con autorizaci\\u00f3n.</div>';
+    +' fuera del flujo activo. Cada uno penaliza el fill rate como no entregado. Retirar no es despachar: se sac\u00f3 a prop\u00f3sito y queda trazable. Puede devolverse al ciclo con autorizaci\u00f3n.</div>';
   if(!lista.length){
     html+='<div class="an-vacio">No hay pedidos retirados del ciclo'+((fg||fu)?' con los filtros actuales':'')+'.</div>';
     cont.innerHTML=html; return;
@@ -1317,9 +1317,9 @@ function renderAnulados(){
       +'<td>'+_escNA(f.ue)+'</td>'
       +'<td>'+_escNA(f.grupo)+'</td>'
       +'<td style="color:'+(f.tipo==='URG'?'#C00000':'#5a6b7a')+';font-weight:'+(f.tipo==='URG'?'700':'400')+'">'+_escNA(f.tipo)+'</td>'
-      +'<td class="motivo">'+_escNA(f.anuladoMotivo||'\\u2014')+'</td>'
-      +'<td>'+_escNA(f.anuladoPor||'\\u2014')+'</td>'
-      +'<td class="mono" style="font-size:10px">'+_escNA(f.anuladoTs||'\\u2014')+'</td>'
+      +'<td class="motivo">'+_escNA(f.anuladoMotivo||'\u2014')+'</td>'
+      +'<td>'+_escNA(f.anuladoPor||'\u2014')+'</td>'
+      +'<td class="mono" style="font-size:10px">'+_escNA(f.anuladoTs||'\u2014')+'</td>'
       +'<td style="text-align:center"><button class="btn-react" onclick="reactivarPedido(\''+_esc(f.id)+'\')" title="Devolver al ciclo (requiere Supervisor o Jefe)">\\u21BA Devolver al ciclo</button></td>'
       +'</tr>';
   });
@@ -2000,20 +2000,34 @@ function verDoc(id){
     if(f.anuladoPor)    body+=fila('Retirado por', _escNA(f.anuladoPor));
     if(f.anuladoTs)     body+=fila('Cu\u00e1ndo', _escNA(f.anuladoTs));
   }
-  // Fase C — estado de entrega en el detalle.
-  if(!ret){
-    if(f.entregado){
-      body+=fila('Entrega (ATA)','<span class="en-ata">'+_escNA(f.fEntrega||'\u2014')+'</span>','#0F6E56');
-    }else if(f.despachado){
-      body+=fila('Entrega','<button class="btn-entregar" onclick="_cerrarModal();registrarEntrega(\''+_esc(f.id)+'\')">Registrar entrega</button>');
-    }else{
-      // Aún no despachado: explicar por qué no se puede registrar la entrega todavía.
-      body+=fila('Entrega','<span style="color:#8a6d2f;font-size:12px;">A\u00fan en <b>'+_escNA(_etapaLabel(f))+'</b>. La entrega se podr\u00e1 registrar cuando el pedido sea despachado.</span>');
-    }
-  }
   body+='</table>';
 
-  // ── COMPROMETER FECHA DE ENTREGA (flexibilidad del supervisor) ──────────
+  // ── ACCIÓN: ENTREGA (unificada en el modal único) ───────────────────────
+  // Reemplaza los modales separados de "Entregado hoy" y "Registrar entrega".
+  // Todas las acciones de un pedido viven aquí, en un solo lugar coherente.
+  if(!ret){
+    if(f.entregado){
+      // Ya entregado: memoria de la entrega (no acción).
+      body+='<div style="margin-top:14px;padding:12px;background:#eafaf3;border:1px solid #b7e3d0;">'
+        +'<div style="font-size:11px;font-weight:700;color:#0F6E56;letter-spacing:.3px;">ENTREGA CONFIRMADA</div>'
+        +'<div style="font-size:13px;color:#0F6E56;margin-top:4px;font-weight:600;">'+_escNA(f.fEntrega||'\u2014')+'</div>'
+        +'</div>';
+    } else if(f.despachado){
+      // Despachado y sin confirmar: registrar entrega (ATA con fecha/hora) o atajo hoy.
+      body+='<div style="margin-top:14px;padding:12px;background:#eafaf3;border:1px solid #b7e3d0;">'
+        +'<div style="font-size:11px;font-weight:700;color:#0F6E56;letter-spacing:.3px;margin-bottom:7px;">REGISTRAR ENTREGA EN LA UE</div>'
+        +'<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+        +'<button class="btn-entregar" style="background:#0F6E56;" onclick="_cerrarModal();registrarEntrega(\''+_esc(f.id)+'\')">Registrar con fecha y hora</button>'
+        +'<button class="btn-entregadohoy" onclick="entregadoHoy(\''+_esc(f.id)+'\')">\u2713 Entregado hoy</button>'
+        +'</div>'
+        +'<div style="font-size:11px;color:#5a6b7a;margin-top:6px;">Confirma que la UE recibi\u00f3. \"Entregado hoy\" usa la fecha de hoy en un clic.</div>'
+        +'</div>';
+    } else {
+      // Aún no despachado.
+      body+='<div style="margin-top:14px;padding:10px;background:#fbf6ea;border:1px solid #e5d5b0;font-size:12px;color:#8a6d2f;">'
+        +'A\u00fan en <b>'+_escNA(_etapaLabel(f))+'</b>. La entrega se registrar\u00e1 cuando el pedido sea despachado.</div>';
+    }
+  }
   // Fijar/cambiar la fecha comprometida DIRECTO desde el detalle, para que el
   // supervisor ubique el pedido con el buscador y actúe sin buscarlo de nuevo.
   // Requiere PIN. NO dispara notificaciones a la UE.
