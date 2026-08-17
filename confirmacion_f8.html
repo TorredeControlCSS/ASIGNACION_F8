@@ -648,49 +648,12 @@ function dHoy(){
 // Fuerza la lectura en vivo (buffer_detalle) del día indicado. Se usa solo si
 // el usuario sospecha que HOY ya tiene recepciones que el JSON aún no refleja.
 // Puede tardar (lee el buffer completo), por eso es opt-in, no automático.
-// "Actualizar ahora" en el mensaje de turno iniciando: reintenta el JSON de hoy
-// UNA vez, con feedback visible. Si sigue sin datos, vuelve al mensaje (sin bucle).
-async function dReintentarHoy(dia){
-  const cont=document.getElementById('dLista');
-  cont.innerHTML='<div class="loading">Buscando recepciones del d\u00eda\u2026</div>';
-  try{
-    const res=await fetch(`detalle_dia/detalle_${encodeURIComponent(dia)}.json?_ts=${Date.now()}`,{cache:'no-store'});
-    if(res.ok){
-      const r=await res.json();
-      if(r && r.ok){
-        DIA_DATA=r; DIA_CARGADO=true;
-        dPoblarLotes(r); dPoblarUE(r); dPintarCierre(r.resumen); dRender();
-        return;
-      }
-    }
-  }catch(e){}
-  // Sigue sin JSON: volver a mostrar el mensaje (dCargar reingresa a la rama de hoy).
-  DIA_CARGADO=false;
-  dCargar(dia);
-}
-
-async function dCargarEnVivo(lote){
-  const dia = lote || dHoy();
-  document.getElementById('dLista').innerHTML='<div class="loading">Buscando recepciones del día en vivo… (puede tardar)</div>';
-  try{
-    const url=`${WEBAPP_BASE}?file=buffer_detalle&lote=${encodeURIComponent(dia)}`;
-    const r=await loadJsonp(url,90000);
-    if(!r||!r.ok){ document.getElementById('dLista').innerHTML='<div class="dia-vacio">No se pudo cargar el detalle del día.</div>'; return; }
-    DIA_DATA=r; DIA_CARGADO=true;
-    dPoblarLotes(r); dPoblarUE(r); dPintarCierre(r.resumen); dRender();
-  }catch(err){
-    document.getElementById('dLista').innerHTML='<div class="dia-vacio">No se pudo cargar: '+err.message+'</div>';
-  }
-}
-
 async function dCargar(lote){
   document.getElementById('dLista').innerHTML='<div class="loading">Cargando…</div>';
   document.getElementById('dCap').innerHTML='';
   const dia = lote || dHoy();
-  // ESTRATEGIA JSON POR DIA: primero se intenta leer el JSON publicado en
-  // GitHub Pages (instantaneo, sin GAS, sin timeout). Si ese dia aun no tiene
-  // JSON (recien creado y no regenerado), se cae al endpoint buffer_detalle en
-  // vivo como respaldo. Asi nunca se rompe la lectura.
+  // Primero el JSON estático del día (instantáneo). Si no existe (404), respaldo
+  // en vivo por buffer_detalle. Simple y robusto.
   try{
     const jsonUrl = `detalle_dia/detalle_${encodeURIComponent(dia)}.json?_ts=${Date.now()}`;
     const res = await fetch(jsonUrl, { cache:'no-store' });
@@ -702,36 +665,13 @@ async function dCargar(lote){
         return;
       }
     }
-    // Si el JSON no existe (404) o vino mal, se usa el respaldo en vivo.
     throw new Error('sin-json');
   }catch(_e){
-    // INTELIGENTE: si el día pedido es HOY y su JSON aún no existe, es porque
-    // el turno está iniciando y todavía no hay recepciones. NO tiene sentido
-    // esperar 20+ segundos al fallback en vivo para traer cero datos: se muestra
-    // un mensaje honesto al instante. El JSON de hoy se generará al llegar el
-    // primer documento del día.
-    if(dia === dHoy()){
-      // Día de hoy sin JSON: turno iniciando, sin recepciones aún. Mensaje
-      // honesto e inmediato (NO llamar dPoblarLotes/dPoblarUE aquí: reconstruyen
-      // el dropdown y disparan su onchange → dCargar de nuevo → bucle de 404).
-      DIA_DATA={ok:true, dia:dia, docs:[], renglones:[], resumen:{}}; DIA_CARGADO=true;
-      document.getElementById('dLista').innerHTML=
-        '<div class="dia-vacio" style="padding:34px;text-align:center;color:#5a6b7a;line-height:1.5;">'
-        +'<div style="font-size:14px;font-weight:600;color:#0C447C;margin-bottom:6px;">El turno de hoy est\u00e1 iniciando</div>'
-        +'A\u00fan no hay recepciones registradas para hoy ('+dia+').<br>'
-        +'Esta vista se actualizar\u00e1 conforme lleguen las Formas 8 del d\u00eda.<br>'
-        +'<button class="btn" style="margin-top:14px" onclick="dReintentarHoy(\''+dia+'\')">Actualizar ahora</button>'
-        +'<div style="margin-top:10px;font-size:11px;">\u00bfYa hay recepciones y no aparecen? '
-        +'<a href="#" onclick="dCargarEnVivo(\''+dia+'\');return false;" style="color:#1e5a9e;">Buscar en vivo</a> '
-        +'(puede tardar).</div>'
-        +'</div>';
-      return;
-    }
-    // FALLBACK (solo días pasados sin JSON): lectura en vivo por buffer_detalle.
+    // Respaldo en vivo (más lento, pero siempre funciona).
     try{
       const url=`${WEBAPP_BASE}?file=buffer_detalle&lote=${encodeURIComponent(dia)}`;
       const r=await loadJsonp(url,90000);
-      if(!r||!r.ok){toast('No se pudo cargar el detalle del día.',true);return;}
+      if(!r||!r.ok){ document.getElementById('dLista').innerHTML='<div class="dia-vacio">No se pudo cargar el detalle del día.</div>'; return; }
       DIA_DATA=r; DIA_CARGADO=true;
       dPoblarLotes(r); dPoblarUE(r); dPintarCierre(r.resumen); dRender();
     }catch(err){
