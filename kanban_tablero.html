@@ -520,6 +520,12 @@ function baseTarjetas(){
     if(fu && f.ue!==fu) return false;
     if(triFiltro && f.triage!==triFiltro) return false;
     if(soloPendiente && f.macro==='DISTRIBUCION') return false;
+    // NAVEGACIÓN: si hay texto en el buscador, filtra la vista por F8 o UE.
+    // Así el buscador no solo abre el modal — filtra la vista donde estás.
+    if(BUSCA_NAV){
+      const q=BUSCA_NAV;
+      if(_buscNorm(f.id).indexOf(q)<0 && _buscNorm(f.ue).indexOf(q)<0) return false;
+    }
     return true;
   });
 }
@@ -1029,6 +1035,7 @@ function _abrir(){ document.getElementById('modalBg').classList.add('open'); }
 function _cerrarModal(){ document.getElementById('modalBg').classList.remove('open'); }
 
 let VISTA='ue';   // 'ue' (acordeón) | 'crono' (grilla semanal)
+let BUSCA_NAV=''; // texto de búsqueda que filtra la vista actual (navegación)
 function cambiarVista(v){
   VISTA=v;
   document.querySelectorAll('.vsw-btn').forEach(b=>b.classList.toggle('activa', b.getAttribute('data-vista')===v));
@@ -1064,6 +1071,7 @@ function rpFiltrada_(){
     if(fu && f.ue!==fu) return false;
     if(ft && f.tipo!==ft) return false;
     if(fd && String(diaSemanaEntrega_(f))!==fd) return false;
+    if(BUSCA_NAV){ if(_buscNorm(f.id).indexOf(BUSCA_NAV)<0 && _buscNorm(f.ue).indexOf(BUSCA_NAV)<0) return false; }
     return true;
   });
 }
@@ -1192,7 +1200,7 @@ async function comprometerFecha(id, inp){
 }
 
 // Comprometer fecha DESDE EL MODAL (buscador → detalle → acción). Reusa el
-// mismo endpoint kanban_comprometer. Cierra el modal y refresca al terminar.
+// endpoint kanban_comprometer. Cierra el modal y refresca al terminar.
 async function comprometerDesdeModal(id){
   const inp=document.getElementById('mCompInp');
   if(!inp){ return; }
@@ -1347,7 +1355,7 @@ function renderEntregas(){
   if(!cont) return;
   const fg=document.getElementById('fGrupo').value;
   const fu=document.getElementById('fUE').value;
-  const pasa=f=>(!fg||f.grupo===fg)&&(!fu||f.ue===fu)&&!f.anulado;
+  const pasa=f=>(!fg||f.grupo===fg)&&(!fu||f.ue===fu)&&!f.anulado&&(!BUSCA_NAV||_buscNorm(f.id).indexOf(BUSCA_NAV)>=0||_buscNorm(f.ue).indexOf(BUSCA_NAV)>=0);
   // Pendientes: despachados y no entregados. Los más viejos (más días de espera) arriba.
   const pend=F8.filter(f=>f.despachado && !f.entregado).filter(pasa)
     .sort((a,b)=>{ const da=_diasDesde_(a.fDespacho)||0, db=_diasDesde_(b.fDespacho)||0; return db-da; });
@@ -1755,6 +1763,11 @@ function buscarDoc(){
   const panel=document.getElementById('buscPanel');
   const bx=document.getElementById('btnBuscarX');
   bx.style.display = q ? '' : 'none';
+  // NAVEGACIÓN: el texto del buscador filtra la vista actual (todas las vistas
+  // que usan filtrados() lo respetan). Repintar para reflejar el filtro.
+  const _prev = BUSCA_NAV;
+  BUSCA_NAV = q;
+  if(_prev !== BUSCA_NAV){ try{ render(); }catch(e){} }
   if(!q){ panel.style.display='none'; panel.innerHTML=''; return; }
 
   // Coincidencia por Forma 8 (contiene) o por Unidad Ejecutora (contiene).
@@ -1996,9 +2009,9 @@ function verDoc(id){
   body+='</table>';
 
   // ── COMPROMETER FECHA DE ENTREGA (flexibilidad del supervisor) ──────────
-  // Permite fijar/cambiar la fecha comprometida DIRECTO desde el detalle, para
-  // que el supervisor ubique el pedido con el buscador y actúe sin buscarlo de
-  // nuevo en Reparto por fase. Requiere PIN. NO dispara notificaciones a la UE.
+  // Fijar/cambiar la fecha comprometida DIRECTO desde el detalle, para que el
+  // supervisor ubique el pedido con el buscador y actúe sin buscarlo de nuevo.
+  // Requiere PIN. NO dispara notificaciones a la UE.
   if(!ret && !f.entregado){
     const fcomp = (f.fechaComprometida||'').slice(0,10);
     body+='<div style="margin-top:14px;padding:12px;background:#eef4fb;border:1px solid #cfe0f2;">'
