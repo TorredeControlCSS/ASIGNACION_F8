@@ -667,25 +667,9 @@ async function dCargar(lote){
     }
     throw new Error('sin-json');
   }catch(_e){
-    // Día de HOY sin JSON aún: turno iniciando, sin recepciones. Mostrar mensaje
-    // inmediato en vez de esperar 20+s al fallback por cero datos. La guardia
-    // _poblandoLotes (en dPoblarLotes) evita que reconstruir el dropdown dispare
-    // el onchange → dCargar → bucle. Días pasados sí usan el fallback en vivo.
-    if(dia === dHoy()){
-      DIA_DATA={ok:true, lote:dia, lotes:[dia], renglones:[], resumen:{docs:0,renglones:0}};
-      DIA_CARGADO=true;
-      dPoblarLotes(DIA_DATA);
-      document.getElementById('dLista').innerHTML=
-        '<div class="dia-vacio" style="padding:34px;text-align:center;color:#5a6b7a;line-height:1.6;">'
-        +'<div style="font-size:14px;font-weight:600;color:#0C447C;margin-bottom:6px;">El turno de hoy est\u00e1 iniciando</div>'
-        +'A\u00fan no hay recepciones registradas para hoy ('+dia+').<br>'
-        +'Presiona <b>Actualizar</b> cuando lleguen las primeras Formas 8, '
-        +'o revisa los d\u00edas anteriores con las flechas.'
-        +'</div>';
-      document.getElementById('dCap').innerHTML='';
-      return;
-    }
-    // Días pasados sin JSON: respaldo en vivo (más lento, pero siempre funciona).
+    // Sin JSON (hoy recién iniciado o día sin publicar): respaldo en vivo por
+    // buffer_detalle. Trae los datos reales del día. Los días con JSON no llegan
+    // aquí (cargan instantáneo arriba).
     try{
       const url=`${WEBAPP_BASE}?file=buffer_detalle&lote=${encodeURIComponent(dia)}`;
       const r=await loadJsonp(url,90000);
