@@ -356,6 +356,34 @@
   .empty{padding:36px;text-align:center;color:var(--sub);background:#fff;border:1px solid var(--bord);}
   .loading{padding:26px;text-align:center;color:var(--sub);}
   .err{background:#fdecea;border:1px solid #f5c6cb;color:#a11b11;padding:12px 16px;margin-bottom:10px;font-size:12px;}
+  /* ── Vista Entregas del día ──────────────────────────────────────────
+     Sobria a propósito: se usa de pie, con prisa y con mala luz. */
+  .ent-barra{display:flex;align-items:center;gap:10px;background:#1f3864;color:#fff;padding:9px 14px;border-radius:6px;font-size:14px;margin-bottom:10px}
+  .ent-red{margin-left:auto;font-size:12px;font-family:Consolas,monospace}
+  .ent-red .ok{color:#8fe08f}.ent-red .off{color:#ffc9a0}
+  .ent-oferta{background:#e8f1fb;border:1px solid #1f6bb8;border-left:4px solid #1f6bb8;padding:11px 14px;border-radius:5px;margin-bottom:10px;font-size:14px}
+  .ent-aviso{padding:9px 13px;border-radius:5px;margin-bottom:10px;font-size:13px}
+  .ent-aviso.ok{background:#eaf5ea;border-left:4px solid #2e7d32}
+  .ent-aviso.warn{background:#fff8e1;border-left:4px solid #8a6a00}
+  .ent-aviso.err{background:#fdecea;border-left:4px solid #a3331f}
+  .ent-caja{background:#fff;border:1px solid #d9dde3;border-radius:7px;padding:14px;margin-bottom:12px}
+  .ent-tit{font-weight:600;color:#1f3864;margin-bottom:9px;font-size:14px}
+  .ent-caja textarea{width:100%;box-sizing:border-box;font-family:Consolas,monospace;font-size:14px;padding:9px;border:1px solid #c6ccd4;border-radius:5px;resize:vertical}
+  .ent-acc{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:9px}
+  .ent-acc input{padding:8px 10px;border:1px solid #c6ccd4;border-radius:5px;font-size:14px}
+  .ent-nota{color:#666;font-size:12px}
+  .btn-si{background:#1f3864;color:#fff;border:0;padding:9px 17px;border-radius:5px;font-size:14px;cursor:pointer}
+  .btn-si:disabled{opacity:.55;cursor:default}
+  .btn-no{background:#fff;color:#1f3864;border:1px solid #1f3864;padding:9px 17px;border-radius:5px;font-size:14px;cursor:pointer}
+  .btn-mini{background:#eef1f5;border:1px solid #c6ccd4;border-radius:4px;padding:3px 9px;font-size:12px;cursor:pointer}
+  .ent-tb{width:100%;border-collapse:collapse;font-size:13px;margin-top:4px}
+  .ent-tb th{background:#eef1f5;text-align:left;padding:6px 9px;font-weight:600;color:#333}
+  .ent-tb td{border-bottom:1px solid #eceef1;padding:6px 9px}
+  .ent-tb .mono{font-family:Consolas,monospace}
+  .ent-tb .x{background:none;border:0;color:#a3331f;font-size:17px;cursor:pointer;line-height:1}
+  .e-subida{color:#2e7d32;font-weight:600}.e-error{color:#a3331f;font-weight:600}
+  .e-subiendo{color:#1f6bb8}.e-pendiente{color:#666}
+  .ent-vacio{color:#777;font-size:13px;padding:14px 0;text-align:center}
 </style>
 </head>
 <body>
@@ -415,6 +443,7 @@
     <div class="spacer"></div><span class="count" id="cnt"></span>
   </div>
   <div class="vistas-sw">
+    <button class="vsw-btn" data-vista="entdia" onclick="cambiarVista('entdia')">Entregas del día <span id="edBadge" style="font-family:Consolas;font-size:11px;opacity:.8"></span></button>
     <button class="vsw-btn activa" data-vista="reparto" onclick="cambiarVista('reparto')">Reparto por fase</button>
     <button class="vsw-btn" data-vista="crono" onclick="cambiarVista('crono')">Plan de Entregas</button>
     <button class="vsw-btn" data-vista="entregas" onclick="cambiarVista('entregas')">Entregas <span id="enBadge" style="font-family:Consolas;font-size:11px;opacity:.8"></span></button>
@@ -424,6 +453,7 @@
   <div class="leyenda" id="leyenda"></div>
   <div id="vistaCrono" style="display:none;"><div id="grillaSemanal"></div></div>
   <div id="vistaUE" style="display:none;"><div id="lista"></div></div>
+  <div id="vistaEntregasDia" style="display:none;"></div>
   <div id="vistaReparto"><div id="listaReparto"><div class="loading">Cargando tablero&hellip;</div></div></div>
   <div id="vistaNoAsig" style="display:none;"><div id="listaNoAsig"></div></div>
   <div id="vistaAnulados" style="display:none;"><div id="listaAnulados"></div></div>
@@ -1184,6 +1214,10 @@ function cambiarVista(v){
   document.getElementById('vistaNoAsig').style.display = (v==='noasig')? '' : 'none';
   document.getElementById('vistaAnulados').style.display = (v==='anulados')? '' : 'none';
   document.getElementById('vistaEntregas').style.display = (v==='entregas')? '' : 'none';
+  /* La captura NO pasa por render(): debe abrir aunque el tablero siga
+     cargando o no haya red. */
+  document.getElementById('vistaEntregasDia').style.display = (v==='entdia')? '' : 'none';
+  if (v==='entdia'){ entRender(); return; }
   render();
 }
 
@@ -2295,6 +2329,16 @@ document.getElementById('enModOk').onclick=_enModConfirmar;
 document.getElementById('entregaBg').onclick=function(e){ if(e.target===this) _enModCerrar(); };
 document.getElementById('enModPin').addEventListener('keydown',function(e){ if(e.key==='Enter') _enModConfirmar(); });
 document.addEventListener('keydown',function(e){ if(e.key==='Escape'){ _cerrarModal(); _enModCerrar(); const bp=document.getElementById('buscPanel'); if(bp) bp.style.display='none'; } });
+/* El sondeo de red de la captura arranca aparte de cargar(): tiene que
+   funcionar aunque el tablero tarde o falle. */
+try { entIniciar_(); } catch(e){}
+/* Insignia con lo que queda sin subir, visible desde cualquier vista. */
+try { setInterval(function(){
+  var b=document.getElementById('edBadge'); if(!b) return;
+  var n=entCola_().filter(function(x){return x.estado!=='subida';}).length;
+  b.textContent = n ? ('('+n+')') : '';
+  b.style.color = n ? '#ffc9a0' : '';
+}, 3000); } catch(e){}
 cargar();
 setInterval(function(){
   // No refrescar si el usuario está en medio de editar una fecha comprometida:
@@ -2304,6 +2348,306 @@ setInterval(function(){
   if(act && act.classList && act.classList.contains('comp-inp')) return;
   cargar(true);
 }, 180000);   // refresco silencioso cada 3 min (sin parpadeo)
+
+/* ══════════════════════════════════════════════════════════════════════════
+ *  VISTA · ENTREGAS DEL DÍA          Torre de Control · 20-sep-2026
+ *  ────────────────────────────────────────────────────────────────────────
+ *  QUÉ PROBLEMA CIERRA
+ *  Ninguna de las cuatro fuentes del WMS captura la ENTREGA FÍSICA en la
+ *  bahía. Medido el 18-sep contra el informe del supervisor: de sus 55 Formas
+ *  8 entregadas ese día, 55 estaban en SEGUIMIENTO_PEDIDOS y CERO tenían
+ *  FECHA_ENTREGA, FECHA_DESPACHO, FECHA_DISTRIBUCION ni RECIBIDO_UE_POR. El
+ *  tablero las mostraba abiertas. Por eso el supervisor lleva meses armando
+ *  su informe a mano: es la única fuente real de ese hecho.
+ *
+ *  Esta vista lo convierte en captura, sin quitarle el informe.
+ *
+ *  TRES DECISIONES DE DISEÑO, Y POR QUÉ
+ *
+ *  1. CAPTURA PRIMERO, RED DESPUÉS. El internet del almacén es malo y el
+ *     supervisor atiende urgencias con gente gritando en la puerta. Cada
+ *     marca se guarda en el dispositivo al instante y no espera a nadie. La
+ *     vista NO consulta el backend para funcionar.
+ *
+ *  2. LA SUBIDA LA DECIDE ÉL, NUNCA SOLA. Cuando se detecta red estable se
+ *     AVISA y se ofrece el botón; no se sube en silencio. Es la misma regla
+ *     de cargar_reportes.html: el sistema detecta, la persona decide. Un dato
+ *     que sube solo es un dato del que nadie se hizo responsable.
+ *
+ *  3. PEGAR EN LOTE ES LA VÍA PRINCIPAL. Sus informes traen 43, 70, 126 y 55
+ *     documentos en un día. Con 126 documentos, marcar de a uno no es una
+ *     herramienta. Llega del papel con los números escritos, los pega y listo.
+ *
+ *  NO INVENTA PUERTA NUEVA: escribe por kbLlaveHito_, la llave maestra que ya
+ *  existe y ya está probada, en lote y con el PIN del supervisor.
+ * ══════════════════════════════════════════════════════════════════════════ */
+
+const ENT_LS_COLA  = 'cedis_entregas_cola_v1';
+const ENT_LS_ASIST = 'cedis_asistencia_v1';
+const ENT_PING_MS  = 45000;     // cada cuánto se tantea la red
+
+/* ── Persistencia local. Todo vive en el dispositivo hasta que él suba. ── */
+function entHoy_(){
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function entLeer_(clave){
+  try { return JSON.parse(localStorage.getItem(clave) || '{}'); } catch(e){ return {}; }
+}
+function entGuardar_(clave, obj){
+  try { localStorage.setItem(clave, JSON.stringify(obj)); return true; }
+  catch(e){ entAviso_('No se pudo guardar en el dispositivo: ' + e.message, 'err'); return false; }
+}
+function entCola_(){ const t = entLeer_(ENT_LS_COLA); return t[entHoy_()] || []; }
+function entColaSet_(arr){ const t = entLeer_(ENT_LS_COLA); t[entHoy_()] = arr; entGuardar_(ENT_LS_COLA, t); }
+function entAsist_(){ const t = entLeer_(ENT_LS_ASIST); return t[entHoy_()] || []; }
+function entAsistSet_(arr){ const t = entLeer_(ENT_LS_ASIST); t[entHoy_()] = arr; entGuardar_(ENT_LS_ASIST, t); }
+
+/* Normaliza un número de Forma 8 tecleado o pegado. Acepta las formas reales
+   medidas en producción: prefijo numérico (8107) o alfabético (CDCH, CDDI),
+   separadores con punto o espacio, guiones repetidos, y el segmento de grupo
+   opcional -- el capturador lo omite en el 37% de los casos. */
+function entNormF8_(txt){
+  let t = String(txt || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  t = t.replace(/\([^)]*\)/g, ' ').replace(/[^A-Z0-9]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+  const p = t.split('-').filter(Boolean);
+  if (p.length < 3) return null;
+  if (!/^[A-Z]{0,5}\d{0,4}$/.test(p[0]) || !p[0]) return null;
+  if (!/^\d{4}$/.test(p[1])) return null;
+  return t;
+}
+
+/* ── Alta en lote. Es la vía principal, no el respaldo. ── */
+function entAgregar(){
+  const ta = document.getElementById('entTexto');
+  const crudo = (ta.value || '').split(/[\s,;]+/).filter(Boolean);
+  if (!crudo.length){ entAviso_('Pega o escribe al menos una Forma 8.', 'warn'); return; }
+
+  const cola = entCola_();
+  const yaHay = new Set(cola.map(x => x.f8));
+  const hora  = new Date().toTimeString().slice(0,5);
+  let nuevos = 0, repes = 0, malos = [];
+
+  crudo.forEach(function(c){
+    const f8 = entNormF8_(c);
+    if (!f8){ malos.push(c); return; }
+    if (yaHay.has(f8)){ repes++; return; }
+    yaHay.add(f8);
+    /* La UE sale del tablero si ya está cargado; si no, queda vacía y se
+       resuelve al subir. La captura NUNCA depende de que el tablero haya
+       terminado de cargar. */
+    const p = (typeof DATA !== 'undefined' && DATA && DATA.pedidos)
+      ? DATA.pedidos.find(function(x){ return String(x.id||'').trim() === f8; }) : null;
+    cola.push({ f8:f8, ue:(p && (p.ue||p.unidad)) || '', hora:hora, estado:'pendiente' });
+    nuevos++;
+  });
+  entColaSet_(cola);
+  ta.value = '';
+  let msg = nuevos + (nuevos===1 ? ' entrega capturada' : ' entregas capturadas');
+  if (repes) msg += ' · ' + repes + ' ya estaban';
+  if (malos.length) msg += ' · ' + malos.length + ' no parecen Forma 8: ' + malos.slice(0,3).join(', ');
+  entAviso_(msg, malos.length ? 'warn' : 'ok');
+  entRender();
+}
+
+function entQuitar(f8){
+  entColaSet_(entCola_().filter(function(x){ return x.f8 !== f8; }));
+  entRender();
+}
+
+/* ── Subida. La dispara ÉL, con el PIN. Nada se borra hasta que el servidor
+      confirme, y lo que falle se queda en la cola con su motivo. ── */
+function entSubir(){
+  const pend = entCola_().filter(function(x){ return x.estado !== 'subida'; });
+  if (!pend.length){ entAviso_('No hay entregas pendientes de subir.', 'ok'); return; }
+  const pin = document.getElementById('entPin').value.trim();
+  if (!pin){ entAviso_('Escribe tu PIN para subir.', 'warn'); document.getElementById('entPin').focus(); return; }
+
+  const btn = document.getElementById('entBtnSubir');
+  btn.disabled = true;
+  let ok = 0, err = 0, i = 0;
+
+  /* De una en una y en serie: Apps Script serializa las ejecuciones del mismo
+     usuario, así que mandarlas en paralelo solo las encola y agota esperas. */
+  (function siguiente(){
+    if (i >= pend.length){
+      btn.disabled = false;
+      entAviso_(ok + ' subidas · ' + (err ? err + ' con error, siguen en la cola' : 'sin errores'),
+                err ? 'warn' : 'ok');
+      entRender();
+      return;
+    }
+    const it = pend[i++];
+    it.estado = 'subiendo'; entRender();
+    const u = WEBAPP_BASE + '?file=kb_llave_hito&id=' + encodeURIComponent(it.f8) +
+              '&etapa=ENTREGADO&fecha=' + encodeURIComponent(entHoy_()) +
+              '&pin=' + encodeURIComponent(pin) +
+              '&nota=' + encodeURIComponent('Entrega registrada en bahía ' + it.hora);
+    fetch(u).then(function(r){ return r.json(); }).then(function(r){
+      if (r && r.ok){ it.estado = 'subida'; it.msg = ''; ok++; }
+      else { it.estado = 'error'; it.msg = (r && r.msg) || 'rechazada'; err++; }
+    }).catch(function(e){
+      it.estado = 'error'; it.msg = 'sin conexión'; err++;
+    }).then(function(){
+      entColaSet_(entCola_().map(function(x){ return x.f8===it.f8 ? it : x; }));
+      setTimeout(siguiente, 120);
+    });
+  })();
+}
+
+/* ── Detección de red. "Estable" se mide, no se adivina: dos respuestas
+      seguidas. Una barra de WiFi llena en el almacén no significa que haya
+      red utilizable. ── */
+let ENT_RED = { estable:false, ofrecido:false };
+function entSondear_(){
+  const pend = entCola_().filter(function(x){ return x.estado !== 'subida'; }).length;
+  if (!pend) return;
+  if (!navigator.onLine){ ENT_RED.estable = false; ENT_RED.ofrecido = false; entPintarRed_(); return; }
+  const t0 = Date.now();
+  fetch(WEBAPP_BASE + '?file=kanban_ping&t=' + t0, { method:'GET' })
+    .then(function(){ return fetch(WEBAPP_BASE + '?file=kanban_ping&t=' + (t0+1)); })
+    .then(function(){
+      const antes = ENT_RED.estable;
+      ENT_RED.estable = true; entPintarRed_();
+      if (!antes && !ENT_RED.ofrecido){ ENT_RED.ofrecido = true; entOfrecerSubida_(pend); }
+    })
+    .catch(function(){ ENT_RED.estable = false; ENT_RED.ofrecido = false; entPintarRed_(); });
+}
+function entOfrecerSubida_(n){
+  const c = document.getElementById('entOferta');
+  if (!c) return;
+  c.style.display = '';
+  c.innerHTML = '<b>Red estable detectada.</b> Tienes ' + n +
+    (n===1 ? ' entrega capturada sin subir.' : ' entregas capturadas sin subir.') +
+    ' <button class="btn-si" onclick="document.getElementById(\'entOferta\').style.display=\'none\';entSubir();">Subir al tablero</button>' +
+    ' <button class="btn-no" onclick="document.getElementById(\'entOferta\').style.display=\'none\';">Ahora no</button>';
+}
+function entPintarRed_(){
+  const e = document.getElementById('entRed'); if (!e) return;
+  const pend = entCola_().filter(function(x){ return x.estado !== 'subida'; }).length;
+  e.innerHTML = (ENT_RED.estable ? '<span class="ok">&#9679; conectado</span>' : '<span class="off">&#9679; sin conexión</span>') +
+                (pend ? ' · <b>' + pend + ' sin subir</b>' : ' · todo subido');
+}
+function entAviso_(txt, tipo){
+  const e = document.getElementById('entAviso'); if (!e) return;
+  e.className = 'ent-aviso ' + (tipo||'ok'); e.textContent = txt; e.style.display = '';
+  clearTimeout(entAviso_._t); entAviso_._t = setTimeout(function(){ e.style.display='none'; }, 7000);
+}
+
+/* ── Asistencia. La otra mitad del informe: sin esto el supervisor seguiría
+      escribiéndola a mano y la herramienta no le ahorraría nada. ── */
+function entAsistAgregar(){
+  const ue  = document.getElementById('asUE').value.trim();
+  const rep = document.getElementById('asRep').value.trim();
+  const ced = document.getElementById('asCed').value.trim();
+  if (!ue){ entAviso_('Indica la unidad ejecutora.', 'warn'); return; }
+  const a = entAsist_();
+  a.push({ ue:ue, rep:rep, ced:ced, lleg:new Date().toTimeString().slice(0,5), sal:'' });
+  entAsistSet_(a);
+  document.getElementById('asUE').value=''; document.getElementById('asRep').value=''; document.getElementById('asCed').value='';
+  entRender();
+}
+function entAsistSalida(i){
+  const a = entAsist_(); if (!a[i]) return;
+  a[i].sal = new Date().toTimeString().slice(0,5);
+  entAsistSet_(a); entRender();
+}
+function entAsistQuitar(i){
+  const a = entAsist_(); a.splice(i,1); entAsistSet_(a); entRender();
+}
+
+/* ── Informe del día. Se genera del dato capturado; nadie lo escribe. ── */
+function entInforme(){
+  const cola = entCola_(), asis = entAsist_();
+  const f = new Date();
+  const MES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const fTxt = f.getDate() + ' de ' + MES[f.getMonth()] + ' de ' + f.getFullYear();
+  const filasF8 = cola.map(function(x,i){
+    return '<tr><td>'+(i+1)+'</td><td>'+(x.ue||'&mdash;')+'</td><td class="mono">'+x.f8+'</td><td>'+x.hora+'</td></tr>';
+  }).join('');
+  const filasAs = asis.map(function(a){
+    return '<tr><td>'+a.ue+'</td><td>'+(a.rep||'&mdash;')+'</td><td>'+(a.ced||'&mdash;')+'</td><td>'+(a.lleg||'&mdash;')+'</td><td>'+(a.sal||'&mdash;')+'</td></tr>';
+  }).join('');
+  const html = '<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Informe CEDIS '+entHoy_()+'</title>'+
+    '<style>body{font-family:Calibri,Arial,sans-serif;font-size:11pt;margin:28px;color:#111}'+
+    'h1{font-size:15pt;color:#1F3864;margin:0 0 2px}h2{font-size:12pt;color:#1F3864;margin:18px 0 6px;border-bottom:1px solid #1F3864;padding-bottom:3px}'+
+    '.sub{color:#444;font-size:10pt}table{border-collapse:collapse;width:100%;margin-top:6px;font-size:10pt}'+
+    'th{background:#1F3864;color:#fff;text-align:left;padding:5px 7px}td{border-bottom:1px solid #ddd;padding:4px 7px}'+
+    '.mono{font-family:Consolas,monospace}.kpis{display:flex;gap:14px;margin:12px 0}'+
+    '.kpi{border:1px solid #ccc;border-top:3px solid #1F3864;padding:8px 16px}.kpi b{font-size:18pt;display:block}'+
+    '@media print{body{margin:12mm}}</style></head><body>'+
+    '<h1>INFORME EJECUTIVO CONSOLIDADO DE GESTIÓN Y ASISTENCIA</h1>'+
+    '<div class="sub">Centro de Distribución (CEDIS) &middot; Caja de Seguro Social, Panamá</div>'+
+    '<p><b>Para:</b> Jefatura de Almacén<br><b>De:</b> Torre de Control &middot; DINALOG<br>'+
+    '<b>Fecha del reporte:</b> '+fTxt+'<br>'+
+    '<b>Asunto:</b> Consolidado General de Solicitudes (Forma 8) y Control de Asistencia de Unidades Ejecutoras</p>'+
+    '<h2>1. Resumen ejecutivo de operaciones</h2>'+
+    '<div class="kpis"><div class="kpi"><b>'+cola.length+'</b>Formas 8 entregadas</div>'+
+    '<div class="kpi"><b>'+asis.length+'</b>Representantes presentes</div>'+
+    '<div class="kpi"><b>'+cola.filter(function(x){return x.estado==='subida';}).length+'</b>Registradas en el sistema</div></div>'+
+    '<p>El presente informe consolida las entregas realizadas por el Centro de Distribución durante la jornada del '+fTxt+
+    ', junto con el control de asistencia de los representantes de las unidades ejecutoras que acudieron a retirar sus insumos.</p>'+
+    '<h2>2. Control de asistencia de unidades ejecutoras</h2>'+
+    (asis.length ? '<table><tr><th>Unidad Ejecutora</th><th>Representante</th><th>Cédula</th><th>Llegada</th><th>Salida</th></tr>'+filasAs+'</table>'
+                 : '<p>Sin registros de asistencia para esta jornada.</p>')+
+    '<h2>3. Anexo: listado consolidado de entregas (Forma 8)</h2>'+
+    (cola.length ? '<table><tr><th>N&ordm;</th><th>Unidad Ejecutora</th><th>N&ordm; Doc (Forma 8)</th><th>Hora</th></tr>'+filasF8+'</table>'
+                 : '<p>Sin entregas registradas para esta jornada.</p>')+
+    '<h2>4. Observaciones</h2><p>Los '+cola.length+' documentos listados fueron entregados físicamente en la bahía del CEDIS '+
+    'y quedan registrados en el sistema maestro de la Torre de Control con su hora de entrega.</p>'+
+    '</body></html>';
+  const w = window.open('', '_blank');
+  if (!w){ entAviso_('El navegador bloqueó la ventana. Permite las ventanas emergentes.', 'warn'); return; }
+  w.document.write(html); w.document.close();
+  setTimeout(function(){ try{ w.print(); }catch(e){} }, 400);
+}
+
+/* ── Pintado ── */
+function entRender(){
+  const cont = document.getElementById('vistaEntregasDia');
+  if (!cont || VISTA !== 'entdia') return;
+  const cola = entCola_(), asis = entAsist_();
+  const est = { pendiente:'en cola', subiendo:'subiendo&hellip;', subida:'&#10003; en el tablero', error:'&#9888; ' };
+  const filas = cola.map(function(x){
+    return '<tr><td class="mono">'+x.f8+'</td><td>'+(x.ue||'&mdash;')+'</td><td>'+x.hora+'</td>'+
+      '<td class="e-'+x.estado+'">'+(est[x.estado]||x.estado)+(x.estado==='error'?(x.msg||''):'')+'</td>'+
+      '<td><button class="x" onclick="entQuitar(\''+x.f8+'\')">&times;</button></td></tr>';
+  }).join('');
+  const filasAs = asis.map(function(a,i){
+    return '<tr><td>'+a.ue+'</td><td>'+(a.rep||'&mdash;')+'</td><td>'+(a.ced||'&mdash;')+'</td><td>'+a.lleg+'</td>'+
+      '<td>'+(a.sal ? a.sal : '<button class="btn-mini" onclick="entAsistSalida('+i+')">Marcar salida</button>')+'</td>'+
+      '<td><button class="x" onclick="entAsistQuitar('+i+')">&times;</button></td></tr>';
+  }).join('');
+  cont.innerHTML =
+    '<div class="ent-barra"><b>Entregas del día</b> &middot; '+entHoy_()+
+      '<span class="ent-red" id="entRed"></span></div>'+
+    '<div id="entOferta" class="ent-oferta" style="display:none"></div>'+
+    '<div id="entAviso" class="ent-aviso" style="display:none"></div>'+
+    '<div class="ent-caja"><div class="ent-tit">Registrar entregas &mdash; pega o escribe las Formas 8</div>'+
+      '<textarea id="entTexto" rows="3" placeholder="8107-2026-1-788&#10;8045-2026-1-4357&#10;&hellip;una por línea, o separadas por espacio"></textarea>'+
+      '<div class="ent-acc"><button class="btn-si" onclick="entAgregar()">Agregar a la lista</button>'+
+      '<span class="ent-nota">Se guardan en este dispositivo. No necesitas internet para capturar.</span></div></div>'+
+    '<div class="ent-caja"><div class="ent-tit">Capturadas hoy &mdash; '+cola.length+'</div>'+
+      (cola.length ? '<table class="ent-tb"><tr><th>Forma 8</th><th>Unidad Ejecutora</th><th>Hora</th><th>Estado</th><th></th></tr>'+filas+'</table>'
+                   : '<div class="ent-vacio">Todavía no has registrado entregas hoy.</div>')+
+      '<div class="ent-acc"><input id="entPin" type="password" placeholder="PIN" maxlength="8">'+
+      '<button class="btn-si" id="entBtnSubir" onclick="entSubir()">Subir al tablero</button>'+
+      '<button class="btn-no" onclick="entInforme()">Generar informe del día</button></div></div>'+
+    '<div class="ent-caja"><div class="ent-tit">Asistencia de unidades ejecutoras</div>'+
+      '<div class="ent-acc"><input id="asUE" placeholder="Unidad ejecutora" style="min-width:260px">'+
+      '<input id="asRep" placeholder="Representante"><input id="asCed" placeholder="Cédula" style="max-width:130px">'+
+      '<button class="btn-si" onclick="entAsistAgregar()">Registrar llegada</button></div>'+
+      (asis.length ? '<table class="ent-tb"><tr><th>Unidad Ejecutora</th><th>Representante</th><th>Cédula</th><th>Llegada</th><th>Salida</th><th></th></tr>'+filasAs+'</table>'
+                   : '<div class="ent-vacio">Sin registros de asistencia hoy.</div>')+
+    '</div>';
+  entPintarRed_();
+}
+
+function entIniciar_(){
+  entSondear_();
+  setInterval(entSondear_, ENT_PING_MS);
+}
+
 </script>
 </body>
 </html>
