@@ -2518,7 +2518,12 @@ function entSubir(){
 let ENT_RED = { estable:false, ofrecido:false, huboRed:false };
 function entSondear_(){
   const pend = entCola_().filter(function(x){ return x.estado !== 'subida'; }).length;
-  if (!pend) return;
+  /* DEFECTO CORREGIDO: aquí había un `if (!pend) return;` para ahorrar llamadas
+     cuando no quedaba nada por subir. El efecto era que con todo subido el
+     sondeo no corría, ENT_RED.estable se quedaba en false y la barra decía
+     "sin conexión" teniendo red. El indicador mentía justo cuando todo estaba
+     bien. La sonda no toca hojas y cuesta nada: se ejecuta siempre y lo que
+     depende de `pend` es solo OFRECER la subida, no medir la red. */
   if (!navigator.onLine){ ENT_RED.estable = false; ENT_RED.ofrecido = false; entPintarRed_(); return; }
   const t0 = Date.now();
   fetch(WEBAPP_BASE + '?file=kanban_ping&t=' + t0, { method:'GET' })
@@ -2526,7 +2531,9 @@ function entSondear_(){
     .then(function(){
       const antes = ENT_RED.estable;
       ENT_RED.estable = true; ENT_RED.huboRed = true; entPintarRed_();
-      if (!antes && !ENT_RED.ofrecido){ ENT_RED.ofrecido = true; entOfrecerSubida_(pend); }
+      /* Solo se OFRECE subir si hay algo pendiente; la medición de red es
+         independiente de eso. */
+      if (pend && !antes && !ENT_RED.ofrecido){ ENT_RED.ofrecido = true; entOfrecerSubida_(pend); }
     })
     .catch(function(){ ENT_RED.estable = false; ENT_RED.ofrecido = false; entPintarRed_(); });
 }
