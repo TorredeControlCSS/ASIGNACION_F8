@@ -2387,9 +2387,19 @@ const ENT_LS_ASIST = 'cedis_asistencia_v1';
 const ENT_PING_MS  = 45000;     // cada cuánto se tantea la red
 
 /* ── Persistencia local. Todo vive en el dispositivo hasta que él suba. ── */
+/* Fecha y hora SIEMPRE en Panamá, nunca la del dispositivo. Diego da soporte
+   desde Arizona (UTC−7) y el almacén opera en UTC−5: una hora sin dueño se lee
+   como la del lector. Panamá no tiene horario de verano, así que el desfase es
+   fijo y no hay que preguntarle a nada. */
+const ENT_PTY_MIN = -5 * 60;
+function entPtyAhora_(){ return new Date(Date.now() + ENT_PTY_MIN*60000); }
 function entHoy_(){
-  const d = new Date();
-  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  const d = entPtyAhora_();
+  return d.getUTCFullYear() + '-' + String(d.getUTCMonth()+1).padStart(2,'0') + '-' + String(d.getUTCDate()).padStart(2,'0');
+}
+function entHora_(){
+  const d = entPtyAhora_();
+  return String(d.getUTCHours()).padStart(2,'0') + ':' + String(d.getUTCMinutes()).padStart(2,'0');
 }
 function entLeer_(clave){
   try { return JSON.parse(localStorage.getItem(clave) || '{}'); } catch(e){ return {}; }
@@ -2425,7 +2435,7 @@ function entAgregar(){
 
   const cola = entCola_();
   const yaHay = new Set(cola.map(x => x.f8));
-  const hora  = new Date().toTimeString().slice(0,5);
+  const hora  = entHora_();
   let nuevos = 0, repes = 0, malos = [];
 
   crudo.forEach(function(c){
@@ -2484,7 +2494,14 @@ function entSubir(){
               '&pin=' + encodeURIComponent(pin) +
               '&nota=' + encodeURIComponent('Entrega registrada en bahía ' + it.hora);
     fetch(u).then(function(r){ return r.json(); }).then(function(r){
-      if (r && r.ok){ it.estado = 'subida'; it.msg = ''; ok++; }
+      if (r && r.ok){
+        it.estado = 'subida'; it.msg = '';
+        /* La UE la resuelve el servidor: la vista captura sin red y los pedidos
+           ya entregados no están en la lista del tablero activo. Llega aquí y
+           se guarda, así el informe deja de salir con guiones. */
+        if (r.ue) it.ue = r.ue;
+        ok++;
+      }
       else { it.estado = 'error'; it.msg = (r && r.msg) || 'rechazada'; err++; }
     }).catch(function(e){
       it.estado = 'error'; it.msg = 'sin conexión'; err++;
@@ -2498,7 +2515,7 @@ function entSubir(){
 /* ── Detección de red. "Estable" se mide, no se adivina: dos respuestas
       seguidas. Una barra de WiFi llena en el almacén no significa que haya
       red utilizable. ── */
-let ENT_RED = { estable:false, ofrecido:false };
+let ENT_RED = { estable:false, ofrecido:false, huboRed:false };
 function entSondear_(){
   const pend = entCola_().filter(function(x){ return x.estado !== 'subida'; }).length;
   if (!pend) return;
@@ -2508,7 +2525,7 @@ function entSondear_(){
     .then(function(){ return fetch(WEBAPP_BASE + '?file=kanban_ping&t=' + (t0+1)); })
     .then(function(){
       const antes = ENT_RED.estable;
-      ENT_RED.estable = true; entPintarRed_();
+      ENT_RED.estable = true; ENT_RED.huboRed = true; entPintarRed_();
       if (!antes && !ENT_RED.ofrecido){ ENT_RED.ofrecido = true; entOfrecerSubida_(pend); }
     })
     .catch(function(){ ENT_RED.estable = false; ENT_RED.ofrecido = false; entPintarRed_(); });
@@ -2542,14 +2559,14 @@ function entAsistAgregar(){
   const ced = document.getElementById('asCed').value.trim();
   if (!ue){ entAviso_('Indica la unidad ejecutora.', 'warn'); return; }
   const a = entAsist_();
-  a.push({ ue:ue, rep:rep, ced:ced, lleg:new Date().toTimeString().slice(0,5), sal:'' });
+  a.push({ ue:ue, rep:rep, ced:ced, lleg:entHora_(), sal:'' });
   entAsistSet_(a);
   document.getElementById('asUE').value=''; document.getElementById('asRep').value=''; document.getElementById('asCed').value='';
   entRender();
 }
 function entAsistSalida(i){
   const a = entAsist_(); if (!a[i]) return;
-  a[i].sal = new Date().toTimeString().slice(0,5);
+  a[i].sal = entHora_();
   entAsistSet_(a); entRender();
 }
 function entAsistQuitar(i){
@@ -2559,43 +2576,73 @@ function entAsistQuitar(i){
 /* ── Informe del día. Se genera del dato capturado; nadie lo escribe. ── */
 function entInforme(){
   const cola = entCola_(), asis = entAsist_();
-  const f = new Date();
+  const reg  = cola.filter(function(x){ return x.estado==='subida'; }).length;
+  const pend = cola.length - reg;
+  const f = entPtyAhora_();
   const MES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-  const fTxt = f.getDate() + ' de ' + MES[f.getMonth()] + ' de ' + f.getFullYear();
+  const fTxt = f.getUTCDate() + ' de ' + MES[f.getUTCMonth()] + ' de ' + f.getUTCFullYear();
+
   const filasF8 = cola.map(function(x,i){
-    return '<tr><td>'+(i+1)+'</td><td>'+(x.ue||'&mdash;')+'</td><td class="mono">'+x.f8+'</td><td>'+x.hora+'</td></tr>';
+    return '<tr><td>'+(i+1)+'</td><td>'+(x.ue||'&mdash;')+'</td><td class="mono">'+x.f8+'</td><td>'+x.hora+'</td>'+
+           '<td>'+(x.estado==='subida' ? 'Registrada' : 'Pendiente')+'</td></tr>';
   }).join('');
   const filasAs = asis.map(function(a){
     return '<tr><td>'+a.ue+'</td><td>'+(a.rep||'&mdash;')+'</td><td>'+(a.ced||'&mdash;')+'</td><td>'+(a.lleg||'&mdash;')+'</td><td>'+(a.sal||'&mdash;')+'</td></tr>';
   }).join('');
+
+  /* LA NOTA DICE LA CAUSA, Y SOLO LA QUE CORRESPONDE.
+     Sin causa escrita, "pendiente" se lee como "el supervisor no reportó", y
+     eso vicia el reporte: la próxima vez nadie captura. Con causa, el informe
+     defiende a quien lo genera.
+     Y no se culpa a la red por defecto: si hubo red estable en la jornada y
+     aun así quedaron pendientes, la causa fue otra y el texto lo refleja. Un
+     disclaimer automático es una excusa automática. */
+  let nota = '';
+  if (pend > 0){
+    nota = '<div class="nota"><b>'+pend+(pend===1?' entrega pendiente':' entregas pendientes')+' de registro.</b> '+
+      (ENT_RED.huboRed
+        ? 'Fueron capturadas en la bahía al momento de la entrega y quedaron en espera de registro al generar este informe. '
+        : 'Fueron capturadas en la bahía al momento de la entrega y quedaron en espera porque la red del almacén no estaba disponible al generar este informe. ')+
+      'El hecho de la entrega consta en este documento con su hora; el registro en el Kanban se completa al subirlas.</div>';
+  }
+
   const html = '<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Informe CEDIS '+entHoy_()+'</title>'+
-    '<style>body{font-family:Calibri,Arial,sans-serif;font-size:11pt;margin:28px;color:#111}'+
+    '<style>@page{margin:14mm;size:letter}body{font-family:Calibri,Arial,sans-serif;font-size:11pt;margin:0;color:#111}'+
     'h1{font-size:15pt;color:#1F3864;margin:0 0 2px}h2{font-size:12pt;color:#1F3864;margin:18px 0 6px;border-bottom:1px solid #1F3864;padding-bottom:3px}'+
     '.sub{color:#444;font-size:10pt}table{border-collapse:collapse;width:100%;margin-top:6px;font-size:10pt}'+
     'th{background:#1F3864;color:#fff;text-align:left;padding:5px 7px}td{border-bottom:1px solid #ddd;padding:4px 7px}'+
-    '.mono{font-family:Consolas,monospace}.kpis{display:flex;gap:14px;margin:12px 0}'+
-    '.kpi{border:1px solid #ccc;border-top:3px solid #1F3864;padding:8px 16px}.kpi b{font-size:18pt;display:block}'+
-    '@media print{body{margin:12mm}}</style></head><body>'+
+    '.mono{font-family:Consolas,monospace}.kpis{display:flex;gap:12px;margin:12px 0}'+
+    '.kpi{border:1px solid #ccc;border-top:3px solid #1F3864;padding:8px 14px;flex:1}'+
+    '.kpi b{font-size:18pt;display:block;line-height:1.1}.kpi span{font-size:9.5pt;color:#333}'+
+    '.nota{background:#fff8e1;border-left:4px solid #8a6a00;padding:9px 12px;margin-top:8px;font-size:10pt}'+
+    '.pie{margin-top:22px;border-top:1px solid #ccc;padding-top:6px;font-size:9pt;color:#555}'+
+    '</style></head><body>'+
     '<h1>INFORME EJECUTIVO CONSOLIDADO DE GESTIÓN Y ASISTENCIA</h1>'+
     '<div class="sub">Centro de Distribución (CEDIS) &middot; Caja de Seguro Social, Panamá</div>'+
     '<p><b>Para:</b> Jefatura de Almacén<br><b>De:</b> Torre de Control &middot; DINALOG<br>'+
     '<b>Fecha del reporte:</b> '+fTxt+'<br>'+
-    '<b>Asunto:</b> Consolidado General de Solicitudes (Forma 8) y Control de Asistencia de Unidades Ejecutoras</p>'+
+    '<b>Asunto:</b> Consolidado General de Entregas (Forma 8) y Control de Asistencia de Unidades Ejecutoras</p>'+
     '<h2>1. Resumen ejecutivo de operaciones</h2>'+
-    '<div class="kpis"><div class="kpi"><b>'+cola.length+'</b>Formas 8 entregadas</div>'+
-    '<div class="kpi"><b>'+asis.length+'</b>Representantes presentes</div>'+
-    '<div class="kpi"><b>'+cola.filter(function(x){return x.estado==='subida';}).length+'</b>Registradas en el sistema</div></div>'+
+    '<div class="kpis">'+
+      '<div class="kpi"><b>'+cola.length+'</b><span>Entregas del día</span></div>'+
+      '<div class="kpi"><b>'+reg+'</b><span>Registradas en el Kanban</span></div>'+
+      '<div class="kpi"><b>'+pend+'</b><span>Pendientes de registro en el Kanban</span></div>'+
+      '<div class="kpi"><b>'+asis.length+'</b><span>Representantes presentes</span></div>'+
+    '</div>'+
     '<p>El presente informe consolida las entregas realizadas por el Centro de Distribución durante la jornada del '+fTxt+
     ', junto con el control de asistencia de los representantes de las unidades ejecutoras que acudieron a retirar sus insumos.</p>'+
+    nota+
     '<h2>2. Control de asistencia de unidades ejecutoras</h2>'+
     (asis.length ? '<table><tr><th>Unidad Ejecutora</th><th>Representante</th><th>Cédula</th><th>Llegada</th><th>Salida</th></tr>'+filasAs+'</table>'
                  : '<p>Sin registros de asistencia para esta jornada.</p>')+
     '<h2>3. Anexo: listado consolidado de entregas (Forma 8)</h2>'+
-    (cola.length ? '<table><tr><th>N&ordm;</th><th>Unidad Ejecutora</th><th>N&ordm; Doc (Forma 8)</th><th>Hora</th></tr>'+filasF8+'</table>'
+    (cola.length ? '<table><tr><th>N&ordm;</th><th>Unidad Ejecutora</th><th>N&ordm; Doc (Forma 8)</th><th>Hora</th><th>Estado</th></tr>'+filasF8+'</table>'
                  : '<p>Sin entregas registradas para esta jornada.</p>')+
     '<h2>4. Observaciones</h2><p>Los '+cola.length+' documentos listados fueron entregados físicamente en la bahía del CEDIS '+
-    'y quedan registrados en el sistema maestro de la Torre de Control con su hora de entrega.</p>'+
+    'y constan con su hora de entrega. Las entregas marcadas como registradas quedan asentadas en el sistema maestro de la Torre de Control.</p>'+
+    '<div class="pie">Generado por la Torre de Control &middot; DINALOG el '+fTxt+' a las '+entHora_()+' (hora de Panamá).</div>'+
     '</body></html>';
+
   const w = window.open('', '_blank');
   if (!w){ entAviso_('El navegador bloqueó la ventana. Permite las ventanas emergentes.', 'warn'); return; }
   w.document.write(html); w.document.close();
@@ -2607,7 +2654,10 @@ function entRender(){
   const cont = document.getElementById('vistaEntregasDia');
   if (!cont || VISTA !== 'entdia') return;
   const cola = entCola_(), asis = entAsist_();
-  const est = { pendiente:'en cola', subiendo:'subiendo&hellip;', subida:'&#10003; en el tablero', error:'&#9888; ' };
+  /* Mismo lenguaje que el informe: 'registrada' es el hecho en el Kanban,
+     'pendiente de registro' es que la entrega ocurrio y falta asentarla. */
+  const est = { pendiente:'pendiente de registro', subiendo:'registrando&hellip;',
+                subida:'&#10003; registrada', error:'&#9888; ' };
   const filas = cola.map(function(x){
     return '<tr><td class="mono">'+x.f8+'</td><td>'+(x.ue||'&mdash;')+'</td><td>'+x.hora+'</td>'+
       '<td class="e-'+x.estado+'">'+(est[x.estado]||x.estado)+(x.estado==='error'?(x.msg||''):'')+'</td>'+
