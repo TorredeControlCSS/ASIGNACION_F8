@@ -375,6 +375,8 @@
   .ent-retro{background:#fff8e1;border-left:4px solid #8a6a00;padding:9px 13px;border-radius:5px;
     margin:9px 0 0;font-size:13px;color:#5c4700}
   .ent-tb tr.e-retro td{background:#fffdf3}
+  .ent-rec{display:block;font-size:11px;color:#2e7d32}
+  .ent-sinrec{display:block;font-size:11px;color:#8a6a00}
   .ent-acc input[type=date]{font-family:Consolas,monospace;font-size:14px}
   .ent-busca{width:100%;box-sizing:border-box;padding:14px 12px;font-size:19px;font-weight:600;
     font-variant-numeric:tabular-nums;border:2px solid #c6ccd4;border-radius:6px}
@@ -2528,6 +2530,7 @@ function entSubir(){
     const u = WEBAPP_BASE + '?file=kb_llave_hito&id=' + encodeURIComponent(it.f8) +
               '&etapa=ENTREGADO&fecha=' + encodeURIComponent(it.fecha || entHoy_()) +
               '&pin=' + encodeURIComponent(pin) +
+              (entReceptorTxt_(it.ue) ? '&receptor=' + encodeURIComponent(entReceptorTxt_(it.ue)) : '') +
               '&nota=' + encodeURIComponent('Entrega registrada en bahía ' + it.hora +
                 ((it.fecha && it.fecha !== entHoy_()) ? ' · carga retroactiva del ' + it.fecha : ''));
     fetch(u).then(function(r){ return r.json(); }).then(function(r){
@@ -2537,6 +2540,8 @@ function entSubir(){
            ya entregados no están en la lista del tablero activo. Llega aquí y
            se guarda, así el informe deja de salir con guiones. */
         if (r.ue) it.ue = r.ue;
+        it.sinRec = !!r.sinReceptor;
+        it.rec = r.receptor || '';
         ok++;
       }
       else { it.estado = 'error'; it.msg = (r && r.msg) || 'rechazada'; err++; }
@@ -2704,7 +2709,12 @@ function entRender(){
                 subida:'&#10003; registrada', error:'&#9888; ' };
   const filas = cola.map(function(x){
     var fx = x.fecha || entHoy_();
-    return '<tr'+(fx!==entHoy_()?' class="e-retro"':'')+'><td class="mono">'+x.f8+'</td><td>'+(x.ue||'&mdash;')+'</td>'+
+    var rec = entReceptorTxt_(x.ue);
+    var recHtml = !x.ue ? ''
+      : (rec ? '<span class="ent-rec">recibió '+entEsc_(rec)+'</span>'
+             : '<span class="ent-sinrec">sin receptor &mdash; regístralo en Asistencia</span>');
+    return '<tr'+(fx!==entHoy_()?' class="e-retro"':'')+'><td class="mono">'+x.f8+'</td>'+
+      '<td>'+(x.ue||'&mdash;')+recHtml+'</td>'+
       '<td class="mono">'+fx+'</td><td>'+x.hora+'</td>'+
       '<td class="e-'+x.estado+'">'+(est[x.estado]||x.estado)+(x.estado==='error'?(x.msg||''):'')+'</td>'+
       '<td>'+(x.ue ? '<button class="btn-mini" onclick="entQuienRetiro(\''+String(x.ue).replace(/'/g,"")+'\')">Quién retiró</button>' : '')+
@@ -2738,6 +2748,11 @@ function entRender(){
       '<textarea id="entTexto" rows="3" placeholder="8107-2026-1-788&#10;8045-2026-1-4357&#10;&hellip;una por línea, o separadas por espacio"></textarea>'+
       '<div class="ent-acc"><button class="btn-si" onclick="entAgregar()">Agregar a la lista</button>'+
       '<span class="ent-nota">Se guardan en este dispositivo. No necesitas internet para capturar.</span></div></div>'+
+    (function(){
+      var sinR = cola.filter(function(x){ return x.ue && !entReceptorTxt_(x.ue); }).length;
+      return sinR ? '<div class="ent-retro">'+sinR+(sinR===1?' entrega no tiene':' entregas no tienen')+
+        ' quién recibió. Regístralo abajo en Asistencia y la columna RECIBIDO_UE_POR se llena sola al subir.</div>' : '';
+    })()+
     '<div class="ent-caja"><div class="ent-tit">Capturadas hoy &mdash; '+cola.length+'</div>'+
       (cola.length ? '<table class="ent-tb"><tr><th>Forma 8</th><th>Unidad Ejecutora</th><th>Entregada el</th><th>Hora</th><th>Estado</th><th></th></tr>'+filas+'</table>'
                    : '<div class="ent-vacio">Todavía no has registrado entregas hoy.</div>')+
@@ -2795,6 +2810,29 @@ function entFechaCambia(){
 }
 function entFechaHoy(){ entFechaAct = null; entRender(); }
 function entRetro_(){ return entFechaSel_() !== entHoy_(); }
+
+/* ══ El receptor sale de la asistencia, no del supervisor ══════════════════
+   RECIBIDO_UE_POR es quien recibio EN la unidad ejecutora. Si el tablero no lo
+   manda, el back end deja la celda vacia (corregido el 20-sep; antes escribia
+   ahi el nombre del supervisor). El dato ya existe: es la persona que el
+   supervisor marco en Asistencia por esa misma unidad. ═══════════════════════ */
+function entReceptor_(ue){
+  if(!ue) return null;
+  var nu = entNorm_(ue), a = entAsist_();
+  for (var i=0;i<a.length;i++){ if (entNorm_(a[i].ue) === nu) return a[i]; }
+  /* Segunda pasada tolerante: los nombres de UE del roster y los del tablero no
+     siempre coinciden palabra por palabra (alias, parentesis). */
+  for (var j=0;j<a.length;j++){
+    var na = entNorm_(a[j].ue);
+    if (na && (nu.indexOf(na) >= 0 || na.indexOf(nu) >= 0)) return a[j];
+  }
+  return null;
+}
+function entReceptorTxt_(ue){
+  var r = entReceptor_(ue);
+  if(!r || !r.rep) return '';
+  return r.rep + (r.ced ? ' (' + r.ced + ')' : '');
+}
 
 function entNorm_(t){
   return String(t==null?'':t).toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
