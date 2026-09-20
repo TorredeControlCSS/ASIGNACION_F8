@@ -372,6 +372,39 @@
   .ent-acc{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:9px}
   .ent-acc input{padding:8px 10px;border:1px solid #c6ccd4;border-radius:5px;font-size:14px}
   .ent-nota{color:#666;font-size:12px}
+  .ent-busca{width:100%;box-sizing:border-box;padding:14px 12px;font-size:19px;font-weight:600;
+    font-variant-numeric:tabular-nums;border:2px solid #c6ccd4;border-radius:6px}
+  .ent-busca:focus{outline:none;border-color:#1f3864}
+  .ent-chips{display:flex;gap:7px;overflow-x:auto;padding:9px 0 2px}
+  .ent-chips button{flex:0 0 auto;background:#fff;border:2px solid #d9dde3;border-radius:6px;
+    padding:9px 13px;font-weight:700;font-family:Consolas,monospace;font-size:13px;cursor:pointer;min-width:70px}
+  .ent-chips button small{display:block;font-weight:400;font-size:10px;color:#666;font-family:inherit}
+  .ent-hits{display:flex;flex-direction:column;gap:6px;margin-top:4px}
+  .ent-hit{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:#fff;
+    border:1px solid #e3e7ec;border-left:5px solid #c6ccd4;border-radius:6px;padding:11px 12px;cursor:pointer}
+  .ent-hit:hover{background:#f4f7fa}
+  .ent-hit.ya{border-left-color:#2e7d32;background:#eaf5ea}
+  .ent-hit .hid{font-family:Consolas,monospace;font-size:16px;font-weight:700;white-space:nowrap}
+  .ent-hit .hue{flex:1;font-size:13px;color:#1f3864;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ent-hit .hmas{font-size:21px;color:#888}
+  .ent-hit mark{background:#ffe89a;padding:0 1px;border-radius:2px}
+  .ent-listo{display:block;width:100%;margin:10px 0;padding:14px;background:#2e7d32;color:#fff;
+    border:0;border-radius:6px;font-size:15px;font-weight:700;cursor:pointer}
+  .ent-filtro{display:flex;align-items:center;gap:9px;background:#eef2f7;border-radius:6px;
+    padding:9px 13px;margin-bottom:9px;font-size:13px;font-weight:600;color:#1f3864}
+  .ent-filtro .x{margin-left:auto}
+  .ent-pers{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:#fff;
+    border:1px solid #e3e7ec;border-left:5px solid #c6ccd4;border-radius:6px;padding:10px 12px;
+    cursor:pointer;margin-bottom:6px}
+  .ent-pers:hover{background:#f4f7fa}
+  .ent-pers.dentro{border-left-color:#2e7d32;background:#eaf5ea}
+  .ent-pers.fuera{border-left-color:#c6ccd4;opacity:.7}
+  .ent-pers .rmeta{flex:1;min-width:0}
+  .ent-pers .rnom{display:block;font-size:15px;font-weight:700;color:#1f3864}
+  .ent-pers .ralt{display:block;font-size:11px;color:#777;font-style:italic}
+  .ent-pers .rsub{display:block;font-size:12px;color:#666;font-variant-numeric:tabular-nums}
+  .ent-pers .rhr{font-size:13px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .ent-pers mark{background:#ffe89a;padding:0 1px;border-radius:2px}
   .btn-si{background:#1f3864;color:#fff;border:0;padding:9px 17px;border-radius:5px;font-size:14px;cursor:pointer}
   .btn-si:disabled{opacity:.55;cursor:default}
   .btn-no{background:#fff;color:#1f3864;border:1px solid #1f3864;padding:9px 17px;border-radius:5px;font-size:14px;cursor:pointer}
@@ -2446,9 +2479,8 @@ function entAgregar(){
     /* La UE sale del tablero si ya está cargado; si no, queda vacía y se
        resuelve al subir. La captura NUNCA depende de que el tablero haya
        terminado de cargar. */
-    const p = (typeof DATA !== 'undefined' && DATA && DATA.pedidos)
-      ? DATA.pedidos.find(function(x){ return String(x.id||'').trim() === f8; }) : null;
-    cola.push({ f8:f8, ue:(p && (p.ue||p.unidad)) || '', hora:hora, estado:'pendiente' });
+    const p = entBuscarPedido_(f8);
+    cola.push({ f8:f8, ue:(p && p.ue) || '', hora:hora, estado:'pendiente' });
     nuevos++;
   });
   entColaSet_(cola);
@@ -2668,7 +2700,8 @@ function entRender(){
   const filas = cola.map(function(x){
     return '<tr><td class="mono">'+x.f8+'</td><td>'+(x.ue||'&mdash;')+'</td><td>'+x.hora+'</td>'+
       '<td class="e-'+x.estado+'">'+(est[x.estado]||x.estado)+(x.estado==='error'?(x.msg||''):'')+'</td>'+
-      '<td><button class="x" onclick="entQuitar(\''+x.f8+'\')">&times;</button></td></tr>';
+      '<td>'+(x.ue ? '<button class="btn-mini" onclick="entQuienRetiro(\''+String(x.ue).replace(/'/g,"")+'\')">Quién retiró</button>' : '')+
+      ' <button class="x" onclick="entQuitar(\''+x.f8+'\')">&times;</button></td></tr>';
   }).join('');
   const filasAs = asis.map(function(a,i){
     return '<tr><td>'+a.ue+'</td><td>'+(a.rep||'&mdash;')+'</td><td>'+(a.ced||'&mdash;')+'</td><td>'+a.lleg+'</td>'+
@@ -2680,7 +2713,15 @@ function entRender(){
       '<span class="ent-red" id="entRed"></span></div>'+
     '<div id="entOferta" class="ent-oferta" style="display:none"></div>'+
     '<div id="entAviso" class="ent-aviso" style="display:none"></div>'+
-    '<div class="ent-caja"><div class="ent-tit">Registrar entregas &mdash; pega o escribe las Formas 8</div>'+
+    '<div class="ent-caja"><div class="ent-tit">Buscar la unidad o la Forma 8</div>'+
+      '<input id="entBusca" class="ent-busca" placeholder="torrijos &middot; 479 &middot; 8107-" '+
+        'oninput="entBuscar()" autocomplete="off" autocapitalize="off" spellcheck="false">'+
+      '<div class="ent-chips">'+ entPrefijos_().map(function(x){
+          return '<button onclick="entPrefijo(\''+x.p+'\')">'+x.p+
+                 '<small>'+entEsc_(String(x.ue||'').split('(')[0].trim().slice(0,16))+'</small></button>'; }).join('') +'</div>'+
+      '<div id="entHits" class="ent-hits"></div>'+
+    '</div>'+
+    '<div class="ent-caja"><div class="ent-tit">Pegar en lote &mdash; la lista del turno</div>'+
       '<textarea id="entTexto" rows="3" placeholder="8107-2026-1-788&#10;8045-2026-1-4357&#10;&hellip;una por línea, o separadas por espacio"></textarea>'+
       '<div class="ent-acc"><button class="btn-si" onclick="entAgregar()">Agregar a la lista</button>'+
       '<span class="ent-nota">Se guardan en este dispositivo. No necesitas internet para capturar.</span></div></div>'+
@@ -2690,7 +2731,10 @@ function entRender(){
       '<div class="ent-acc"><input id="entPin" type="password" placeholder="PIN" maxlength="8">'+
       '<button class="btn-si" id="entBtnSubir" onclick="entSubir()">Subir al tablero</button>'+
       '<button class="btn-no" onclick="entInforme()">Generar informe del día</button></div></div>'+
-    '<div class="ent-caja"><div class="ent-tit">Asistencia de unidades ejecutoras</div>'+
+    '<div class="ent-caja" id="entRosterCaja"><div class="ent-tit">Asistencia &mdash; quién vino a retirar</div>'+
+      entRosterHTML_() +
+    '</div>'+
+    '<div class="ent-caja"><div class="ent-tit">Registrar a alguien que no está en la lista</div>'+
       '<div class="ent-acc"><input id="asUE" placeholder="Unidad ejecutora" style="min-width:260px">'+
       '<input id="asRep" placeholder="Representante"><input id="asCed" placeholder="Cédula" style="max-width:130px">'+
       '<button class="btn-si" onclick="entAsistAgregar()">Registrar llegada</button></div>'+
@@ -2698,6 +2742,193 @@ function entRender(){
                    : '<div class="ent-vacio">Sin registros de asistencia hoy.</div>')+
     '</div>';
   entPintarRed_();
+  if (typeof entBuscar === 'function') entBuscar();
+}
+
+
+/* ══ ETAPA 7 · Buscador predictivo y roster de bahía ═══════════════════════
+   El supervisor trabaja de pie con gente esperando. Aquí no se teclea un
+   numero completo: se escribe parte del nombre de la unidad o los ultimos
+   digitos, y la UE se confirma ANTES de capturar, no al subir.
+   Lee de F8, que el tablero ya tiene en memoria: no agrega ni una llamada
+   al back end y sobrevive a que se caiga la red. ══════════════════════════ */
+
+var ENT_ROSTER = [{"n":"Josué Castillo","c":"4-775-7310","u":"CIUDAD DE LA SALUD","v":9,"ult":"2026-09-08","alt_n":["Josue Castillo"],"alt_c":["11-775-2370","4-775-2290","4-775-2370","4-775-2390","4-775-5390","4-775-7390"]},{"n":"Antonio Chambers","c":"3-105-102","u":"HOSP. MANUEL AMADOR G.","v":8,"ult":"2026-09-17","alt_n":["Antonio Chamber"],"alt_c":["3-103-102","3-105-182","3-105-702"]},{"n":"Fernando Robles","c":"8-719-318","u":"POL. GENEROSO GUARDIA (STA. LIBRADA)","v":8,"ult":"2026-09-17","alt_n":["Fernando","Fernando Robles L."],"alt_c":["4-218-318","8-219-318","8-319-318","8-809-318"]},{"n":"Alvaro Gonzalez","c":"8-815-1394","u":"POL. ALEJANDRO DE LA GUARDIA (BETHANIA)","v":7,"ult":"2026-09-08","alt_n":["Alonso A. Giral","Alonso González","Alvaro Adán G.","Alvaro González","Miguel González","Nury González"],"alt_c":["8-809-1594"]},{"n":"Daniel Rodriguez","c":"9-701-203","u":"CAPPS PEDREGAL","v":5,"ult":"2026-09-17","alt_n":["Daniel Rodríguez"],"alt_c":["8-701-203"]},{"n":"Luis Carlos Herrera","c":"8-503-184","u":"POL. MANUEL FERRER VALDES (PEDIATRICA)","v":5,"ult":"2026-09-10","alt_n":["Luis Carlos"],"alt_c":[]},{"n":"Aurelio A. Osorio","c":"6-565-97","u":"POL. MANUEL MARIA VALDES (SAN MIGUELITO)","v":5,"ult":"2026-09-08","alt_n":["Ángreso S. Otero"],"alt_c":["6-56-547","6-56-597"]},{"n":"Aarón De León","c":"8-887-13","u":"ULAPS - SAN CRISTOBAL (PROF. CARLOS VELARDE)","v":5,"ult":"2026-09-10","alt_n":["Aaron De León"],"alt_c":["8-887-1713"]},{"n":"Jeniffer Dez.","c":"8-786-310","u":"CAPPS TORRIJOS CARTER","v":4,"ult":"2026-09-14","alt_n":["Jeniffer Diaz","Jeniffer Díaz","Jennifer Diaz"],"alt_c":["8-776-310"]},{"n":"Miguel Cedeño A.","c":"3-827-1123","u":"ESPECIALIDADES PEDIATRICAS (HEPOTH)","v":4,"ult":"2026-09-14","alt_n":["Miguel Cedeno","Miguel Cedeño"],"alt_c":[]},{"n":"Igrael Castillo","c":"8-903-705","u":"HOSP. DRA. SUSANA JONES CANO","v":4,"ult":"2026-09-16","alt_n":["Israel Castillo","Jarguel Castillo"],"alt_c":[]},{"n":"Victor M. Blanquicil","c":"8-210-1759","u":"POL. CARLOS N. BRIN (SAN FRANCISCO)","v":4,"ult":"2026-09-16","alt_n":["Victor Blanquiceli","Víctor Blanquise","Víctor M. Blanquice"],"alt_c":["8-210-1754"]},{"n":"Rogelio Cordova","c":"8-472-627","u":"POL. JOAQUIN J. VALLARINO (JUAN DIAZ)","v":4,"ult":"2026-09-01","alt_n":["Rogelio Concepcion","Rogelio Córdova"],"alt_c":["8-426-627","8-479-647"]},{"n":"R. Tamayo","c":"9-115-520","u":"CAPPS LAS ACACIAS","v":3,"ult":"2026-09-01","alt_n":["R. Tam","R. Tame"],"alt_c":[]},{"n":"Alberto Santamaria","c":"3-733-333","u":"POL. DE NUEVO SAN JUAN","v":3,"ult":"2026-09-10","alt_n":["Alberto Santamaría"],"alt_c":["3-733-993"]},{"n":"Abdiel Mena","c":"8-467-96","u":"POL. MANUEL FERRER VALDES (PEDIATRICA)","v":3,"ult":"2026-09-15","alt_n":[],"alt_c":[]},{"n":"Valentin Melgar","c":"8-1034-9","u":"POLICLINICA DE SAN ANTONIO","v":3,"ult":"2026-09-16","alt_n":["Valentin M.","Valentin Melejex"],"alt_c":["8-1134-9"]},{"n":"Joans Lu","c":"6-715-57","u":"C. H. M. DR. ARNULFO ARIAS MADRID","v":2,"ult":"2026-09-14","alt_n":["Joan Lu"],"alt_c":[]},{"n":"Erick Jones","c":"10-27-734","u":"CAPPS EL TECAL","v":2,"ult":"2026-09-02","alt_n":[],"alt_c":[]},{"n":"Kristopher Domínguez","c":"8-747-227","u":"CAPPS MAÑANITAS (LOS NOGALES)","v":2,"ult":"2026-09-16","alt_n":["Kristopher Dominguez"],"alt_c":[]},{"n":"Ramos / Stuart","c":"9-711-1310","u":"ESPECIALIDADES PEDIATRICAS (HEPOTH)","v":2,"ult":"2026-08-24","alt_n":["Ramos"],"alt_c":[]},{"n":"Maria Menocho","c":"6-709-29","u":"HOGAR DE LA ESPERANZA","v":2,"ult":"2026-09-15","alt_n":[],"alt_c":[]},{"n":"Rafael Aguilar","c":"7-721-2400","u":"HOSP. DE CHEPO","v":2,"ult":"2026-09-16","alt_n":["Rafael Morales"],"alt_c":["2-721-2400"]},{"n":"Richard A. Urri.","c":"8-338-552","u":"POL. DR. BLAS D. GOMEZ CHETRO","v":2,"ult":"2026-08-24","alt_n":["Rolando A. Viga"],"alt_c":[]},{"n":"Idalys Castillo","c":"9-726-151","u":"POL. DR. BLAS D. GOMEZ CHETRO","v":2,"ult":"2026-09-16","alt_n":[],"alt_c":[]},{"n":"Miguel Tejada P.","c":"8-717-2471","u":"POL. PRESIDENTE REMON (CALLE 17)","v":2,"ult":"2026-09-02","alt_n":["Miguel Tejada"],"alt_c":[]},{"n":"Oscar Lucero","c":"8-881-319","u":"ULAPS - LAS CUMBRES (DR. EDILBERTO CULIOLIS)","v":2,"ult":"2026-09-16","alt_n":[],"alt_c":["8-887-319"]},{"n":"Josué Gourd","c":"3-741-393","u":"ULAPS MAXIMO HERRERA (HIPODROMO)","v":2,"ult":"2026-09-17","alt_n":["Josué Powell"],"alt_c":[]},{"n":"Eudocio Santamaría","c":"5-518-519","u":"ULAPS VISTA ALEGRE (ARRAIJAN)","v":2,"ult":"2026-09-16","alt_n":["Federico Santamaría"],"alt_c":["8-818-519"]},{"n":"Gerardo Quijada","c":"2-700-245","u":"C. H. M. DR. ARNULFO ARIAS MADRID","v":1,"ult":"2026-08-11","alt_n":[],"alt_c":[]},{"n":"Zacarias","c":"8-785-502","u":"C. H. M. DR. ARNULFO ARIAS MADRID","v":1,"ult":"2026-08-14","alt_n":[],"alt_c":[]},{"n":"Gustavo Q.","c":"2-700-246","u":"C. H. M. DR. ARNULFO ARIAS MADRID","v":1,"ult":"2026-08-31","alt_n":[],"alt_c":[]},{"n":"Carina Castillo","c":"5-704-162","u":"C. H. M. DR. ARNULFO ARIAS MADRID","v":1,"ult":"2026-09-03","alt_n":[],"alt_c":[]},{"n":"Abdiel Kena","c":"8-464-96","u":"C. H. M. DR. ARNULFO ARIAS MADRID","v":1,"ult":"2026-09-17","alt_n":[],"alt_c":[]},{"n":"Stefanie Caballero","c":"8-778-2005","u":"CAPPS LAS ACACIAS","v":1,"ult":"2026-08-25","alt_n":[],"alt_c":[]},{"n":"Daniel R.","c":"1-701-203","u":"CAPPS LAS ACACIAS","v":1,"ult":"2026-09-08","alt_n":[],"alt_c":[]},{"n":"Abraham San Martín","c":"8-795-191","u":"CAPPS MAÑANITAS (LOS NOGALES)","v":1,"ult":"2026-08-14","alt_n":[],"alt_c":[]},{"n":"Abdiel Mena","c":"8-467-96","u":"CAPPS MAÑANITAS (LOS NOGALES)","v":1,"ult":"2026-08-18","alt_n":[],"alt_c":[]},{"n":"Jason De León","c":"8-219-318","u":"CAPPS MAÑANITAS (LOS NOGALES)","v":1,"ult":"2026-08-18","alt_n":[],"alt_c":[]},{"n":"R. Tame","c":"9-115-520","u":"CAPPS MAÑANITAS (LOS NOGALES)","v":1,"ult":"2026-09-08","alt_n":[],"alt_c":[]},{"n":"Stephane Caballero","c":"8-718-1005","u":"CAPPS PEDREGAL","v":1,"ult":"2026-08-18","alt_n":[],"alt_c":[]},{"n":"Hernando Fontan","c":"8-391-304","u":"CAPPS TORRIJOS CARTER","v":1,"ult":"2026-08-28","alt_n":[],"alt_c":[]},{"n":"Jeneffy Díaz","c":"8-746-310","u":"CAPPS TORRIJOS CARTER","v":1,"ult":"2026-09-16","alt_n":[],"alt_c":[]},{"n":"Eladio De León","c":"4-136-1547","u":"CAPPS VACAMONTE","v":1,"ult":"2026-08-18","alt_n":[],"alt_c":[]},{"n":"Zobeida Jaramillo","c":"6-714-1671","u":"CAPPS VACAMONTE","v":1,"ult":"2026-09-02","alt_n":[],"alt_c":[]},{"n":"Abdel Benítez","c":"4-758-1912","u":"CEDIS CHIRIQUÍ","v":1,"ult":"2026-08-28","alt_n":[],"alt_c":[]},{"n":"María González","c":"4-829-998","u":"CEDIS CHIRIQUÍ","v":1,"ult":"2026-09-04","alt_n":[],"alt_c":[]},{"n":"Aníbal Fernández","c":"2-736-897","u":"CEDIS DIVISA","v":1,"ult":"2026-08-27","alt_n":[],"alt_c":[]},{"n":"Jacinto Quazada","c":"2-135-575","u":"CEDIS DIVISA","v":1,"ult":"2026-09-17","alt_n":[],"alt_c":[]},{"n":"Josue","c":"8-740-234","u":"CIUDAD DE LA SALUD","v":1,"ult":"2026-08-14","alt_n":[],"alt_c":[]},{"n":"Alvis González","c":"8-841-594","u":"CIUDAD DE LA SALUD","v":1,"ult":"2026-09-11","alt_n":[],"alt_c":[]},{"n":"Moises Angulo","c":"8-955-659","u":"CIUDAD DE LA SALUD","v":1,"ult":"2026-09-15","alt_n":[],"alt_c":[]},{"n":"Jennifer Diaz","c":"8-766-310","u":"ESPECIALIDADES PEDIATRICAS (HEPOTH)","v":1,"ult":"2026-09-02","alt_n":[],"alt_c":[]},{"n":"Ramos S.","c":"9-711-131","u":"ESPECIALIDADES PEDIATRICAS (HEPOTH)","v":1,"ult":"2026-09-16","alt_n":[],"alt_c":[]},{"n":"José Balio","c":"8-740-2294","u":"HOSP. DE CHEPO","v":1,"ult":"2026-08-24","alt_n":[],"alt_c":[]},{"n":"Jessica Rodriguez","c":"8-449-284","u":"HOSP. DE CHEPO","v":1,"ult":"2026-09-02","alt_n":[],"alt_c":[]},{"n":"Josué A. Correa","c":"8-721-1815","u":"HOSP. DRA. SUSANA JONES CANO","v":1,"ult":"2026-08-31","alt_n":[],"alt_c":[]},{"n":"María Menacho","c":"6-709-29","u":"HOSP. DRA. SUSANA JONES CANO","v":1,"ult":"2026-09-08","alt_n":[],"alt_c":[]},{"n":"Cosa Quiel","c":"2-700-24","u":"HOSP. DRA. SUSANA JONES CANO","v":1,"ult":"2026-09-17","alt_n":[],"alt_c":[]},{"n":"Eladio Dávila","c":"4-136-1547","u":"HOSP. IRMA DE LOURDES TZANETATOS","v":1,"ult":"2026-08-21","alt_n":[],"alt_c":[]},{"n":"Jennifer Degá","c":"8-796-310","u":"HOSP. IRMA DE LOURDES TZANETATOS","v":1,"ult":"2026-08-28","alt_n":[],"alt_c":[]},{"n":"Pedro M. Castillo","c":"9-738-521","u":"HOSP. IRMA DE LOURDES TZANETATOS","v":1,"ult":"2026-09-04","alt_n":[],"alt_c":[]},{"n":"Nectalí Herrera","c":"3-90-738","u":"HOSP. MANUEL AMADOR G.","v":1,"ult":"2026-08-25","alt_n":[],"alt_c":[]},{"n":"Roland A. Vega","c":"8-337-5512","u":"POL. ALEJANDRO DE LA GUARDIA (BETHANIA)","v":1,"ult":"2026-08-14","alt_n":[],"alt_c":[]},{"n":"Jaime A. Bellido","c":"8-835-1912","u":"POL. ALEJANDRO DE LA GUARDIA (BETHANIA)","v":1,"ult":"2026-08-17","alt_n":[],"alt_c":[]},{"n":"Yanin Cheng","c":"8-728-1006","u":"POL. ALEJANDRO DE LA GUARDIA (BETHANIA)","v":1,"ult":"2026-09-11","alt_n":[],"alt_c":[]},{"n":"Valentin Melgar","c":"8-1034-9","u":"POL. CARLOS N. BRIN (SAN FRANCISCO)","v":1,"ult":"2026-09-02","alt_n":[],"alt_c":[]},{"n":"Cyssa Oquiane","c":"4-740-1904","u":"POL. CARLOS N. BRIN (SAN FRANCISCO)","v":1,"ult":"2026-09-11","alt_n":[],"alt_c":[]},{"n":"Crescencio Rodríguez","c":"8-749-161","u":"POL. DE NUEVO SAN JUAN","v":1,"ult":"2026-08-11","alt_n":[],"alt_c":[]},{"n":"Nectalí Herrera","c":"3-90-738","u":"POL. DE NUEVO SAN JUAN","v":1,"ult":"2026-08-25","alt_n":[],"alt_c":[]},{"n":"Nectalí Herrera","c":"3-90-738","u":"POL. DE SABANITAS","v":1,"ult":"2026-08-25","alt_n":[],"alt_c":[]},{"n":"Rolando A. Vega","c":"8-338-551","u":"POL. DR. BLAS D. GOMEZ CHETRO","v":1,"ult":"2026-08-21","alt_n":[],"alt_c":[]},{"n":"Jaimir Guez","c":"8-728-106","u":"POL. DR. BLAS D. GOMEZ CHETRO","v":1,"ult":"2026-08-26","alt_n":[],"alt_c":[]},{"n":"Javier Chávez","c":"8-728-1004","u":"POL. DR. BLAS D. GOMEZ CHETRO","v":1,"ult":"2026-08-28","alt_n":[],"alt_c":[]},{"n":"Pedro M. Castillo J.","c":"9-738-521","u":"POL. DR. BLAS D. GOMEZ CHETRO","v":1,"ult":"2026-09-11","alt_n":[],"alt_c":[]},{"n":"Nectalí Herrera","c":"3-90-738","u":"POL. HUGO SPADAFORA","v":1,"ult":"2026-08-25","alt_n":[],"alt_c":[]},{"n":"Antonio Chambens","c":"3-105-102","u":"POL. HUGO SPADAFORA","v":1,"ult":"2026-09-08","alt_n":[],"alt_c":[]},{"n":"Néstor Herrera","c":"3-90-730","u":"POL. HUGO SPADAFORA","v":1,"ult":"2026-09-16","alt_n":[],"alt_c":[]},{"n":"Manuel Lopez","c":"3-568-45","u":"POL. HUGO SPADAFORA","v":1,"ult":"2026-09-17","alt_n":[],"alt_c":[]},{"n":"Jorge Sáenz","c":"6-714-1247","u":"POL. JOAQUIN J. VALLARINO (JUAN DIAZ)","v":1,"ult":"2026-08-11","alt_n":[],"alt_c":[]},{"n":"Jorge Saez","c":"6-716-1245","u":"POL. JOAQUIN J. VALLARINO (JUAN DIAZ)","v":1,"ult":"2026-08-17","alt_n":[],"alt_c":[]},{"n":"Ángel Córdoba","c":"8-479-610","u":"POL. JOAQUIN J. VALLARINO (JUAN DIAZ)","v":1,"ult":"2026-08-21","alt_n":[],"alt_c":[]},{"n":"Luis Montes","c":"8-262-345","u":"POL. JOAQUIN J. VALLARINO (JUAN DIAZ)","v":1,"ult":"2026-08-31","alt_n":[],"alt_c":[]},{"n":"Roselba Quintero T.","c":"8-477-627","u":"POL. JOAQUIN J. VALLARINO (JUAN DIAZ)","v":1,"ult":"2026-09-02","alt_n":[],"alt_c":[]},{"n":"Gustavo Quintero","c":"2-70-226","u":"POL. JOAQUIN J. VALLARINO (JUAN DIAZ)","v":1,"ult":"2026-09-08","alt_n":[],"alt_c":[]},{"n":"Aiza Moreno","c":"8-338-428","u":"POL. JUAN VEGA M. (SAN CARLOS)","v":1,"ult":"2026-09-16","alt_n":[],"alt_c":[]},{"n":"Fernando Robles","c":"8-115-794","u":"POL. MANUEL FERRER VALDES (PEDIATRICA)","v":1,"ult":"2026-08-18","alt_n":[],"alt_c":[]},{"n":"Aaron Delcid","c":"8-887-1713","u":"POL. MANUEL FERRER VALDES (PEDIATRICA)","v":1,"ult":"2026-09-17","alt_n":[],"alt_c":[]},{"n":"Juan Bonilla","c":"8-503-812","u":"POL. MANUEL MARIA VALDES (SAN MIGUELITO)","v":1,"ult":"2026-08-18","alt_n":[],"alt_c":[]},{"n":"Moisés Angel","c":"8-957-659","u":"POL. MANUEL MARIA VALDES (SAN MIGUELITO)","v":1,"ult":"2026-09-11","alt_n":[],"alt_c":[]},{"n":"Jesús Muñoz","c":"8-877-446","u":"POL. PRESIDENTE REMON (CALLE 17)","v":1,"ult":"2026-08-11","alt_n":[],"alt_c":[]},{"n":"Misael Tejada","c":"8-717-2431","u":"POL. PRESIDENTE REMON (CALLE 17)","v":1,"ult":"2026-08-26","alt_n":[],"alt_c":[]},{"n":"Marva Bonilla C.","c":"8-747-452","u":"POL. PRESIDENTE REMON (CALLE 17)","v":1,"ult":"2026-08-31","alt_n":[],"alt_c":[]},{"n":"Víctor M. Blanquicís","c":"8-210-1759","u":"POL. PRESIDENTE REMON (CALLE 17)","v":1,"ult":"2026-09-11","alt_n":[],"alt_c":[]},{"n":"Antonio Chico","c":"8-852-218","u":"POL. PRESIDENTE REMON (CALLE 17)","v":1,"ult":"2026-09-16","alt_n":[],"alt_c":[]},{"n":"J. Guerra","c":"8-449-536","u":"POL. SANTIAGO BARRAZA (CHORRERA)","v":1,"ult":"2026-08-17","alt_n":[],"alt_c":[]},{"n":"J. Espinosa","c":"8-439-536","u":"POL. SANTIAGO BARRAZA (CHORRERA)","v":1,"ult":"2026-08-19","alt_n":[],"alt_c":[]},{"n":"Y. Camargo","c":"8-459-534","u":"POL. SANTIAGO BARRAZA (CHORRERA)","v":1,"ult":"2026-08-21","alt_n":[],"alt_c":[]},{"n":"Yosiel C.","c":"8-749-579","u":"POL. SANTIAGO BARRAZA (CHORRERA)","v":1,"ult":"2026-08-25","alt_n":[],"alt_c":[]},{"n":"Fernando Spiteri G.","c":"8-741-308","u":"POL. SANTIAGO BARRAZA (CHORRERA)","v":1,"ult":"2026-09-02","alt_n":[],"alt_c":[]},{"n":"Jose Ruiz","c":"8-913-1781","u":"POL. SANTIAGO BARRAZA (CHORRERA)","v":1,"ult":"2026-09-07","alt_n":[],"alt_c":[]},{"n":"Y. Guardado","c":"8-458-134","u":"POL. SANTIAGO BARRAZA (CHORRERA)","v":1,"ult":"2026-09-14","alt_n":[],"alt_c":[]},{"n":"Vladimir C.","c":"8-854-28","u":"POLICLINICA DE SAN ANTONIO","v":1,"ult":"2026-08-14","alt_n":[],"alt_c":[]},{"n":"Aracelys Martinez","c":"8-921-2641","u":"POLICLINICA DE SAN ANTONIO","v":1,"ult":"2026-08-17","alt_n":[],"alt_c":[]},{"n":"Wilberto Jimenez","c":"8-849-939","u":"POLICLINICA DE SAN ANTONIO","v":1,"ult":"2026-08-24","alt_n":[],"alt_c":[]},{"n":"Jerisbeth Arlenis Real R.","c":"8-728-1001","u":"POLICLINICA DE SAN ANTONIO","v":1,"ult":"2026-09-02","alt_n":[],"alt_c":[]},{"n":"Jose Luis Meda","c":"2-708-4","u":"RAFAEL ESTEVEZ","v":1,"ult":"2026-09-07","alt_n":[],"alt_c":[]},{"n":"Corina Urriola","c":"8-722-1591","u":"ULAPS - LAS CUMBRES (DR. EDILBERTO CULIOLIS)","v":1,"ult":"2026-08-11","alt_n":[],"alt_c":[]},{"n":"Carmen Vertiaga","c":"8-722-1521","u":"ULAPS - LAS CUMBRES (DR. EDILBERTO CULIOLIS)","v":1,"ult":"2026-08-21","alt_n":[],"alt_c":[]},{"n":"Juan A. Corro","c":"8-721-1815","u":"ULAPS - LAS CUMBRES (DR. EDILBERTO CULIOLIS)","v":1,"ult":"2026-09-08","alt_n":[],"alt_c":[]},{"n":"Elsie De La Cruz","c":"2-114-798","u":"ULAPS - SAN CRISTOBAL (PROF. CARLOS VELARDE)","v":1,"ult":"2026-08-18","alt_n":[],"alt_c":[]},{"n":"Alexis Adella","c":"4-711-51","u":"ULAPS GUADALUPE","v":1,"ult":"2026-09-16","alt_n":[],"alt_c":[]},{"n":"Nectalí Herrera","c":"3-90-738","u":"ULAPS PORTOBELO","v":1,"ult":"2026-08-25","alt_n":[],"alt_c":[]},{"n":"Aiza Moreno","c":"8-338-428","u":"ULAPS SAN JOSE","v":1,"ult":"2026-09-16","alt_n":[],"alt_c":[]},{"n":"Roselin Cordón","c":"8-479-627","u":"ULAPS VISTA ALEGRE (ARRAIJAN)","v":1,"ult":"2026-08-18","alt_n":[],"alt_c":[]}];
+
+var entPrefijos = null;   /* los 10 prefijos mas frecuentes, calculados de F8 */
+var entSesion   = 0;      /* capturas hechas en la busqueda en curso */
+var entFiltroUE = null;   /* UE por la que se pregunta en asistencia */
+var entElegido  = null;   /* persona ya marcada: la vista se acota a ella */
+
+function entNorm_(t){
+  return String(t==null?'':t).toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+}
+function entEsc_(t){
+  return String(t==null?'':t).replace(/[&<>"]/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; });
+}
+function entMarcar_(txt, q){
+  if(!q) return entEsc_(txt);
+  var i = entNorm_(txt).indexOf(entNorm_(q));
+  if(i<0) return entEsc_(txt);
+  return entEsc_(txt.slice(0,i))+'<mark>'+entEsc_(txt.slice(i,i+q.length))+'</mark>'+entEsc_(txt.slice(i+q.length));
+}
+/* Resuelve la UE de una Forma 8 contra lo que el tablero ya cargo. */
+function entBuscarPedido_(f8){
+  if (typeof F8 === 'undefined' || !F8 || !F8.length) return null;
+  for (var i=0;i<F8.length;i++){ if (String(F8[i].id||'').trim() === f8) return F8[i]; }
+  return null;
+}
+/* Los diez prefijos que mas se repiten. Salen del dato, no de una lista fija. */
+function entPrefijos_(){
+  if (entPrefijos) return entPrefijos;
+  if (typeof F8 === 'undefined' || !F8 || !F8.length) return [];
+  var c = {}, ue = {};
+  F8.forEach(function(f){
+    var id = String(f.id||'').trim(); if(!id) return;
+    var p = id.split('-')[0]; if(!p) return;
+    c[p] = (c[p]||0)+1;
+    if(!ue[p]) ue[p] = f.ue || '';
+  });
+  entPrefijos = Object.keys(c).sort(function(a,b){ return c[b]-c[a]; }).slice(0,10)
+    .map(function(p){ return { p:p, ue:ue[p] }; });
+  return entPrefijos;
+}
+function entPrefijo(p){
+  var e = document.getElementById('entBusca'); if(!e) return;
+  e.value = p + '-'; entBuscar(); e.focus();
+}
+function entBuscar(){
+  var e = document.getElementById('entBusca'), box = document.getElementById('entHits');
+  if(!e || !box) return;
+  var q = e.value.trim();
+  if(!q){ box.innerHTML = entSesion ? entBarraListo_() : ''; return; }
+  if (typeof F8 === 'undefined' || !F8 || !F8.length){
+    box.innerHTML = '<div class="ent-vacio">El tablero todavía está cargando. Puedes pegar las Formas 8 en el cuadro de abajo: la captura no espera.</div>';
+    return;
+  }
+  var nq = entNorm_(q), nid = entNormF8_(q) || nq;
+  var cola = {}; entCola_().forEach(function(x){ cola[x.f8] = 1; });
+  var hits = F8.filter(function(f){
+    if (f.anulado) return false;
+    return entNorm_(f.ue).indexOf(nq) >= 0 || entNorm_(f.id).indexOf(nid) >= 0;
+  });
+  hits.sort(function(a,b){
+    var ae = entNorm_(a.id).slice(-nid.length)===nid ? 0 : 1;
+    var be = entNorm_(b.id).slice(-nid.length)===nid ? 0 : 1;
+    return ae-be;
+  });
+  var tot = hits.length; hits = hits.slice(0,40);
+  box.innerHTML = (entSesion ? entBarraListo_() : '') +
+    (tot ? '<div class="ent-nota" style="margin-bottom:6px">'+tot+(tot===1?' pedido':' pedidos')+
+           (tot>hits.length?' · se muestran '+hits.length:'')+'</div>' : '') +
+    (tot ? hits.map(function(f){
+        var t = cola[String(f.id).trim()] ? ' ya' : '';
+        return '<button class="ent-hit'+t+'" onclick="entCapturar(\''+String(f.id).replace(/'/g,"")+'\')">'+
+          '<span class="hid">'+entMarcar_(f.id, nid.length>=2?nid:'')+'</span>'+
+          '<span class="hue">'+entMarcar_(f.ue||'', nq.length>=2?q:'')+'</span>'+
+          '<span class="hmas">'+(t?'&#10003;':'+')+'</span></button>';
+      }).join('')
+      : '<div class="ent-vacio">Ninguna Forma 8 abierta cruza con &ldquo;'+entEsc_(q)+'&rdquo;. '+
+        'Puede ser de un módulo que el WMS no instala en esa unidad, o llegó fuera de ventanilla. '+
+        'Pégala en el cuadro de abajo y se captura igual.</div>');
+}
+function entBarraListo_(){
+  return '<button class="ent-listo" onclick="entListo()">Listo &middot; '+entSesion+
+         (entSesion===1?' capturada':' capturadas')+'</button>';
+}
+function entListo(){
+  entSesion = 0;
+  var e = document.getElementById('entBusca'); if(e) e.value='';
+  entBuscar();
+}
+function entCapturar(id){
+  var f8 = entNormF8_(id) || String(id).trim();
+  var cola = entCola_();
+  for (var i=0;i<cola.length;i++){ if (cola[i].f8===f8){ entAviso_('Ya estaba capturada.','warn'); return; } }
+  var p = entBuscarPedido_(f8);
+  cola.push({ f8:f8, ue:(p && p.ue) || '', hora:entHora_(), estado:'pendiente' });
+  entColaSet_(cola);
+  entSesion++;
+  entAviso_((p && p.ue) ? p.ue : 'Capturada', 'ok');
+  entRender();
+  var e = document.getElementById('entBusca');
+  if (e){ e.focus(); }
+}
+
+/* ── Roster: la misma lista sirve arriba y abajo ──────────────────────── */
+function entQuienRetiro(ue){
+  entFiltroUE = ue; entElegido = null;
+  var e = document.getElementById('entRosterQ'); if(e) e.value='';
+  entRender();
+  var t = document.getElementById('entRosterCaja');
+  if (t && t.scrollIntoView) t.scrollIntoView({behavior:'smooth', block:'start'});
+}
+function entSoltarFiltro(){ entFiltroUE = null; entElegido = null; entRender(); }
+function entRosterBuscar(){ entRender(); }
+
+function entRosterHTML_(){
+  var e = document.getElementById('entRosterQ');
+  var q = e ? e.value.trim() : '';
+  var nq = entNorm_(q);
+  var lista = ENT_ROSTER.map(function(p,i){ return { p:p, i:i }; });
+  if (entElegido !== null) lista = lista.filter(function(x){ return x.i === entElegido; });
+  else if (entFiltroUE) lista = lista.filter(function(x){ return x.p.u === entFiltroUE; });
+  if (q) lista = lista.filter(function(x){
+    return entNorm_(x.p.n).indexOf(nq)>=0 || entNorm_(x.p.c).indexOf(nq)>=0 ||
+           entNorm_(x.p.u).indexOf(nq)>=0 ||
+           (x.p.alt_c||[]).some(function(c){ return entNorm_(c).indexOf(nq)>=0; }) ||
+           (x.p.alt_n||[]).some(function(n){ return entNorm_(n).indexOf(nq)>=0; });
+  });
+  lista.sort(function(a,b){ return b.p.v - a.p.v; });
+  var asis = entAsist_();
+  function yaMarcado(p){
+    for (var k=0;k<asis.length;k++){
+      if (asis[k].ced && p.c && asis[k].ced===p.c) return k;
+      if (!asis[k].ced && asis[k].rep===p.n && asis[k].ue===p.u) return k;
+    }
+    return -1;
+  }
+  var filas = lista.slice(0,60).map(function(x){
+    var p = x.p, k = yaMarcado(p);
+    var a = k>=0 ? asis[k] : null;
+    var hr = a ? (a.sal ? a.lleg+' &rarr; '+a.sal : a.lleg+' &rarr;') : 'marcar llegada';
+    var alt = (p.alt_n && p.alt_n.length)
+      ? '<span class="ralt">también escrito '+entEsc_(p.alt_n.join(' · '))+'</span>' : '';
+    return '<button class="ent-pers'+(a?(a.sal?' fuera':' dentro'):'')+'" onclick="entMarcarPersona('+x.i+')">'+
+      '<span class="rmeta"><span class="rnom">'+entMarcar_(p.n,q)+'</span>'+alt+
+      '<span class="rsub">'+entEsc_(p.c||'sin cédula')+
+      (entFiltroUE?'':' &middot; '+entEsc_(p.u))+' &middot; '+p.v+' de 25 jornadas</span></span>'+
+      '<span class="rhr">'+hr+'</span></button>';
+  }).join('');
+  var cab = '';
+  if (entElegido !== null){
+    var pe = ENT_ROSTER[entElegido], ke = yaMarcado(pe);
+    cab = '<div class="ent-filtro">'+(ke>=0 && asis[ke].sal ? 'Salida registrada '+asis[ke].sal
+          : ke>=0 ? 'Llegada registrada '+asis[ke].lleg : '')+'</div>';
+  } else if (entFiltroUE){
+    cab = '<div class="ent-filtro">Quién retiró por '+entEsc_(entFiltroUE)+
+          '<button class="x" onclick="entSoltarFiltro()">&times;</button></div>';
+  }
+  return cab +
+    '<div class="ent-acc"><input id="entRosterQ" placeholder="moi · robles · 8-467" '+
+      'oninput="entRosterBuscar()" value="'+entEsc_(q)+'" style="min-width:260px"></div>' +
+    (filas || '<div class="ent-vacio">Nadie del roster cruza con eso. Usa el registro manual de abajo.</div>') +
+    ((entElegido!==null) ? '<button class="ent-listo" onclick="entSoltarFiltro()">Listo</button>' : '');
+}
+function entMarcarPersona(i){
+  var p = ENT_ROSTER[i]; if(!p) return;
+  var a = entAsist_(), k = -1;
+  for (var j=0;j<a.length;j++){
+    if (a[j].ced && p.c && a[j].ced===p.c){ k=j; break; }
+    if (!a[j].ced && a[j].rep===p.n && a[j].ue===p.u){ k=j; break; }
+  }
+  if (k < 0) a.push({ ue:p.u, rep:p.n, ced:p.c, lleg:entHora_(), sal:'' });
+  else if (!a[k].sal) a[k].sal = entHora_();
+  else { a[k].lleg = entHora_(); a[k].sal = ''; }
+  entAsistSet_(a);
+  entElegido = i;
+  entRender();
 }
 
 function entIniciar_(){
