@@ -372,6 +372,10 @@
   .ent-acc{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:9px}
   .ent-acc input{padding:8px 10px;border:1px solid #c6ccd4;border-radius:5px;font-size:14px}
   .ent-nota{color:#666;font-size:12px}
+  .ent-retro{background:#fff8e1;border-left:4px solid #8a6a00;padding:9px 13px;border-radius:5px;
+    margin:9px 0 0;font-size:13px;color:#5c4700}
+  .ent-tb tr.e-retro td{background:#fffdf3}
+  .ent-acc input[type=date]{font-family:Consolas,monospace;font-size:14px}
   .ent-busca{width:100%;box-sizing:border-box;padding:14px 12px;font-size:19px;font-weight:600;
     font-variant-numeric:tabular-nums;border:2px solid #c6ccd4;border-radius:6px}
   .ent-busca:focus{outline:none;border-color:#1f3864}
@@ -2480,7 +2484,7 @@ function entAgregar(){
        resuelve al subir. La captura NUNCA depende de que el tablero haya
        terminado de cargar. */
     const p = entBuscarPedido_(f8);
-    cola.push({ f8:f8, ue:(p && p.ue) || '', hora:hora, estado:'pendiente' });
+    cola.push({ f8:f8, ue:(p && p.ue) || '', hora:hora, fecha:entFechaSel_(), estado:'pendiente' });
     nuevos++;
   });
   entColaSet_(cola);
@@ -2522,9 +2526,10 @@ function entSubir(){
     const it = pend[i++];
     it.estado = 'subiendo'; entRender();
     const u = WEBAPP_BASE + '?file=kb_llave_hito&id=' + encodeURIComponent(it.f8) +
-              '&etapa=ENTREGADO&fecha=' + encodeURIComponent(entHoy_()) +
+              '&etapa=ENTREGADO&fecha=' + encodeURIComponent(it.fecha || entHoy_()) +
               '&pin=' + encodeURIComponent(pin) +
-              '&nota=' + encodeURIComponent('Entrega registrada en bahía ' + it.hora);
+              '&nota=' + encodeURIComponent('Entrega registrada en bahía ' + it.hora +
+                ((it.fecha && it.fecha !== entHoy_()) ? ' · carga retroactiva del ' + it.fecha : ''));
     fetch(u).then(function(r){ return r.json(); }).then(function(r){
       if (r && r.ok){
         it.estado = 'subida'; it.msg = '';
@@ -2698,7 +2703,9 @@ function entRender(){
   const est = { pendiente:'pendiente de registro', subiendo:'registrando&hellip;',
                 subida:'&#10003; registrada', error:'&#9888; ' };
   const filas = cola.map(function(x){
-    return '<tr><td class="mono">'+x.f8+'</td><td>'+(x.ue||'&mdash;')+'</td><td>'+x.hora+'</td>'+
+    var fx = x.fecha || entHoy_();
+    return '<tr'+(fx!==entHoy_()?' class="e-retro"':'')+'><td class="mono">'+x.f8+'</td><td>'+(x.ue||'&mdash;')+'</td>'+
+      '<td class="mono">'+fx+'</td><td>'+x.hora+'</td>'+
       '<td class="e-'+x.estado+'">'+(est[x.estado]||x.estado)+(x.estado==='error'?(x.msg||''):'')+'</td>'+
       '<td>'+(x.ue ? '<button class="btn-mini" onclick="entQuienRetiro(\''+String(x.ue).replace(/'/g,"")+'\')">Quién retiró</button>' : '')+
       ' <button class="x" onclick="entQuitar(\''+x.f8+'\')">&times;</button></td></tr>';
@@ -2722,11 +2729,17 @@ function entRender(){
       '<div id="entHits" class="ent-hits"></div>'+
     '</div>'+
     '<div class="ent-caja"><div class="ent-tit">Pegar en lote &mdash; la lista del turno</div>'+
+      '<div class="ent-acc"><label class="ent-nota" for="entFecha">Entregadas el</label>'+
+        '<input type="date" id="entFecha" value="'+entFechaSel_()+'" max="'+entHoy_()+'" onchange="entFechaCambia()">'+
+        (entRetro_() ? '<button class="btn-mini" onclick="entFechaHoy()">Volver a hoy</button>' : '')+
+      '</div>'+
+      (entRetro_() ? '<div class="ent-retro">Carga retroactiva: lo que agregues se registrará como entregado el '+
+         entFechaSel_()+', no hoy. Úsalo para asentar un informe atrasado.</div>' : '')+
       '<textarea id="entTexto" rows="3" placeholder="8107-2026-1-788&#10;8045-2026-1-4357&#10;&hellip;una por línea, o separadas por espacio"></textarea>'+
       '<div class="ent-acc"><button class="btn-si" onclick="entAgregar()">Agregar a la lista</button>'+
       '<span class="ent-nota">Se guardan en este dispositivo. No necesitas internet para capturar.</span></div></div>'+
     '<div class="ent-caja"><div class="ent-tit">Capturadas hoy &mdash; '+cola.length+'</div>'+
-      (cola.length ? '<table class="ent-tb"><tr><th>Forma 8</th><th>Unidad Ejecutora</th><th>Hora</th><th>Estado</th><th></th></tr>'+filas+'</table>'
+      (cola.length ? '<table class="ent-tb"><tr><th>Forma 8</th><th>Unidad Ejecutora</th><th>Entregada el</th><th>Hora</th><th>Estado</th><th></th></tr>'+filas+'</table>'
                    : '<div class="ent-vacio">Todavía no has registrado entregas hoy.</div>')+
       '<div class="ent-acc"><input id="entPin" type="password" placeholder="PIN" maxlength="8">'+
       '<button class="btn-si" id="entBtnSubir" onclick="entSubir()">Subir al tablero</button>'+
@@ -2757,8 +2770,31 @@ var ENT_ROSTER = [{"n":"Josué Castillo","c":"4-775-7310","u":"CIUDAD DE LA SALU
 
 var entPrefijos = null;   /* los 10 prefijos mas frecuentes, calculados de F8 */
 var entSesion   = 0;      /* capturas hechas en la busqueda en curso */
+var entFechaAct = null;   /* fecha de entrega que se esta cargando (null = hoy) */
 var entFiltroUE = null;   /* UE por la que se pregunta en asistencia */
 var entElegido  = null;   /* persona ya marcada: la vista se acota a ella */
+
+/* ══ Fecha de la entrega ═══════════════════════════════════════════════════
+   Por defecto es hoy. Se cambia para cargar un informe atrasado: los
+   documentos que el supervisor ya entrego dias antes entran al Kanban con SU
+   fecha, no con la de hoy. Sin esto, la medida de cuanto tardo un pedido de
+   la Forma 8 a la entrega queda falseada. ═══════════════════════════════════ */
+function entFechaSel_(){
+  if (entFechaAct && /^\d{4}-\d{2}-\d{2}$/.test(entFechaAct)) return entFechaAct;
+  return entHoy_();
+}
+function entFechaCambia(){
+  var e = document.getElementById('entFecha');
+  var v = e ? String(e.value||'').trim() : '';
+  entFechaAct = /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null;
+  if (entFechaAct && entFechaAct > entHoy_()){
+    entFechaAct = null;
+    entAviso_('No se puede registrar una entrega con fecha futura.', 'warn');
+  }
+  entRender();
+}
+function entFechaHoy(){ entFechaAct = null; entRender(); }
+function entRetro_(){ return entFechaSel_() !== entHoy_(); }
 
 function entNorm_(t){
   return String(t==null?'':t).toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
@@ -2847,7 +2883,7 @@ function entCapturar(id){
   var cola = entCola_();
   for (var i=0;i<cola.length;i++){ if (cola[i].f8===f8){ entAviso_('Ya estaba capturada.','warn'); return; } }
   var p = entBuscarPedido_(f8);
-  cola.push({ f8:f8, ue:(p && p.ue) || '', hora:entHora_(), estado:'pendiente' });
+  cola.push({ f8:f8, ue:(p && p.ue) || '', hora:entHora_(), fecha:entFechaSel_(), estado:'pendiente' });
   entColaSet_(cola);
   entSesion++;
   entAviso_((p && p.ue) ? p.ue : 'Capturada', 'ok');
