@@ -12,7 +12,7 @@
  * anterior instalada en el celular.
  * =========================================================================== */
 
-const CACHE_VER = 'kanban-v68';
+const CACHE_VER = 'kanban-v69';
 
 // Solo el armazón. Nada de datos.
 const ASSETS = [
