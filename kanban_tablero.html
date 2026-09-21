@@ -723,7 +723,14 @@ async function cargar(silencioso, desdeMotor){
         else { res=j; fuente='archivo'; }
       }catch(e){ res=null; }
     }
-    if(!res){ res=await pedir('file=kanban_tablero_almacen'); fuente='motor'; }
+    if(!res){
+      /* 21-sep: el Motor puede tardar si le toca reconstruir (se midieron 24 s y
+         un ciclo de redirecciones que no terminaba). No se espera para siempre:
+         a los 45 s se avisa, y Registrar sigue funcionando mientras tanto. */
+      res=await Promise.race([ pedir('file=kanban_tablero_almacen'),
+        new Promise(function(_,rej){ setTimeout(function(){ rej(new Error('el Motor no respondi\u00f3 en 45 segundos; puedes seguir registrando entregas mientras tanto')); }, 45000); }) ]);
+      fuente='motor';
+    }
     if(!res||res.ok===false) throw new Error((res&&res.msg)||'Respuesta vac\u00eda');
     TA_FUENTE=fuente;
     TA_DATOS_MS = (fuente==='archivo') ? (Date.parse(res.generadoISO||'')||Date.now()) : Date.now();
