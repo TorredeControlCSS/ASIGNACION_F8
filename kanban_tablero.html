@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Kanban de Seguimiento | Tablero del Almacén por Unidad Ejecutora</title>
+<title>Kanban de Seguimiento — Tablero del Almacén por Unidad Ejecutora</title>
 <link rel="icon" href="./favicon.ico?v=1"/>
 <style>
   :root{
@@ -1222,6 +1222,7 @@ let BUSCA_NAV=''; // texto de búsqueda que filtra la vista actual (navegación)
 let EN_TAB='pend'; // sección activa en Entregas: 'pend' (por confirmar) | 'hechas' (memoria)
 let ENTREGADOS_MEM=null;   // memoria histórica de entregados (del JSON estático)
 let ENTREGADOS_CARGANDO=false;
+let ENTREGADOS_TS='';        // cuando se publico el JSON, si lo trae
 
 // Carga la memoria de entregados desde el JSON estático (GitHub Pages).
 // Historia inmutable → lectura instantánea, sin castigar al Motor. Si el JSON
@@ -1234,9 +1235,13 @@ async function cargarEntregadosJSON(force){
     const r=await fetch('entregados/entregados.json?_ts='+Date.now(),{cache:'no-store'});
     if(r.ok){
       const j=await r.json();
-      if(j && j.ok && Array.isArray(j.entregados)) ENTREGADOS_MEM=j.entregados;
-    }
-  }catch(e){ /* silencioso: cae a F8 */ }
+      if(j && j.ok && Array.isArray(j.entregados)){ ENTREGADOS_MEM=j.entregados;
+        var _g=j.generado||j.actualizado||j.ts||j.fecha||''; var _d=_g?new Date(_g):null;
+        ENTREGADOS_TS=(_d && !isNaN(_d)) ? _d.toLocaleString('es-PA',{timeZone:'America/Panama',day:'2-digit',month:'2-digit',
+          hour:'2-digit',minute:'2-digit',hour12:false})+' PTY' : ''; }
+      else cargarEntregadosJSON._fallo=true;
+    } else cargarEntregadosJSON._fallo=true;
+  }catch(e){ cargarEntregadosJSON._fallo=true; /* cae a F8 */ }
   ENTREGADOS_CARGANDO=false;
   return ENTREGADOS_MEM;
 }
@@ -1569,23 +1574,43 @@ function renderEntregas(){
     .sort((a,b)=>{ const da=_diasDesde_(a.fDespacho)||0, db=_diasDesde_(b.fDespacho)||0; return db-da; });
   // Ya confirmadas: memoria histórica. Preferir el JSON estático (instantáneo,
   // escala a miles); si no cargó aún, caer a filtrar F8 (los entregados activos).
-  let hechas;
-  if(EN_TAB==='hechas' && ENTREGADOS_MEM){
-    hechas=ENTREGADOS_MEM.filter(f=>(!fg||f.grupo===fg)&&(!fu||f.ue===fu)
-      &&(!BUSCA_NAV||_buscNorm(f.id).indexOf(BUSCA_NAV)>=0||_buscNorm(f.ue).indexOf(BUSCA_NAV)>=0));
-  } else {
-    hechas=F8.filter(f=>f.entregado).filter(pasa)
-      .sort((a,b)=>String(b.fEntrega||'').localeCompare(String(a.fEntrega||'')));
+  /* CORREGIDO 20-sep: la memoria es UNA sola poblacion, se abra o no.
+     Antes el boton contaba los entregados vivos de F8 y, al abrirlo, la lista
+     saltaba al JSON publicado -- otra poblacion, fotografiada dias atras. Un
+     pedido entregado ayer contaba en el boton y desaparecia al abrir.
+     Ahora: memoria = JSON publicado + entregados vivos de F8 (gana F8, que es
+     mas fresco). El numero del boton y la lista son siempre lo mismo. */
+  if(!ENTREGADOS_MEM && !ENTREGADOS_CARGANDO && !cargarEntregadosJSON._fallo){
+    cargarEntregadosJSON().then(()=>{ if(VISTA==='entregas') render(); });
   }
+  const memMap={}; let posteriores=0;
+  (ENTREGADOS_MEM||[]).forEach(f=>{ if(f && f.id) memMap[_buscNorm(f.id)]=f; });
+  F8.filter(f=>f.entregado && !f.anulado).forEach(f=>{
+    const k=_buscNorm(f.id); if(ENTREGADOS_MEM && !memMap[k]) posteriores++; memMap[k]=f; });
+  const hechas=Object.keys(memMap).map(k=>memMap[k])
+    .filter(f=>(!fg||f.grupo===fg)&&(!fu||f.ue===fu)
+      &&(!BUSCA_NAV||_buscNorm(f.id).indexOf(BUSCA_NAV)>=0||_buscNorm(f.ue).indexOf(BUSCA_NAV)>=0))
+    .sort((a,b)=>{
+      /* Un entregado sin FECHA_ENTREGA es un defecto de datos (la fecha no
+         persistio). Ordenado por fecha quedaba al fondo de 1,200 filas y el
+         pedido parecia perdido. Ahora va arriba, marcado para revisarlo. */
+      const sa=a.fEntrega?1:0, sb=b.fEntrega?1:0; if(sa!==sb) return sa-sb;
+      return String(b.fEntrega||'').localeCompare(String(a.fEntrega||'')); });
+  const sinFecha=hechas.filter(f=>!f.fEntrega).length;
 
   let html='<div class="en-head">CONFIRMACI\u00d3N Y MEMORIA DE ENTREGAS &mdash; el supervisor confirma aqu\u00ed los pedidos que la UE ya recibi\u00f3. '
     +'Los del PDF de seguimiento se ubican con el buscador y se marcan entregados; pasan a la memoria.</div>';
   // Toggle de sección: Por confirmar (accionable) | Entregadas (memoria histórica).
   html+='<div class="en-toggle">'
     +'<button class="en-tg'+(EN_TAB==='pend'?' on':'')+'" onclick="EN_TAB=\'pend\';render();">Por confirmar <b>'+pend.length.toLocaleString()+'</b></button>'
-    +'<button class="en-tg'+(EN_TAB==='hechas'?' on':'')+'" onclick="EN_TAB=\'hechas\';cargarEntregadosJSON().then(()=>render());">Entregadas (memoria) <b>'+((EN_TAB==='hechas'&&ENTREGADOS_MEM)?ENTREGADOS_MEM.length:hechas.length).toLocaleString()+'</b></button>'
+    +'<button class="en-tg'+(EN_TAB==='hechas'?' on':'')+'" onclick="EN_TAB=\'hechas\';cargarEntregadosJSON().then(()=>render());">Entregadas (memoria) <b>'+hechas.length.toLocaleString()+'</b></button>'
     +'</div>';
   html+='<div class="en-sub">Se aplican los filtros de la barra (Unidad Ejecutora, Grupo, Tipo) y el buscador.</div>';
+  if(EN_TAB==='hechas') html+='<div class="en-sub">'+(ENTREGADOS_MEM
+    ? 'Memoria publicada'+(ENTREGADOS_TS?' el '+_escNA(ENTREGADOS_TS):'')+': '+ENTREGADOS_MEM.length.toLocaleString()+' pedidos'
+      +(posteriores?' &middot; m&aacute;s '+posteriores+' entregados despu&eacute;s, que ya cuentan aqu&iacute;':'')
+      +(sinFecha?'<br><b style="color:#8a6a00">'+sinFecha+(sinFecha===1?' pedido figura':' pedidos figuran')+' como entregado sin fecha de entrega</b> &mdash; van arriba de la lista para revisarlos.':'')
+    : (cargarEntregadosJSON._fallo ? 'La memoria publicada no carg&oacute;: se muestran solo los entregados del tablero.' : 'Cargando la memoria publicada&hellip;'))+'</div>';
 
   if(!pend.length && !hechas.length){
     html+='<div class="an-vacio">No hay pedidos'+((fg||fu||BUSCA_NAV)?' con los filtros actuales':'')+'.</div>';
@@ -1628,7 +1653,7 @@ function renderEntregas(){
         +'<td>'+_escNA(f.ue)+'</td>'
         +'<td>'+_escNA(f.grupo||'\u2014')+'</td>'
         +'<td>'+_escNA(f.tipo)+'</td>'
-        +'<td class="en-ata">'+_escNA(f.fEntrega||'\u2014')+'</td>'
+        +'<td class="en-ata">'+(f.fEntrega ? _escNA(f.fEntrega) : '<span style="color:#8a6a00;font-weight:700">sin fecha &mdash; revisar</span>')+'</td>'
         +'<td style="text-align:center">'+(F8.some(x=>String(x.id)===String(f.id))
             ? '<button class="btn-revertir" onclick="revertirEntrega(\''+_esc(f.id)+'\')" title="Deshacer la entrega (marcada por error)">Revertir</button>'
             : '<button class="btn-entregar" style="padding:3px 9px;font-size:10px;background:#5a6b7a" onclick="verDoc(\''+_esc(f.id)+'\')">Ver</button>')+'</td>'
@@ -2537,6 +2562,10 @@ function entSubir(){
            se guarda, así el informe deja de salir con guiones. */
         if (r.ue) it.ue = r.ue;
         it.sinRec = !!r.sinReceptor;
+        /* El Kanban ya lo tiene como ENTREGADO: el tablero en memoria tambien.
+           Sin esto el pedido seguia saliendo como pendiente hasta recargar. */
+        var _p = entBuscarPedido_(it.f8);
+        if (_p){ _p.entregado = true; _p.fEntrega = (r.fecha || it.fecha || entHoy_()); }
         ok++;
       }
       else { it.estado = 'error'; it.msg = (r && r.msg) || 'rechazada'; err++; }
@@ -2742,7 +2771,7 @@ function entRender(){
       '<datalist id="entGenteCap"></datalist>'+
       '<div class="entp-lote"><button class="btn-mini" onclick="entLoteToggle()">'+
         (entLoteOn ? 'Cerrar' : 'Pegar varias Formas 8 a la vez')+'</button></div>'+
-      (entLoteOn ? '<textarea id="entLoteTxt" rows="4" placeholder="8107-2026-1-788&#10;8045-2026-1-4357&#10;una por línea, o separadas por espacio"></textarea>'+
+      (entLoteOn ? '<textarea id="entLoteTxt" rows="4" placeholder="Pega aquí las Formas 8, una por línea o separadas por espacio"></textarea>'+
                    '<div class="ent-acc"><button class="btn-si" onclick="entLote()">Agregar a la lista</button>'+
                    '<span class="ent-nota">Cada una toma su unidad del tablero. Las que no estén quedan para que les escribas la unidad.</span></div>' : '')+
     '</div>';
