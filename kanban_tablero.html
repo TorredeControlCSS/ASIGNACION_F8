@@ -3248,22 +3248,41 @@ function entCapAgregar(){
 function entLoteToggle(){ entLoteOn = !entLoteOn; entRender(); var t=document.getElementById('entLoteTxt'); if(t) t.focus(); }
 function entLote(){
   var t = document.getElementById('entLoteTxt');
-  var brutos = String(t ? t.value : '').split(/[\s,;]+/).map(function(x){ return x.trim(); }).filter(Boolean);
+  /* CARGA MASIVA (21-sep): una línea puede traer su propia fecha de entrega
+     delante —"2026-08-29 8106-2026-1-1232" o "29/08/2026 8106-2026-1-1232"—.
+     Así un mes de informes del supervisor entra en una sola pegada, cada
+     pedido con la fecha del informe donde apareció. Sin fecha, toma la del
+     selector, como siempre. Las fechas futuras se descartan. */
+  var brutos = [], fechas = {}, futuras = 0;
+  String(t ? t.value : '').split(/\r?\n/).forEach(function(lin){
+    var m = lin.trim().match(/^(\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{4})\s+(.+)$/), fe = null, resto = lin;
+    if (m){
+      fe = m[1];
+      if (fe.indexOf('/') > 0){ var q = fe.split('/'); fe = q[2]+'-'+('0'+q[1]).slice(-2)+'-'+('0'+q[0]).slice(-2); }
+      if (fe > entHoy_()){ futuras++; return; }
+      resto = m[2];
+    }
+    resto.split(/[\s,;]+/).map(function(x){ return x.trim(); }).filter(Boolean)
+         .forEach(function(b){ brutos.push({ b:b, fecha:(fe || entFechaSel_()) }); });
+  });
   var cola = entCola_(), ya = {}; cola.forEach(function(x){ ya[entIdParcial_(x.f8)] = 1; });
   var st = entRepParse_(entStRep), c = { ok:0, sinUE:0, rep:0, basura:0 };
-  brutos.forEach(function(b){
+  brutos.forEach(function(o){
+    var b = o.b;
     var f8 = entNormF8_(b) || entIdParcial_(b);
     if (!f8 || !/\d{3,}/.test(f8)){ c.basura++; return; }
     var k = entIdParcial_(f8); if (ya[k]){ c.rep++; return; }
     var p = entBuscarPedido_(f8);
     var mismo = p && entStUE && entMismaUE_(p.ue, entStUE);
-    cola.push({ f8:(p ? String(p.id).trim() : f8), ue:(p ? p.ue : ''), hora:(entHoraOk_(entStHora) || entHora_()), fecha:entFechaSel_(),
+    cola.push({ f8:(p ? String(p.id).trim() : f8), ue:(p ? p.ue : ''), hora:(entHoraOk_(entStHora) || entHora_()), fecha:o.fecha,
                 estado:'pendiente', rep:(mismo ? st.rep : ''), ced:(mismo ? st.ced : ''), colado:!p });
-    ya[k] = 1;
+    ya[k] = 1; fechas[o.fecha] = 1;
     if (p) c.ok++; else c.sinUE++;
   });
   entColaSet_(cola); entLoteOn = false; entFoco = true; entRender();
-  var m = (c.ok + c.sinUE) + ' agregados';
+  var nF = Object.keys(fechas).length;
+  var m = (c.ok + c.sinUE) + ' agregados' + (nF > 1 ? ', con ' + nF + ' fechas de entrega distintas' : '');
+  if (futuras) m += ' · ' + futuras + ' líneas con fecha futura descartadas';
   if (c.sinUE) m += ' · ' + c.sinUE + ' no están en el tablero: escribe su unidad en la lista';
   if (c.rep) m += ' · ' + c.rep + ' ya estaban';
   if (c.basura) m += ' · ' + c.basura + ' no parecen Forma 8';
