@@ -372,6 +372,55 @@
   .ent-acc{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:9px}
   .ent-acc input{padding:8px 10px;border:1px solid #c6ccd4;border-radius:5px;font-size:14px}
   .ent-nota{color:#666;font-size:12px}
+  /* ── rediseño 21-sep ── */
+  .rd-kpis{display:flex;gap:10px;margin:10px 0;flex-wrap:wrap}
+  .rd-kpi{flex:1;min-width:180px;border:0;border-radius:10px;padding:12px 15px;text-align:left;display:flex;flex-direction:column;gap:2px;cursor:pointer;font:inherit;transition:filter .12s}
+  .rd-kpi b{font-size:28px;line-height:1.05;font-variant-numeric:tabular-nums}
+  .rd-kpi span{font-size:12.5px;font-weight:600}
+  .rd-kpi small{font-size:11px;opacity:.8}
+  .rd-kpi:hover{filter:brightness(.97)}
+  .rd-kpi.azul{background:#dde8f6;color:#1f3864}
+  .rd-kpi.rosa{background:#f8dcdc;color:#8c1d18}
+  .rd-kpi.ambar{background:#fbeec4;color:#6b5100}
+  .rd-kpi.verde{background:#d8efdc;color:#1d5e26}
+  .rd-kpi.durazno{background:#fbe1cc;color:#7a3a0b}
+  .rd-kpi.on{box-shadow:inset 0 0 0 2px currentColor}
+  .rd-flujo{background:#fff;border:1px solid #d9dee5;border-radius:10px;padding:10px 12px 12px;margin:0 0 10px}
+  .rd-seg{display:flex;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
+  .rd-seg span{border-top:2px solid;padding-top:3px}
+  .rd-seg .dentro{flex:5;border-color:#9fb3cf;color:#2d4a7c}
+  .rd-seg .fuera{flex:3;margin-left:14px;border-color:#9ccc9f;color:#2e6b34}
+  .rd-etapas{display:flex;align-items:stretch;overflow-x:auto;padding-bottom:2px}
+  .rd-et{flex:1;min-width:112px;display:flex;flex-direction:column;align-items:flex-start;gap:1px;text-align:left;border:0;cursor:pointer;font:inherit;
+    padding:9px 12px 9px 18px;margin-right:-6px;background:#eef2f8;color:#1f3864;
+    clip-path:polygon(0 0,calc(100% - 12px) 0,100% 50%,calc(100% - 12px) 100%,0 100%,12px 50%)}
+  .rd-et:first-child{clip-path:polygon(0 0,calc(100% - 12px) 0,100% 50%,calc(100% - 12px) 100%,0 100%);padding-left:12px}
+  .rd-et b{font-size:19px;font-variant-numeric:tabular-nums;line-height:1.1}
+  .rd-et span{font-size:11.5px;font-weight:700}
+  .rd-et small{font-size:10.5px;opacity:.8;white-space:nowrap}
+  .rd-et small.eq{opacity:.6;font-style:italic}
+  .rd-et.fuera{background:#e6f3e8;color:#1d5e26}
+  .rd-et.fin{background:#d8efdc}
+  .rd-et.cuello{background:#f8dcdc;color:#8c1d18}
+  .rd-et.cero{opacity:.55}
+  .rd-et.salto{margin-left:14px}
+  .rd-et:hover{filter:brightness(.96)}
+  .rd-ley{display:flex;gap:14px;flex-wrap:wrap;margin-top:7px;font-size:11px;color:#5a6b7a}
+  .rd-ley i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+  .rd-sub{display:flex;gap:6px;margin:10px 0 4px}
+  .rd-sub button{background:#fff;border:1px solid #d9dee5;border-radius:20px;padding:7px 15px;color:#5a6b7a;font-weight:600;cursor:pointer;font:inherit}
+  .rd-sub button.on{background:#1f3864;border-color:#1f3864;color:#fff}
+  .rd-sub button b{font-family:Consolas,monospace;margin-left:6px}
+  .en-toggle{display:none}
+  .rd-mem{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}
+  .rd-mem input{padding:6px 8px;border:1px solid #c6ccd4;border-radius:5px;width:90px}
+  .rd-mem button{padding:7px 14px;border:0;border-radius:6px;background:#1f3864;color:#fff;font-weight:700;cursor:pointer}
+  .rd-mem button[disabled]{opacity:.6;cursor:default}
+  .rd-memmsg{font-size:12.5px;font-weight:600}
+  .rd-memmsg.ok{color:#1d5e26} .rd-memmsg.warn{color:#8a6a00}
+  .rd-filtro90{background:#f8dcdc;color:#8c1d18;border-radius:6px;padding:7px 12px;font-size:12.5px;font-weight:600;margin:6px 0}
+  .rd-filtro90 a{color:inherit}
+  .ent-red .prob{color:#5a6b7a}
   .entp-fec{display:inline-flex;align-items:center;gap:6px;margin-left:12px;font-size:12px;color:#666}
   .entp-fec input[type=date]{font-family:Consolas,monospace;font-size:13px;padding:3px 6px;border:1px solid #c6ccd4;border-radius:4px}
   .entp-kpi{display:flex;gap:10px;margin:10px 0}
@@ -407,6 +456,9 @@
   .entp-asis summary{cursor:pointer;font-weight:700;color:#1f3864;font-size:13px}
   .ent-retro{background:#fff8e1;border-left:4px solid #8a6a00;padding:9px 13px;border-radius:5px;margin:9px 0;font-size:13px;color:#5c4700}
   .ent-tb tr.e-retro td{background:#fffdf3}
+  .entp-fila label.entp-hora{flex:0 0 150px;min-width:150px}
+  .entp-fila input[type=time]{font-family:Consolas,monospace}
+  .entp-t{font-family:Consolas,monospace;font-size:13px;padding:4px 6px;border:1px solid #d9dde3;border-radius:5px;width:92px}
   .btn-si{background:#1f3864;color:#fff;border:0;padding:9px 17px;border-radius:5px;font-size:14px;cursor:pointer}
   .btn-si:disabled{opacity:.55;cursor:default}
   .btn-no{background:#fff;color:#1f3864;border:1px solid #1f3864;padding:9px 17px;border-radius:5px;font-size:14px;cursor:pointer}
@@ -430,7 +482,7 @@
 </div>
 <div class="wrap">
   <div id="errBox"></div>
-  <div class="accion">
+  <div class="accion" id="viejaBanda" style="display:none">
     <div class="acc vence" id="accVence" onclick="toggleAccion('vence')">
       <div class="acc-lbl">Vence hoy / ma&ntilde;ana</div>
       <div class="acc-val num" id="av_val">&ndash;</div>
@@ -452,7 +504,7 @@
       <div class="otif-mini" id="ot_mini">a tiempo &middot; completo</div>
     </div>
   </div>
-  <div class="kpis">
+  <div class="kpis" id="viejoKpis" style="display:none">
     <div class="kpi sinasig" id="kpi_SIN_ASIGNAR" onclick="filtrarMacro('SIN_ASIGNAR')"><div class="lbl">Cero por desabasto</div><div class="val num" id="k_SIN_ASIGNAR">&ndash;</div></div>
     <div class="kpi recep" id="kpi_RECEPCION" onclick="filtrarMacro('RECEPCION')"><div class="lbl">Recepci&oacute;n</div><div class="val num" id="k_RECEPCION">&ndash;</div></div>
     <div class="kpi asig" id="kpi_ASIGNACION" onclick="filtrarMacro('ASIGNACION')"><div class="lbl">Asignaci&oacute;n</div><div class="val num" id="k_ASIGNACION">&ndash;</div></div>
@@ -461,6 +513,8 @@
     <div class="kpi fact" id="kpi_FACTURACION" onclick="filtrarMacro('FACTURACION')"><div class="lbl">Facturaci&oacute;n</div><div class="val num" id="k_FACTURACION">&ndash;</div></div>
     <div class="kpi dist" id="kpi_DISTRIBUCION" onclick="filtrarMacro('DISTRIBUCION')"><div class="lbl">Distribuci&oacute;n</div><div class="val num" id="k_DISTRIBUCION">&ndash;</div></div>
   </div>
+  <div id="rdKpis" class="rd-kpis"></div>
+  <div id="rdFlujo" class="rd-flujo"></div>
   <div class="toolbar">
     <label>Grupo:</label><select id="fGrupo"><option value="">&mdash; Todos &mdash;</option></select>
     <label>Unidad Ejecutora:</label><select id="fUE"><option value="">&mdash; Todas &mdash;</option></select>
@@ -478,18 +532,18 @@
     <div class="spacer"></div><span class="count" id="cnt"></span>
   </div>
   <div class="vistas-sw">
-    <button class="vsw-btn" data-vista="entdia" onclick="cambiarVista('entdia')">Entregas del día <span id="edBadge" style="font-family:Consolas;font-size:11px;opacity:.8"></span></button>
-    <button class="vsw-btn activa" data-vista="reparto" onclick="cambiarVista('reparto')">Reparto por fase</button>
+    <button class="vsw-btn activa" data-vista="ent" onclick="RD_KPI=null;rdIrEntregas('registrar')">Entregas <span id="enBadge" style="font-family:Consolas;font-size:11px;opacity:.8"></span><span id="edBadge" style="font-family:Consolas;font-size:11px;margin-left:3px"></span></button>
+    <button class="vsw-btn" data-vista="reparto" onclick="cambiarVista('reparto')">Reparto por fase</button>
     <button class="vsw-btn" data-vista="crono" onclick="cambiarVista('crono')">Plan de Entregas</button>
-    <button class="vsw-btn" data-vista="entregas" onclick="cambiarVista('entregas')">Entregas <span id="enBadge" style="font-family:Consolas;font-size:11px;opacity:.8"></span></button>
     <button class="vsw-btn" data-vista="noasig" onclick="cambiarVista('noasig')">Cero por desabasto <span id="naBadge" style="font-family:Consolas;font-size:11px;opacity:.8"></span></button>
     <button class="vsw-btn" data-vista="anulados" onclick="cambiarVista('anulados')">Retirados del ciclo <span id="anBadge" style="font-family:Consolas;font-size:11px;opacity:.8"></span></button>
   </div>
   <div class="leyenda" id="leyenda"></div>
+  <div id="rdSub" class="rd-sub" style="display:none"></div>
   <div id="vistaCrono" style="display:none;"><div id="grillaSemanal"></div></div>
   <div id="vistaUE" style="display:none;"><div id="lista"></div></div>
-  <div id="vistaEntregasDia" style="display:none;"></div>
-  <div id="vistaReparto"><div id="listaReparto"><div class="loading">Cargando tablero&hellip;</div></div></div>
+  <div id="vistaEntregasDia"></div>
+  <div id="vistaReparto" style="display:none;"><div id="listaReparto"><div class="loading">Cargando tablero&hellip;</div></div></div>
   <div id="vistaNoAsig" style="display:none;"><div id="listaNoAsig"></div></div>
   <div id="vistaAnulados" style="display:none;"><div id="listaAnulados"></div></div>
   <div id="vistaEntregas" style="display:none;"><div id="listaEntregas"></div></div>
@@ -1217,7 +1271,7 @@ function abrirModalDia(iso){
 function _abrir(){ document.getElementById('modalBg').classList.add('open'); }
 function _cerrarModal(){ document.getElementById('modalBg').classList.remove('open'); }
 
-let VISTA='reparto';   // vista principal: Reparto por fase (Por UE fue retirada)
+let VISTA='entdia';   /* rediseño 21-sep: abre en Entregas, donde vive el supervisor */   // vista principal: Reparto por fase (Por UE fue retirada)
 let BUSCA_NAV=''; // texto de búsqueda que filtra la vista actual (navegación)
 let EN_TAB='pend'; // sección activa en Entregas: 'pend' (por confirmar) | 'hechas' (memoria)
 let ENTREGADOS_MEM=null;   // memoria histórica de entregados (del JSON estático)
@@ -1239,9 +1293,9 @@ async function cargarEntregadosJSON(force){
         var _g=j.generado||j.actualizado||j.ts||j.fecha||''; var _d=_g?new Date(_g):null;
         ENTREGADOS_TS=(_d && !isNaN(_d)) ? _d.toLocaleString('es-PA',{timeZone:'America/Panama',day:'2-digit',month:'2-digit',
           hour:'2-digit',minute:'2-digit',hour12:false})+' PTY' : ''; }
-      else cargarEntregadosJSON._fallo=true;
-    } else cargarEntregadosJSON._fallo=true;
-  }catch(e){ cargarEntregadosJSON._fallo=true; /* cae a F8 */ }
+      else { cargarEntregadosJSON._fallo=true; cargarEntregadosJSON._falloTs=Date.now(); }
+    } else { cargarEntregadosJSON._fallo=true; cargarEntregadosJSON._falloTs=Date.now(); }
+  }catch(e){ cargarEntregadosJSON._fallo=true; cargarEntregadosJSON._falloTs=Date.now(); /* cae a F8 */ }
   ENTREGADOS_CARGANDO=false;
   return ENTREGADOS_MEM;
 }
@@ -1257,6 +1311,7 @@ function cambiarVista(v){
   /* La captura NO pasa por render(): debe abrir aunque el tablero siga
      cargando o no haya red. */
   document.getElementById('vistaEntregasDia').style.display = (v==='entdia')? '' : 'none';
+  try{ rdNav_(v); rdPintarCabecera_(); }catch(e){}
   if (v==='entdia'){ entRender(); return; }
   render();
 }
@@ -1571,6 +1626,7 @@ function renderEntregas(){
   const pasa=f=>(!fg||f.grupo===fg)&&(!fu||f.ue===fu)&&!f.anulado&&(!BUSCA_NAV||_buscNorm(f.id).indexOf(BUSCA_NAV)>=0||_buscNorm(f.ue).indexOf(BUSCA_NAV)>=0);
   // Pendientes: despachados y no entregados. Los más viejos (más días de espera) arriba.
   const pend=F8.filter(f=>f.despachado && !f.entregado).filter(pasa)
+    .filter(f=>!RD_MAS90 || (_diasDesde_(f.fDespacho)||0)>RD_CORTE)
     .sort((a,b)=>{ const da=_diasDesde_(a.fDespacho)||0, db=_diasDesde_(b.fDespacho)||0; return db-da; });
   // Ya confirmadas: memoria histórica. Preferir el JSON estático (instantáneo,
   // escala a miles); si no cargó aún, caer a filtrar F8 (los entregados activos).
@@ -1580,7 +1636,8 @@ function renderEntregas(){
      pedido entregado ayer contaba en el boton y desaparecia al abrir.
      Ahora: memoria = JSON publicado + entregados vivos de F8 (gana F8, que es
      mas fresco). El numero del boton y la lista son siempre lo mismo. */
-  if(!ENTREGADOS_MEM && !ENTREGADOS_CARGANDO && !cargarEntregadosJSON._fallo){
+  /* Si fallo, se reintenta pasado un minuto: un arranque con mala senal no la deja apagada. */
+  if(!ENTREGADOS_MEM && !ENTREGADOS_CARGANDO && !(cargarEntregadosJSON._fallo && Date.now()-(cargarEntregadosJSON._falloTs||0)<60000)){
     cargarEntregadosJSON().then(()=>{ if(VISTA==='entregas') render(); });
   }
   const memMap={}; let posteriores=0;
@@ -1606,6 +1663,8 @@ function renderEntregas(){
     +'<button class="en-tg'+(EN_TAB==='hechas'?' on':'')+'" onclick="EN_TAB=\'hechas\';cargarEntregadosJSON().then(()=>render());">Entregadas (memoria) <b>'+hechas.length.toLocaleString()+'</b></button>'
     +'</div>';
   html+='<div class="en-sub">Se aplican los filtros de la barra (Unidad Ejecutora, Grupo, Tipo) y el buscador.</div>';
+  if(EN_TAB==='pend' && RD_MAS90) html+='<div class="rd-filtro90">Solo los de m&aacute;s de '+RD_CORTE+' d&iacute;as sin confirmar &middot; <a href="#" onclick="RD_MAS90=false;RD_KPI=null;render();return false">ver todos</a></div>';
+  if(EN_TAB==='hechas') html+='<div class="rd-mem"><input id="rdMemPin" type="password" placeholder="PIN" maxlength="8" onkeydown="if(event.key===\'Enter\')rdPublicarMemoria()"><button id="rdMemBtn" onclick="rdPublicarMemoria()">Actualizar memoria</button><span id="rdMemMsg" class="rd-memmsg" style="display:none"></span></div>';
   if(EN_TAB==='hechas') html+='<div class="en-sub">'+(ENTREGADOS_MEM
     ? 'Memoria publicada'+(ENTREGADOS_TS?' el '+_escNA(ENTREGADOS_TS):'')+': '+ENTREGADOS_MEM.length.toLocaleString()+' pedidos'
       +(posteriores?' &middot; m&aacute;s '+posteriores+' entregados despu&eacute;s, que ya cuentan aqu&iacute;':'')
@@ -1882,13 +1941,14 @@ function renderNoAsignadas(){
 }
 
 function render(){
-  pintarBanda(); pintarKPIs();   // las tarjetas reaccionan al contexto (UE/grupo/triage/pendiente)
+  pintarBanda(); pintarKPIs(); rdPintarCabecera_(); try{ rdNav_(VISTA); }catch(e){}   // las tarjetas reaccionan al contexto (UE/grupo/triage/pendiente)
   // Badge de Anulados: se actualiza siempre, se vea la vista que se vea.
   const nAn=F8.filter(f=>f.anulado).length;
   const ab=document.getElementById('anBadge'); if(ab) ab.textContent=nAn?('('+nAn+')'):'';
   // Badge de Entregas: pendientes por confirmar (despachados, no entregados, no retirados).
   const nEn=F8.filter(f=>f.despachado && !f.entregado && !f.anulado).length;
   const eb=document.getElementById('enBadge'); if(eb) eb.textContent=nEn?('('+nEn+')'):'';
+  if(VISTA==='entdia') return;   /* la bahía se pinta sola: no se le quita el foco a quien teclea */
   const rows=filtrados();
   if(VISTA==='crono'){ renderPlanEntregas(); return; }   // Plan de Entregas: pedidos con fecha PROMETIDA por el supervisor, agrupados por día
   if(VISTA==='reparto'){ renderReparto(); return; }                // bolsones por fase para repartir trabajo (modo Supervisor)
@@ -2391,7 +2451,12 @@ document.getElementById('enModPin').addEventListener('keydown',function(e){ if(e
 document.addEventListener('keydown',function(e){ if(e.key==='Escape'){ _cerrarModal(); _enModCerrar(); const bp=document.getElementById('buscPanel'); if(bp) bp.style.display='none'; } });
 /* El sondeo de red de la captura arranca aparte de cargar(): tiene que
    funcionar aunque el tablero tarde o falle. */
-try { entIniciar_(); } catch(e){}
+/* DEFECTO CORREGIDO 21-sep — el sondeo de red nunca arrancaba.
+   Esta llamada corria ANTES de que se declararan ENT_PING_MS y ENT_RED, mas
+   abajo en el archivo: ReferenceError, tragado por el try/catch vacio. El
+   indicador decia 'sin conexion' siempre y la subida nunca se ofrecia.
+   setTimeout(…,0) espera a que el archivo entero termine de cargarse. */
+setTimeout(function(){ try { entIniciar_(); } catch(e){ console.error('entIniciar_', e); } }, 0);
 /* Insignia con lo que queda sin subir, visible desde cualquier vista. */
 try { setInterval(function(){
   var b=document.getElementById('edBadge'); if(!b) return;
@@ -2399,7 +2464,9 @@ try { setInterval(function(){
   b.textContent = n ? ('('+n+')') : '';
   b.style.color = n ? '#ffc9a0' : '';
 }, 3000); } catch(e){}
+setTimeout(function(){ try { cambiarVista('entdia'); } catch(e){ console.error('arranque en Entregas', e); } }, 0);
 cargar();
+try { cargarEntregadosJSON().then(function(){ rdPintarCabecera_(); try{ rdNav_(VISTA); }catch(e){} }); } catch(e){}
 setInterval(function(){
   // No refrescar si el usuario está en medio de editar una fecha comprometida:
   // reconstruir la tabla le borraría lo que está escribiendo. Se salta este
@@ -2581,7 +2648,7 @@ function entSubir(){
 /* ── Detección de red. "Estable" se mide, no se adivina: dos respuestas
       seguidas. Una barra de WiFi llena en el almacén no significa que haya
       red utilizable. ── */
-let ENT_RED = { estable:false, ofrecido:false, huboRed:false };
+let ENT_RED = { estable:false, ofrecido:false, huboRed:false, probado:false };
 function entSondear_(){
   const pend = entCola_().filter(function(x){ return x.estado !== 'subida'; }).length;
   /* DEFECTO CORREGIDO: aquí había un `if (!pend) return;` para ahorrar llamadas
@@ -2590,18 +2657,18 @@ function entSondear_(){
      "sin conexión" teniendo red. El indicador mentía justo cuando todo estaba
      bien. La sonda no toca hojas y cuesta nada: se ejecuta siempre y lo que
      depende de `pend` es solo OFRECER la subida, no medir la red. */
-  if (!navigator.onLine){ ENT_RED.estable = false; ENT_RED.ofrecido = false; entPintarRed_(); return; }
+  if (!navigator.onLine){ ENT_RED.estable = false; ENT_RED.ofrecido = false; ENT_RED.probado = true; entPintarRed_(); return; }
   const t0 = Date.now();
   fetch(WEBAPP_BASE + '?file=kanban_ping&t=' + t0, { method:'GET' })
     .then(function(){ return fetch(WEBAPP_BASE + '?file=kanban_ping&t=' + (t0+1)); })
     .then(function(){
       const antes = ENT_RED.estable;
-      ENT_RED.estable = true; ENT_RED.huboRed = true; entPintarRed_();
+      ENT_RED.estable = true; ENT_RED.huboRed = true; ENT_RED.probado = true; entPintarRed_();
       /* Solo se OFRECE subir si hay algo pendiente; la medición de red es
          independiente de eso. */
       if (pend && !antes && !ENT_RED.ofrecido){ ENT_RED.ofrecido = true; entOfrecerSubida_(pend); }
     })
-    .catch(function(){ ENT_RED.estable = false; ENT_RED.ofrecido = false; entPintarRed_(); });
+    .catch(function(){ ENT_RED.estable = false; ENT_RED.ofrecido = false; ENT_RED.probado = true; entPintarRed_(); });
 }
 function entOfrecerSubida_(n){
   const c = document.getElementById('entOferta');
@@ -2615,7 +2682,9 @@ function entOfrecerSubida_(n){
 function entPintarRed_(){
   const e = document.getElementById('entRed'); if (!e) return;
   const pend = entCola_().filter(function(x){ return x.estado !== 'subida'; }).length;
-  e.innerHTML = (ENT_RED.estable ? '<span class="ok">&#9679; conectado</span>' : '<span class="off">&#9679; sin conexión</span>') +
+  /* Antes de la primera medición no se afirma nada: decía "sin conexión" al abrir, con red. */
+  e.innerHTML = (!ENT_RED.probado ? '<span class="prob">&#9679; comprobando conexión&hellip;</span>'
+               : ENT_RED.estable ? '<span class="ok">&#9679; conectado</span>' : '<span class="off">&#9679; sin conexión</span>') +
                 (pend ? ' · <b>' + pend + ' sin subir</b>' : ' · todo subido');
 }
 function entAviso_(txt, tipo){
@@ -2765,6 +2834,8 @@ function entRender(){
           'oninput="entCapUECambia()" onkeydown="entCapTecla(event,\'ue\')" autocomplete="off" value="'+entEsc_(entStUE)+'"></label>'+
         '<label>Retiró <small>(opcional)</small><input id="entCapRep" list="entGenteCap" placeholder="nombre y cédula" '+
           'oninput="entCapRepCambia()" onkeydown="entCapTecla(event,\'rep\')" autocomplete="off" value="'+entEsc_(entStRep)+'"></label>'+
+        '<label class="entp-hora">Hora de entrega <small>(vacía = ahora)</small><input id="entCapHora" type="time" '+
+          'oninput="entCapHoraCambia()" onkeydown="entCapTecla(event,\'hora\')" value="'+entEsc_(entStHora)+'"></label>'+
         '<button class="btn-si" onclick="entCapAgregar()">Agregar</button>'+
       '</div>'+
       '<datalist id="entUEs">'+UEs.map(function(u){ return '<option value="'+entEsc_(u)+'">'; }).join('')+'</datalist>'+
@@ -2799,7 +2870,9 @@ function entRender(){
               'onchange="entFilaRep(\''+k+'\',this.value)">'
           : entEsc_(entRepTxt_(x.rep,x.ced) || '—');
         return '<tr'+(fx!==entHoy_()?' class="e-retro"':'')+'><td class="mono">'+entEsc_(x.f8)+'</td>'+
-          '<td>'+celUE+'</td><td>'+celRep+'</td><td class="mono">'+fx+' '+x.hora+'</td>'+
+          '<td>'+celUE+'</td><td>'+celRep+'</td>'+
+          '<td class="mono">'+fx+' '+(vivo ? '<input type="time" class="entp-t" value="'+entEsc_(x.hora)+'" '+
+              'onchange="entFilaHora(\''+k+'\',this.value)">' : entEsc_(x.hora))+'</td>'+
           '<td class="e-'+x.estado+'">'+(est[x.estado]||x.estado)+(x.estado==='error'?entEsc_(x.msg||''):'')+'</td>'+
           '<td><button class="x" onclick="entQuitar(\''+entEsc_(x.f8)+'\')">&times;</button></td></tr>';
       }).join('')+'</table>'+dlHtml;
@@ -2811,19 +2884,27 @@ function entRender(){
        '<button class="btn-no" onclick="entInforme()">Generar informe del día</button></div></div>';
 
   /* la asistencia sale sola de quién retiró cada pedido */
-  h += '<details class="ent-caja entp-asis"><summary>Asistencia del día &mdash; '+asis.length+
+  h += '<details class="ent-caja entp-asis"'+(entAsisAbierta?' open':'')+' ontoggle="entAsisAbierta=this.open"><summary>Asistencia del día &mdash; '+asis.length+
        (asis.length===1?' representante':' representantes')+'</summary>'+
-       (asis.length ? '<table class="ent-tb"><tr><th>Unidad ejecutora</th><th>Retiró</th><th>Cédula</th><th>Llegada</th><th>Pedidos</th></tr>'+
+       (asis.length ? '<table class="ent-tb"><tr><th>Unidad ejecutora</th><th>Retiró</th><th>Cédula</th><th>Llegada</th><th>Salida</th><th>Pedidos</th></tr>'+
           asis.map(function(a){
+            const ed = a.auto && a.k;
+            const t = function(campo, v){
+              return ed ? '<input type="time" class="entp-t" value="'+entEsc_(v||'')+'" '+
+                            'onchange="entAsisHora(\''+entEsc_(a.k)+'\',\''+campo+'\',this.value)">'
+                        : entEsc_(v||'—'); };
             return '<tr><td>'+entEsc_(a.ue)+'</td><td>'+entEsc_(a.rep||'—')+'</td><td class="mono">'+entEsc_(a.ced||'—')+'</td>'+
-                   '<td class="mono">'+entEsc_(a.lleg||'')+'</td><td class="mono">'+(a.n!=null ? a.n : '—')+'</td></tr>';
-          }).join('')+'</table>'
+                   '<td class="mono">'+t('lleg', a.lleg)+'</td><td class="mono">'+t('sal', a.sal)+'</td>'+
+                   '<td class="mono">'+(a.n!=null ? a.n : '—')+'</td></tr>';
+          }).join('')+'</table>'+
+          '<div class="ent-nota" style="margin-top:6px">La llegada arranca con la hora del primer pedido; corrígela y pon la salida cuando la sepas. Así sale en el informe.</div>'
         : '<div class="ent-vacio">Se llena sola cuando anotas quién retiró un pedido.</div>')+
        '</details>';
 
   cont.innerHTML = h;
   entPintarRed_();
   entCapGente_();
+  if (typeof rdPintarCabecera_==='function'){ rdPintarCabecera_(); try{ rdNav_(VISTA); }catch(e){} }
   if (entStF8) entCapSug();
   if (entFoco){
     entFoco = false;
@@ -2852,6 +2933,9 @@ var entFechaAct = null;   /* fecha de entrega que se está cargando; null = hoy 
 var entStF8 = '', entStUE = '', entStRep = '';   /* lo tecleado sobrevive al repintado */
 var entStUEAuto = false;  /* la unidad la puso el pedido, no la escribió el supervisor */
 var entLoteOn = false, entFoco = false;
+var entStHora = '';       /* hora de entrega tecleada; vacía = la hora actual */
+var entAsisAbierta = false;
+var ENT_LS_ASISH = 'cedis_entregas_horas_v1';   /* llegada/salida capturadas a mano */
 
 /* ── utilidades ──────────────────────────────────────────────────────── */
 function entNorm_(t){
@@ -2900,6 +2984,9 @@ function entRepParse_(t){
   var m = s.match(/^(.*?)[\s(]+([0-9A-Z]{1,3}-\d{1,5}-\d{1,6})\)?\s*$/i);
   return m ? { rep:m[1].trim(), ced:m[2] } : { rep:s, ced:'' };
 }
+function entHoraOk_(h){ return /^([01]\d|2[0-3]):[0-5]\d$/.test(String(h||'').trim()) ? String(h).trim() : ''; }
+function entHorasMan_(){ var t = entLeer_(ENT_LS_ASISH); return t[entHoy_()] || {}; }
+function entHorasManSet_(m){ var t = entLeer_(ENT_LS_ASISH); t[entHoy_()] = m; entGuardar_(ENT_LS_ASISH, t); }
 function entRepTxt_(rep, ced){ return rep ? rep + (ced ? ' (' + ced + ')' : '') : ''; }
 
 /* ── fecha de la entrega ─────────────────────────────────────────────── */
@@ -2932,6 +3019,13 @@ function entAsistSync_(){
     if (x.hora < m[k].lleg) m[k].lleg = x.hora;
     if (!m[k].ced && x.ced) m[k].ced = x.ced;
     m[k].n++;
+  });
+  var hm = entHorasMan_();
+  orden.forEach(function(k){
+    var o = hm[k] || {};
+    if (entHoraOk_(o.lleg)) m[k].lleg = o.lleg;
+    if (entHoraOk_(o.sal))  m[k].sal  = o.sal;
+    m[k].k = k;
   });
   entAsistSet_(manual.concat(orden.map(function(k){ return m[k]; })));
 }
@@ -3039,10 +3133,12 @@ function entCapAgregar(){
     return;
   }
   var r = entRepParse_((document.getElementById('entCapRep')||{}).value);
-  cola.push({ f8:(p ? String(p.id).trim() : f8), ue:ue, hora:entHora_(), fecha:entFechaSel_(),
+  var hEnt = entHoraOk_((document.getElementById('entCapHora')||{}).value) || entHora_();
+  cola.push({ f8:(p ? String(p.id).trim() : f8), ue:ue, hora:hEnt, fecha:entFechaSel_(),
               estado:'pendiente', rep:r.rep, ced:r.ced, colado:!p });
   entColaSet_(cola);
   entStF8 = ''; entStUE = ue; entStUEAuto = !!p; entStRep = entRepTxt_(r.rep, r.ced);
+  entStHora = entHoraOk_((document.getElementById('entCapHora')||{}).value);
   entFoco = true; entRender();
   entAviso_(p ? (String(p.id).trim() + ' · ' + ue)
               : (f8 + ' agregado como pedido que no estaba en el tablero'), p ? 'ok' : 'warn');
@@ -3061,7 +3157,7 @@ function entLote(){
     var k = entIdParcial_(f8); if (ya[k]){ c.rep++; return; }
     var p = entBuscarPedido_(f8);
     var mismo = p && entStUE && entMismaUE_(p.ue, entStUE);
-    cola.push({ f8:(p ? String(p.id).trim() : f8), ue:(p ? p.ue : ''), hora:entHora_(), fecha:entFechaSel_(),
+    cola.push({ f8:(p ? String(p.id).trim() : f8), ue:(p ? p.ue : ''), hora:(entHoraOk_(entStHora) || entHora_()), fecha:entFechaSel_(),
                 estado:'pendiente', rep:(mismo ? st.rep : ''), ced:(mismo ? st.ced : ''), colado:!p });
     ya[k] = 1;
     if (p) c.ok++; else c.sinUE++;
@@ -3093,6 +3189,197 @@ function entFilaRep(k, val){
   }
   entColaSet_(cola); entRender();
   if (n) entAviso_('También quedó en ' + n + (n===1?' pedido':' pedidos') + ' de la misma unidad.', 'ok');
+}
+
+/* ── horas capturadas a mano ─────────────────────────────────────────────
+   El informe del día lleva la hora de entrega de cada pedido y la llegada y
+   salida de cada representante. Cuando se registra al momento, la hora sale
+   sola; cuando se carga después o desde un informe atrasado, se escribe. */
+function entCapHoraCambia(){ var e = document.getElementById('entCapHora'); if(e) entStHora = entHoraOk_(e.value); }
+function entFilaHora(k, val){
+  var h = entHoraOk_(val); if(!h){ entRender(); entAviso_('Hora no válida. Usa el formato 24 horas, por ejemplo 09:35.', 'warn'); return; }
+  var cola = entCola_();
+  cola.forEach(function(x){ if (entIdParcial_(x.f8) === k && x.estado !== 'subida') x.hora = h; });
+  entColaSet_(cola); entRender();
+}
+function entAsisHora(k, campo, val){
+  var h = String(val||'').trim();
+  entAsisAbierta = true;
+  if (h && !entHoraOk_(h)){ entRender(); entAviso_('Hora no válida. Usa el formato 24 horas, por ejemplo 09:35.', 'warn'); return; }
+  var m = entHorasMan_(); m[k] = m[k] || {};
+  m[k][campo] = h;
+  entHorasManSet_(m); entRender();
+  var a = entAsist_().filter(function(x){ return x.k === k; })[0];
+  if (a && entHoraOk_(a.lleg) && entHoraOk_(a.sal) && a.sal < a.lleg)
+    entAviso_('La salida quedó antes que la llegada. Revísala.', 'warn');
+}
+
+
+/* ══ REDISEÑO 21-sep · CABECERA, FLUJO KANBAN Y NAVEGACIÓN ════════════════════
+   Reemplaza el mosaico de siete tarjetas y la banda de acción por:
+     · cuatro cifras en pastel sólido, cada una lleva a donde hay que actuar;
+     · el flujo Kanban completo, siempre a la vista, con los nombres de
+       RP_FASES y LLM_ETAPAS y el equipo que empuja cada fase;
+     · Entregas en una sola pestaña: Registrar · Por confirmar · Memoria.
+   Toda la lectura sale de F8 y de la memoria publicada: cero llamadas nuevas.
+   La carga de datos queda en cargar(): cuando la Etapa 8 publique el tablero
+   como JSON, se cambia ahí y esta cabecera no se toca. ═════════════════════ */
+
+var RD_SUB = 'registrar';   /* registrar | confirmar | memoria */
+var RD_KPI = null;          /* cifra activa */
+var RD_MAS90 = false;       /* Por confirmar acotado a los de más de 90 días */
+var RD_CORTE = 90;
+
+function rdEsc_(t){ return String(t==null?'':t).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function rdFiltroCab_(f){
+  var fg=(document.getElementById('fGrupo')||{}).value||'', fu=(document.getElementById('fUE')||{}).value||'',
+      ft=(document.getElementById('fTipo')||{}).value||'';
+  return !f.anulado && (!fg||f.grupo===fg) && (!fu||f.ue===fu) && (!ft||f.tipo===ft);
+}
+function rdMediana_(a){ if(!a.length) return 0; var s=a.slice().sort(function(x,y){return x-y;}), m=Math.floor(s.length/2);
+  return s.length%2 ? s[m] : Math.round((s[m-1]+s[m])/2); }
+function rdPorConfirmar_(){ return (typeof F8!=='undefined'&&F8?F8:[]).filter(function(f){ return f.despachado && !f.entregado && rdFiltroCab_(f); }); }
+/* La memoria: publicada + entregados vivos de F8, la misma población que muestra la pestaña. */
+function rdMemoria_(){
+  var m={}, lst=[];
+  (typeof ENTREGADOS_MEM!=='undefined' && ENTREGADOS_MEM ? ENTREGADOS_MEM : []).forEach(function(f){ if(f&&f.id) m[_buscNorm(f.id)]=f; });
+  (typeof F8!=='undefined'&&F8?F8:[]).forEach(function(f){ if(f.entregado && !f.anulado) m[_buscNorm(f.id)]=f; });
+  for (var k in m) lst.push(m[k]);
+  return lst;
+}
+
+/* ── las cuatro cifras ── */
+function rdPintarKpis_(){
+  var box=document.getElementById('rdKpis'); if(!box) return;
+  var pc=rdPorConfirmar_(), dd=pc.map(function(f){ return _diasDesde_(f.fDespacho)||0; });
+  var m90=dd.filter(function(d){ return d>RD_CORTE; }).length;
+  var cola=(typeof entCola_==='function')?entCola_():[], pend=cola.filter(function(x){return x.estado!=='subida';}).length,
+      hoy=cola.length-pend;
+  var sf=rdMemoria_().filter(function(f){ return !f.fEntrega; }).length;
+  var k=[
+    ['pc','azul',  pc.length, 'Despachados por confirmar entrega', pc.length?'esperan una mediana de '+rdMediana_(dd)+' días':'nada pendiente'],
+    ['m90','rosa', m90,       'Llevan más de '+RD_CORTE+' días sin confirmar', 'los primeros que hay que cerrar'],
+    ['reg',pend?'ambar':'verde', pend||hoy, pend?'Registrados sin subir al Kanban':'Entregas registradas hoy', pend?'están en esta tablet: falta PIN y subir':'ya están en el Kanban'],
+    ['sf', sf?'durazno':'verde', sf, 'Entregados sin fecha de entrega', sf?'defecto de datos: revisar en Memoria':'la memoria está completa']
+  ];
+  box.innerHTML=k.map(function(x){
+    return '<button class="rd-kpi '+x[1]+(RD_KPI===x[0]?' on':'')+'" onclick="rdKpi(\''+x[0]+'\')">'+
+           '<b>'+x[2].toLocaleString()+'</b><span>'+x[3]+'</span><small>'+x[4]+'</small></button>';
+  }).join('');
+}
+function rdKpi(id){
+  RD_KPI = (RD_KPI===id) ? null : id;
+  RD_MAS90 = (RD_KPI==='m90');
+  if(id==='reg') rdIrEntregas('registrar');
+  else if(id==='sf') rdIrEntregas('memoria');
+  else rdIrEntregas('confirmar');
+}
+
+/* ── el flujo Kanban ── */
+var RD_ET_FUERA=[
+  {clave:'DISTRIBUCION', label:'Distribuci\u00f3n', pie:'salieron'},
+  {clave:'DESPACHADO',   label:'Despachado',        pie:'por confirmar'},
+  {clave:'ENTREGADO',    label:'Entregado en la UE', pie:'confirmados'}
+];
+function rdPintarFlujo_(){
+  var box=document.getElementById('rdFlujo'); if(!box) return;
+  var F=(typeof F8!=='undefined'&&F8?F8:[]).filter(rdFiltroCab_);
+  var dentro=RP_FASES.map(function(Fa){
+    var l=F.filter(function(f){ return f.macro===Fa.clave; });
+    var v7=l.filter(function(f){ return (_diasDesde_(f.fechaRecepcion)||0)>7; }).length;
+    return { clave:Fa.clave, label:Fa.label, equipo:Fa.equipo, n:l.length, v7:v7 };
+  });
+  var cu=null, max=0; dentro.forEach(function(x){ if(x.v7>max){ max=x.v7; cu=x.clave; } });
+  var nDist=F.filter(function(f){ return f.macro==='DISTRIBUCION' && !f.despachado && !f.entregado; }).length;
+  var nDesp=rdPorConfirmar_().length;
+  var fu=(document.getElementById('fUE')||{}).value||'', fg=(document.getElementById('fGrupo')||{}).value||'';
+  var nEnt=rdMemoria_().filter(function(f){ return (!fu||f.ue===fu)&&(!fg||f.grupo===fg); }).length;
+  var fuera=[nDist,nDesp,nEnt];
+  var tDentro=dentro.reduce(function(s,x){return s+x.n;},0), tFuera=fuera.reduce(function(s,x){return s+x;},0);
+  var h='<div class="rd-seg"><span class="dentro">Dentro del almac\u00e9n \u00b7 '+tDentro.toLocaleString()+'</span>'+
+        '<span class="fuera">Sali\u00f3 del almac\u00e9n \u00b7 '+tFuera.toLocaleString()+'</span></div><div class="rd-etapas">';
+  dentro.forEach(function(x){
+    var cl='rd-et'+(x.clave===cu?' cuello':'')+(x.n?'':' cero');
+    h+='<button class="'+cl+'" onclick="rdIrEtapa(\''+x.clave+'\')" title="'+rdEsc_(x.label+' \u00b7 '+x.equipo)+'">'+
+       '<span>'+rdEsc_(x.label)+'</span><b>'+x.n.toLocaleString()+'</b>'+
+       '<small>'+(x.clave===cu?'cuello de botella \u00b7 ':'')+(x.v7?x.v7.toLocaleString()+' con +7 d\u00edas':'al d\u00eda')+'</small>'+
+       '<small class="eq">'+rdEsc_(x.equipo)+'</small></button>';
+  });
+  RD_ET_FUERA.forEach(function(x,i){
+    var cl='rd-et fuera'+(i===0?' salto':'')+(x.clave==='ENTREGADO'?' fin':'')+(fuera[i]?'':' cero');
+    h+='<button class="'+cl+'" onclick="rdIrEtapa(\''+x.clave+'\')"><span>'+x.label+'</span><b>'+fuera[i].toLocaleString()+'</b><small>'+x.pie+'</small></button>';
+  });
+  h+='</div><div class="rd-ley"><span><i style="background:#eef2f8"></i>en proceso</span><span><i style="background:#f8dcdc"></i>cuello de botella</span>'+
+     '<span><i style="background:#e6f3e8"></i>fuera del almac\u00e9n</span><span>Toca una etapa para ver sus pedidos.</span></div>';
+  box.innerHTML=h;
+}
+function rdIrEtapa(clave){
+  RD_KPI=null; RD_MAS90=false;
+  if(clave==='DESPACHADO'){ rdIrEntregas('confirmar'); return; }
+  if(clave==='ENTREGADO'){ rdIrEntregas('memoria'); return; }
+  if(clave==='DISTRIBUCION'){ return; }
+  if(typeof rpColapsado!=='undefined') rpColapsado[clave]=false;
+  cambiarVista('reparto');
+  setTimeout(function(){ var el=document.getElementById('rpfase_'+clave); if(el&&el.scrollIntoView) el.scrollIntoView({behavior:'smooth',block:'start'}); }, 60);
+}
+function rdPintarCabecera_(){ try{ rdPintarKpis_(); rdPintarFlujo_(); }catch(e){} }
+
+/* ── navegación: Entregas es una sola pestaña con tres partes ── */
+function rdIrEntregas(sub){
+  RD_SUB = sub || RD_SUB;
+  if(RD_SUB!=='confirmar') RD_MAS90=false;
+  if(RD_SUB==='registrar'){ cambiarVista('entdia'); }
+  else {
+    EN_TAB = (RD_SUB==='memoria') ? 'hechas' : 'pend';
+    if(RD_SUB==='memoria' && typeof cargarEntregadosJSON==='function'){
+      if(!ENTREGADOS_MEM) cargarEntregadosJSON._fallo=false;   /* abrir Memoria siempre reintenta */
+      cargarEntregadosJSON().then(function(){ if(VISTA==='entregas'){ render(); } });
+    }
+    cambiarVista('entregas');
+  }
+}
+function rdNav_(v){
+  var enEnt = (v==='entdia' || v==='entregas');
+  document.querySelectorAll('.vsw-btn').forEach(function(b){
+    var d=b.getAttribute('data-vista');
+    b.classList.toggle('activa', d===v || (d==='ent' && enEnt));
+  });
+  var sub=document.getElementById('rdSub'); if(!sub) return;
+  sub.style.display = enEnt ? '' : 'none';
+  if(!enEnt) return;
+  var nCola=(typeof entCola_==='function')?entCola_().length:0;
+  var nPc=rdPorConfirmar_().length, nMem=rdMemoria_().length;
+  var act = (v==='entdia') ? 'registrar' : (EN_TAB==='hechas' ? 'memoria' : 'confirmar');
+  sub.innerHTML=[['registrar','Registrar',nCola],['confirmar','Por confirmar',nPc],['memoria','Memoria',nMem]].map(function(x){
+    return '<button class="'+(act===x[0]?'on':'')+'" onclick="RD_KPI=null;rdIrEntregas(\''+x[0]+'\')">'+x[1]+'<b>'+x[2].toLocaleString()+'</b></button>';
+  }).join('');
+}
+
+/* ── botón Actualizar memoria: publica desde el tablero, con PIN ── */
+async function rdPublicarMemoria(){
+  var pinEl=document.getElementById('rdMemPin'), btn=document.getElementById('rdMemBtn');
+  var pin=pinEl?pinEl.value.trim():'';
+  if(!pin){ if(pinEl) pinEl.focus(); rdMemMsg_('Escribe tu PIN para publicar la memoria.','warn'); return; }
+  if(btn){ btn.disabled=true; btn.textContent='Publicando\u2026'; }
+  try{
+    var r=await pedir('file=kb_publicar_entregados&pin='+encodeURIComponent(pin));
+    if(!r || !r.ok) throw new Error((r&&r.msg)||'No se pudo publicar.');
+    ENTREGADOS_MEM=r.entregados||[];
+    try{ var d=new Date(r.generado); ENTREGADOS_TS=d.toLocaleString('es-PA',{timeZone:'America/Panama',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false})+' PTY'; }catch(e){}
+    cargarEntregadosJSON._fallo=false;
+    render();
+    rdMemMsg_('Memoria publicada: '+r.total.toLocaleString()+' pedidos'+
+      (r.quitados?' \u00b7 '+r.quitados+' quitados porque en la hoja ya no est\u00e1n entregados':'')+
+      (r.sinFecha?' \u00b7 '+r.sinFecha+' siguen sin fecha':''),'ok');
+  }catch(e){
+    rdMemMsg_(String(e.message||e),'warn');
+  }finally{
+    var b2=document.getElementById('rdMemBtn'); if(b2){ b2.disabled=false; b2.textContent='Actualizar memoria'; }
+  }
+}
+function rdMemMsg_(t,tipo){
+  var e=document.getElementById('rdMemMsg'); if(!e) return;
+  e.className='rd-memmsg '+(tipo||'ok'); e.textContent=t; e.style.display='';
 }
 
 function entIniciar_(){
