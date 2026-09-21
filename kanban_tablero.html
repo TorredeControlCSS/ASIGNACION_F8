@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Kanban de Seguimiento — Tablero del Almacén por Unidad ejecutora</title>
+<title>Kanban de Seguimiento — Tablero del Almacén por Unidad Ejecutora</title>
 <link rel="icon" href="./favicon.ico?v=1"/>
 <style>
   :root{
@@ -447,14 +447,15 @@
   .rd-ctxbtn{border:1px solid #d9dee5;background:#fff;color:#1f3864;border-radius:6px;padding:5px 11px;font:inherit;font-size:12px;font-weight:600;cursor:pointer}
   .rd-ctxbtn.on{background:#1f3864;color:#fff;border-color:#1f3864}
   /* ── afinado 21-sep (2): Registrar sin banda azul, pestañas discretas ── */
-  .ent-barra.rd-slim{background:transparent;color:#1f3864;padding:2px 0 8px;border-radius:0;border-bottom:1px solid #e3e7ec;
+  .ent-barra.rd-slim{background:#1f3864;color:#fff;padding:7px 12px;border-radius:6px;border-bottom:0;
     margin-bottom:10px;gap:8px;flex-wrap:wrap;font-size:13px}
-  .rd-slim .entp-fec{margin-left:0;color:#1f3864;font-weight:700;font-size:13px}
-  .rd-slim .entp-fec label{font-weight:700}
+  .rd-slim .entp-fec{margin-left:0;color:#fff;font-weight:700;font-size:13px}
+  .rd-slim .entp-fec label{font-weight:700;color:#fff}
+  .rd-slim .entp-fec input[type=date]{border:0;border-radius:4px;padding:3px 6px}
   .rd-slim .ent-red{margin-left:auto;font-size:12px}
-  .rd-pill{display:inline-flex;align-items:baseline;gap:4px;background:#eef2f8;color:#1f3864;border-radius:12px;padding:3px 10px;font-size:12px}
+  .rd-pill{display:inline-flex;align-items:baseline;gap:4px;background:rgba(255,255,255,.16);color:#fff;border-radius:12px;padding:3px 10px;font-size:12px}
   .rd-pill b{font-variant-numeric:tabular-nums}
-  .rd-pill.ok{background:#e6f3e8;color:#1d5e26}
+  .rd-pill.ok{background:#d8efdc;color:#1d5e26}
   .rd-pill.warn{background:#fbeec4;color:#6b5100}
   .rd-pill.alerta{background:#fbe1cc;color:#7a3a0b}
   .rd-sub{gap:18px;margin:6px 0 8px;border-bottom:1px solid #e3e7ec}
@@ -2862,8 +2863,9 @@ function entRender(){
   const UEs = entUnidades_();
 
   let h =
-    /* Una sola línea: fecha, cifras y red. Antes eran una banda azul a todo el
-       ancho más dos tarjetas grandes que repetían lo que ya dice la cabecera. */
+    /* La banda azul se queda para que resalte, y las cifras van dentro de ella.
+       Lo que sobraba eran las dos tarjetas grandes de abajo, que repetían lo
+       que ya dice la cabecera. */
     '<div class="ent-barra rd-slim"><span class="entp-fec"><label for="entFecha">Entregas del</label>'+
       '<input type="date" id="entFecha" value="'+entFechaSel_()+'" max="'+entHoy_()+'" onchange="entFechaCambia()">'+
       (entRetro_() ? '<button class="btn-mini" onclick="entFechaHoy()">Hoy</button>' : '')+'</span>'+
