@@ -263,6 +263,9 @@
                   <th style="font-size:9px;">Prioridad</th>
                   <!-- NUEVA COLUMNA VISUAL -->
                   <th class="right" style="background:#e3f2fd; color:#0d47a1;">Stock</th>
+                  <!-- 21-sep: INVENTARIO_UE (columna AM de ASIGNACIONES). El Motor lo mandaba
+                       y solo se veía en la ficha de detalle; la tabla nunca lo pintó. -->
+                  <th class="right" style="background:#fff3e0; color:#8a4b00;" title="Saldo en el estante de la unidad ejecutora, según la Calculadora (INVENTARIO_UE)">Inv. UE</th>
                   <th class="right">Solic.</th>
                   <th class="right">Redond.</th>
                   <th class="right">Asig.</th>
@@ -556,6 +559,7 @@
 
         <!-- NUEVA COLUMNA STOCK (SOLO WEB) -->
         <td class="right" style="background:#e3f2fd; color:#0d47a1; font-weight:bold;">${fmt(r.Stock_Fisico)}</td>
+        ${celdaInvUE(r)}
 
         <td class="right">${fmt(r.Solicitado)}</td>
         <td class="right" style="${estiloSol}" title="${r.Acaparamiento ? 'Recortado por Anti-Acaparamiento' : ''}">${fmt(r.Solicitado_redondeado)}</td>
@@ -1434,6 +1438,18 @@
   // limpia y deja leer el status HTTP real. Probado en celular multi-cuenta el
   // 19-jul-2026. Se conserva el nombre loadJsonp(url, timeoutMs).
   // ==========================================================================
+  /* 21-sep · INVENTARIO_UE en la tabla principal.
+     null  = la Calculadora no tiene dato para esa unidad y renglón (no es cero).
+     0     = la unidad está en cero en su estante: se marca en rojo.
+     El tooltip suma lo distribuido en el mes, que viaja en el mismo registro. */
+  function celdaInvUE(r){
+    const v = r.Inventario_UE, dist = (r.Distrib_Mes != null) ? fmt(r.Distrib_Mes) : '—';
+    if (v === null || v === undefined || v === '')
+      return `<td class="right" style="background:#fff8ef; color:#999;" title="Sin dato en la Calculadora para esta unidad y renglón · Distribuido este mes: ${dist}">—</td>`;
+    const cero = Number(v) === 0;
+    return `<td class="right" style="background:#fff8ef; font-weight:bold; color:${cero ? '#b71c1c' : '#8a4b00'};" `+
+           `title="Saldo en el estante de la UE: ${fmt(v)} · Distribuido este mes: ${dist}">${fmt(v)}</td>`;
+  }
   function loadJsonp(url, timeoutMs) {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), timeoutMs || 90000);
