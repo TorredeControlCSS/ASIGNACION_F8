@@ -651,7 +651,9 @@ async function pedir(params){
   try{
     const res=await fetch(url,{method:'GET',redirect:'follow'});
     if(!res.ok) throw new Error('HTTP '+res.status);
-    return await res.json();
+    const _j=await res.json();
+    if(_j && _j.ok!==false && /file=(kb_llave_hito|kb_llave_muerto|kanban_entregar|kanban_comprometer|kanban_anular|kb_publicar_entregados)/.test(params)) taMarcarEscritura_();
+    return _j;
   } finally {
     clearTimeout(_lat); _latMostrar(false);
   }
@@ -679,7 +681,32 @@ function toast_(msg){
   t.textContent=msg; document.body.appendChild(t);
   setTimeout(()=>{ t.style.transition='opacity .4s'; t.style.opacity='0'; setTimeout(()=>t.remove(),400); }, 4000);
 }
-async function cargar(silencioso){
+/* ══ ETAPA 8 · EL TABLERO LEE DE ARCHIVO (21-sep) ═══════════════════════════
+   Abre leyendo kanban/tablero.json, que el precalentador publica en GitHub
+   Pages, en vez de llamar al Motor (~4.8 s). Reglas para no retroceder nunca:
+   · si el archivo tiene más de 15 min, se refresca desde el Motor por detrás;
+   · un archivo más viejo que lo que ya se ve no se aplica;
+   · si en esta sesión se registró algo después de que se publicó el archivo,
+     se lee del Motor, que ya tiene ese registro.
+   El botón Actualizar va siempre al Motor. Si el archivo no existe o falla,
+   todo sigue como antes: se lee del Motor. */
+let TA_FUENTE='', TA_DATOS_MS=0, TA_ESCRIBIO_MS=0, TA_REFRESCANDO=false;
+const TA_VIEJO_MS=15*60000;
+function taExpandir_(j){
+  if(!j || !Array.isArray(j.cols) || !Array.isArray(j.rows)) return j;
+  const c=j.cols;
+  j.f8=j.rows.map(r=>{ const o={}; for(let i=0;i<c.length;i++) o[c[i]]=r[i]; return o; });
+  return j;
+}
+async function taLeerArchivo_(){
+  const r=await fetch('kanban/tablero.json',{cache:'no-cache'});
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  const j=taExpandir_(await r.json());
+  if(!j || !j.ok || !Array.isArray(j.f8) || !j.f8.length) throw new Error('archivo sin datos');
+  return j;
+}
+function taMarcarEscritura_(){ TA_ESCRIBIO_MS=Date.now(); }
+async function cargar(silencioso, desdeMotor){
   // Primera carga: muestra "Cargando". Auto-refresco (silencioso): NO borra la
   // pantalla — actualiza los datos por detrás y repinta sin parpadeo.
   if(!silencioso){
@@ -687,12 +714,28 @@ async function cargar(silencioso){
   }
   document.getElementById('errBox').innerHTML='';
   try{
-    const res=await pedir('file=kanban_tablero_almacen');
+    let res=null, fuente='motor';
+    if(!desdeMotor){
+      try{
+        const j=await taLeerArchivo_(), gen=Date.parse(j.generadoISO||'')||0;
+        if(gen && gen<=TA_DATOS_MS){ return; }                              // más viejo que lo que ya se ve
+        if(gen && TA_ESCRIBIO_MS && gen<TA_ESCRIBIO_MS){ desdeMotor=true; }  // no trae lo recién registrado
+        else { res=j; fuente='archivo'; }
+      }catch(e){ res=null; }
+    }
+    if(!res){ res=await pedir('file=kanban_tablero_almacen'); fuente='motor'; }
     if(!res||res.ok===false) throw new Error((res&&res.msg)||'Respuesta vac\u00eda');
+    TA_FUENTE=fuente;
+    TA_DATOS_MS = (fuente==='archivo') ? (Date.parse(res.generadoISO||'')||Date.now()) : Date.now();
     F8=res.f8||[]; MACROS=res.macros||[]; UETOT=res.ueTotales||{};
     MACROS.forEach(m=>COLOR[m.clave]=m.color);
-    document.getElementById('gen').innerHTML='Actualizado: '+(res.generado||'\u2014')+'<br>Hoy: '+(res.diaHoy||'\u2014')+' \u00b7 '+F8.length+' F8 activas';
+    document.getElementById('gen').innerHTML='Actualizado: '+(res.generado||'\u2014')+
+      (fuente==='archivo'?' \u00b7 archivo':' \u00b7 Motor')+'<br>Hoy: '+(res.diaHoy||'\u2014')+' \u00b7 '+F8.length+' F8 activas';
     pintarLeyenda(); poblarFiltros(); render();
+    if(fuente==='archivo' && (Date.now()-TA_DATOS_MS)>TA_VIEJO_MS && !TA_REFRESCANDO){
+      TA_REFRESCANDO=true;
+      setTimeout(function(){ cargar(true,true).finally(function(){ TA_REFRESCANDO=false; }); }, 1200);
+    }
   }catch(err){
     // En refresco silencioso, un fallo de red NO borra lo que ya se ve:
     // solo se registra; el usuario conserva los últimos datos buenos.
@@ -2098,7 +2141,7 @@ function render(){
    bandera 'silencioso'. Recargaba 4.8 s sin avisar nada: parecia no hacer nada. */
 document.getElementById('btnRefresh').onclick=async function(){
   const b=this; b.disabled=true; b.textContent='Actualizando\u2026';
-  try{ await cargar(true); b.textContent='\u2713 Actualizado'; }
+  try{ await cargar(true, true); b.textContent='\u2713 Actualizado'; }
   catch(e){ b.textContent='\u26a0 No se pudo'; }
   setTimeout(function(){ b.disabled=false; b.innerHTML='&#8635; Actualizar'; }, 2500);
 };
@@ -2680,6 +2723,7 @@ function entSubir(){
         it.sinRec = !!r.sinReceptor;
         /* El Kanban ya lo tiene como ENTREGADO: el tablero en memoria tambien.
            Sin esto el pedido seguia saliendo como pendiente hasta recargar. */
+        taMarcarEscritura_();
         var _p = entBuscarPedido_(it.f8);
         if (_p){ _p.entregado = true; _p.fEntrega = (r.fecha || it.fecha || entHoy_()); }
         ok++;
