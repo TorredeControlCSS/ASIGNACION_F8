@@ -372,45 +372,60 @@
   .ent-acc{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:9px}
   .ent-acc input{padding:8px 10px;border:1px solid #c6ccd4;border-radius:5px;font-size:14px}
   .ent-nota{color:#666;font-size:12px}
-  .ent-retro{background:#fff8e1;border-left:4px solid #8a6a00;padding:9px 13px;border-radius:5px;
-    margin:9px 0 0;font-size:13px;color:#5c4700}
+  .entv-fec{display:inline-flex;align-items:center;gap:6px;margin-left:12px;font-size:12px;color:#666}
+  .entv-fec input[type=date]{font-family:Consolas,monospace;font-size:13px;padding:3px 6px;border:1px solid #c6ccd4;border-radius:4px}
+  .entv-busca{width:100%;box-sizing:border-box;margin:12px 0 6px;padding:15px 13px;font-size:19px;font-weight:600;
+    font-variant-numeric:tabular-nums;border:2px solid #c6ccd4;border-radius:7px;background:#f4f7fa}
+  .entv-busca:focus{outline:none;border-color:#1f3864;background:#fff}
+  .entv-op{display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;text-align:left;margin-bottom:7px;
+    background:#fff;border:1px solid #e3e7ec;border-left:5px solid #c6ccd4;border-radius:7px;padding:12px 13px;cursor:pointer;font:inherit}
+  .entv-op:hover{background:#f4f7fa}
+  .entv-op.pers{border-left-color:#2e7d32}
+  .entv-op.ue{border-left-color:#1f3864}
+  .entv-op .t{flex:1;min-width:0}
+  .entv-op .n{display:block;font-size:16px;font-weight:700;color:#1f3864}
+  .entv-op .s{display:block;font-size:12px;color:#666;font-variant-numeric:tabular-nums}
+  .entv-op .g{font-size:11px;color:#888;white-space:nowrap}
+  .entv-op mark,.entv-f8 mark{background:#ffe89a;padding:0 1px;border-radius:2px}
+  .entv-nuevo{width:100%;box-sizing:border-box;margin:4px 0 8px;padding:13px;font:inherit;font-weight:700;cursor:pointer;
+    background:#fff;border:2px dashed #c6ccd4;border-radius:7px;color:#555}
+  .entv-alta{display:flex;flex-direction:column;gap:8px;border:2px dashed #c6ccd4;border-radius:7px;padding:12px;margin:4px 0 10px}
+  .entv-alta input{padding:12px;font:inherit;font-size:15px;border:1px solid #c6ccd4;border-radius:6px}
+  .entv-alta button{padding:13px;font:inherit;font-weight:700;border:0;border-radius:6px;background:#1f3864;color:#fff;cursor:pointer}
+  .entv-visita{border:2px solid #2e7d32;border-radius:9px;padding:14px;background:#eaf5ea;margin:12px 0 4px}
+  .entv-visita.pide{border-color:#1f3864;background:#eef2f7}
+  .entv-visita .q{font-size:20px;font-weight:700;color:#1f3864;line-height:1.2}
+  .entv-visita .u{font-size:13px;font-weight:600;color:#1b5e20}
+  .entv-visita .m{font-size:12px;color:#44604c;margin-top:3px;font-variant-numeric:tabular-nums}
+  .entv-visita .fila{display:flex;gap:9px;margin-top:11px}
+  .entv-visita .fila button{flex:1;padding:12px;font:inherit;font-weight:700;border-radius:6px;cursor:pointer}
+  .entv-visita .cerrar{background:#2e7d32;color:#fff;border:0}
+  .entv-visita .cambiar{background:#fff;color:#1f3864;border:1px solid #c6ccd4}
+  .entv-f8{display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;text-align:left;margin-bottom:6px;
+    background:#fff;border:1px solid #e3e7ec;border-left:5px solid #c6ccd4;border-radius:7px;padding:11px 13px;cursor:pointer;font:inherit}
+  .entv-f8:hover{background:#f4f7fa}
+  .entv-f8.ya{border-left-color:#2e7d32;background:#eaf5ea}
+  .entv-f8 .id{flex:1;font-family:Consolas,monospace;font-size:17px;font-weight:700}
+  .entv-f8 .mas{font-size:22px;color:#888}
+  #entFajo{width:100%;box-sizing:border-box;margin-top:8px;padding:10px;font-family:Consolas,monospace;font-size:14px;
+    border:1px solid #c6ccd4;border-radius:6px}
+  .entv-lote{width:100%;box-sizing:border-box;margin-top:6px;padding:12px;font:inherit;font-weight:700;cursor:pointer;
+    background:#fff;border:1px solid #c6ccd4;border-radius:6px;color:#1f3864}
+  .entv-h{font-size:12px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.04em;margin:20px 0 8px}
+  .entv-tom{display:flex;align-items:center;gap:10px;padding:9px 12px;margin-bottom:5px;border-radius:6px;
+    background:#eaf5ea;border-left:4px solid #2e7d32}
+  .entv-tom .id{flex:1;font-family:Consolas,monospace;font-size:15px;font-weight:700}
+  .entv-tom .otra{font-size:11px;color:#8a6a00}
+  .entv-tom .hh{font-size:12px;color:#666;font-variant-numeric:tabular-nums}
+  .entv-tom button{border:0;background:none;font-size:19px;color:#888;cursor:pointer}
+  .entv-cerrada{display:flex;align-items:center;gap:12px;padding:9px 12px;margin-bottom:5px;border:1px solid #e3e7ec;
+    border-left:5px solid #c6ccd4;border-radius:6px}
+  .entv-cerrada .t{flex:1;min-width:0}
+  .entv-cerrada .n{display:block;font-size:14px;font-weight:700;color:#1f3864}
+  .entv-cerrada .s{display:block;font-size:12px;color:#666;font-variant-numeric:tabular-nums}
+  .entv-cerrada .c{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;color:#1f3864}
+  .ent-retro{background:#fff8e1;border-left:4px solid #8a6a00;padding:9px 13px;border-radius:5px;margin:9px 0;font-size:13px;color:#5c4700}
   .ent-tb tr.e-retro td{background:#fffdf3}
-  .ent-rec{display:block;font-size:11px;color:#2e7d32}
-  .ent-sinrec{display:block;font-size:11px;color:#8a6a00}
-  .ent-acc input[type=date]{font-family:Consolas,monospace;font-size:14px}
-  .ent-busca{width:100%;box-sizing:border-box;padding:14px 12px;font-size:19px;font-weight:600;
-    font-variant-numeric:tabular-nums;border:2px solid #c6ccd4;border-radius:6px}
-  .ent-busca:focus{outline:none;border-color:#1f3864}
-  .ent-chips{display:flex;gap:7px;overflow-x:auto;padding:9px 0 2px}
-  .ent-chips button{flex:0 0 auto;background:#fff;border:2px solid #d9dde3;border-radius:6px;
-    padding:9px 13px;font-weight:700;font-family:Consolas,monospace;font-size:13px;cursor:pointer;min-width:70px}
-  .ent-chips button small{display:block;font-weight:400;font-size:10px;color:#666;font-family:inherit}
-  .ent-hits{display:flex;flex-direction:column;gap:6px;margin-top:4px}
-  .ent-hit{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:#fff;
-    border:1px solid #e3e7ec;border-left:5px solid #c6ccd4;border-radius:6px;padding:11px 12px;cursor:pointer}
-  .ent-hit:hover{background:#f4f7fa}
-  .ent-hit.ya{border-left-color:#2e7d32;background:#eaf5ea}
-  .ent-hit .hid{font-family:Consolas,monospace;font-size:16px;font-weight:700;white-space:nowrap}
-  .ent-hit .hue{flex:1;font-size:13px;color:#1f3864;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .ent-hit .hmas{font-size:21px;color:#888}
-  .ent-hit mark{background:#ffe89a;padding:0 1px;border-radius:2px}
-  .ent-listo{display:block;width:100%;margin:10px 0;padding:14px;background:#2e7d32;color:#fff;
-    border:0;border-radius:6px;font-size:15px;font-weight:700;cursor:pointer}
-  .ent-filtro{display:flex;align-items:center;gap:9px;background:#eef2f7;border-radius:6px;
-    padding:9px 13px;margin-bottom:9px;font-size:13px;font-weight:600;color:#1f3864}
-  .ent-filtro .x{margin-left:auto}
-  .ent-pers{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:#fff;
-    border:1px solid #e3e7ec;border-left:5px solid #c6ccd4;border-radius:6px;padding:10px 12px;
-    cursor:pointer;margin-bottom:6px}
-  .ent-pers:hover{background:#f4f7fa}
-  .ent-pers.dentro{border-left-color:#2e7d32;background:#eaf5ea}
-  .ent-pers.fuera{border-left-color:#c6ccd4;opacity:.7}
-  .ent-pers .rmeta{flex:1;min-width:0}
-  .ent-pers .rnom{display:block;font-size:15px;font-weight:700;color:#1f3864}
-  .ent-pers .ralt{display:block;font-size:11px;color:#777;font-style:italic}
-  .ent-pers .rsub{display:block;font-size:12px;color:#666;font-variant-numeric:tabular-nums}
-  .ent-pers .rhr{font-size:13px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
-  .ent-pers mark{background:#ffe89a;padding:0 1px;border-radius:2px}
   .btn-si{background:#1f3864;color:#fff;border:0;padding:9px 17px;border-radius:5px;font-size:14px;cursor:pointer}
   .btn-si:disabled{opacity:.55;cursor:default}
   .btn-no{background:#fff;color:#1f3864;border:1px solid #1f3864;padding:9px 17px;border-radius:5px;font-size:14px;cursor:pointer}
@@ -2530,7 +2545,7 @@ function entSubir(){
     const u = WEBAPP_BASE + '?file=kb_llave_hito&id=' + encodeURIComponent(it.f8) +
               '&etapa=ENTREGADO&fecha=' + encodeURIComponent(it.fecha || entHoy_()) +
               '&pin=' + encodeURIComponent(pin) +
-              (entReceptorTxt_(it.ue) ? '&receptor=' + encodeURIComponent(entReceptorTxt_(it.ue)) : '') +
+              (entReceptorItem_(it) ? '&receptor=' + encodeURIComponent(entReceptorItem_(it)) : '') +
               '&nota=' + encodeURIComponent('Entrega registrada en bahía ' + it.hora +
                 ((it.fecha && it.fecha !== entHoy_()) ? ' · carga retroactiva del ' + it.fecha : ''));
     fetch(u).then(function(r){ return r.json(); }).then(function(r){
@@ -2541,7 +2556,6 @@ function entSubir(){
            se guarda, así el informe deja de salir con guiones. */
         if (r.ue) it.ue = r.ue;
         it.sinRec = !!r.sinReceptor;
-        it.rec = r.receptor || '';
         ok++;
       }
       else { it.estado = 'error'; it.msg = (r && r.msg) || 'rechazada'; err++; }
@@ -2702,307 +2716,368 @@ function entInforme(){
 function entRender(){
   const cont = document.getElementById('vistaEntregasDia');
   if (!cont || VISTA !== 'entdia') return;
-  const cola = entCola_(), asis = entAsist_();
+  const cola = entCola_(), asis = entAsist_(), v = entVisActual_();
   /* Mismo lenguaje que el informe: 'registrada' es el hecho en el Kanban,
      'pendiente de registro' es que la entrega ocurrio y falta asentarla. */
   const est = { pendiente:'pendiente de registro', subiendo:'registrando&hellip;',
                 subida:'&#10003; registrada', error:'&#9888; ' };
-  const filas = cola.map(function(x){
-    var fx = x.fecha || entHoy_();
-    var rec = entReceptorTxt_(x.ue);
-    var recHtml = !x.ue ? ''
-      : (rec ? '<span class="ent-rec">recibió '+entEsc_(rec)+'</span>'
-             : '<span class="ent-sinrec">sin receptor &mdash; regístralo en Asistencia</span>');
-    return '<tr'+(fx!==entHoy_()?' class="e-retro"':'')+'><td class="mono">'+x.f8+'</td>'+
-      '<td>'+(x.ue||'&mdash;')+recHtml+'</td>'+
-      '<td class="mono">'+fx+'</td><td>'+x.hora+'</td>'+
-      '<td class="e-'+x.estado+'">'+(est[x.estado]||x.estado)+(x.estado==='error'?(x.msg||''):'')+'</td>'+
-      '<td>'+(x.ue ? '<button class="btn-mini" onclick="entQuienRetiro(\''+String(x.ue).replace(/'/g,"")+'\')">Quién retiró</button>' : '')+
-      ' <button class="x" onclick="entQuitar(\''+x.f8+'\')">&times;</button></td></tr>';
-  }).join('');
-  const filasAs = asis.map(function(a,i){
-    return '<tr><td>'+a.ue+'</td><td>'+(a.rep||'&mdash;')+'</td><td>'+(a.ced||'&mdash;')+'</td><td>'+a.lleg+'</td>'+
-      '<td>'+(a.sal ? a.sal : '<button class="btn-mini" onclick="entAsistSalida('+i+')">Marcar salida</button>')+'</td>'+
-      '<td><button class="x" onclick="entAsistQuitar('+i+')">&times;</button></td></tr>';
-  }).join('');
-  cont.innerHTML =
-    '<div class="ent-barra"><b>Entregas del día</b> &middot; '+entHoy_()+
+
+  let h =
+    '<div class="ent-barra"><b>Entregas</b>'+
+      '<span class="entv-fec"><label for="entFecha">del</label>'+
+      '<input type="date" id="entFecha" value="'+entFechaSel_()+'" max="'+entHoy_()+'" onchange="entFechaCambia()">'+
+      (entRetro_() ? '<button class="btn-mini" onclick="entFechaHoy()">Hoy</button>' : '')+'</span>'+
       '<span class="ent-red" id="entRed"></span></div>'+
     '<div id="entOferta" class="ent-oferta" style="display:none"></div>'+
     '<div id="entAviso" class="ent-aviso" style="display:none"></div>'+
-    '<div class="ent-caja"><div class="ent-tit">Buscar la unidad o la Forma 8</div>'+
-      '<input id="entBusca" class="ent-busca" placeholder="torrijos &middot; 479 &middot; 8107-" '+
-        'oninput="entBuscar()" autocomplete="off" autocapitalize="off" spellcheck="false">'+
-      '<div class="ent-chips">'+ entPrefijos_().map(function(x){
-          return '<button onclick="entPrefijo(\''+x.p+'\')">'+x.p+
-                 '<small>'+entEsc_(String(x.ue||'').split('(')[0].trim().slice(0,16))+'</small></button>'; }).join('') +'</div>'+
-      '<div id="entHits" class="ent-hits"></div>'+
-    '</div>'+
-    '<div class="ent-caja"><div class="ent-tit">Pegar en lote &mdash; la lista del turno</div>'+
-      '<div class="ent-acc"><label class="ent-nota" for="entFecha">Entregadas el</label>'+
-        '<input type="date" id="entFecha" value="'+entFechaSel_()+'" max="'+entHoy_()+'" onchange="entFechaCambia()">'+
-        (entRetro_() ? '<button class="btn-mini" onclick="entFechaHoy()">Volver a hoy</button>' : '')+
-      '</div>'+
-      (entRetro_() ? '<div class="ent-retro">Carga retroactiva: lo que agregues se registrará como entregado el '+
-         entFechaSel_()+', no hoy. Úsalo para asentar un informe atrasado.</div>' : '')+
-      '<textarea id="entTexto" rows="3" placeholder="8107-2026-1-788&#10;8045-2026-1-4357&#10;&hellip;una por línea, o separadas por espacio"></textarea>'+
-      '<div class="ent-acc"><button class="btn-si" onclick="entAgregar()">Agregar a la lista</button>'+
-      '<span class="ent-nota">Se guardan en este dispositivo. No necesitas internet para capturar.</span></div></div>'+
-    (function(){
-      var sinR = cola.filter(function(x){ return x.ue && !entReceptorTxt_(x.ue); }).length;
-      return sinR ? '<div class="ent-retro">'+sinR+(sinR===1?' entrega no tiene':' entregas no tienen')+
-        ' quién recibió. Regístralo abajo en Asistencia y la columna RECIBIDO_UE_POR se llena sola al subir.</div>' : '';
-    })()+
-    '<div class="ent-caja"><div class="ent-tit">Capturadas hoy &mdash; '+cola.length+'</div>'+
-      (cola.length ? '<table class="ent-tb"><tr><th>Forma 8</th><th>Unidad Ejecutora</th><th>Entregada el</th><th>Hora</th><th>Estado</th><th></th></tr>'+filas+'</table>'
-                   : '<div class="ent-vacio">Todavía no has registrado entregas hoy.</div>')+
-      '<div class="ent-acc"><input id="entPin" type="password" placeholder="PIN" maxlength="8">'+
-      '<button class="btn-si" id="entBtnSubir" onclick="entSubir()">Subir al tablero</button>'+
-      '<button class="btn-no" onclick="entInforme()">Generar informe del día</button></div></div>'+
-    '<div class="ent-caja" id="entRosterCaja"><div class="ent-tit">Asistencia &mdash; quién vino a retirar</div>'+
-      entRosterHTML_() +
-    '</div>'+
-    '<div class="ent-caja"><div class="ent-tit">Registrar a alguien que no está en la lista</div>'+
-      '<div class="ent-acc"><input id="asUE" placeholder="Unidad ejecutora" style="min-width:260px">'+
-      '<input id="asRep" placeholder="Representante"><input id="asCed" placeholder="Cédula" style="max-width:130px">'+
-      '<button class="btn-si" onclick="entAsistAgregar()">Registrar llegada</button></div>'+
-      (asis.length ? '<table class="ent-tb"><tr><th>Unidad Ejecutora</th><th>Representante</th><th>Cédula</th><th>Llegada</th><th>Salida</th><th></th></tr>'+filasAs+'</table>'
-                   : '<div class="ent-vacio">Sin registros de asistencia hoy.</div>')+
-    '</div>';
+    (entRetro_() ? '<div class="ent-retro">Cargando un informe atrasado: todo lo que registres aquí queda como entregado el '+
+                   entFechaSel_()+', no hoy.</div>' : '');
+
+  const altaForm = function(conUE){
+    return '<div class="entv-alta">'+
+      (conUE ? '<input id="entAltaU" list="entUEs" placeholder="Unidad ejecutora" autocomplete="off">'+
+               '<datalist id="entUEs">'+entUnidades_().map(function(u){ return '<option value="'+entEsc_(u)+'">'; }).join('')+'</datalist>' : '')+
+      '<input id="entAltaN" placeholder="Nombre de quien retira" autocomplete="off">'+
+      '<input id="entAltaC" placeholder="Cédula" inputmode="numeric" autocomplete="off">'+
+      '<button onclick="entVisAltaOk()">'+(entCambiaRep ? 'Cambiar a esta persona' : 'Registrar y abrir la visita')+'</button></div>';
+  };
+
+  if (v && !entPideUE){
+    /* ── 3 · la visita abierta: esta persona se lleva estos documentos ── */
+    const docs = entVisDocs_(v.vid);
+    h += '<div class="entv-visita"><div class="q">'+entEsc_(v.rep)+'</div>'+
+         '<div class="u">'+entEsc_(v.ue)+'</div>'+
+         '<div class="m">'+(v.ced ? entEsc_(v.ced)+' &middot; ' : '')+'llegó '+v.lleg+' &middot; '+
+           docs.length+(docs.length===1?' documento':' documentos')+'</div>'+
+         '<div class="fila"><button class="cambiar" onclick="entVisNoEs()">No es esta persona</button>'+
+         '<button class="cerrar" onclick="entVisCerrar()">Cerrar visita</button></div></div>'+
+         '<input id="entVF8" class="entv-busca" placeholder="últimos dígitos de la Forma 8" oninput="entVHits()" '+
+           'autocomplete="off" spellcheck="false" inputmode="search" value="'+entEsc_(entQF8)+'">'+
+         '<div id="entVHits"></div>'+
+         '<textarea id="entFajo" rows="3" placeholder="…o pega el fajo completo, una por línea"></textarea>'+
+         '<button class="entv-lote" onclick="entVisFajo()">Agregar el fajo</button>';
+    if (docs.length){
+      h += '<div class="entv-h">Se lleva '+docs.length+'</div>';
+      docs.slice().reverse().forEach(function(x){
+        h += '<div class="entv-tom"><span class="id">'+entEsc_(x.f8)+'</span>'+
+             (!entMismaUE_(x.ue, v.ue) ? '<span class="otra">'+entEsc_(x.ue)+'</span>' : '')+
+             '<span class="hh">'+x.hora+'</span>'+
+             '<button onclick="entQuitar(\''+x.f8+'\')" aria-label="Quitar">&times;</button></div>';
+      });
+    }
+  } else if (entPideUE){
+    /* ── 2 · se eligió la unidad: ¿quién vino? ── */
+    const gente = ENT_ROSTER.map(function(p,i){ return {p:p,i:i}; })
+      .filter(function(x){ return entMismaUE_(x.p.u, entPideUE); })
+      .sort(function(a,b){ return b.p.v - a.p.v; });
+    h += '<div class="entv-visita pide"><div class="q">'+entEsc_(entPideUE)+'</div>'+
+         '<div class="m">'+(entCambiaRep ? '¿Quién está retirando en realidad?' : '¿Quién vino a retirar?')+'</div>'+
+         '<div class="fila"><button class="cambiar" onclick="entVisCancelar()">Cancelar</button></div></div>';
+    gente.forEach(function(x){
+      h += '<button class="entv-op pers" onclick="entVisPersona('+x.i+')">'+
+        '<span class="t"><span class="n">'+entEsc_(x.p.n)+'</span>'+
+        '<span class="s">'+entEsc_(x.p.c)+
+          ((x.p.alt_n && x.p.alt_n.length) ? ' &middot; también escrito '+entEsc_(x.p.alt_n[0]) : '')+'</span></span>'+
+        '<span class="g">'+x.p.v+' visitas</span></button>';
+    });
+    if (!gente.length) h += '<div class="ent-vacio">Nadie de esta unidad ha venido antes. Regístralo aquí abajo.</div>';
+    h += entAltaOn || !gente.length ? altaForm(false)
+         : '<button class="entv-nuevo" onclick="entVisAlta()">Es alguien que no está en la lista</button>';
+  } else {
+    /* ── 1 · nadie en curso: ¿quién llegó? ── */
+    h += '<input id="entVQ" class="entv-busca" placeholder="¿Quién llegó?  torrijos · moisés · 8107-479" '+
+           'oninput="entVBuscar()" autocomplete="off" autocapitalize="off" spellcheck="false" value="'+entEsc_(entQ)+'">'+
+         '<div class="ent-nota" style="margin:0 2px 10px">Escribe su nombre, su unidad o el número de una Forma 8 que traiga.</div>'+
+         '<div id="entVRes"></div>'+
+         (entAltaOn ? altaForm(true) : '');
+  }
+
+  /* ── visitas cerradas del día ── */
+  const cerradas = asis.filter(function(a){ return a.sal; }).slice().reverse();
+  if (cerradas.length){
+    h += '<div class="entv-h">Visitas de hoy &middot; '+cerradas.length+'</div>';
+    cerradas.forEach(function(a){
+      const n = a.vid ? entVisDocs_(a.vid).length : cola.filter(function(x){ return entMismaUE_(x.ue, a.ue); }).length;
+      h += '<div class="entv-cerrada"><span class="t"><span class="n">'+entEsc_(a.rep||'—')+'</span>'+
+           '<span class="s">'+entEsc_(a.ue)+' &middot; '+a.lleg+' &rarr; '+a.sal+'</span></span>'+
+           '<span class="c">'+n+'</span></div>';
+    });
+  }
+
+  /* ── lo que falta subir: el estado de cada documento frente al Kanban ── */
+  if (cola.length){
+    const pend = cola.filter(function(x){ return x.estado !== 'subida'; }).length;
+    h += '<div class="entv-h">Registro en el Kanban &middot; '+(pend ? pend+' por subir de '+cola.length : 'todo subido')+'</div>'+
+         '<table class="ent-tb"><tr><th>Forma 8</th><th>Unidad</th><th>Retiró</th><th>Entregada</th><th>Estado</th><th></th></tr>'+
+         cola.slice().reverse().map(function(x){
+           const fx = x.fecha || entHoy_();
+           return '<tr'+(fx!==entHoy_()?' class="e-retro"':'')+'><td class="mono">'+entEsc_(x.f8)+'</td>'+
+             '<td>'+entEsc_(x.ue||'—')+'</td><td>'+entEsc_(entReceptorItem_(x) || '—')+'</td>'+
+             '<td class="mono">'+fx+'</td>'+
+             '<td class="e-'+x.estado+'">'+(est[x.estado]||x.estado)+(x.estado==='error'?entEsc_(x.msg||''):'')+'</td>'+
+             '<td><button class="x" onclick="entQuitar(\''+x.f8+'\')">&times;</button></td></tr>';
+         }).join('')+'</table>';
+  }
+  h += '<div class="ent-acc" style="margin-top:12px"><input id="entPin" type="password" placeholder="PIN" maxlength="8">'+
+       '<button class="btn-si" id="entBtnSubir" onclick="entSubir()">Subir al tablero</button>'+
+       '<button class="btn-no" onclick="entInforme()">Generar informe del día</button></div>';
+
+  cont.innerHTML = h;
   entPintarRed_();
-  if (typeof entBuscar === 'function') entBuscar();
+  if (entPideUE){ /* nada que buscar: se elige de la lista */ }
+  else if (v) entVHits();
+  else entVBuscar();
+  const foco = document.getElementById(entPideUE ? (entAltaOn ? 'entAltaN' : '')
+                                   : (v ? 'entVF8' : (entAltaOn ? 'entAltaU' : 'entVQ')));
+  if (foco){ foco.focus(); try{ const n = foco.value.length; foco.setSelectionRange(n,n); }catch(e){} }
 }
 
 
-/* ══ ETAPA 7 · Buscador predictivo y roster de bahía ═══════════════════════
-   El supervisor trabaja de pie con gente esperando. Aquí no se teclea un
-   numero completo: se escribe parte del nombre de la unidad o los ultimos
-   digitos, y la UE se confirma ANTES de capturar, no al subir.
-   Lee de F8, que el tablero ya tiene en memoria: no agrega ni una llamada
-   al back end y sobrevive a que se caiga la red. ══════════════════════════ */
+/* ══ ETAPA 7 · LA BAHÍA TRABAJA POR VISITA ═══════════════════════════════════
+   A la bahía no llega "una Forma 8": llega una persona, de una unidad, con un
+   fajo de Formas 8. Esa es la unidad de trabajo y la pantalla se organiza así:
+     1. Se escribe quién llegó (nombre, unidad o un número de Forma 8).
+     2. Se abre la visita: queda la hora de llegada y quien retira.
+     3. Se tocan o se pegan los documentos que se lleva. Cada uno queda
+        amarrado a esa persona, así que el receptor viaja solo al Kanban.
+     4. Se cierra la visita: queda la hora de salida.
+   Las entregas viven en la misma cola de siempre (entCola_) y las visitas en
+   la misma asistencia de siempre (entAsist_): subir e informe no cambian.
+   Todo lee de F8, que el tablero ya tiene en memoria. Cero llamadas nuevas. ══ */
 
 var ENT_ROSTER = [{"n":"Josué Castillo","c":"4-775-7310","u":"CIUDAD DE LA SALUD","v":9,"ult":"2026-09-08","alt_n":["Josue Castillo"],"alt_c":["11-775-2370","4-775-2290","4-775-2370","4-775-2390","4-775-5390","4-775-7390"]},{"n":"Antonio Chambers","c":"3-105-102","u":"HOSP. MANUEL AMADOR G.","v":8,"ult":"2026-09-17","alt_n":["Antonio Chamber"],"alt_c":["3-103-102","3-105-182","3-105-702"]},{"n":"Fernando Robles","c":"8-719-318","u":"POL. GENEROSO GUARDIA (STA. LIBRADA)","v":8,"ult":"2026-09-17","alt_n":["Fernando","Fernando Robles L."],"alt_c":["4-218-318","8-219-318","8-319-318","8-809-318"]},{"n":"Alvaro Gonzalez","c":"8-815-1394","u":"POL. ALEJANDRO DE LA GUARDIA (BETHANIA)","v":7,"ult":"2026-09-08","alt_n":["Alonso A. Giral","Alonso González","Alvaro Adán G.","Alvaro González","Miguel González","Nury González"],"alt_c":["8-809-1594"]},{"n":"Daniel Rodriguez","c":"9-701-203","u":"CAPPS PEDREGAL","v":5,"ult":"2026-09-17","alt_n":["Daniel Rodríguez"],"alt_c":["8-701-203"]},{"n":"Luis Carlos Herrera","c":"8-503-184","u":"POL. MANUEL FERRER VALDES (PEDIATRICA)","v":5,"ult":"2026-09-10","alt_n":["Luis Carlos"],"alt_c":[]},{"n":"Aurelio A. Osorio","c":"6-565-97","u":"POL. MANUEL MARIA VALDES (SAN MIGUELITO)","v":5,"ult":"2026-09-08","alt_n":["Ángreso S. Otero"],"alt_c":["6-56-547","6-56-597"]},{"n":"Aarón De León","c":"8-887-13","u":"ULAPS - SAN CRISTOBAL (PROF. CARLOS VELARDE)","v":5,"ult":"2026-09-10","alt_n":["Aaron De León"],"alt_c":["8-887-1713"]},{"n":"Jeniffer Dez.","c":"8-786-310","u":"CAPPS TORRIJOS CARTER","v":4,"ult":"2026-09-14","alt_n":["Jeniffer Diaz","Jeniffer Díaz","Jennifer Diaz"],"alt_c":["8-776-310"]},{"n":"Miguel Cedeño A.","c":"3-827-1123","u":"ESPECIALIDADES PEDIATRICAS (HEPOTH)","v":4,"ult":"2026-09-14","alt_n":["Miguel Cedeno","Miguel Cedeño"],"alt_c":[]},{"n":"Igrael Castillo","c":"8-903-705","u":"HOSP. DRA. SUSANA JONES CANO","v":4,"ult":"2026-09-16","alt_n":["Israel Castillo","Jarguel Castillo"],"alt_c":[]},{"n":"Victor M. Blanquicil","c":"8-210-1759","u":"POL. CARLOS N. BRIN (SAN FRANCISCO)","v":4,"ult":"2026-09-16","alt_n":["Victor Blanquiceli","Víctor Blanquise","Víctor M. Blanquice"],"alt_c":["8-210-1754"]},{"n":"Rogelio Cordova","c":"8-472-627","u":"POL. JOAQUIN J. VALLARINO (JUAN DIAZ)","v":4,"ult":"2026-09-01","alt_n":["Rogelio Concepcion","Rogelio Córdova"],"alt_c":["8-426-627","8-479-647"]},{"n":"R. Tamayo","c":"9-115-520","u":"CAPPS LAS ACACIAS","v":3,"ult":"2026-09-01","alt_n":["R. Tam","R. Tame"],"alt_c":[]},{"n":"Alberto Santamaria","c":"3-733-333","u":"POL. DE NUEVO SAN JUAN","v":3,"ult":"2026-09-10","alt_n":["Alberto Santamaría"],"alt_c":["3-733-993"]},{"n":"Abdiel Mena","c":"8-467-96","u":"POL. MANUEL FERRER VALDES (PEDIATRICA)","v":3,"ult":"2026-09-15","alt_n":[],"alt_c":[]},{"n":"Valentin Melgar","c":"8-1034-9","u":"POLICLINICA DE SAN ANTONIO","v":3,"ult":"2026-09-16","alt_n":["Valentin M.","Valentin Melejex"],"alt_c":["8-1134-9"]},{"n":"Joans Lu","c":"6-715-57","u":"C. H. M. DR. ARNULFO ARIAS MADRID","v":2,"ult":"2026-09-14","alt_n":["Joan Lu"],"alt_c":[]},{"n":"Erick Jones","c":"10-27-734","u":"CAPPS EL TECAL","v":2,"ult":"2026-09-02","alt_n":[],"alt_c":[]},{"n":"Kristopher Domínguez","c":"8-747-227","u":"CAPPS MAÑANITAS (LOS NOGALES)","v":2,"ult":"2026-09-16","alt_n":["Kristopher Dominguez"],"alt_c":[]},{"n":"Ramos / Stuart","c":"9-711-1310","u":"ESPECIALIDADES PEDIATRICAS (HEPOTH)","v":2,"ult":"2026-08-24","alt_n":["Ramos"],"alt_c":[]},{"n":"Maria Menocho","c":"6-709-29","u":"HOGAR DE LA ESPERANZA","v":2,"ult":"2026-09-15","alt_n":[],"alt_c":[]},{"n":"Rafael Aguilar","c":"7-721-2400","u":"HOSP. DE CHEPO","v":2,"ult":"2026-09-16","alt_n":["Rafael Morales"],"alt_c":["2-721-2400"]},{"n":"Richard A. Urri.","c":"8-338-552","u":"POL. DR. BLAS D. GOMEZ CHETRO","v":2,"ult":"2026-08-24","alt_n":["Rolando A. Viga"],"alt_c":[]},{"n":"Idalys Castillo","c":"9-726-151","u":"POL. DR. BLAS D. GOMEZ CHETRO","v":2,"ult":"2026-09-16","alt_n":[],"alt_c":[]},{"n":"Miguel Tejada P.","c":"8-717-2471","u":"POL. PRESIDENTE REMON (CALLE 17)","v":2,"ult":"2026-09-02","alt_n":["Miguel Tejada"],"alt_c":[]},{"n":"Oscar Lucero","c":"8-881-319","u":"ULAPS - LAS CUMBRES (DR. EDILBERTO CULIOLIS)","v":2,"ult":"2026-09-16","alt_n":[],"alt_c":["8-887-319"]},{"n":"Josué Gourd","c":"3-741-393","u":"ULAPS MAXIMO HERRERA (HIPODROMO)","v":2,"ult":"2026-09-17","alt_n":["Josué Powell"],"alt_c":[]},{"n":"Eudocio Santamaría","c":"5-518-519","u":"ULAPS VISTA ALEGRE (ARRAIJAN)","v":2,"ult":"2026-09-16","alt_n":["Federico Santamaría"],"alt_c":["8-818-519"]},{"n":"Gerardo Quijada","c":"2-700-245","u":"C. H. M. DR. ARNULFO ARIAS MADRID","v":1,"ult":"2026-08-11","alt_n":[],"alt_c":[]},{"n":"Zacarias","c":"8-785-502","u":"C. H. M. DR. ARNULFO ARIAS MADRID","v":1,"ult":"2026-08-14","alt_n":[],"alt_c":[]},{"n":"Gustavo Q.","c":"2-700-246","u":"C. H. M. DR. ARNULFO ARIAS MADRID","v":1,"ult":"2026-08-31","alt_n":[],"alt_c":[]},{"n":"Carina Castillo","c":"5-704-162","u":"C. H. M. DR. ARNULFO ARIAS MADRID","v":1,"ult":"2026-09-03","alt_n":[],"alt_c":[]},{"n":"Abdiel Kena","c":"8-464-96","u":"C. H. M. DR. ARNULFO ARIAS MADRID","v":1,"ult":"2026-09-17","alt_n":[],"alt_c":[]},{"n":"Stefanie Caballero","c":"8-778-2005","u":"CAPPS LAS ACACIAS","v":1,"ult":"2026-08-25","alt_n":[],"alt_c":[]},{"n":"Daniel R.","c":"1-701-203","u":"CAPPS LAS ACACIAS","v":1,"ult":"2026-09-08","alt_n":[],"alt_c":[]},{"n":"Abraham San Martín","c":"8-795-191","u":"CAPPS MAÑANITAS (LOS NOGALES)","v":1,"ult":"2026-08-14","alt_n":[],"alt_c":[]},{"n":"Abdiel Mena","c":"8-467-96","u":"CAPPS MAÑANITAS (LOS NOGALES)","v":1,"ult":"2026-08-18","alt_n":[],"alt_c":[]},{"n":"Jason De León","c":"8-219-318","u":"CAPPS MAÑANITAS (LOS NOGALES)","v":1,"ult":"2026-08-18","alt_n":[],"alt_c":[]},{"n":"R. Tame","c":"9-115-520","u":"CAPPS MAÑANITAS (LOS NOGALES)","v":1,"ult":"2026-09-08","alt_n":[],"alt_c":[]},{"n":"Stephane Caballero","c":"8-718-1005","u":"CAPPS PEDREGAL","v":1,"ult":"2026-08-18","alt_n":[],"alt_c":[]},{"n":"Hernando Fontan","c":"8-391-304","u":"CAPPS TORRIJOS CARTER","v":1,"ult":"2026-08-28","alt_n":[],"alt_c":[]},{"n":"Jeneffy Díaz","c":"8-746-310","u":"CAPPS TORRIJOS CARTER","v":1,"ult":"2026-09-16","alt_n":[],"alt_c":[]},{"n":"Eladio De León","c":"4-136-1547","u":"CAPPS VACAMONTE","v":1,"ult":"2026-08-18","alt_n":[],"alt_c":[]},{"n":"Zobeida Jaramillo","c":"6-714-1671","u":"CAPPS VACAMONTE","v":1,"ult":"2026-09-02","alt_n":[],"alt_c":[]},{"n":"Abdel Benítez","c":"4-758-1912","u":"CEDIS CHIRIQUÍ","v":1,"ult":"2026-08-28","alt_n":[],"alt_c":[]},{"n":"María González","c":"4-829-998","u":"CEDIS CHIRIQUÍ","v":1,"ult":"2026-09-04","alt_n":[],"alt_c":[]},{"n":"Aníbal Fernández","c":"2-736-897","u":"CEDIS DIVISA","v":1,"ult":"2026-08-27","alt_n":[],"alt_c":[]},{"n":"Jacinto Quazada","c":"2-135-575","u":"CEDIS DIVISA","v":1,"ult":"2026-09-17","alt_n":[],"alt_c":[]},{"n":"Josue","c":"8-740-234","u":"CIUDAD DE LA SALUD","v":1,"ult":"2026-08-14","alt_n":[],"alt_c":[]},{"n":"Alvis González","c":"8-841-594","u":"CIUDAD DE LA SALUD","v":1,"ult":"2026-09-11","alt_n":[],"alt_c":[]},{"n":"Moises Angulo","c":"8-955-659","u":"CIUDAD DE LA SALUD","v":1,"ult":"2026-09-15","alt_n":[],"alt_c":[]},{"n":"Jennifer Diaz","c":"8-766-310","u":"ESPECIALIDADES PEDIATRICAS (HEPOTH)","v":1,"ult":"2026-09-02","alt_n":[],"alt_c":[]},{"n":"Ramos S.","c":"9-711-131","u":"ESPECIALIDADES PEDIATRICAS (HEPOTH)","v":1,"ult":"2026-09-16","alt_n":[],"alt_c":[]},{"n":"José Balio","c":"8-740-2294","u":"HOSP. DE CHEPO","v":1,"ult":"2026-08-24","alt_n":[],"alt_c":[]},{"n":"Jessica Rodriguez","c":"8-449-284","u":"HOSP. DE CHEPO","v":1,"ult":"2026-09-02","alt_n":[],"alt_c":[]},{"n":"Josué A. Correa","c":"8-721-1815","u":"HOSP. DRA. SUSANA JONES CANO","v":1,"ult":"2026-08-31","alt_n":[],"alt_c":[]},{"n":"María Menacho","c":"6-709-29","u":"HOSP. DRA. SUSANA JONES CANO","v":1,"ult":"2026-09-08","alt_n":[],"alt_c":[]},{"n":"Cosa Quiel","c":"2-700-24","u":"HOSP. DRA. SUSANA JONES CANO","v":1,"ult":"2026-09-17","alt_n":[],"alt_c":[]},{"n":"Eladio Dávila","c":"4-136-1547","u":"HOSP. IRMA DE LOURDES TZANETATOS","v":1,"ult":"2026-08-21","alt_n":[],"alt_c":[]},{"n":"Jennifer Degá","c":"8-796-310","u":"HOSP. IRMA DE LOURDES TZANETATOS","v":1,"ult":"2026-08-28","alt_n":[],"alt_c":[]},{"n":"Pedro M. Castillo","c":"9-738-521","u":"HOSP. IRMA DE LOURDES TZANETATOS","v":1,"ult":"2026-09-04","alt_n":[],"alt_c":[]},{"n":"Nectalí Herrera","c":"3-90-738","u":"HOSP. MANUEL AMADOR G.","v":1,"ult":"2026-08-25","alt_n":[],"alt_c":[]},{"n":"Roland A. Vega","c":"8-337-5512","u":"POL. ALEJANDRO DE LA GUARDIA (BETHANIA)","v":1,"ult":"2026-08-14","alt_n":[],"alt_c":[]},{"n":"Jaime A. Bellido","c":"8-835-1912","u":"POL. ALEJANDRO DE LA GUARDIA (BETHANIA)","v":1,"ult":"2026-08-17","alt_n":[],"alt_c":[]},{"n":"Yanin Cheng","c":"8-728-1006","u":"POL. ALEJANDRO DE LA GUARDIA (BETHANIA)","v":1,"ult":"2026-09-11","alt_n":[],"alt_c":[]},{"n":"Valentin Melgar","c":"8-1034-9","u":"POL. CARLOS N. BRIN (SAN FRANCISCO)","v":1,"ult":"2026-09-02","alt_n":[],"alt_c":[]},{"n":"Cyssa Oquiane","c":"4-740-1904","u":"POL. CARLOS N. BRIN (SAN FRANCISCO)","v":1,"ult":"2026-09-11","alt_n":[],"alt_c":[]},{"n":"Crescencio Rodríguez","c":"8-749-161","u":"POL. DE NUEVO SAN JUAN","v":1,"ult":"2026-08-11","alt_n":[],"alt_c":[]},{"n":"Nectalí Herrera","c":"3-90-738","u":"POL. DE NUEVO SAN JUAN","v":1,"ult":"2026-08-25","alt_n":[],"alt_c":[]},{"n":"Nectalí Herrera","c":"3-90-738","u":"POL. DE SABANITAS","v":1,"ult":"2026-08-25","alt_n":[],"alt_c":[]},{"n":"Rolando A. Vega","c":"8-338-551","u":"POL. DR. BLAS D. GOMEZ CHETRO","v":1,"ult":"2026-08-21","alt_n":[],"alt_c":[]},{"n":"Jaimir Guez","c":"8-728-106","u":"POL. DR. BLAS D. GOMEZ CHETRO","v":1,"ult":"2026-08-26","alt_n":[],"alt_c":[]},{"n":"Javier Chávez","c":"8-728-1004","u":"POL. DR. BLAS D. GOMEZ CHETRO","v":1,"ult":"2026-08-28","alt_n":[],"alt_c":[]},{"n":"Pedro M. Castillo J.","c":"9-738-521","u":"POL. DR. BLAS D. GOMEZ CHETRO","v":1,"ult":"2026-09-11","alt_n":[],"alt_c":[]},{"n":"Nectalí Herrera","c":"3-90-738","u":"POL. HUGO SPADAFORA","v":1,"ult":"2026-08-25","alt_n":[],"alt_c":[]},{"n":"Antonio Chambens","c":"3-105-102","u":"POL. HUGO SPADAFORA","v":1,"ult":"2026-09-08","alt_n":[],"alt_c":[]},{"n":"Néstor Herrera","c":"3-90-730","u":"POL. HUGO SPADAFORA","v":1,"ult":"2026-09-16","alt_n":[],"alt_c":[]},{"n":"Manuel Lopez","c":"3-568-45","u":"POL. HUGO SPADAFORA","v":1,"ult":"2026-09-17","alt_n":[],"alt_c":[]},{"n":"Jorge Sáenz","c":"6-714-1247","u":"POL. JOAQUIN J. VALLARINO (JUAN DIAZ)","v":1,"ult":"2026-08-11","alt_n":[],"alt_c":[]},{"n":"Jorge Saez","c":"6-716-1245","u":"POL. JOAQUIN J. VALLARINO (JUAN DIAZ)","v":1,"ult":"2026-08-17","alt_n":[],"alt_c":[]},{"n":"Ángel Córdoba","c":"8-479-610","u":"POL. JOAQUIN J. VALLARINO (JUAN DIAZ)","v":1,"ult":"2026-08-21","alt_n":[],"alt_c":[]},{"n":"Luis Montes","c":"8-262-345","u":"POL. JOAQUIN J. VALLARINO (JUAN DIAZ)","v":1,"ult":"2026-08-31","alt_n":[],"alt_c":[]},{"n":"Roselba Quintero T.","c":"8-477-627","u":"POL. JOAQUIN J. VALLARINO (JUAN DIAZ)","v":1,"ult":"2026-09-02","alt_n":[],"alt_c":[]},{"n":"Gustavo Quintero","c":"2-70-226","u":"POL. JOAQUIN J. VALLARINO (JUAN DIAZ)","v":1,"ult":"2026-09-08","alt_n":[],"alt_c":[]},{"n":"Aiza Moreno","c":"8-338-428","u":"POL. JUAN VEGA M. (SAN CARLOS)","v":1,"ult":"2026-09-16","alt_n":[],"alt_c":[]},{"n":"Fernando Robles","c":"8-115-794","u":"POL. MANUEL FERRER VALDES (PEDIATRICA)","v":1,"ult":"2026-08-18","alt_n":[],"alt_c":[]},{"n":"Aaron Delcid","c":"8-887-1713","u":"POL. MANUEL FERRER VALDES (PEDIATRICA)","v":1,"ult":"2026-09-17","alt_n":[],"alt_c":[]},{"n":"Juan Bonilla","c":"8-503-812","u":"POL. MANUEL MARIA VALDES (SAN MIGUELITO)","v":1,"ult":"2026-08-18","alt_n":[],"alt_c":[]},{"n":"Moisés Angel","c":"8-957-659","u":"POL. MANUEL MARIA VALDES (SAN MIGUELITO)","v":1,"ult":"2026-09-11","alt_n":[],"alt_c":[]},{"n":"Jesús Muñoz","c":"8-877-446","u":"POL. PRESIDENTE REMON (CALLE 17)","v":1,"ult":"2026-08-11","alt_n":[],"alt_c":[]},{"n":"Misael Tejada","c":"8-717-2431","u":"POL. PRESIDENTE REMON (CALLE 17)","v":1,"ult":"2026-08-26","alt_n":[],"alt_c":[]},{"n":"Marva Bonilla C.","c":"8-747-452","u":"POL. PRESIDENTE REMON (CALLE 17)","v":1,"ult":"2026-08-31","alt_n":[],"alt_c":[]},{"n":"Víctor M. Blanquicís","c":"8-210-1759","u":"POL. PRESIDENTE REMON (CALLE 17)","v":1,"ult":"2026-09-11","alt_n":[],"alt_c":[]},{"n":"Antonio Chico","c":"8-852-218","u":"POL. PRESIDENTE REMON (CALLE 17)","v":1,"ult":"2026-09-16","alt_n":[],"alt_c":[]},{"n":"J. Guerra","c":"8-449-536","u":"POL. SANTIAGO BARRAZA (CHORRERA)","v":1,"ult":"2026-08-17","alt_n":[],"alt_c":[]},{"n":"J. Espinosa","c":"8-439-536","u":"POL. SANTIAGO BARRAZA (CHORRERA)","v":1,"ult":"2026-08-19","alt_n":[],"alt_c":[]},{"n":"Y. Camargo","c":"8-459-534","u":"POL. SANTIAGO BARRAZA (CHORRERA)","v":1,"ult":"2026-08-21","alt_n":[],"alt_c":[]},{"n":"Yosiel C.","c":"8-749-579","u":"POL. SANTIAGO BARRAZA (CHORRERA)","v":1,"ult":"2026-08-25","alt_n":[],"alt_c":[]},{"n":"Fernando Spiteri G.","c":"8-741-308","u":"POL. SANTIAGO BARRAZA (CHORRERA)","v":1,"ult":"2026-09-02","alt_n":[],"alt_c":[]},{"n":"Jose Ruiz","c":"8-913-1781","u":"POL. SANTIAGO BARRAZA (CHORRERA)","v":1,"ult":"2026-09-07","alt_n":[],"alt_c":[]},{"n":"Y. Guardado","c":"8-458-134","u":"POL. SANTIAGO BARRAZA (CHORRERA)","v":1,"ult":"2026-09-14","alt_n":[],"alt_c":[]},{"n":"Vladimir C.","c":"8-854-28","u":"POLICLINICA DE SAN ANTONIO","v":1,"ult":"2026-08-14","alt_n":[],"alt_c":[]},{"n":"Aracelys Martinez","c":"8-921-2641","u":"POLICLINICA DE SAN ANTONIO","v":1,"ult":"2026-08-17","alt_n":[],"alt_c":[]},{"n":"Wilberto Jimenez","c":"8-849-939","u":"POLICLINICA DE SAN ANTONIO","v":1,"ult":"2026-08-24","alt_n":[],"alt_c":[]},{"n":"Jerisbeth Arlenis Real R.","c":"8-728-1001","u":"POLICLINICA DE SAN ANTONIO","v":1,"ult":"2026-09-02","alt_n":[],"alt_c":[]},{"n":"Jose Luis Meda","c":"2-708-4","u":"RAFAEL ESTEVEZ","v":1,"ult":"2026-09-07","alt_n":[],"alt_c":[]},{"n":"Corina Urriola","c":"8-722-1591","u":"ULAPS - LAS CUMBRES (DR. EDILBERTO CULIOLIS)","v":1,"ult":"2026-08-11","alt_n":[],"alt_c":[]},{"n":"Carmen Vertiaga","c":"8-722-1521","u":"ULAPS - LAS CUMBRES (DR. EDILBERTO CULIOLIS)","v":1,"ult":"2026-08-21","alt_n":[],"alt_c":[]},{"n":"Juan A. Corro","c":"8-721-1815","u":"ULAPS - LAS CUMBRES (DR. EDILBERTO CULIOLIS)","v":1,"ult":"2026-09-08","alt_n":[],"alt_c":[]},{"n":"Elsie De La Cruz","c":"2-114-798","u":"ULAPS - SAN CRISTOBAL (PROF. CARLOS VELARDE)","v":1,"ult":"2026-08-18","alt_n":[],"alt_c":[]},{"n":"Alexis Adella","c":"4-711-51","u":"ULAPS GUADALUPE","v":1,"ult":"2026-09-16","alt_n":[],"alt_c":[]},{"n":"Nectalí Herrera","c":"3-90-738","u":"ULAPS PORTOBELO","v":1,"ult":"2026-08-25","alt_n":[],"alt_c":[]},{"n":"Aiza Moreno","c":"8-338-428","u":"ULAPS SAN JOSE","v":1,"ult":"2026-09-16","alt_n":[],"alt_c":[]},{"n":"Roselin Cordón","c":"8-479-627","u":"ULAPS VISTA ALEGRE (ARRAIJAN)","v":1,"ult":"2026-08-18","alt_n":[],"alt_c":[]}];
 
-var entPrefijos = null;   /* los 10 prefijos mas frecuentes, calculados de F8 */
-var entSesion   = 0;      /* capturas hechas en la busqueda en curso */
-var entFechaAct = null;   /* fecha de entrega que se esta cargando (null = hoy) */
-var entFiltroUE = null;   /* UE por la que se pregunta en asistencia */
-var entElegido  = null;   /* persona ya marcada: la vista se acota a ella */
+var ENT_LS_VIS  = 'cedis_entregas_visita_v1';
+var entFechaAct = null;   /* fecha que se está cargando; null = hoy */
+var entPideUE   = null;   /* se eligió una unidad y falta decir quién vino */
+var entAltaOn   = false;  /* formulario de persona nueva abierto */
+var entCambiaRep= false;  /* "No es él": se reemplaza a quien retira */
+var entQ = '', entQF8 = '';
 
-/* ══ Fecha de la entrega ═══════════════════════════════════════════════════
-   Por defecto es hoy. Se cambia para cargar un informe atrasado: los
-   documentos que el supervisor ya entrego dias antes entran al Kanban con SU
-   fecha, no con la de hoy. Sin esto, la medida de cuanto tardo un pedido de
-   la Forma 8 a la entrega queda falseada. ═══════════════════════════════════ */
-function entFechaSel_(){
-  if (entFechaAct && /^\d{4}-\d{2}-\d{2}$/.test(entFechaAct)) return entFechaAct;
-  return entHoy_();
-}
-function entFechaCambia(){
-  var e = document.getElementById('entFecha');
-  var v = e ? String(e.value||'').trim() : '';
-  entFechaAct = /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null;
-  if (entFechaAct && entFechaAct > entHoy_()){
-    entFechaAct = null;
-    entAviso_('No se puede registrar una entrega con fecha futura.', 'warn');
-  }
-  entRender();
-}
-function entFechaHoy(){ entFechaAct = null; entRender(); }
-function entRetro_(){ return entFechaSel_() !== entHoy_(); }
-
-/* ══ El receptor sale de la asistencia, no del supervisor ══════════════════
-   RECIBIDO_UE_POR es quien recibio EN la unidad ejecutora. Si el tablero no lo
-   manda, el back end deja la celda vacia (corregido el 20-sep; antes escribia
-   ahi el nombre del supervisor). El dato ya existe: es la persona que el
-   supervisor marco en Asistencia por esa misma unidad. ═══════════════════════ */
-function entReceptor_(ue){
-  if(!ue) return null;
-  var nu = entNorm_(ue), a = entAsist_();
-  for (var i=0;i<a.length;i++){ if (entNorm_(a[i].ue) === nu) return a[i]; }
-  /* Segunda pasada tolerante: los nombres de UE del roster y los del tablero no
-     siempre coinciden palabra por palabra (alias, parentesis). */
-  for (var j=0;j<a.length;j++){
-    var na = entNorm_(a[j].ue);
-    if (na && (nu.indexOf(na) >= 0 || na.indexOf(nu) >= 0)) return a[j];
-  }
-  return null;
-}
-function entReceptorTxt_(ue){
-  var r = entReceptor_(ue);
-  if(!r || !r.rep) return '';
-  return r.rep + (r.ced ? ' (' + r.ced + ')' : '');
-}
-
+/* ── utilidades ──────────────────────────────────────────────────────── */
 function entNorm_(t){
   return String(t==null?'':t).toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
 }
 function entEsc_(t){
-  return String(t==null?'':t).replace(/[&<>"]/g, function(c){
-    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; });
+  return String(t==null?'':t).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; });
 }
+function entIdParcial_(t){ return entNorm_(t).replace(/[^A-Z0-9]+/g,'-').replace(/^-|-$/g,''); }
 function entMarcar_(txt, q){
   if(!q) return entEsc_(txt);
   var i = entNorm_(txt).indexOf(entNorm_(q));
   if(i<0) return entEsc_(txt);
   return entEsc_(txt.slice(0,i))+'<mark>'+entEsc_(txt.slice(i,i+q.length))+'</mark>'+entEsc_(txt.slice(i+q.length));
 }
-/* Resuelve la UE de una Forma 8 contra lo que el tablero ya cargo. */
+function entMismaUE_(a,b){
+  var x=entNorm_(a), y=entNorm_(b);
+  return !!x && !!y && (x===y || x.indexOf(y)>=0 || y.indexOf(x)>=0);
+}
 function entBuscarPedido_(f8){
   if (typeof F8 === 'undefined' || !F8 || !F8.length) return null;
   for (var i=0;i<F8.length;i++){ if (String(F8[i].id||'').trim() === f8) return F8[i]; }
   return null;
 }
-/* Los diez prefijos que mas se repiten. Salen del dato, no de una lista fija. */
-function entPrefijos_(){
-  if (entPrefijos) return entPrefijos;
-  if (typeof F8 === 'undefined' || !F8 || !F8.length) return [];
-  var c = {}, ue = {};
-  F8.forEach(function(f){
-    var id = String(f.id||'').trim(); if(!id) return;
-    var p = id.split('-')[0]; if(!p) return;
-    c[p] = (c[p]||0)+1;
-    if(!ue[p]) ue[p] = f.ue || '';
-  });
-  entPrefijos = Object.keys(c).sort(function(a,b){ return c[b]-c[a]; }).slice(0,10)
-    .map(function(p){ return { p:p, ue:ue[p] }; });
-  return entPrefijos;
+function entUnidades_(){
+  var m = {};
+  if (typeof F8 !== 'undefined' && F8) F8.forEach(function(f){ if(f.ue) m[f.ue]=1; });
+  ENT_ROSTER.forEach(function(p){ if(p.u) m[p.u]=1; });
+  return Object.keys(m).sort();
 }
-function entPrefijo(p){
-  var e = document.getElementById('entBusca'); if(!e) return;
-  e.value = p + '-'; entBuscar(); e.focus();
+
+/* ── fecha de la entrega ─────────────────────────────────────────────── */
+function entFechaSel_(){
+  return (entFechaAct && /^\d{4}-\d{2}-\d{2}$/.test(entFechaAct)) ? entFechaAct : entHoy_();
 }
-function entBuscar(){
-  var e = document.getElementById('entBusca'), box = document.getElementById('entHits');
-  if(!e || !box) return;
-  var q = e.value.trim();
-  if(!q){ box.innerHTML = entSesion ? entBarraListo_() : ''; return; }
-  if (typeof F8 === 'undefined' || !F8 || !F8.length){
-    box.innerHTML = '<div class="ent-vacio">El tablero todavía está cargando. Puedes pegar las Formas 8 en el cuadro de abajo: la captura no espera.</div>';
+function entRetro_(){ return entFechaSel_() !== entHoy_(); }
+function entFechaCambia(){
+  var e = document.getElementById('entFecha');
+  var v = e ? String(e.value||'').trim() : '';
+  entFechaAct = /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null;
+  var futura = entFechaAct && entFechaAct > entHoy_();
+  if (futura) entFechaAct = null;
+  entRender();
+  if (futura) entAviso_('No se puede registrar una entrega con fecha futura.', 'warn');
+}
+function entFechaHoy(){ entFechaAct = null; entRender(); }
+
+/* ── receptor que viaja al Kanban ────────────────────────────────────── */
+function entReceptorItem_(it){
+  if (it.rep) return it.rep + (it.ced ? ' (' + it.ced + ')' : '');
+  var a = entAsist_();
+  for (var i=0;i<a.length;i++){
+    if (a[i].rep && entMismaUE_(a[i].ue, it.ue)) return a[i].rep + (a[i].ced ? ' (' + a[i].ced + ')' : '');
+  }
+  return '';
+}
+
+/* ── la visita abierta ───────────────────────────────────────────────── */
+function entVisId_(){ var t = entLeer_(ENT_LS_VIS); return t[entHoy_()] || null; }
+function entVisIdSet_(v){ var t = {}; if (v) t[entHoy_()] = v; entGuardar_(ENT_LS_VIS, t); }
+function entVisActual_(){
+  var id = entVisId_(); if(!id) return null;
+  var a = entAsist_();
+  for (var i=0;i<a.length;i++){ if (a[i].vid === id && !a[i].sal) return a[i]; }
+  return null;
+}
+function entVisDocs_(vid){ return entCola_().filter(function(x){ return x.vis === vid; }); }
+
+function entVisAbrir_(ue, rep, ced){
+  var a = entAsist_(), v = entVisActual_(), h = entHora_();
+  if (entCambiaRep && v){
+    a.forEach(function(x){ if (x.vid === v.vid){ x.rep = rep; x.ced = ced || ''; } });
+    entAsistSet_(a);
+    entColaSet_(entCola_().map(function(x){
+      if (x.vis === v.vid){ x.rep = rep; x.ced = ced || ''; } return x; }));
+    entCambiaRep = false; entPideUE = null; entAltaOn = false;
+    entRender(); entAviso_('Ahora retira ' + rep, 'ok');
     return;
   }
-  var nq = entNorm_(q), nid = entNormF8_(q) || nq;
-  var cola = {}; entCola_().forEach(function(x){ cola[x.f8] = 1; });
-  var hits = F8.filter(function(f){
-    if (f.anulado) return false;
-    return entNorm_(f.ue).indexOf(nq) >= 0 || entNorm_(f.id).indexOf(nid) >= 0;
-  });
-  hits.sort(function(a,b){
-    var ae = entNorm_(a.id).slice(-nid.length)===nid ? 0 : 1;
-    var be = entNorm_(b.id).slice(-nid.length)===nid ? 0 : 1;
-    return ae-be;
-  });
-  var tot = hits.length; hits = hits.slice(0,40);
-  box.innerHTML = (entSesion ? entBarraListo_() : '') +
-    (tot ? '<div class="ent-nota" style="margin-bottom:6px">'+tot+(tot===1?' pedido':' pedidos')+
-           (tot>hits.length?' · se muestran '+hits.length:'')+'</div>' : '') +
-    (tot ? hits.map(function(f){
-        var t = cola[String(f.id).trim()] ? ' ya' : '';
-        return '<button class="ent-hit'+t+'" onclick="entCapturar(\''+String(f.id).replace(/'/g,"")+'\')">'+
-          '<span class="hid">'+entMarcar_(f.id, nid.length>=2?nid:'')+'</span>'+
-          '<span class="hue">'+entMarcar_(f.ue||'', nq.length>=2?q:'')+'</span>'+
-          '<span class="hmas">'+(t?'&#10003;':'+')+'</span></button>';
-      }).join('')
-      : '<div class="ent-vacio">Ninguna Forma 8 abierta cruza con &ldquo;'+entEsc_(q)+'&rdquo;. '+
-        'Puede ser de un módulo que el WMS no instala en esa unidad, o llegó fuera de ventanilla. '+
-        'Pégala en el cuadro de abajo y se captura igual.</div>');
+  var vid = 'v' + Date.now();
+  a.push({ vid:vid, ue:ue, rep:rep, ced:ced||'', lleg:h, sal:'', fecha:entFechaSel_() });
+  entAsistSet_(a); entVisIdSet_(vid);
+  entPideUE = null; entAltaOn = false; entQ = ''; entQF8 = '';
+  entRender(); entAviso_('Llegada ' + h + ' · ' + rep, 'ok');
 }
-function entBarraListo_(){
-  return '<button class="ent-listo" onclick="entListo()">Listo &middot; '+entSesion+
-         (entSesion===1?' capturada':' capturadas')+'</button>';
-}
-function entListo(){
-  entSesion = 0;
-  var e = document.getElementById('entBusca'); if(e) e.value='';
-  entBuscar();
-}
-function entCapturar(id){
-  var f8 = entNormF8_(id) || String(id).trim();
-  var cola = entCola_();
-  for (var i=0;i<cola.length;i++){ if (cola[i].f8===f8){ entAviso_('Ya estaba capturada.','warn'); return; } }
-  var p = entBuscarPedido_(f8);
-  cola.push({ f8:f8, ue:(p && p.ue) || '', hora:entHora_(), fecha:entFechaSel_(), estado:'pendiente' });
-  entColaSet_(cola);
-  entSesion++;
-  entAviso_((p && p.ue) ? p.ue : 'Capturada', 'ok');
-  entRender();
-  var e = document.getElementById('entBusca');
-  if (e){ e.focus(); }
-}
-
-/* ── Roster: la misma lista sirve arriba y abajo ──────────────────────── */
-function entQuienRetiro(ue){
-  entFiltroUE = ue; entElegido = null;
-  var e = document.getElementById('entRosterQ'); if(e) e.value='';
-  entRender();
-  var t = document.getElementById('entRosterCaja');
-  if (t && t.scrollIntoView) t.scrollIntoView({behavior:'smooth', block:'start'});
-}
-function entSoltarFiltro(){ entFiltroUE = null; entElegido = null; entRender(); }
-function entRosterBuscar(){ entRender(); }
-
-function entRosterHTML_(){
-  var e = document.getElementById('entRosterQ');
-  var q = e ? e.value.trim() : '';
-  var nq = entNorm_(q);
-  var lista = ENT_ROSTER.map(function(p,i){ return { p:p, i:i }; });
-  if (entElegido !== null) lista = lista.filter(function(x){ return x.i === entElegido; });
-  else if (entFiltroUE) lista = lista.filter(function(x){ return x.p.u === entFiltroUE; });
-  if (q) lista = lista.filter(function(x){
-    return entNorm_(x.p.n).indexOf(nq)>=0 || entNorm_(x.p.c).indexOf(nq)>=0 ||
-           entNorm_(x.p.u).indexOf(nq)>=0 ||
-           (x.p.alt_c||[]).some(function(c){ return entNorm_(c).indexOf(nq)>=0; }) ||
-           (x.p.alt_n||[]).some(function(n){ return entNorm_(n).indexOf(nq)>=0; });
-  });
-  lista.sort(function(a,b){ return b.p.v - a.p.v; });
-  var asis = entAsist_();
-  function yaMarcado(p){
-    for (var k=0;k<asis.length;k++){
-      if (asis[k].ced && p.c && asis[k].ced===p.c) return k;
-      if (!asis[k].ced && asis[k].rep===p.n && asis[k].ue===p.u) return k;
-    }
-    return -1;
-  }
-  var filas = lista.slice(0,60).map(function(x){
-    var p = x.p, k = yaMarcado(p);
-    var a = k>=0 ? asis[k] : null;
-    var hr = a ? (a.sal ? a.lleg+' &rarr; '+a.sal : a.lleg+' &rarr;') : 'marcar llegada';
-    var alt = (p.alt_n && p.alt_n.length)
-      ? '<span class="ralt">también escrito '+entEsc_(p.alt_n.join(' · '))+'</span>' : '';
-    return '<button class="ent-pers'+(a?(a.sal?' fuera':' dentro'):'')+'" onclick="entMarcarPersona('+x.i+')">'+
-      '<span class="rmeta"><span class="rnom">'+entMarcar_(p.n,q)+'</span>'+alt+
-      '<span class="rsub">'+entEsc_(p.c||'sin cédula')+
-      (entFiltroUE?'':' &middot; '+entEsc_(p.u))+' &middot; '+p.v+' de 25 jornadas</span></span>'+
-      '<span class="rhr">'+hr+'</span></button>';
-  }).join('');
-  var cab = '';
-  if (entElegido !== null){
-    var pe = ENT_ROSTER[entElegido], ke = yaMarcado(pe);
-    cab = '<div class="ent-filtro">'+(ke>=0 && asis[ke].sal ? 'Salida registrada '+asis[ke].sal
-          : ke>=0 ? 'Llegada registrada '+asis[ke].lleg : '')+'</div>';
-  } else if (entFiltroUE){
-    cab = '<div class="ent-filtro">Quién retiró por '+entEsc_(entFiltroUE)+
-          '<button class="x" onclick="entSoltarFiltro()">&times;</button></div>';
-  }
-  return cab +
-    '<div class="ent-acc"><input id="entRosterQ" placeholder="moi · robles · 8-467" '+
-      'oninput="entRosterBuscar()" value="'+entEsc_(q)+'" style="min-width:260px"></div>' +
-    (filas || '<div class="ent-vacio">Nadie del roster cruza con eso. Usa el registro manual de abajo.</div>') +
-    ((entElegido!==null) ? '<button class="ent-listo" onclick="entSoltarFiltro()">Listo</button>' : '');
-}
-function entMarcarPersona(i){
+function entVisPersona(i){
   var p = ENT_ROSTER[i]; if(!p) return;
-  var a = entAsist_(), k = -1;
-  for (var j=0;j<a.length;j++){
-    if (a[j].ced && p.c && a[j].ced===p.c){ k=j; break; }
-    if (!a[j].ced && a[j].rep===p.n && a[j].ue===p.u){ k=j; break; }
-  }
-  if (k < 0) a.push({ ue:p.u, rep:p.n, ced:p.c, lleg:entHora_(), sal:'' });
-  else if (!a[k].sal) a[k].sal = entHora_();
-  else { a[k].lleg = entHora_(); a[k].sal = ''; }
-  entAsistSet_(a);
-  entElegido = i;
+  var v = entVisActual_();
+  entVisAbrir_(entPideUE || (v && v.ue) || p.u, p.n, p.c);
+}
+function entVisUnidad(k){
+  var u = entUnidades_()[k]; if(!u) return;
+  entPideUE = u; entAltaOn = false; entRender();
+}
+function entVisCancelar(){ entPideUE = null; entAltaOn = false; entCambiaRep = false; entRender(); }
+function entVisAlta(){
+  entAltaOn = true; entRender();
+  var e = document.getElementById(entPideUE ? 'entAltaN' : 'entAltaU'); if(e) e.focus();
+}
+function entVisAltaOk(){
+  var eu = document.getElementById('entAltaU');
+  var u = entPideUE || (eu ? eu.value.trim() : '');
+  var n = ((document.getElementById('entAltaN')||{}).value||'').trim();
+  var c = ((document.getElementById('entAltaC')||{}).value||'').trim();
+  if (!u){ entAviso_('Falta la unidad ejecutora.', 'warn'); return; }
+  if (!n){ entAviso_('Falta el nombre de quien retira.', 'warn'); return; }
+  entVisAbrir_(u, n, c);
+}
+function entVisNoEs(){
+  var v = entVisActual_(); if(!v) return;
+  entCambiaRep = true; entPideUE = v.ue; entAltaOn = false; entRender();
+}
+function entVisCerrar(){
+  var v = entVisActual_(); if(!v) return;
+  var h = entHora_(), a = entAsist_();
+  a.forEach(function(x){ if (x.vid === v.vid) x.sal = h; });
+  entAsistSet_(a); entVisIdSet_(null); entQ = ''; entQF8 = '';
+  var n = entVisDocs_(v.vid).length;
   entRender();
+  entAviso_('Visita cerrada · ' + v.rep + ' se llevó ' + n + (n===1?' documento':' documentos'), 'ok');
+}
+
+/* ── documentos de la visita ─────────────────────────────────────────── */
+function entVisMeter_(v, crudo){
+  var f8 = entNormF8_(crudo) || entIdParcial_(crudo);
+  if (!f8 || !/\d{3,}/.test(f8)) return 'basura';
+  var cola = entCola_();
+  for (var i=0;i<cola.length;i++){ if (cola[i].f8 === f8) return 'repetido'; }
+  var p = entBuscarPedido_(f8);
+  cola.push({ f8:f8, ue:(p && p.ue) || v.ue, hora:entHora_(), fecha:entFechaSel_(),
+              estado:'pendiente', vis:v.vid, rep:v.rep, ced:v.ced });
+  entColaSet_(cola);
+  return (p && !entMismaUE_(p.ue, v.ue)) ? 'otra' : 'ok';
+}
+function entVisTomar(id){
+  var v = entVisActual_(); if(!v) return;
+  var r = entVisMeter_(v, id);
+  entRender();
+  if (r === 'repetido') entAviso_('Ese documento ya estaba en la lista.', 'warn');
+}
+function entVisFajo(){
+  var v = entVisActual_(); if(!v) return;
+  var e = document.getElementById('entFajo');
+  var brutos = String(e ? e.value : '').split(/[\s,;]+/).map(function(x){ return x.trim(); }).filter(Boolean);
+  var c = { ok:0, repetido:0, basura:0, otra:0 };
+  brutos.forEach(function(b){ c[entVisMeter_(v, b)]++; });
+  entRender();
+  var m = (c.ok+c.otra) + ((c.ok+c.otra)===1 ? ' agregado' : ' agregados');
+  if (c.repetido) m += ' · ' + c.repetido + ' repetidos';
+  if (c.basura)   m += ' · ' + c.basura + ' no parecen Forma 8';
+  if (c.otra)     m += ' · ' + c.otra + ' son de otra unidad, revísalos';
+  entAviso_(m, (c.otra || c.basura) ? 'warn' : 'ok');
+}
+
+/* ── búsquedas: se repinta solo la lista, nunca el campo donde se escribe ─ */
+function entVBuscar(){
+  var e = document.getElementById('entVQ'), box = document.getElementById('entVRes');
+  if (!e || !box) return;
+  entQ = e.value;
+  var q = e.value.trim();
+  if (!q){ box.innerHTML = ''; return; }
+  var nq = entNorm_(q), nid = entIdParcial_(q);
+  var pers = ENT_ROSTER.map(function(p,i){ return {p:p,i:i}; }).filter(function(x){
+    return entNorm_(x.p.n).indexOf(nq)>=0 || entNorm_(x.p.c).indexOf(nq)>=0 ||
+      (x.p.alt_n||[]).some(function(n){ return entNorm_(n).indexOf(nq)>=0; }) ||
+      (x.p.alt_c||[]).some(function(c){ return entNorm_(c).indexOf(nq)>=0; });
+  }).sort(function(a,b){ return b.p.v - a.p.v; }).slice(0,6);
+  var U = entUnidades_(), porId = {};
+  if (nid.length >= 3 && typeof F8 !== 'undefined' && F8){
+    F8.forEach(function(f){ if (entIdParcial_(f.id).indexOf(nid) >= 0 && f.ue) porId[f.ue] = 1; });
+  }
+  var ues = U.map(function(u,k){ return {u:u,k:k}; })
+    .filter(function(x){ return entNorm_(x.u).indexOf(nq)>=0 || porId[x.u]; }).slice(0,6);
+  var h = '';
+  pers.forEach(function(x){
+    h += '<button class="entv-op pers" onclick="entVisPersona('+x.i+')">'+
+      '<span class="t"><span class="n">'+entMarcar_(x.p.n,q)+'</span>'+
+      '<span class="s">'+entEsc_(x.p.c)+' &middot; '+entEsc_(x.p.u)+'</span></span>'+
+      '<span class="g">'+x.p.v+' visitas</span></button>';
+  });
+  ues.forEach(function(x){
+    var gente = ENT_ROSTER.filter(function(p){ return entMismaUE_(p.u, x.u); }).length;
+    h += '<button class="entv-op ue" onclick="entVisUnidad('+x.k+')">'+
+      '<span class="t"><span class="n">'+entMarcar_(x.u,q)+'</span>'+
+      '<span class="s">'+(porId[x.u] && entNorm_(x.u).indexOf(nq)<0 ? 'tiene una Forma 8 que termina así &middot; ' : '')+
+      gente+(gente===1?' persona conocida':' personas conocidas')+'</span></span>'+
+      '<span class="g">unidad</span></button>';
+  });
+  if (!pers.length && !ues.length)
+    h += '<div class="ent-vacio">Nadie con ese nombre ni ninguna unidad así.</div>';
+  h += '<button class="entv-nuevo" onclick="entVisAlta()">Es alguien que no está en la lista</button>';
+  box.innerHTML = h;
+}
+function entVHits(){
+  var v = entVisActual_(), e = document.getElementById('entVF8'), box = document.getElementById('entVHits');
+  if (!v || !e || !box) return;
+  entQF8 = e.value;
+  var q = e.value.trim(), nid = entIdParcial_(q);
+  if (typeof F8 === 'undefined' || !F8 || !F8.length){
+    box.innerHTML = '<div class="ent-vacio">El tablero todavía está cargando las Formas 8. Puedes pegar el fajo abajo: la captura no espera.</div>';
+    return;
+  }
+  var tomados = {}; entCola_().forEach(function(x){ tomados[x.f8] = 1; });
+  var l = F8.filter(function(f){ return !f.anulado && entMismaUE_(f.ue, v.ue); });
+  var total = l.length;
+  if (q) l = l.filter(function(f){ return entIdParcial_(f.id).indexOf(nid) >= 0; });
+  l.sort(function(a,b){
+    var ae = entIdParcial_(a.id).slice(-nid.length)===nid ? 0 : 1;
+    var be = entIdParcial_(b.id).slice(-nid.length)===nid ? 0 : 1;
+    return ae - be;
+  });
+  var hay = l.length; l = l.slice(0,40);
+  var h = '<div class="ent-nota" style="margin:2px 0 8px">'+
+    (q ? hay+' de '+total : total)+' Formas 8 abiertas de esta unidad'+
+    (hay>l.length ? ' &middot; se muestran '+l.length : '')+'</div>';
+  l.forEach(function(f){
+    var id = String(f.id).trim(), ya = tomados[id];
+    h += '<button class="entv-f8'+(ya?' ya':'')+'" onclick="entVisTomar(\''+id.replace(/'/g,'')+'\')">'+
+      '<span class="id">'+entMarcar_(id, nid.length>=2 ? nid : '')+'</span>'+
+      '<span class="mas">'+(ya ? '&#10003;' : '+')+'</span></button>';
+  });
+  if (!l.length) h += '<div class="ent-vacio">'+(q ? 'Ninguna termina así. Si la trae en papel, pégala abajo y se registra igual.'
+                                             : 'Esta unidad no tiene Formas 8 abiertas en el tablero. Si trae alguna, pégala abajo.')+'</div>';
+  box.innerHTML = h;
 }
 
 function entIniciar_(){
