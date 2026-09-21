@@ -418,6 +418,34 @@
   .rd-mem button[disabled]{opacity:.6;cursor:default}
   .rd-memmsg{font-size:12.5px;font-weight:600}
   .rd-memmsg.ok{color:#1d5e26} .rd-memmsg.warn{color:#8a6a00}
+  /* ── afinado 21-sep: menos ruido ── */
+  .rd-kpis{gap:8px;margin:8px 0}
+  .rd-kpi{min-width:150px;padding:7px 12px;border-radius:8px;gap:0}
+  .rd-kpi b{font-size:21px}
+  .rd-kpi span{font-size:12px}
+  .rd-kpi small{font-size:10.5px}
+  .rd-etapas{overflow-x:hidden;overflow-y:hidden}
+  .rd-et{min-width:0;padding:7px 8px 7px 16px}
+  .rd-et:first-child{padding-left:10px}
+  .rd-et span,.rd-et small{max-width:100%;overflow:hidden;text-overflow:ellipsis}
+  .rd-et span{font-size:11px;white-space:nowrap}
+  .rd-et b{font-size:17px}
+  .rd-et small{font-size:10px}
+  @media (max-width:1180px){ .rd-et small.eq{display:none} }
+  @media (max-width:900px){ .rd-et small:not(.eq){display:none} .rd-et b{font-size:15px} }
+  .rd-tb{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 0;margin:4px 0 2px;border-bottom:1px solid #e3e7ec}
+  .rd-tb label{display:none}
+  .rd-tb .buscador-wrap{flex:1 1 280px;min-width:220px;max-width:420px}
+  .rd-tb .buscador-wrap input{width:100%;box-sizing:border-box}
+  .rd-tb select{padding:6px 8px;border:1px solid #d9dee5;border-radius:6px;background:#fff;font:inherit;font-size:13px;max-width:230px}
+  .rd-limpiar{border:0;background:none;color:#1f3864;font-size:12.5px;font-weight:600;cursor:pointer;text-decoration:underline;padding:4px}
+  .rd-refresh{margin-left:10px;border:1px solid rgba(255,255,255,.45);background:transparent;color:inherit;border-radius:6px;
+    padding:5px 11px;font:inherit;font-size:12px;font-weight:600;cursor:pointer}
+  .rd-refresh[disabled]{opacity:.75;cursor:default}
+  .rd-ctx{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:8px 0 6px}
+  .rd-ctx .leyenda{margin:0;padding:0;border:0;font-size:11px}
+  .rd-ctxbtn{border:1px solid #d9dee5;background:#fff;color:#1f3864;border-radius:6px;padding:5px 11px;font:inherit;font-size:12px;font-weight:600;cursor:pointer}
+  .rd-ctxbtn.on{background:#1f3864;color:#fff;border-color:#1f3864}
   .rd-filtro90{background:#f8dcdc;color:#8c1d18;border-radius:6px;padding:7px 12px;font-size:12.5px;font-weight:600;margin:6px 0}
   .rd-filtro90 a{color:inherit}
   .ent-red .prob{color:#5a6b7a}
@@ -478,7 +506,7 @@
   <img src="./icons/icon-512.png" alt="logo" onerror="this.style.display='none'"/>
   <div><h1>Kanban de Seguimiento &mdash; Tablero del Almac&eacute;n</h1>
     <div class="sub">Torre de Control &middot; DINALOG / CEDIS &middot; Solo lectura</div></div>
-  <div class="spacer"></div><div class="gen" id="gen"></div>
+  <div class="spacer"></div><div class="gen" id="gen"></div><button class="rd-refresh" id="btnRefresh" title="Traer los datos m&aacute;s recientes del Kanban">&#8635; Actualizar</button>
 </div>
 <div class="wrap">
   <div id="errBox"></div>
@@ -515,22 +543,6 @@
   </div>
   <div id="rdKpis" class="rd-kpis"></div>
   <div id="rdFlujo" class="rd-flujo"></div>
-  <div class="toolbar">
-    <label>Grupo:</label><select id="fGrupo"><option value="">&mdash; Todos &mdash;</option></select>
-    <label>Unidad Ejecutora:</label><select id="fUE"><option value="">&mdash; Todas &mdash;</option></select>
-    <label>Tipo:</label><select id="fTipo"><option value="">&mdash; Todos &mdash;</option><option value="URG">Urgencias</option><option value="MEN">Mensuales</option></select>
-    <label>F. Entrega:</label><select id="fDiaEnt"><option value="">&mdash; Todos &mdash;</option><option value="1">Lunes</option><option value="2">Martes</option><option value="3">Mi&eacute;rcoles</option><option value="4">Jueves</option><option value="5">Viernes</option></select>
-    <button class="btn pend-toggle" id="btnPendiente">Solo pendiente</button>
-    <button class="btn sec" id="btnLimpiar">Limpiar filtros</button>
-    <button class="btn sec" id="btnExpand">Expandir todo</button>
-    <button class="btn sec" id="btnRefresh">&#8635; Actualizar</button>
-    <div class="buscador-wrap">
-      <input type="text" id="fBuscar" placeholder="Buscar Forma 8 o Unidad Ejecutora&hellip;" autocomplete="off" spellcheck="false">
-      <button class="busc-x" id="btnBuscarX" title="Limpiar b&uacute;squeda" style="display:none;">&#10005;</button>
-      <div class="busc-panel" id="buscPanel" style="display:none;"></div>
-    </div>
-    <div class="spacer"></div><span class="count" id="cnt"></span>
-  </div>
   <div class="vistas-sw">
     <button class="vsw-btn activa" data-vista="ent" onclick="RD_KPI=null;rdIrEntregas('registrar')">Entregas <span id="enBadge" style="font-family:Consolas;font-size:11px;opacity:.8"></span><span id="edBadge" style="font-family:Consolas;font-size:11px;margin-left:3px"></span></button>
     <button class="vsw-btn" data-vista="reparto" onclick="cambiarVista('reparto')">Reparto por fase</button>
@@ -538,12 +550,24 @@
     <button class="vsw-btn" data-vista="noasig" onclick="cambiarVista('noasig')">Cero por desabasto <span id="naBadge" style="font-family:Consolas;font-size:11px;opacity:.8"></span></button>
     <button class="vsw-btn" data-vista="anulados" onclick="cambiarVista('anulados')">Retirados del ciclo <span id="anBadge" style="font-family:Consolas;font-size:11px;opacity:.8"></span></button>
   </div>
-  <div class="leyenda" id="leyenda"></div>
+  <div class="toolbar rd-tb" id="rdTb">
+    <div class="buscador-wrap">
+      <input type="text" id="fBuscar" placeholder="Buscar Forma 8 o unidad ejecutora&hellip;" autocomplete="off" spellcheck="false">
+      <button class="busc-x" id="btnBuscarX" title="Limpiar b&uacute;squeda" style="display:none;">&#10005;</button>
+      <div class="busc-panel" id="buscPanel" style="display:none;"></div>
+    </div>
+    <select id="fUE" title="Unidad ejecutora"><option value="">Todas las unidades</option></select>
+    <select id="fGrupo" title="Grupo"><option value="">Todos los grupos</option></select>
+    <select id="fTipo" title="Tipo de pedido"><option value="">Urgencias y mensuales</option><option value="URG">Urgencias</option><option value="MEN">Mensuales</option></select>
+    <select id="fDiaEnt" class="rd-solo-dia" title="Día de entrega de la unidad"><option value="">Cualquier d&iacute;a de entrega</option><option value="1">Lunes</option><option value="2">Martes</option><option value="3">Mi&eacute;rcoles</option><option value="4">Jueves</option><option value="5">Viernes</option></select>
+    <button class="rd-limpiar" id="btnLimpiar" style="display:none">&#10005; Limpiar filtros</button>
+    <div class="spacer"></div><span class="count" id="cnt"></span>
+  </div>
   <div id="rdSub" class="rd-sub" style="display:none"></div>
-  <div id="vistaCrono" style="display:none;"><div id="grillaSemanal"></div></div>
+  <div id="vistaCrono" style="display:none;"><div class="rd-ctx"><button class="rd-ctxbtn pend-toggle" id="btnPendiente" title="Ocultar los pedidos que ya salieron en distribuci&oacute;n">Solo pendiente</button></div><div id="grillaSemanal"></div></div>
   <div id="vistaUE" style="display:none;"><div id="lista"></div></div>
   <div id="vistaEntregasDia"></div>
-  <div id="vistaReparto" style="display:none;"><div id="listaReparto"><div class="loading">Cargando tablero&hellip;</div></div></div>
+  <div id="vistaReparto" style="display:none;"><div class="rd-ctx"><button class="rd-ctxbtn" id="btnExpand">Expandir todo</button><div class="leyenda" id="leyenda"></div></div><div id="listaReparto"><div class="loading">Cargando tablero&hellip;</div></div></div>
   <div id="vistaNoAsig" style="display:none;"><div id="listaNoAsig"></div></div>
   <div id="vistaAnulados" style="display:none;"><div id="listaAnulados"></div></div>
   <div id="vistaEntregas" style="display:none;"><div id="listaEntregas"></div></div>
@@ -807,8 +831,8 @@ function pintarKPIs(){
 function poblarFiltros(){
   const grupos=[...new Set(F8.map(f=>f.grupo))].filter(Boolean).sort();
   const ues=[...new Set(F8.map(f=>f.ue))].filter(Boolean).sort();
-  fill('fGrupo','','\u2014 Todos \u2014',grupos);
-  fill('fUE','','\u2014 Todas \u2014',ues);
+  fill('fGrupo','','Todos los grupos',grupos);
+  fill('fUE','','Todas las unidades',ues);
 }
 function fill(id,allVal,allLbl,arr){
   const s=document.getElementById(id), prev=s.value;
@@ -2053,7 +2077,14 @@ function render(){
   });
   cont.innerHTML=html;
 }
-document.getElementById('btnRefresh').onclick=cargar;
+/* CORREGIDO 21-sep: onclick=cargar le pasaba el evento del clic como si fuera la
+   bandera 'silencioso'. Recargaba 4.8 s sin avisar nada: parecia no hacer nada. */
+document.getElementById('btnRefresh').onclick=async function(){
+  const b=this; b.disabled=true; b.textContent='Actualizando\u2026';
+  try{ await cargar(true); b.textContent='\u2713 Actualizado'; }
+  catch(e){ b.textContent='\u26a0 No se pudo'; }
+  setTimeout(function(){ b.disabled=false; b.innerHTML='&#8635; Actualizar'; }, 2500);
+};
 document.getElementById('btnLimpiar').onclick=limpiarFiltros;
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -2404,6 +2435,7 @@ function verDoc(id){
 }
 
 document.getElementById('fBuscar').addEventListener('input', buscarDoc);
+document.getElementById('fBuscar').addEventListener('input', function(){ try{ rdBarra_(); }catch(e){} });
 document.getElementById('fBuscar').addEventListener('focus', function(){ if(this.value.trim()) buscarDoc(); });
 document.getElementById('btnBuscarX').onclick=function(){
   const inp=document.getElementById('fBuscar'); inp.value=''; buscarDoc(); inp.focus();
@@ -3322,7 +3354,18 @@ function rdIrEtapa(clave){
   cambiarVista('reparto');
   setTimeout(function(){ var el=document.getElementById('rpfase_'+clave); if(el&&el.scrollIntoView) el.scrollIntoView({behavior:'smooth',block:'start'}); }, 60);
 }
-function rdPintarCabecera_(){ try{ rdPintarKpis_(); rdPintarFlujo_(); }catch(e){} }
+function rdPintarCabecera_(){ try{ rdPintarKpis_(); rdPintarFlujo_(); rdBarra_(); }catch(e){} }
+/* La fila de filtros se acomoda a la vista: en Registrar no aparece (la bahía
+   tiene su propio buscador), Día de entrega solo donde filtra, y Limpiar solo
+   cuando hay algún filtro puesto. */
+function rdBarra_(){
+  var tb=document.getElementById('rdTb'); if(!tb) return;
+  tb.style.display = (VISTA==='entdia') ? 'none' : '';
+  var dia=document.getElementById('fDiaEnt');
+  if(dia) dia.style.display = (VISTA==='reparto' || VISTA==='crono') ? '' : 'none';
+  var hay=['fUE','fGrupo','fTipo','fDiaEnt','fBuscar'].some(function(id){ var e=document.getElementById(id); return e && String(e.value||'').trim(); });
+  var bl=document.getElementById('btnLimpiar'); if(bl) bl.style.display = hay ? '' : 'none';
+}
 
 /* ── navegación: Entregas es una sola pestaña con tres partes ── */
 function rdIrEntregas(sub){
