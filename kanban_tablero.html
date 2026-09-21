@@ -446,6 +446,22 @@
   .rd-ctx .leyenda{margin:0;padding:0;border:0;font-size:11px}
   .rd-ctxbtn{border:1px solid #d9dee5;background:#fff;color:#1f3864;border-radius:6px;padding:5px 11px;font:inherit;font-size:12px;font-weight:600;cursor:pointer}
   .rd-ctxbtn.on{background:#1f3864;color:#fff;border-color:#1f3864}
+  /* ── afinado 21-sep (2): Registrar sin banda azul, pestañas discretas ── */
+  .ent-barra.rd-slim{background:transparent;color:#1f3864;padding:2px 0 8px;border-radius:0;border-bottom:1px solid #e3e7ec;
+    margin-bottom:10px;gap:8px;flex-wrap:wrap;font-size:13px}
+  .rd-slim .entp-fec{margin-left:0;color:#1f3864;font-weight:700;font-size:13px}
+  .rd-slim .entp-fec label{font-weight:700}
+  .rd-slim .ent-red{margin-left:auto;font-size:12px}
+  .rd-pill{display:inline-flex;align-items:baseline;gap:4px;background:#eef2f8;color:#1f3864;border-radius:12px;padding:3px 10px;font-size:12px}
+  .rd-pill b{font-variant-numeric:tabular-nums}
+  .rd-pill.ok{background:#e6f3e8;color:#1d5e26}
+  .rd-pill.warn{background:#fbeec4;color:#6b5100}
+  .rd-pill.alerta{background:#fbe1cc;color:#7a3a0b}
+  .rd-sub{gap:18px;margin:6px 0 8px;border-bottom:1px solid #e3e7ec}
+  .rd-sub button{background:none;border:0;border-bottom:2px solid transparent;border-radius:0;padding:5px 1px;
+    font-size:12.5px;font-weight:600;color:#5a6b7a;margin-bottom:-1px}
+  .rd-sub button.on{background:none;color:#1f3864;border-bottom-color:#1f3864}
+  .rd-sub button b{font-weight:400;opacity:.75;margin-left:5px;font-size:11.5px}
   .rd-filtro90{background:#f8dcdc;color:#8c1d18;border-radius:6px;padding:7px 12px;font-size:12.5px;font-weight:600;margin:6px 0}
   .rd-filtro90 a{color:inherit}
   .ent-red .prob{color:#5a6b7a}
@@ -2790,9 +2806,16 @@ function entInforme(){
     '.kpi b{font-size:18pt;display:block;line-height:1.1}.kpi span{font-size:9.5pt;color:#333}'+
     '.nota{background:#fff8e1;border-left:4px solid #8a6a00;padding:9px 12px;margin-top:8px;font-size:10pt}'+
     '.pie{margin-top:22px;border-top:1px solid #ccc;padding-top:6px;font-size:9pt;color:#555}'+
+    '.enc{display:flex;align-items:center;gap:14px;border-bottom:2px solid #1F3864;padding-bottom:10px;margin-bottom:10px}'+
+    '.enc img{width:58px;height:58px}.enc h1{margin:0}'+
+    '.ind{display:flex;gap:12px;margin:8px 0}.ind div{flex:1;border:1px solid #d6dbe3;border-radius:4px;padding:6px 10px}'+
+    '.ind b{font-size:14pt;display:block;color:#1F3864}.ind span{font-size:9pt;color:#444}.ind .r b{color:#8c1d18}'+
+    '.graf{width:100%;margin-top:6px}.graf text{font-family:Calibri,Arial,sans-serif}'+
+    '.leyg{font-size:9pt;color:#444;margin-top:2px}'+
     '</style></head><body>'+
-    '<h1>INFORME EJECUTIVO CONSOLIDADO DE GESTIÓN Y ASISTENCIA</h1>'+
-    '<div class="sub">Centro de Distribución (CEDIS) &middot; Caja de Seguro Social, Panamá</div>'+
+    '<div class="enc"><img src="https://raw.githubusercontent.com/TorredeControlCSS/RH_BIOMETRICO/refs/heads/main/icons/icon-512.png" alt="Caja de Seguro Social" onerror="this.style.display=\'none\'"/>'+
+    '<div><h1>INFORME EJECUTIVO CONSOLIDADO DE GESTIÓN Y ASISTENCIA</h1>'+
+    '<div class="sub">Centro de Distribución (CEDIS) &middot; Caja de Seguro Social, Panamá</div></div></div>'+
     '<p><b>Para:</b> Jefatura de Almacén<br><b>De:</b> Torre de Control &middot; DINALOG<br>'+
     '<b>Fecha del reporte:</b> '+fTxt+'<br>'+
     '<b>Asunto:</b> Consolidado General de Entregas (Forma 8) y Control de Asistencia de Unidades Ejecutoras</p>'+
@@ -2806,13 +2829,14 @@ function entInforme(){
     '<p>El presente informe consolida las entregas realizadas por el Centro de Distribución durante la jornada del '+fTxt+
     ', junto con el control de asistencia de los representantes de las unidades ejecutoras que acudieron a retirar sus insumos.</p>'+
     nota+
-    '<h2>2. Control de asistencia de unidades ejecutoras</h2>'+
+    rdIndicadoresHTML_()+
+    '<h2>3. Control de asistencia de unidades ejecutoras</h2>'+
     (asis.length ? '<table><tr><th>Unidad Ejecutora</th><th>Representante</th><th>Cédula</th><th>Llegada</th><th>Salida</th></tr>'+filasAs+'</table>'
                  : '<p>Sin registros de asistencia para esta jornada.</p>')+
-    '<h2>3. Anexo: listado consolidado de entregas (Forma 8)</h2>'+
+    '<h2>4. Anexo: listado consolidado de entregas (Forma 8)</h2>'+
     (cola.length ? '<table><tr><th>N&ordm;</th><th>Unidad Ejecutora</th><th>N&ordm; Doc (Forma 8)</th><th>Hora</th><th>Estado</th></tr>'+filasF8+'</table>'
                  : '<p>Sin entregas registradas para esta jornada.</p>')+
-    '<h2>4. Observaciones</h2><p>Los '+cola.length+' documentos listados fueron entregados físicamente en la bahía del CEDIS '+
+    '<h2>5. Observaciones</h2><p>Los '+cola.length+' documentos listados fueron entregados físicamente en la bahía del CEDIS '+
     'y constan con su hora de entrega. Las entregas marcadas como registradas quedan asentadas en el sistema maestro de la Torre de Control.</p>'+
     '<div class="pie">Generado por la Torre de Control &middot; DINALOG el '+fTxt+' a las '+entHora_()+' (hora de Panamá).</div>'+
     '</body></html>';
@@ -2838,22 +2862,20 @@ function entRender(){
   const UEs = entUnidades_();
 
   let h =
-    '<div class="ent-barra"><b>Entregas</b>'+
-      '<span class="entp-fec"><label for="entFecha">del</label>'+
+    /* Una sola línea: fecha, cifras y red. Antes eran una banda azul a todo el
+       ancho más dos tarjetas grandes que repetían lo que ya dice la cabecera. */
+    '<div class="ent-barra rd-slim"><span class="entp-fec"><label for="entFecha">Entregas del</label>'+
       '<input type="date" id="entFecha" value="'+entFechaSel_()+'" max="'+entHoy_()+'" onchange="entFechaCambia()">'+
       (entRetro_() ? '<button class="btn-mini" onclick="entFechaHoy()">Hoy</button>' : '')+'</span>'+
+      '<span class="rd-pill'+(pend.length?' warn':'')+'"><b>'+pend.length+'</b> por registrar</span>'+
+      '<span class="rd-pill ok"><b>'+(cola.length - pend.length)+'</b> registrados</span>'+
+      (sinUE ? '<span class="rd-pill alerta"><b>'+sinUE+'</b> sin unidad ejecutora</span>' : '')+
       '<span class="ent-red" id="entRed"></span></div>'+
     '<div id="entOferta" class="ent-oferta" style="display:none"></div>'+
     '<div id="entAviso" class="ent-aviso" style="display:none"></div>'+
     (entRetro_() ? '<div class="ent-retro">Cargando un informe atrasado: los pedidos que agregues quedan como entregados el '+
                    entFechaSel_()+', no hoy.</div>' : '')+
 
-    /* la cifra que le importa al supervisor: pedidos */
-    '<div class="entp-kpi">'+
-      '<div><b>'+pend.length+'</b><span>pedidos por registrar</span></div>'+
-      '<div><b>'+(cola.length - pend.length)+'</b><span>registrados en el Kanban</span></div>'+
-      (sinUE ? '<div class="alerta"><b>'+sinUE+'</b><span>sin unidad ejecutora</span></div>' : '')+
-    '</div>'+
 
     /* captar el pedido */
     '<div class="ent-caja"><div class="ent-tit">Forma 8</div>'+
@@ -3354,6 +3376,63 @@ function rdIrEtapa(clave){
   cambiarVista('reparto');
   setTimeout(function(){ var el=document.getElementById('rpfase_'+clave); if(el&&el.scrollIntoView) el.scrollIntoView({behavior:'smooth',block:'start'}); }, 60);
 }
+
+/* ══ INDICADORES DEL FLUJO PARA EL INFORME (21-sep) ══════════════════════════
+   Los pedidos por etapa, con los nombres de RP_FASES, y cómo se relacionan:
+   cuánto está dentro del almacén contra lo que ya salió, dónde se acumula,
+   y cuánto de lo despachado sigue sin confirmarse. Sin filtros: es el CEDIS
+   completo. El gráfico es SVG en línea, así imprime igual en cualquier equipo. */
+function rdIndicadores_(){
+  var F=(typeof F8!=='undefined'&&F8?F8:[]).filter(function(f){ return !f.anulado; });
+  var dentro=RP_FASES.map(function(Fa){
+    var l=F.filter(function(f){ return f.macro===Fa.clave; });
+    return { label:Fa.label, equipo:Fa.equipo, n:l.length,
+             v7:l.filter(function(f){ return (_diasDesde_(f.fechaRecepcion)||0)>7; }).length };
+  });
+  var cu=-1, max=0; dentro.forEach(function(x,i){ if(x.v7>max){ max=x.v7; cu=i; } });
+  var pc=F.filter(function(f){ return f.despachado && !f.entregado; });
+  var dd=pc.map(function(f){ return _diasDesde_(f.fDespacho)||0; });
+  var fuera=[
+    { label:'Distribuci\u00f3n', n:F.filter(function(f){ return f.macro==='DISTRIBUCION' && !f.despachado && !f.entregado; }).length },
+    { label:'Despachado', n:pc.length },
+    { label:'Entregado en la UE', n:rdMemoria_().length }
+  ];
+  var tD=dentro.reduce(function(s,x){return s+x.n;},0), tF=fuera.reduce(function(s,x){return s+x.n;},0);
+  return { dentro:dentro, fuera:fuera, cuello:cu, tDentro:tD, tFuera:tF, porConfirmar:pc.length,
+           mediana:rdMediana_(dd), mas90:dd.filter(function(d){ return d>RD_CORTE; }).length,
+           sinFecha:rdMemoria_().filter(function(f){ return !f.fEntrega; }).length };
+}
+function rdBarrasSVG_(filas, colorBase, idxCuello){
+  var W=660, L=150, R=70, H=22, max=Math.max.apply(null, filas.map(function(x){return x.n;}).concat([1]));
+  var h='<svg class="graf" viewBox="0 0 '+W+' '+(filas.length*H+4)+'" xmlns="http://www.w3.org/2000/svg">';
+  filas.forEach(function(x,i){
+    var y=i*H+2, w=Math.max(x.n?2:0, Math.round((W-L-R)*x.n/max)), c=(i===idxCuello)?'#e8a3a3':colorBase;
+    h+='<text x="'+(L-8)+'" y="'+(y+15)+'" text-anchor="end" font-size="11" fill="#1F3864">'+rdEsc_(x.label)+'</text>'+
+       '<rect x="'+L+'" y="'+(y+3)+'" width="'+w+'" height="'+(H-7)+'" rx="2" fill="'+c+'"/>'+
+       '<text x="'+(L+w+6)+'" y="'+(y+15)+'" font-size="11" font-weight="700" fill="#1F3864">'+x.n.toLocaleString()+
+       (x.v7!=null && x.n ? '  \u00b7 '+Math.round(100*x.v7/x.n)+'% +7d' : '')+'</text>';
+  });
+  return h+'</svg>';
+}
+function rdIndicadoresHTML_(){
+  var I=rdIndicadores_(), tot=I.tDentro+I.tFuera||1, pD=Math.round(100*I.tDentro/tot);
+  var cu=I.cuello>=0 ? I.dentro[I.cuello] : null;
+  return '<h2>2. Indicadores del flujo Kanban</h2>'+
+    '<div class="ind">'+
+      '<div><b>'+I.tDentro.toLocaleString()+'</b><span>pedidos dentro del almac\u00e9n ('+pD+'%)</span></div>'+
+      '<div><b>'+I.tFuera.toLocaleString()+'</b><span>ya salieron del almac\u00e9n ('+(100-pD)+'%)</span></div>'+
+      '<div><b>'+I.porConfirmar.toLocaleString()+'</b><span>despachados sin confirmar entrega \u00b7 mediana '+I.mediana+' d\u00edas</span></div>'+
+      '<div class="r"><b>'+I.mas90.toLocaleString()+'</b><span>de ellos con m\u00e1s de '+RD_CORTE+' d\u00edas</span></div>'+
+    '</div>'+
+    '<p style="margin:10px 0 2px"><b>Dentro del almac\u00e9n</b> &mdash; pedidos por fase y porcentaje con m\u00e1s de 7 d\u00edas desde la recepci\u00f3n</p>'+
+    rdBarrasSVG_(I.dentro, '#9fb3cf', I.cuello)+
+    (cu ? '<div class="leyg">Cuello de botella: <b>'+rdEsc_(cu.label)+'</b> ('+rdEsc_(cu.equipo)+'), con '+cu.v7.toLocaleString()+
+          ' pedidos de m\u00e1s de 7 d\u00edas.</div>' : '')+
+    '<p style="margin:10px 0 2px"><b>Fuera del almac\u00e9n</b></p>'+
+    rdBarrasSVG_(I.fuera, '#9ccc9f', -1)+
+    (I.sinFecha ? '<div class="leyg">'+I.sinFecha+' pedidos figuran como entregados sin fecha de entrega registrada.</div>' : '');
+}
+
 function rdPintarCabecera_(){ try{ rdPintarKpis_(); rdPintarFlujo_(); rdBarra_(); }catch(e){} }
 /* La fila de filtros se acomoda a la vista: en Registrar no aparece (la bahía
    tiene su propio buscador), Día de entrega solo donde filtra, y Limpiar solo
