@@ -471,7 +471,7 @@
   function badgePrioridad(r){
     const et = String(r.Rank_Etiqueta || "").toUpperCase();
     let bg="", fg="", txt=et;
-    if (et === "COLA CERO")            { bg="#F8D7DA"; fg="#7D2229"; txt="cola cero"; }
+    if (et === "COLA CERO")            { bg="#F8D7DA"; fg="#7D2229"; txt="vital en cero"; }   // 21-sep: el Motor guarda COLA CERO; se muestra en palabras del almacén
     else if (et === "ESENCIAL EN CERO"){ bg="#FDECC8"; fg="#7A5400"; txt="esencial 0"; }
     else if (et === "VITAL")           { bg="#FDECC8"; fg="#7A5400"; txt="vital"; }
     else if (et === "EN CERO")         { bg="#FDECC8"; fg="#7A5400"; txt="en cero"; }
@@ -954,11 +954,20 @@
       }
 
       const iconHtml = icons.length ? `<div style="margin-top:1px;">${icons.join(" ")}</div>` : "";
+      /* 21-sep · La unidad en cero, en el PDF, igual que la columna Prioridad de la
+         pantalla (misma etiqueta RANK del Motor, mismos colores). Va dentro de la
+         celda del código: no agrega columnas ni mueve los encabezados. Lleva borde
+         para que se lea aunque la impresora no imprima los fondos. */
+      const _etq = String(r.Rank_Etiqueta || "").toUpperCase();
+      const _cero = _etq === "COLA CERO"        ? ["vital en cero", "#F8D7DA", "#7D2229"]
+                  : _etq === "ESENCIAL EN CERO" ? ["esencial 0", "#FDECC8", "#7A5400"]
+                  : _etq === "EN CERO"          ? ["en cero",    "#FDECC8", "#7A5400"] : null;
+      const ceroHtml = _cero ? `<div style="margin-top:1px;"><span style="display:inline-block; background:${_cero[1]}; color:${_cero[2]}; border:1px solid ${_cero[2]}; padding:0 4px; border-radius:3px; font-size:7px; font-weight:bold; white-space:nowrap; -webkit-print-color-adjust:exact; print-color-adjust:exact;">${_cero[0]}</span></div>` : "";
       const transito = r.Asignado_Transito > 0 ? `<div style="color:blue;font-weight:bold;">T:${fmt0(r.Asignado_Transito)}</div>` : "";
 
       return `
       <tr style="${rowStyle}">
-        <td>${esc(r.Codigo)} ${iconHtml}</td>
+        <td>${esc(r.Codigo)} ${iconHtml}${ceroHtml}</td>
         <td>
             ${esc(r.Suministro || "")}
             ${r.Importancia ? `<div style="font-size:7px; font-weight:bold; color:#555; margin-top:2px;">[${r.Importancia}]</div>` : ""}
