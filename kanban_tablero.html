@@ -525,9 +525,9 @@
   .entp-dia input[type=date]{border:1px solid #c6ccd4;border-radius:5px;padding:6px 8px;font-size:13px}
   .entp-dia .ent-red{margin-left:auto;font-size:12px}
   .entp-pasos{display:flex;gap:8px;margin:0 0 10px;flex-wrap:wrap}
-  .entp-pasos span{flex:1;min-width:180px;border:1px solid #d9dde3;border-radius:6px;padding:7px 10px;font-size:13px;color:#555;background:#fff}
-  .entp-pasos span.on{border-color:#1f3864;color:#1f3864;font-weight:600;background:#eef2f8}
-  .entp-pasos span.ok{border-color:#9bc9a2;color:#2e6b36;background:#e6f3e8}
+  .entp-pasos > span{flex:1;min-width:180px;border:1px solid #d9dde3;border-radius:6px;padding:7px 10px;font-size:13px;color:#555;background:#fff}
+  .entp-pasos > span.on{border-color:#1f3864;color:#1f3864;font-weight:600;background:#eef2f8}
+  .entp-pasos > span.ok{border-color:#9bc9a2;color:#2e6b36;background:#e6f3e8}
   .entp-n{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#1f3864;color:#fff;font-size:12px;font-weight:700;margin-right:7px}
   .entp-guia{font-size:13px;color:#555;margin:-4px 0 10px}
   .entp-fotos{display:flex;gap:10px;flex-wrap:wrap}
@@ -539,6 +539,23 @@
   .entp-libro{font-size:13px}
   .entp-prog{font-size:13px;color:#1f3864;font-weight:600}
   .btn-si[disabled]{opacity:.7;cursor:progress}
+  .entp-cap{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+  .entp-cap label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:#555;font-weight:600}
+  .entp-cap label small{font-weight:400;color:#888}
+  .entp-cap input{padding:9px 10px;font-size:14px;border:1px solid #c6ccd4;border-radius:6px;box-sizing:border-box;width:100%}
+  .entp-cap input.auto{background:#eaf5ea;border-color:#9ccc9f;color:#1b5e20;font-weight:600}
+  .entp-cap .c-f8{flex:2 1 260px;position:relative}
+  .entp-cap .c-f8 input{font-family:Consolas,monospace;font-size:16px;font-weight:600}
+  .entp-cap .c-ue{flex:2 1 220px}.entp-cap .c-rep{flex:1.5 1 180px}.entp-cap .c-hora{flex:0 0 120px}
+  .entp-cap .btn-si{padding:10px 20px}
+  .entp-cap .c-f8 .entp-sugs{position:absolute;left:0;top:100%;z-index:20;width:min(620px,92vw);background:#fff;border:1px solid #d9dde3;border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,.12);padding:4px;margin-top:4px}
+  .entp-cap .c-f8 .entp-sugs:empty{display:none}
+  .entp-lnk{border:0;background:none;color:#1f3864;text-decoration:underline;cursor:pointer;font-size:13px;padding:6px 0 0}
+  .entp-modal{position:fixed;inset:0;background:rgba(15,25,45,.45);display:flex;align-items:flex-start;justify-content:center;padding:8vh 12px;z-index:1000}
+  .entp-modal .hoja{background:#fff;border-radius:8px;max-width:560px;width:100%;padding:18px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+  .entp-modal h4{margin:0 0 4px;color:#1f3864;font-size:16px}
+  .entp-modal textarea{width:100%;box-sizing:border-box;font-family:Consolas,monospace;font-size:14px;padding:9px;border:1px solid #c6ccd4;border-radius:5px;margin:10px 0}
+  .entp-modal .acc{display:flex;gap:8px;justify-content:flex-end}
 </style>
 </head>
 <body>
@@ -2975,26 +2992,29 @@ function entRender(){
     /* PASO 1 · captar el pedido */
     '<div class="ent-caja"><div class="ent-tit"><span class="entp-n">1</span>Anota los pedidos que salen</div>'+
       '<p class="entp-guia">Escribe el número de la Forma 8 o el nombre de la unidad y elige el pedido. La unidad se llena sola.</p>'+
-      '<input id="entCapF8" class="entp-f8" placeholder="escribe el número o la unidad · 479 · torrijos" '+
-        'oninput="entCapSug()" onkeydown="entCapTecla(event,\'f8\')" autocomplete="off" autocapitalize="off" '+
-        'spellcheck="false" value="'+entEsc_(entStF8)+'">'+
-      '<div id="entCapSug" class="entp-sugs"></div>'+
-      '<div class="entp-fila">'+
-        '<label>Unidad ejecutora<input id="entCapUE"'+(entStUEAuto?' class="auto"':'')+' list="entUEs" placeholder="se llena sola al elegir el pedido" '+
+      '<div class="entp-cap">'+
+        '<div class="c-f8"><label>Forma 8<input id="entCapF8" placeholder="479 · torrijos · 8066-2026-1-479" '+
+          'oninput="entCapSug()" onkeydown="entCapTecla(event,\'f8\')" autocomplete="off" autocapitalize="off" '+
+          'spellcheck="false" value="'+entEsc_(entStF8)+'"></label><div id="entCapSug" class="entp-sugs"></div></div>'+
+        '<label class="c-ue">Unidad ejecutora<input id="entCapUE"'+(entStUEAuto?' class="auto"':'')+' list="entUEs" placeholder="se llena sola" '+
           'oninput="entCapUECambia()" onkeydown="entCapTecla(event,\'ue\')" autocomplete="off" value="'+entEsc_(entStUE)+'"></label>'+
-        '<label>Retiró <small>(opcional)</small><input id="entCapRep" list="entGenteCap" placeholder="nombre y cédula" '+
+        '<label class="c-rep">Retiró <small>(opcional)</small><input id="entCapRep" list="entGenteCap" placeholder="nombre y cédula" '+
           'oninput="entCapRepCambia()" onkeydown="entCapTecla(event,\'rep\')" autocomplete="off" value="'+entEsc_(entStRep)+'"></label>'+
-        '<label class="entp-hora">Hora de entrega <small>(vacía = ahora)</small><input id="entCapHora" type="time" '+
+        '<label class="c-hora">Hora <small>(vacía = ahora)</small><input id="entCapHora" type="time" '+
           'oninput="entCapHoraCambia()" onkeydown="entCapTecla(event,\'hora\')" value="'+entEsc_(entStHora)+'"></label>'+
         '<button class="btn-si" onclick="entCapAgregar()">Agregar</button>'+
       '</div>'+
       '<datalist id="entUEs">'+UEs.map(function(u){ return '<option value="'+entEsc_(u)+'">'; }).join('')+'</datalist>'+
       '<datalist id="entGenteCap"></datalist>'+
-      '<div class="entp-lote"><button class="btn-mini" onclick="entLoteToggle()">'+
-        (entLoteOn ? 'Cerrar' : 'Pegar varias Formas 8 a la vez')+'</button></div>'+
-      (entLoteOn ? '<textarea id="entLoteTxt" rows="4" placeholder="Pega aquí las Formas 8, una por línea o separadas por espacio"></textarea>'+
-                   '<div class="ent-acc"><button class="btn-si" onclick="entLote()">Agregar a la lista</button>'+
-                   '<span class="ent-nota">Cada una toma su unidad del tablero. Las que no estén quedan para que les escribas la unidad.</span></div>' : '');
+      '<button class="entp-lnk" onclick="entLoteToggle()">Pegar varias Formas 8 a la vez</button>'+
+      /* E2 · pegar varias: ventana aparte, no un cuadro grande dentro del paso */
+      (entLoteOn ? '<div class="entp-modal" onclick="if(event.target===this)entLoteToggle()" onkeydown="if(event.key===\'Escape\')entLoteToggle()">'+
+                   '<div class="hoja"><h4>Pegar varias Formas 8</h4>'+
+                   '<div class="entp-guia">Una por línea o separadas por espacio. Cada una toma su unidad del tablero; las que no estén quedan en la lista para que les escribas la unidad. Si una línea empieza con una fecha (2026-08-29 8106-2026-1-1232), esa entrega queda con esa fecha.</div>'+
+                   '<textarea id="entLoteTxt" rows="7" placeholder="8066-2026-1-479&#10;8047-2026-1-2178" '+
+                     'onkeydown="if((event.ctrlKey||event.metaKey)&&event.key===\'Enter\')entLote()"></textarea>'+
+                   '<div class="acc"><button class="btn-no" onclick="entLoteToggle()">Cancelar</button>'+
+                   '<button class="btn-si" onclick="entLote()">Agregar a la lista</button></div></div></div>' : '');
 
   /* la lista: la fila es el pedido */
   const dls = {}; let dlN = 0, dlHtml = '';
