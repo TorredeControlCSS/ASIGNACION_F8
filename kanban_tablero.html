@@ -516,6 +516,29 @@
   .e-subida{color:#2e7d32;font-weight:600}.e-error{color:#a3331f;font-weight:600}
   .e-subiendo{color:#1f6bb8}.e-pendiente{color:#666}
   .ent-vacio{color:#777;font-size:13px;padding:14px 0;text-align:center}
+  /* E2 · bahía en 3 pasos (25-sep-2026) */
+  .entp-dia{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+  .entp-dia .fl{width:36px;height:36px;border:1px solid #c6ccd4;background:#fff;border-radius:6px;font-size:20px;line-height:1;cursor:pointer;color:#1f3864}
+  .entp-dia .fl:disabled{opacity:.35;cursor:default}
+  .entp-dia .fecha{font-weight:700;color:#1f3864;font-size:16px;min-width:230px;text-align:center}
+  .entp-dia .hoy{border:1px solid #1f3864;background:#fff;color:#1f3864;border-radius:5px;padding:6px 10px;font-weight:600;cursor:pointer}
+  .entp-dia input[type=date]{border:1px solid #c6ccd4;border-radius:5px;padding:6px 8px;font-size:13px}
+  .entp-dia .ent-red{margin-left:auto;font-size:12px}
+  .entp-pasos{display:flex;gap:8px;margin:0 0 10px;flex-wrap:wrap}
+  .entp-pasos span{flex:1;min-width:180px;border:1px solid #d9dde3;border-radius:6px;padding:7px 10px;font-size:13px;color:#555;background:#fff}
+  .entp-pasos span.on{border-color:#1f3864;color:#1f3864;font-weight:600;background:#eef2f8}
+  .entp-pasos span.ok{border-color:#9bc9a2;color:#2e6b36;background:#e6f3e8}
+  .entp-n{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#1f3864;color:#fff;font-size:12px;font-weight:700;margin-right:7px}
+  .entp-guia{font-size:13px;color:#555;margin:-4px 0 10px}
+  .entp-fotos{display:flex;gap:10px;flex-wrap:wrap}
+  .entp-foto{position:relative;width:150px;height:110px;border:1px solid #d9dde3;border-radius:6px;overflow:hidden;background:#f4f6f9}
+  .entp-foto img{width:100%;height:100%;object-fit:cover}
+  .entp-foto button{position:absolute;top:4px;right:4px;border:0;border-radius:50%;width:24px;height:24px;background:rgba(0,0,0,.6);color:#fff;cursor:pointer}
+  .entp-fbtn{width:150px;height:110px;border:2px dashed #9fb3cf;border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#1f3864;cursor:pointer;font-size:13px;text-align:center;background:#fff}
+  .entp-fbtn small{color:#666;font-size:11px}
+  .entp-libro{font-size:13px}
+  .entp-prog{font-size:13px;color:#1f3864;font-weight:600}
+  .btn-si[disabled]{opacity:.7;cursor:progress}
 </style>
 </head>
 <body>
@@ -2701,19 +2724,26 @@ function entSubir(){
   const btn = document.getElementById('entBtnSubir');
   btn.disabled = true;
   let ok = 0, err = 0, i = 0;
+  /* E2 · el botón dice qué está haciendo mientras sube */
+  const prog = function(txt){ const b = document.getElementById('entBtnSubir'); if (b){ b.disabled = true; b.textContent = txt; }
+                              const p = document.getElementById('entProg'); if (p) p.textContent = txt; };
+  prog('Subiendo 1 de ' + pend.length + '…');
 
   /* De una en una y en serie: Apps Script serializa las ejecuciones del mismo
      usuario, así que mandarlas en paralelo solo las encola y agota esperas. */
   (function siguiente(){
     if (i >= pend.length){
       btn.disabled = false;
+      ENT_SUBIENDO = false;
       entAviso_(ok + ' subidas · ' + (err ? err + ' con error, siguen en la cola' : 'sin errores'),
                 err ? 'warn' : 'ok');
       entRender();
       return;
     }
     const it = pend[i++];
+    ENT_SUBIENDO = true;
     it.estado = 'subiendo'; entRender();
+    prog('Subiendo ' + i + ' de ' + pend.length + '…');
     const u = WEBAPP_BASE + '?file=kb_llave_hito&id=' + encodeURIComponent(it.f8) +
               '&etapa=ENTREGADO&fecha=' + encodeURIComponent(it.fecha || entHoy_()) +
               '&pin=' + encodeURIComponent(pin) +
@@ -2817,7 +2847,7 @@ function entAsistQuitar(i){
 
 /* ── Informe del día. Se genera del dato capturado; nadie lo escribe. ── */
 function entInforme(){
-  const cola = entCola_(), asis = entAsist_();
+  const cola = entCola_(), asis = entAsist_(), fotos = entFotos_();   /* E2: fotos de la lista */
   const reg  = cola.filter(function(x){ return x.estado==='subida'; }).length;
   const pend = cola.length - reg;
   const f = entPtyAhora_();
@@ -2876,15 +2906,18 @@ function entInforme(){
       '<div class="kpi"><b>'+cola.length+'</b><span>Entregas del día</span></div>'+
       '<div class="kpi"><b>'+reg+'</b><span>Registradas en el Kanban</span></div>'+
       '<div class="kpi"><b>'+pend+'</b><span>Pendientes de registro en el Kanban</span></div>'+
-      '<div class="kpi"><b>'+asis.length+'</b><span>Representantes presentes</span></div>'+
+      '<div class="kpi"><b>'+(asis.length || (fotos.length ? 'ver foto' : 0))+'</b><span>Representantes presentes</span></div>'+
     '</div>'+
     '<p>El presente informe consolida las entregas realizadas por el Centro de Distribución durante la jornada del '+fTxt+
     ', junto con el control de asistencia de los representantes de las unidades ejecutoras que acudieron a retirar sus insumos.</p>'+
     nota+
     rdIndicadoresHTML_()+
     '<h2>3. Control de asistencia de unidades ejecutoras</h2>'+
+    (fotos.length ? '<p>Lista de asistencia firmada por los representantes (fotografía tomada en la bahía):</p>'+
+                    fotos.map(function(f,i){ return '<div style="page-break-inside:avoid;margin:6px 0 12px"><img src="'+f.src+'" style="max-width:100%;max-height:230mm;border:1px solid #ccc">'+
+                      '<div class="leyg">Hoja '+(i+1)+' de '+fotos.length+(f.hora ? ' &middot; foto tomada a las '+f.hora : '')+'</div></div>'; }).join('') : '')+
     (asis.length ? '<table><tr><th>Unidad Ejecutora</th><th>Representante</th><th>Cédula</th><th>Llegada</th><th>Salida</th></tr>'+filasAs+'</table>'
-                 : '<p>Sin registros de asistencia para esta jornada.</p>')+
+                 : (fotos.length ? '' : '<p>Sin registros de asistencia para esta jornada.</p>'))+
     '<h2>4. Anexo: listado consolidado de entregas (Forma 8)</h2>'+
     (cola.length ? '<table><tr><th>N&ordm;</th><th>Unidad Ejecutora</th><th>N&ordm; Doc (Forma 8)</th><th>Hora</th><th>Estado</th></tr>'+filasF8+'</table>'
                  : '<p>Sin entregas registradas para esta jornada.</p>')+
@@ -2913,25 +2946,35 @@ function entRender(){
   const sinUE = cola.filter(function(x){ return !x.ue; }).length;
   const UEs = entUnidades_();
 
+  const fotos = entFotos_(), dia = entFechaSel_(), hoy = entHoy_();
+  const libro = entRetro_() ? entLibroDia_(dia) : [];
+  const p1ok = cola.length > 0, p2ok = fotos.length > 0, p3ok = cola.length > 0 && !pend.length;
+  const pasoAct = !p1ok ? 1 : (!p2ok ? 2 : (!p3ok ? 3 : 0));
+  const clsPaso = function(n, ok){ return ok ? 'ok' : (pasoAct === n ? 'on' : ''); };
+
   let h =
-    /* La banda azul se queda para que resalte, y las cifras van dentro de ella.
-       Lo que sobraba eran las dos tarjetas grandes de abajo, que repetían lo
-       que ya dice la cabecera. */
-    '<div class="ent-barra rd-slim"><span class="entp-fec"><label for="entFecha">Entregas del</label>'+
-      '<input type="date" id="entFecha" value="'+entFechaSel_()+'" max="'+entHoy_()+'" onchange="entFechaCambia()">'+
-      (entRetro_() ? '<button class="btn-mini" onclick="entFechaHoy()">Hoy</button>' : '')+'</span>'+
-      '<span class="rd-pill'+(pend.length?' warn':'')+'"><b>'+pend.length+'</b> por registrar</span>'+
-      '<span class="rd-pill ok"><b>'+(cola.length - pend.length)+'</b> registrados</span>'+
-      (sinUE ? '<span class="rd-pill alerta"><b>'+sinUE+'</b> sin unidad ejecutora</span>' : '')+
-      '<span class="ent-red" id="entRed"></span></div>'+
+    /* E2 (25-sep-2026) · el día se recorre con flechas; la conexión va al lado */
+    '<div class="entp-dia">'+
+      '<button class="fl" onclick="entDiaMover(-1)" aria-label="Día anterior">&lsaquo;</button>'+
+      '<div class="fecha">'+entEsc_(entDiaTxt_(dia))+'</div>'+
+      '<button class="fl" onclick="entDiaMover(1)" aria-label="Día siguiente"'+(dia >= hoy ? ' disabled' : '')+'>&rsaquo;</button>'+
+      (entRetro_() ? '<button class="hoy" onclick="entFechaHoy()">Volver a hoy</button>' : '')+
+      '<input type="date" id="entFecha" value="'+dia+'" max="'+hoy+'" onchange="entFechaCambia()" aria-label="Elegir día">'+
+      '<span class="ent-red" id="entRed"></span>'+
+    '</div>'+
     '<div id="entOferta" class="ent-oferta" style="display:none"></div>'+
     '<div id="entAviso" class="ent-aviso" style="display:none"></div>'+
-    (entRetro_() ? '<div class="ent-retro">Cargando un informe atrasado: los pedidos que agregues quedan como entregados el '+
-                   entFechaSel_()+', no hoy.</div>' : '')+
+    (entRetro_() ? '<div class="ent-retro">Día pasado: lo que agregues aquí queda como entregado el '+dia+
+                   '. En el libro ese día constan <b>'+libro.length+'</b> entregas'+(libro.length ? ' (abajo).' : '.')+'</div>' : '')+
+    '<div class="entp-pasos">'+
+      '<span class="'+clsPaso(1,p1ok)+'"><span class="entp-n">1</span>Anota los pedidos'+(p1ok ? ' &middot; '+cola.length : '')+'</span>'+
+      '<span class="'+clsPaso(2,p2ok)+'"><span class="entp-n">2</span>Foto de la lista'+(p2ok ? ' &middot; '+fotos.length : '')+'</span>'+
+      '<span class="'+clsPaso(3,p3ok)+'"><span class="entp-n">3</span>Sube y genera el informe'+(pend.length ? ' &middot; faltan '+pend.length : '')+'</span>'+
+    '</div>'+
 
-
-    /* captar el pedido */
-    '<div class="ent-caja"><div class="ent-tit">Forma 8</div>'+
+    /* PASO 1 · captar el pedido */
+    '<div class="ent-caja"><div class="ent-tit"><span class="entp-n">1</span>Anota los pedidos que salen</div>'+
+      '<p class="entp-guia">Escribe el número de la Forma 8 o el nombre de la unidad y elige el pedido. La unidad se llena sola.</p>'+
       '<input id="entCapF8" class="entp-f8" placeholder="escribe el número o la unidad · 479 · torrijos" '+
         'oninput="entCapSug()" onkeydown="entCapTecla(event,\'f8\')" autocomplete="off" autocapitalize="off" '+
         'spellcheck="false" value="'+entEsc_(entStF8)+'">'+
@@ -2951,8 +2994,7 @@ function entRender(){
         (entLoteOn ? 'Cerrar' : 'Pegar varias Formas 8 a la vez')+'</button></div>'+
       (entLoteOn ? '<textarea id="entLoteTxt" rows="4" placeholder="Pega aquí las Formas 8, una por línea o separadas por espacio"></textarea>'+
                    '<div class="ent-acc"><button class="btn-si" onclick="entLote()">Agregar a la lista</button>'+
-                   '<span class="ent-nota">Cada una toma su unidad del tablero. Las que no estén quedan para que les escribas la unidad.</span></div>' : '')+
-    '</div>';
+                   '<span class="ent-nota">Cada una toma su unidad del tablero. Las que no estén quedan para que les escribas la unidad.</span></div>' : '');
 
   /* la lista: la fila es el pedido */
   const dls = {}; let dlN = 0, dlHtml = '';
@@ -2963,7 +3005,10 @@ function entRender(){
       return '<option value="'+entEsc_(entRepTxt_(p.n,p.c))+'">'; }).join('')+'</datalist>';
     return id;
   };
-  h += '<div class="ent-caja"><div class="ent-tit">Pedidos entregados &mdash; '+cola.length+'</div>';
+  h += '<div class="ent-tit" style="margin-top:12px">Pedidos entregados &mdash; '+cola.length+
+       (pend.length ? ' <span class="rd-pill warn"><b>'+pend.length+'</b> por registrar</span>' : '')+
+       ((cola.length-pend.length) ? ' <span class="rd-pill ok"><b>'+(cola.length-pend.length)+'</b> registrados</span>' : '')+
+       (sinUE ? ' <span class="rd-pill alerta"><b>'+sinUE+'</b> sin unidad ejecutora</span>' : '')+'</div>';
   if (cola.length){
     h += '<table class="ent-tb"><tr><th>Forma 8</th><th>Unidad ejecutora</th><th>Retiró</th><th>Entregado</th><th>Estado</th><th></th></tr>'+
       cola.slice().reverse().map(function(x){
@@ -2984,29 +3029,40 @@ function entRender(){
           '<td><button class="x" onclick="entQuitar(\''+entEsc_(x.f8)+'\')">&times;</button></td></tr>';
       }).join('')+'</table>'+dlHtml;
   } else {
-    h += '<div class="ent-vacio">Todavía no hay pedidos entregados en esta jornada.</div>';
+    h += '<div class="ent-vacio">Todavía no hay pedidos anotados en esta jornada.</div>';
   }
-  h += '<div class="ent-acc" style="margin-top:10px"><input id="entPin" type="password" placeholder="PIN" maxlength="8">'+
-       '<button class="btn-si" id="entBtnSubir" onclick="entSubir()">Subir al Kanban</button>'+
-       '<button class="btn-no" onclick="entInforme()">Generar informe del día</button></div></div>';
+  h += '</div>';
 
-  /* la asistencia sale sola de quién retiró cada pedido */
-  h += '<details class="ent-caja entp-asis"'+(entAsisAbierta?' open':'')+' ontoggle="entAsisAbierta=this.open"><summary>Asistencia del día &mdash; '+asis.length+
-       (asis.length===1?' representante':' representantes')+'</summary>'+
-       (asis.length ? '<table class="ent-tb"><tr><th>Unidad ejecutora</th><th>Retiró</th><th>Cédula</th><th>Llegada</th><th>Salida</th><th>Pedidos</th></tr>'+
-          asis.map(function(a){
-            const ed = a.auto && a.k;
-            const t = function(campo, v){
-              return ed ? '<input type="time" class="entp-t" value="'+entEsc_(v||'')+'" '+
-                            'onchange="entAsisHora(\''+entEsc_(a.k)+'\',\''+campo+'\',this.value)">'
-                        : entEsc_(v||'—'); };
-            return '<tr><td>'+entEsc_(a.ue)+'</td><td>'+entEsc_(a.rep||'—')+'</td><td class="mono">'+entEsc_(a.ced||'—')+'</td>'+
-                   '<td class="mono">'+t('lleg', a.lleg)+'</td><td class="mono">'+t('sal', a.sal)+'</td>'+
-                   '<td class="mono">'+(a.n!=null ? a.n : '—')+'</td></tr>';
-          }).join('')+'</table>'+
-          '<div class="ent-nota" style="margin-top:6px">La llegada arranca con la hora del primer pedido; corrígela y pon la salida cuando la sepas. Así sale en el informe.</div>'
-        : '<div class="ent-vacio">Se llena sola cuando anotas quién retiró un pedido.</div>')+
-       '</details>';
+  /* día pasado: lo que quedó en el libro ese día */
+  if (entRetro_() && libro.length){
+    h += '<div class="ent-caja entp-libro"><div class="ent-tit">En el libro el '+entEsc_(entDiaTxt_(dia))+' &mdash; '+libro.length+'</div>'+
+         '<table class="ent-tb"><tr><th>Forma 8</th><th>Unidad ejecutora</th><th>Entregado</th></tr>'+
+         libro.slice().sort(function(a,b){ return String(a.fEntrega).localeCompare(String(b.fEntrega)); }).map(function(f){
+           return '<tr><td class="mono">'+entEsc_(f.id)+'</td><td>'+entEsc_(f.ue||'—')+'</td><td class="mono">'+entEsc_(f.fEntrega||'')+'</td></tr>';
+         }).join('')+'</table></div>';
+  }
+
+  /* PASO 2 · foto de la lista de asistencia */
+  h += '<div class="ent-caja"><div class="ent-tit"><span class="entp-n">2</span>Foto de la lista de asistencia</div>'+
+       '<p class="entp-guia">Toma una foto de la hoja firmada por quienes retiraron. Sale en el informe como prueba; no hace falta escribir los nombres uno por uno.</p>'+
+       '<div class="entp-fotos">'+
+         fotos.map(function(f, i){
+           return '<div class="entp-foto"><img src="'+f.src+'" alt="Lista de asistencia '+(i+1)+'" onclick="entFotoVer('+i+')">'+
+                  '<button onclick="entFotoQuitar('+i+')" aria-label="Quitar foto">&times;</button></div>';
+         }).join('')+
+         (fotos.length < 4 ? '<label class="entp-fbtn" tabindex="0">&#128247;<span>Tomar o elegir foto</span><small>hasta 4 hojas</small>'+
+           '<input type="file" accept="image/*" capture="environment" multiple hidden onchange="entFotoCargar(this)"></label>' : '')+
+       '</div></div>';
+
+  /* PASO 3 · subir y generar el informe */
+  const txtBtn = pend.length ? ('Subir ' + pend.length + (pend.length===1 ? ' al Kanban' : ' al Kanban')) : 'Todo subido';
+  h += '<div class="ent-caja"><div class="ent-tit"><span class="entp-n">3</span>Sube al Kanban y genera el informe</div>'+
+       '<p class="entp-guia">'+(pend.length ? 'Faltan <b>'+pend.length+'</b> por subir. Escribe tu PIN y súbelas; después genera el informe del día.'
+                                           : (cola.length ? 'Todo está en el Kanban. Genera el informe del día.' : 'Cuando anotes pedidos, aquí los subes al Kanban.'))+'</p>'+
+       '<div class="ent-acc"><input id="entPin" type="password" placeholder="PIN" maxlength="8" inputmode="numeric">'+
+       '<button class="btn-si" id="entBtnSubir" onclick="entSubir()"'+((ENT_SUBIENDO || !pend.length) ? ' disabled' : '')+'>'+(ENT_SUBIENDO ? 'Subiendo…' : txtBtn)+'</button>'+
+       '<button class="btn-no" onclick="entInforme()">Generar informe del día</button>'+
+       '<span class="entp-prog" id="entProg"></span></div></div>';
 
   cont.innerHTML = h;
   entPintarRed_();
@@ -3042,6 +3098,7 @@ var entStUEAuto = false;  /* la unidad la puso el pedido, no la escribió el sup
 var entLoteOn = false, entFoco = false;
 var entStHora = '';       /* hora de entrega tecleada; vacía = la hora actual */
 var entAsisAbierta = false;
+var ENT_SUBIENDO = false;   /* E2: mientras sube, el botón no se reactiva al repintar */
 var ENT_LS_ASISH = 'cedis_entregas_horas_v1';   /* llegada/salida capturadas a mano */
 
 /* ── utilidades ──────────────────────────────────────────────────────── */
@@ -3111,6 +3168,66 @@ function entFechaCambia(){
   if (futura) entAviso_('No se puede registrar una entrega con fecha futura.', 'warn');
 }
 function entFechaHoy(){ entFechaAct = null; entFoco = true; entRender(); }
+/* E2 · recorrer los días con flechas (no se pasa de hoy) */
+function entDiaMover(d){
+  var f = new Date(entFechaSel_() + 'T12:00:00'); f.setDate(f.getDate() + d);
+  var iso = f.getFullYear() + '-' + String(f.getMonth()+1).padStart(2,'0') + '-' + String(f.getDate()).padStart(2,'0');
+  if (iso > entHoy_()) return;
+  entFechaAct = (iso === entHoy_()) ? null : iso; entFoco = true; entRender();
+}
+function entDiaTxt_(iso){
+  var DIAS=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'], MES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  var f = new Date(iso + 'T12:00:00');
+  return DIAS[f.getDay()] + ' ' + f.getDate() + ' de ' + MES[f.getMonth()] + (iso===entHoy_() ? ' · hoy' : '');
+}
+/* E2 · lo que quedó en el libro para un día (memoria de entregas) */
+function entLibroDia_(iso){
+  return rdMemoria_().filter(function(f){ return String(f.fEntrega||'').slice(0,10) === iso; });
+}
+
+/* E2 · FOTO DE LA LISTA DE ASISTENCIA. Se guarda en este navegador por día
+   (comprimida: ~1400 px, JPEG) y sale en el informe como prueba. Máximo 4
+   hojas por día; se conservan los últimos 7 días. */
+var ENT_LS_FOTOS = 'cedis_fotos_asistencia_v1';
+function entFotos_(){ var t = entLeer_(ENT_LS_FOTOS); return t[entFechaSel_()] || []; }
+function entFotosSet_(arr){
+  var t = entLeer_(ENT_LS_FOTOS); t[entFechaSel_()] = arr;
+  var dias = Object.keys(t).sort(); while (dias.length > 7){ delete t[dias.shift()]; }
+  try { localStorage.setItem(ENT_LS_FOTOS, JSON.stringify(t)); return true; }
+  catch (e) { entAviso_('No hay espacio para guardar más fotos en este navegador. Quita una foto de otro día o genera el informe ya.', 'warn'); return false; }
+}
+function entFotoCargar(input){
+  var files = Array.prototype.slice.call(input.files || []); input.value = '';
+  var act = entFotos_();
+  files = files.slice(0, Math.max(0, 4 - act.length));
+  if (!files.length){ entAviso_('Máximo 4 hojas por día.', 'warn'); return; }
+  var pend = files.length;
+  files.forEach(function(file){
+    var r = new FileReader();
+    r.onload = function(){
+      var img = new Image();
+      img.onload = function(){
+        var M = 1400, k = Math.min(1, M / Math.max(img.width, img.height));
+        var c = document.createElement('canvas'); c.width = Math.round(img.width*k); c.height = Math.round(img.height*k);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        act.push({ src:c.toDataURL('image/jpeg', 0.6), hora:entHora_() });
+        if (--pend === 0){ entFotosSet_(act); entRender(); }
+      };
+      img.onerror = function(){ if (--pend === 0){ entFotosSet_(act); entRender(); } };
+      img.src = r.result;
+    };
+    r.readAsDataURL(file);
+  });
+}
+function entFotoQuitar(i){
+  if (!confirm('¿Quitar esta foto de la lista de asistencia?')) return;
+  var a = entFotos_(); a.splice(i, 1); entFotosSet_(a); entRender();
+}
+function entFotoVer(i){
+  var a = entFotos_(); if (!a[i]) return;
+  var w = window.open('', '_blank'); if (!w) return;
+  w.document.write('<title>Lista de asistencia</title><img src="'+a[i].src+'" style="max-width:100%">'); w.document.close();
+}
 
 /* ── receptor que viaja al Kanban ────────────────────────────────────── */
 function entReceptorItem_(it){ return entRepTxt_(it.rep, it.ced); }
