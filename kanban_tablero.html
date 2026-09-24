@@ -433,7 +433,7 @@
   .rd-et small{font-size:10px}
   @media (max-width:1180px){ .rd-et small.eq{display:none} }
   @media (max-width:900px){ .rd-et small:not(.eq){display:none} .rd-et b{font-size:15px} }
-  .rd-tb{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 0;margin:4px 0 2px;border-bottom:1px solid #e3e7ec}
+  .rd-tb{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 10px;margin:4px 0 8px;border:1px solid #e3e7ec;border-radius:6px;background:#fff}
   .rd-tb label{display:none}
   .rd-tb .buscador-wrap{flex:1 1 280px;min-width:220px;max-width:420px}
   .rd-tb .buscador-wrap input{width:100%;box-sizing:border-box}
@@ -2476,9 +2476,67 @@ async function entregadoHoy(id){
 }
 
 // Detalle del documento localizado — reusa el modal general.
+/* E3 (25-sep-2026) · PEDIDO YA ENTREGADO: el detalle sale de la memoria de
+   entregas (antes decía "Documento no encontrado" porque solo buscaba entre
+   los activos) y permite CORREGIR LA FECHA DE ENTREGA con PIN de Supervisor
+   o Jefe. La corrección pasa por la llave: deja su hecho en KANBAN_HITOS y el
+   consolidador la mantiene. */
+function _corregirEntregaHTML(id, fEnt){
+  const hoy = (typeof entHoy_==='function') ? entHoy_() : new Date().toISOString().slice(0,10);
+  return '<div style="margin-top:14px;padding:12px;background:#eef4fb;border:1px solid #cfe0f2;">'
+    +'<div style="font-size:11px;font-weight:700;color:#0C447C;letter-spacing:.3px;margin-bottom:7px;">CORREGIR LA FECHA DE ENTREGA</div>'
+    +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
+    +'<input type="date" id="mEntFec" value="'+String(fEnt||'').slice(0,10)+'" max="'+hoy+'" style="padding:6px 9px;border:1px solid #a8a8a8;font-size:13px;font-family:Consolas,monospace;">'
+    +'<input type="text" id="mEntRec" placeholder="Recibió (opcional)" style="padding:6px 9px;border:1px solid #a8a8a8;font-size:13px;min-width:180px;">'
+    +'<input type="password" id="mEntPin" placeholder="PIN" maxlength="8" inputmode="numeric" style="padding:6px 9px;border:1px solid #a8a8a8;font-size:13px;width:80px;" onkeydown="if(event.key===\'Enter\')corregirEntrega(\''+_esc(id)+'\')">'
+    +'<button class="btn-entregar" id="mEntBtn" style="background:#0C447C;" onclick="corregirEntrega(\''+_esc(id)+'\')">Guardar fecha</button>'
+    +'</div>'
+    +'<div id="mEntMsg" style="font-size:11px;color:#5a6b7a;margin-top:6px;">Para cuando la fecha registrada no es la real. Requiere PIN de Supervisor o Jefe.</div>'
+    +'</div>';
+}
+async function corregirEntrega(id){
+  const fec=(document.getElementById('mEntFec')||{}).value||'', pin=((document.getElementById('mEntPin')||{}).value||'').trim();
+  const rec=((document.getElementById('mEntRec')||{}).value||'').trim(), msg=document.getElementById('mEntMsg'), btn=document.getElementById('mEntBtn');
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(fec)){ msg.textContent='Elige la fecha real de la entrega.'; msg.style.color='#8a6a00'; return; }
+  if(!pin){ msg.textContent='Escribe tu PIN.'; msg.style.color='#8a6a00'; return; }
+  btn.disabled=true; btn.textContent='Guardando…'; msg.style.color='#5a6b7a'; msg.textContent='Guardando la corrección en el Kanban…';
+  try{
+    const r=await pedir('file=kb_llave_hito&id='+encodeURIComponent(id)+'&etapa=ENTREGADO&fecha='+encodeURIComponent(fec)+
+                        '&pin='+encodeURIComponent(pin)+(rec?'&receptor='+encodeURIComponent(rec):'')+
+                        '&nota='+encodeURIComponent('Corrección de fecha desde Memoria'));
+    if(!r||r.ok===false){ msg.textContent='No se guardó: '+((r&&r.msg)||'error'); msg.style.color='#8c1d18'; btn.disabled=false; btn.textContent='Guardar fecha'; return; }
+    const k=_buscNorm(id);
+    (typeof ENTREGADOS_MEM!=='undefined'&&ENTREGADOS_MEM?ENTREGADOS_MEM:[]).forEach(function(m){ if(_buscNorm(m.id)===k) m.fEntrega=fec; });
+    F8.forEach(function(m){ if(_buscNorm(m.id)===k) m.fEntrega=fec; });
+    try{ taMarcarEscritura_(); }catch(e){}
+    msg.style.color='#0F6E56'; msg.textContent='\u2713 Corregida: queda entregada el '+fec+(r.por?(' \u00b7 registrada por '+r.por):'')+'.';
+    btn.textContent='Guardada';
+    try{ render(); }catch(e){}
+  }catch(ex){ msg.textContent='Sin conexión. Intenta de nuevo.'; msg.style.color='#8c1d18'; btn.disabled=false; btn.textContent='Guardar fecha'; }
+}
+function _verEntregadoMemoria_(m){
+  document.getElementById('mTit').textContent=m.id;
+  document.getElementById('mSub').textContent=m.ue||'';
+  function fila(k,v){ return '<tr><td style="color:#5a6b7a;padding:5px 12px 5px 0;white-space:nowrap">'+k+'</td><td style="padding:5px 0;font-weight:600">'+v+'</td></tr>'; }
+  let body='<table style="font-size:12px;border-collapse:collapse;width:100%">'
+    +fila('Etapa','<span class="bi-etapa" style="background:#0F6E56">\u2713 ENTREGADO</span>')
+    +fila('Tipo', _escNA(String(m.tipo||'').toUpperCase().indexOf('URG')>=0?'Urgencia':'Mensual'))
+    +fila('Grupo', _escNA(m.grupo||'\u2014'))
+    +fila('Entregado', _escNA(m.fEntrega||'\u2014'))
+    +(m.despachoPor?fila('Despachó / registró', _escNA(m.despachoPor)):'')
+    +'</table>';
+  body+=_corregirEntregaHTML(m.id, m.fEntrega);
+  document.getElementById('mBody').innerHTML=body;
+  document.getElementById('modalBg').classList.add('open');
+  document.getElementById('buscPanel').style.display='none';
+}
 function verDoc(id){
   const f=F8.find(x=>String(x.id)===String(id));
-  if(!f){ alert('Documento no encontrado: '+id); return; }
+  if(!f){
+    const m=rdMemoria_().find(function(x){ return _buscNorm(x.id)===_buscNorm(id); });
+    if(m){ _verEntregadoMemoria_(m); return; }
+    alert('El pedido '+id+' no está entre los activos ni en la memoria de entregas.'); return;
+  }
   const ret=f.anulado;
   document.getElementById('mTit').textContent=f.id;
   document.getElementById('mSub').textContent=f.ue+(f.cedis?(' \u00b7 '+f.cedis):'');
@@ -2514,7 +2572,7 @@ function verDoc(id){
       body+='<div style="margin-top:14px;padding:12px;background:#eafaf3;border:1px solid #b7e3d0;">'
         +'<div style="font-size:11px;font-weight:700;color:#0F6E56;letter-spacing:.3px;">ENTREGA CONFIRMADA</div>'
         +'<div style="font-size:13px;color:#0F6E56;margin-top:4px;font-weight:600;">'+_escNA(f.fEntrega||'\u2014')+'</div>'
-        +'</div>';
+        +'</div>'+_corregirEntregaHTML(f.id, f.fEntrega);
     } else if(f.despachado){
       // Despachado y sin confirmar: registrar entrega (ATA con fecha/hora) o atajo hoy.
       body+='<div style="margin-top:14px;padding:12px;background:#eafaf3;border:1px solid #b7e3d0;">'
