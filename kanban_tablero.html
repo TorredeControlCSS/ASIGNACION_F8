@@ -612,6 +612,27 @@
   /* el detalle se abre al costado, sin tapar la lista */
   .modal-bg{align-items:stretch!important;justify-content:flex-end!important;padding:0!important;background:rgba(15,25,45,.3)!important}
   .modal-bg .modal{max-width:500px!important;width:100%;height:100vh!important;max-height:none!important;border:0!important;border-radius:0!important}
+  /* ══ F3 (24-sep-2026) · sesión de PIN y cambios masivos ══ */
+  .pin-ses{display:inline-flex;align-items:center;gap:6px;font-size:12px;background:rgba(255,255,255,.14);color:#fff;border-radius:14px;padding:4px 10px;margin-right:8px}
+  .pin-ses button{border:0;background:none;color:#fff;text-decoration:underline;font-size:12px;cursor:pointer;padding:0}
+  body.ses-on #entPin, body.ses-on #mEntPin, body.ses-on #llmPin, body.ses-on #enModPin{display:none}
+  .pin-m{position:fixed;inset:0;background:rgba(15,25,45,.45);display:flex;align-items:center;justify-content:center;z-index:500}
+  .pin-m .hoja{background:#fff;border-radius:10px;padding:18px 20px;width:min(360px,92vw);box-shadow:0 10px 30px rgba(0,0,0,.25)}
+  .pin-m h4{margin:0 0 4px;color:#1f3864;font-size:16px}.pin-m p{margin:0 0 10px;font-size:12.5px;color:#5a6675}
+  .pin-m input{width:100%;box-sizing:border-box;padding:10px;font-size:18px;letter-spacing:6px;text-align:center;border:1px solid #c6ccd4;border-radius:6px}
+  .pin-m .err{color:#8c1d18;font-size:12px;min-height:16px;margin-top:6px}
+  .pin-m .acc{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+  .pin-m .acc button{border-radius:6px;padding:8px 14px;font-weight:600;cursor:pointer}
+  .pin-m .no{border:1px solid #1f3864;background:#fff;color:#1f3864}.pin-m .si{border:0;background:#1f3864;color:#fff}
+  th.sel,td.sel{width:30px;text-align:center}
+  th.sel input,td.sel input{width:16px;height:16px;cursor:pointer}
+  .sel-barra{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:300;background:#1f3864;color:#fff;border-radius:10px;
+             padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;box-shadow:0 8px 24px rgba(0,0,0,.25);max-width:calc(100% - 24px)}
+  .sel-barra b{font-size:15px}.sel-barra input{padding:7px 9px;border:0;border-radius:6px;font-size:13px}
+  .sel-barra .ap{background:#4caf6e;color:#fff;border:0;border-radius:6px;padding:8px 14px;font-weight:700;cursor:pointer}
+  .sel-barra .ap:disabled{opacity:.6;cursor:progress}
+  .sel-barra .qs{border:1px solid rgba(255,255,255,.6);background:none;color:#fff;border-radius:6px;padding:6px 10px;cursor:pointer}
+  .sel-barra small{opacity:.85;font-size:12px}
 </style>
 </head>
 <body>
@@ -619,7 +640,7 @@
   <img src="./icons/icon-512.png" alt="logo" onerror="this.style.display='none'"/>
   <div><h1>Kanban de Seguimiento &mdash; Tablero del Almac&eacute;n</h1>
     <div class="sub">Torre de Control &middot; DINALOG / CEDIS &middot; Solo lectura</div></div>
-  <div class="spacer"></div><div class="gen" id="gen"></div><button class="rd-refresh" id="btnRefresh" title="Traer los datos m&aacute;s recientes del Kanban">&#8635; Actualizar</button>
+  <div class="spacer"></div><span class="pin-ses" id="pinSes"></span><div class="gen" id="gen"></div><button class="rd-refresh" id="btnRefresh" title="Traer los datos m&aacute;s recientes del Kanban">&#8635; Actualizar</button>
 </div>
 <div class="wrap">
   <div id="errBox"></div>
@@ -682,6 +703,7 @@
   </div>
   <div id="rdSub" class="rd-sub" style="display:none"></div>
   <div id="rdMigas" class="rd-migas"></div>
+  <div id="selBarra" class="sel-barra" style="display:none"></div>
   <div id="vistaCrono" style="display:none;"><div class="rd-ctx"><button class="rd-ctxbtn pend-toggle" id="btnPendiente" title="Ocultar los pedidos que ya salieron en distribuci&oacute;n">Solo pendiente</button></div><div id="grillaSemanal"></div></div>
   <div id="vistaUE" style="display:none;"><div id="lista"></div></div>
   <div id="vistaEntregasDia"></div>
@@ -1600,7 +1622,7 @@ function renderReparto(){
       +'<span class="rp-n">'+lista.length+' pedidos'+(urg?' &middot; '+urg+' urg':'')+'</span></div>';
     html+='<div class="rp-cuerpo">';
     html+='<div class="rp-sub">'+atrasados+' atrasados &middot; priorizado: m\u00e1s atrasado primero &middot; responsable: '+_escNA(F.equipo)+'</div>';
-    html+='<div class="rp-scroll"><table class="rp-t"><thead><tr>'
+    html+='<div class="rp-scroll"><table class="rp-t"><thead><tr>'+selCab_('rp'+(F.clave||''), lista)
       +'<th class="ord" onclick="rpOrdenarPor(\'id\')">Forma 8'+rpOrdInd('id')+'</th>'
       +'<th class="ord" onclick="rpOrdenarPor(\'ue\')">Unidad Ejecutora'+rpOrdInd('ue')+'</th>'
       +'<th class="ord" onclick="rpOrdenarPor(\'grupo\')">Grupo'+rpOrdInd('grupo')+'</th>'
@@ -1613,7 +1635,7 @@ function renderReparto(){
       +'<th style="text-align:center;width:220px" title="Saneamiento y acciones (requiere Supervisor o Jefe)">Acciones (Supervisor)</th></tr></thead><tbody>';
     lista.slice().sort(rpOrdenActivo_).forEach(f=>{
       const atrColor=(f.diasAtraso!=null && f.diasAtraso>=0)?'#C00000':'#5a6b7a';
-      html+='<tr'+(f.tipo==='URG'?' class="urg"':'')+'>'
+      html+='<tr'+(f.tipo==='URG'?' class="urg"':'')+'>'+selCelda_(f.id)
         +'<td class="mono">'+_escNA(f.id)+'</td>'
         +'<td>'+_escNA(f.ue)+'</td>'
         +'<td>'+_escNA(f.grupo)+'</td>'
@@ -1641,7 +1663,7 @@ function renderReparto(){
 async function comprometerFecha(id, inp){
   const fecha=(inp.value||'').slice(0,10);   // vacío = quitar compromiso
   const accion = fecha ? ('fijar la fecha prometida al '+fecha) : 'QUITAR la fecha prometida';
-  const pin=prompt('Autorización de Supervisor o Jefe.\n\nF8: '+id+'\nAcción: '+accion+'\n\nDigita tu PIN (últimos 4 de la cédula):');
+  const pin=await pinSesion_();
   if(pin===null){ render(); return; }              // canceló → repinta valor previo
   const p=String(pin).trim();
   if(!/^\d{4}$/.test(p)){ alert('PIN inválido: deben ser 4 dígitos.'); render(); return; }
@@ -1670,7 +1692,7 @@ async function comprometerDesdeModal(id){
   if(!inp){ return; }
   const fecha=(inp.value||'').slice(0,10);
   if(!fecha){ alert('Elige una fecha, o usa "Quitar" para borrar el compromiso.'); return; }
-  const pin=prompt('Autorización de Supervisor o Jefe.\n\nF8: '+id+'\nFijar entrega prometida al '+fecha+'\n\nDigita tu PIN (últimos 4 de la cédula):');
+  const pin=await pinSesion_();
   if(pin===null) return;
   const p=String(pin).trim();
   if(!/^\d{4}$/.test(p)){ alert('PIN inválido: deben ser 4 dígitos.'); return; }
@@ -1686,7 +1708,7 @@ async function comprometerDesdeModal(id){
 
 async function quitarCompromisoDesdeModal(id){
   if(!confirm('¿Quitar la fecha prometida de '+id+'? Volverá a usar la fecha teórica del cronograma.')) return;
-  const pin=prompt('Autorización de Supervisor o Jefe.\n\nF8: '+id+'\nQUITAR la fecha prometida\n\nDigita tu PIN:');
+  const pin=await pinSesion_();
   if(pin===null) return;
   const p=String(pin).trim();
   if(!/^\d{4}$/.test(p)){ alert('PIN inválido: deben ser 4 dígitos.'); return; }
@@ -1723,8 +1745,7 @@ async function anularPedido(id){
   if(motivo===null) return;                                  // canceló
   const mot=String(motivo).trim();
   if(!mot){ alert('El motivo es obligatorio para retirar del ciclo.'); return; }
-  const pin=prompt('Autorización de Supervisor o Jefe.\n\nF8: '+id+'\nAcción: RETIRAR DEL CICLO\nMotivo: '+mot+
-    '\n\nDigita tu PIN (últimos 4 de la cédula):');
+  const pin=await pinSesion_();
   if(pin===null) return;
   const p=String(pin).trim();
   if(!/^\d{4}$/.test(p)){ alert('PIN inválido: deben ser 4 dígitos.'); return; }
@@ -1743,8 +1764,7 @@ async function anularPedido(id){
 async function reactivarPedido(id){
   const f=F8.find(x=>String(x.id)===String(id));
   const ue=f?(' \\u00b7 '+f.ue):'';
-  const pin=prompt('Autorización de Supervisor o Jefe.\n\nF8: '+id+ue+
-    '\nAcción: DEVOLVER AL CICLO (reingresar al flujo activo)\n\nDigita tu PIN (últimos 4 de la cédula):');
+  const pin=await pinSesion_();
   if(pin===null) return;
   const p=String(pin).trim();
   if(!/^\d{4}$/.test(p)){ alert('PIN inválido: deben ser 4 dígitos.'); return; }
@@ -1875,14 +1895,14 @@ function renderEntregas(){
   // ---- Sección: por confirmar (solo si el toggle está en 'pend') ----
   if(EN_TAB==='pend' && pend.length){
     html+='<div class="en-secc">Por confirmar &middot; '+pend.length.toLocaleString()+'</div>';
-    html+='<div class="rp-scroll"><table class="en-t"><thead><tr>'
+    html+='<div class="rp-scroll"><table class="en-t"><thead><tr>'+selCab_('pend', pend)
       +'<th>Forma 8</th><th>Unidad Ejecutora</th><th>Grupo</th><th>Tipo</th>'
       +'<th>Despachado</th><th>En espera</th><th style="text-align:center">Acci\u00f3n</th>'
       +'</tr></thead><tbody>';
     pend.forEach(f=>{
       const esp=_diasDesde_(f.fDespacho);
       const espCol=(esp!=null&&esp>=3)?'#C00000':'#5a6b7a';
-      html+='<tr>'
+      html+='<tr>'+selCelda_(f.id)
         +'<td class="mono">'+_escNA(f.id)+'</td>'
         +'<td>'+_escNA(f.ue)+'</td>'
         +'<td>'+_escNA(f.grupo||'\u2014')+'</td>'
@@ -1898,12 +1918,12 @@ function renderEntregas(){
   // ---- Sección: entregadas / memoria (solo si el toggle está en 'hechas') ----
   if(EN_TAB==='hechas' && hechas.length){
     html+='<div class="en-secc hecha">Entregadas &middot; '+hechas.length.toLocaleString()+'</div>';
-    html+='<div class="rp-scroll"><table class="en-t"><thead><tr>'
+    html+='<div class="rp-scroll"><table class="en-t"><thead><tr>'+selCab_('mem', hechas)
       +'<th>Forma 8</th><th>Unidad Ejecutora</th><th>Grupo</th><th>Tipo</th>'
       +'<th>Entregado (ATA)</th><th style="text-align:center">Acci\u00f3n</th>'
       +'</tr></thead><tbody>';
     hechas.forEach(f=>{
-      html+='<tr class="hecha">'
+      html+='<tr class="hecha">'+selCelda_(f.id)
         +'<td class="mono">'+_escNA(f.id)+'</td>'
         +'<td>'+_escNA(f.ue)+'</td>'
         +'<td>'+_escNA(f.grupo||'\u2014')+'</td>'
@@ -1946,7 +1966,7 @@ async function _enModConfirmar(){
   const id=_enModId; if(!id) return;
   const fecha=document.getElementById('enModFecha').value;
   const hora=document.getElementById('enModHora').value;
-  const pin=String(document.getElementById('enModPin').value||'').trim();
+  const pin=await pinCampo_('enModPin', 'Para registrar la entrega');
   const err=document.getElementById('enModErr');
   if(!fecha || !hora){ err.textContent='Indica la fecha y la hora de la entrega.'; return; }
   if(!/^\d{4}$/.test(pin)){ err.textContent='El PIN son 4 d\u00edgitos.'; return; }
@@ -1972,8 +1992,7 @@ async function _enModConfirmar(){
 async function revertirEntrega(id){
   const f=F8.find(x=>String(x.id)===String(id));
   const ue=f?(' \u00b7 '+f.ue):'';
-  const pin=prompt('Deshacer la entrega (marcada por error).\n\nF8: '+id+ue+
-    '\n\nDigita tu PIN (\u00faltimos 4 de la c\u00e9dula):');
+  const pin=await pinSesion_('Para deshacer la entrega');
   if(pin===null) return;
   const p=String(pin).trim();
   if(!/^\d{4}$/.test(p)){ alert('PIN inv\u00e1lido: deben ser 4 d\u00edgitos.'); return; }
@@ -2328,7 +2347,17 @@ function buscarDoc(){
   // tape la vista. Solo si NO hay ninguna activa se consulta cerrados (abajo).
   const _hayActivos = F8.some(f=> !f.anulado && (_buscNorm(f.id).indexOf(q)>=0 || _buscNorm(f.ue).indexOf(q)>=0));
   clearTimeout(BUSC_T); BUSC_SEQ++;                     /* E2 · anula búsquedas en el servidor ya en curso */
-  if(_hayActivos){ panel.style.display='none'; panel.innerHTML=''; return; }
+  if(_hayActivos){
+    panel.style.display='none'; panel.innerHTML='';
+    /* F3b · desde Registrar hoy (que no lista pedidos) la búsqueda lleva a la
+       pestaña donde está el pedido: dentro del almacén, por confirmar o cero. */
+    if(VISTA==='entdia'){
+      const m=F8.filter(f=> !f.anulado && (_buscNorm(f.id).indexOf(q)>=0 || _buscNorm(f.ue).indexOf(q)>=0));
+      const porConf=m.some(f=>f.despachado && !f.entregado), dentro=m.some(f=>['RECEPCION','ASIGNACION','RECOLECCION','PICKING','FACTURACION'].indexOf(f.macro)>=0);
+      if(porConf) rdIrEntregas('confirmar'); else if(dentro) cambiarVista('reparto'); else if(m.some(f=>f.macro==='SIN_ASIGNAR')) cambiarVista('noasig'); else rdIrEntregas('memoria');
+    }
+    return;
+  }
 
   /* E2 (25-sep) · UN PEDIDO YA ENTREGADO SE ABRE DONDE VIVE. La memoria de
      entregas ya está en el navegador: se busca ahí primero (al instante) y se
@@ -2461,7 +2490,7 @@ function _llaveMaestraHTML(id){
 async function llmRegistrar(id){
   const etapa=document.getElementById('llmEtapa').value;
   const fecha=document.getElementById('llmFecha').value; // YYYY-MM-DD o ''
-  const pin=String(document.getElementById('llmPin').value||'').trim();
+  const pin=await pinCampo_('llmPin', 'Llave maestra');
   const nota=String(document.getElementById('llmNota').value||'').trim();
   const msg=document.getElementById('llmMsg');
   if(!/^\d{4}$/.test(pin)){ msg.style.color='#C00000'; msg.textContent='El PIN son 4 d\u00edgitos.'; return; }
@@ -2489,7 +2518,7 @@ async function llmMuerto(id){
   const motivo=prompt('Motivo por el que se declara MUERTO este pedido:');
   if(motivo===null) return;
   if(!String(motivo).trim()){ alert('Debe indicar un motivo.'); return; }
-  const pin=String(document.getElementById('llmPin').value||'').trim();
+  const pin=await pinCampo_('llmPin', 'Llave maestra');
   const msg=document.getElementById('llmMsg');
   if(!/^\d{4}$/.test(pin)){ msg.style.color='#C00000'; msg.textContent='Escriba el PIN (4 d\u00edgitos) antes de declarar muerto.'; return; }
   msg.style.color='#555'; msg.textContent='Procesando\u2026';
@@ -2515,8 +2544,7 @@ function sanearDesdeFila(id){ verDoc(id); }
 async function entregadoHoy(id){
   const f=F8.find(x=>String(x.id)===String(id));
   const ue=f?(' \u00b7 '+f.ue):'';
-  const pin=prompt('Marcar ENTREGADO HOY (la UE retir\u00f3/recibi\u00f3).\n\nF8: '+id+ue+
-    '\n\nDigita tu PIN de Supervisor o Jefe (4 d\u00edgitos):');
+  const pin=await pinSesion_('Para marcar entregado hoy');
   if(pin===null) return;
   if(!/^\d{4}$/.test(String(pin).trim())){ alert('El PIN son 4 d\u00edgitos.'); return; }
   try{
@@ -2563,10 +2591,11 @@ function _corregirEntregaHTML(id, fEnt){
     +'</div>';
 }
 async function corregirEntrega(id){
-  const fec=(document.getElementById('mEntFec')||{}).value||'', pin=((document.getElementById('mEntPin')||{}).value||'').trim();
+  const fec=(document.getElementById('mEntFec')||{}).value||'';
   const rec=((document.getElementById('mEntRec')||{}).value||'').trim(), msg=document.getElementById('mEntMsg'), btn=document.getElementById('mEntBtn');
   if(!/^\d{4}-\d{2}-\d{2}$/.test(fec)){ msg.textContent='Elige la fecha real de la entrega.'; msg.style.color='#8a6a00'; return; }
-  if(!pin){ msg.textContent='Escribe tu PIN.'; msg.style.color='#8a6a00'; return; }
+  const pin = await pinCampo_('mEntPin', 'Para corregir la fecha');
+  if(!pin){ msg.textContent='Sin PIN no se guarda.'; msg.style.color='#8a6a00'; return; }
   btn.disabled=true; btn.textContent='Guardando…'; msg.style.color='#5a6b7a'; msg.textContent='Guardando la corrección en el Kanban…';
   try{
     const r=await pedir('file=kb_llave_hito&id='+encodeURIComponent(id)+'&etapa=ENTREGADO&fecha='+encodeURIComponent(fec)+
@@ -2876,11 +2905,11 @@ function entQuitar(f8){
 
 /* ── Subida. La dispara ÉL, con el PIN. Nada se borra hasta que el servidor
       confirme, y lo que falle se queda en la cola con su motivo. ── */
-function entSubir(){
+async function entSubir(){
   const pend = entCola_().filter(function(x){ return x.estado !== 'subida'; });
   if (!pend.length){ entAviso_('No hay entregas pendientes de subir.', 'ok'); return; }
-  const pin = document.getElementById('entPin').value.trim();
-  if (!pin){ entAviso_('Escribe tu PIN para subir.', 'warn'); document.getElementById('entPin').focus(); return; }
+  const pin = await pinCampo_('entPin', 'Para subir las entregas');
+  if (!pin){ entAviso_('Sin PIN no se sube.', 'warn'); return; }
 
   const btn = document.getElementById('entBtnSubir');
   btn.disabled = true;
@@ -3835,7 +3864,7 @@ function rdPintarCabecera_(){ try{ rdPintarKpis_(); rdPintarFlujo_(); rdBarra_()
    cuando hay algún filtro puesto. */
 function rdBarra_(){
   var tb=document.getElementById('rdTb'); if(!tb) return;
-  tb.style.display = (VISTA==='entdia') ? 'none' : '';
+  tb.style.display = '';   /* F3b (24-sep): la barra con el buscador se ve en todas las pestañas, como en el dummy aprobado */
   var dia=document.getElementById('fDiaEnt');
   if(dia) dia.style.display = (VISTA==='reparto' || VISTA==='crono') ? '' : 'none';
   var hay=['fUE','fGrupo','fTipo','fDiaEnt','fBuscar'].some(function(id){ var e=document.getElementById(id); return e && String(e.value||'').trim(); });
@@ -3865,6 +3894,8 @@ function rdNav_(v){
     b.classList.toggle('activa', d===v || (actEnt && d===actEnt));
   });
   try{ rdMigas_(v); }catch(e){}
+  if(rdNav_._v !== v || rdNav_._t !== EN_TAB){ SEL = {}; rdNav_._v = v; rdNav_._t = EN_TAB; }
+  try{ selPintar_(); pinPintar_(); }catch(e){}
   var sub=document.getElementById('rdSub'); if(!sub) return;
   sub.style.display = enEnt ? '' : 'none';
   if(!enEnt) return;
@@ -3876,6 +3907,128 @@ function rdNav_(v){
   }).join('');
 }
 
+
+
+/* ══ F3 (24-sep-2026) · SESIÓN DE PIN ═══════════════════════════════════════
+   El PIN se escribe una vez: se valida contra PERSONAL (kanban_login) y queda
+   abierto 30 minutos en ESTA pestaña (sessionStorage: se borra al cerrarla).
+   Cada acción lo renueva. El servidor sigue validando el PIN en cada llamada:
+   la sesión solo evita volver a escribirlo. ═════════════════════════════════ */
+var PIN_SES = (function(){ try{ return JSON.parse(sessionStorage.getItem('cedis_pin_ses')||'null'); }catch(e){ return null; } })();
+var PIN_MIN = 30;
+function pinVivo_(){ return !!(PIN_SES && PIN_SES.exp > Date.now()); }
+function pinGuardar_(){ try{ if(PIN_SES) sessionStorage.setItem('cedis_pin_ses', JSON.stringify(PIN_SES)); else sessionStorage.removeItem('cedis_pin_ses'); }catch(e){} pinPintar_(); }
+function pinCerrar(){ PIN_SES = null; pinGuardar_(); }
+function pinPintar_(){
+  var e = document.getElementById('pinSes'), on = pinVivo_();
+  document.body.classList.toggle('ses-on', on);
+  if(!e) return;
+  if(on){ var m = Math.max(1, Math.ceil((PIN_SES.exp - Date.now())/60000));
+    e.innerHTML = '&#128275; '+_esc(PIN_SES.nombre||'Sesi\u00f3n')+' &middot; '+m+' min <button onclick="pinCerrar()">Cerrar sesi\u00f3n</button>'; }
+  else { e.innerHTML = '&#128274; Sin sesi\u00f3n <button onclick="pinSesion_()">Abrir</button>'; }
+}
+setInterval(function(){ if(PIN_SES && !pinVivo_()) PIN_SES = null; pinPintar_(); }, 30000);
+async function pinValidar_(pin){
+  try{
+    var r = await pedir('file=kanban_login&pin='+encodeURIComponent(pin));
+    if(r && r.ok){ PIN_SES = { pin:pin, nombre:r.nombre||'', rol:r.rol||'', exp:Date.now()+PIN_MIN*60000 }; pinGuardar_(); return true; }
+    return (r && r.msg) || 'PIN inv\u00e1lido';
+  }catch(e){ return 'Sin conexi\u00f3n'; }
+}
+function pinSesion_(motivo){
+  if(pinVivo_()){ PIN_SES.exp = Date.now()+PIN_MIN*60000; pinGuardar_(); return Promise.resolve(PIN_SES.pin); }
+  return new Promise(function(res){
+    var d = document.createElement('div'); d.className = 'pin-m';
+    d.innerHTML = '<div class="hoja" role="dialog" aria-label="PIN"><h4>Tu PIN</h4><p>'+(motivo?_esc(motivo)+'. ':'')+
+      'Lo escribes una vez: queda abierto '+PIN_MIN+' minutos en esta pantalla o hasta que cierres sesi\u00f3n.</p>'+
+      '<input type="password" inputmode="numeric" maxlength="8" aria-label="PIN"><div class="err"></div>'+
+      '<div class="acc"><button class="no">Cancelar</button><button class="si">Entrar</button></div></div>';
+    document.body.appendChild(d);
+    var i = d.querySelector('input'), er = d.querySelector('.err'), si = d.querySelector('.si');
+    var fin = function(v){ d.remove(); res(v); };
+    var ok = async function(){
+      var v = String(i.value||'').trim(); if(!v){ er.textContent = 'Escribe tu PIN.'; return; }
+      si.disabled = true; si.textContent = 'Validando\u2026';
+      var r = await pinValidar_(v);
+      if(r === true) fin(v); else { er.textContent = r; si.disabled = false; si.textContent = 'Entrar'; i.select(); }
+    };
+    si.onclick = ok; d.querySelector('.no').onclick = function(){ fin(null); };
+    i.onkeydown = function(e){ if(e.key==='Enter') ok(); if(e.key==='Escape') fin(null); };
+    setTimeout(function(){ i.focus(); }, 30);
+  });
+}
+/* Para las pantallas que ya tienen su campo de PIN: si hay sesión se usa; si
+   escribieron el PIN en el campo, ese PIN abre la sesión; si no, se pide. */
+async function pinCampo_(idCampo, motivo){
+  if(pinVivo_()){ PIN_SES.exp = Date.now()+PIN_MIN*60000; pinGuardar_(); return PIN_SES.pin; }
+  var el = document.getElementById(idCampo), v = el ? String(el.value||'').trim() : '';
+  if(v){ var r = await pinValidar_(v); if(r === true) return v; alert(r); return null; }
+  return await pinSesion_(motivo);
+}
+
+/* ══ F3 · CAMBIOS MASIVOS: casillas + una sola acción para los marcados ═════ */
+var SEL = {}, VIS = {};
+function selCelda_(id){ var k = String(id); return '<td class="sel" onclick="event.stopPropagation()"><input type="checkbox" aria-label="Seleccionar '+_esc(k)+'"'+(SEL[k]?' checked':'')+' onchange="selTog_(\''+_esc(k)+'\',this.checked)"></td>'; }
+function selCab_(clave, lista){
+  VIS[clave] = lista.map(function(f){ return String(f.id); });
+  var todos = VIS[clave].length && VIS[clave].every(function(id){ return SEL[id]; });
+  return '<th class="sel"><input type="checkbox" aria-label="Seleccionar todos"'+(todos?' checked':'')+' onchange="selVis_(\''+clave+'\',this.checked)"></th>';
+}
+function selTog_(id, v){ if(v) SEL[id] = 1; else delete SEL[id]; selPintar_(); }
+function selVis_(clave, v){ (VIS[clave]||[]).forEach(function(id){ if(v) SEL[id] = 1; else delete SEL[id]; }); render(); }
+function selModo_(){
+  if(VISTA==='reparto') return 'prometida';
+  if(VISTA==='entregas') return EN_TAB==='hechas' ? 'corregir' : 'entregar';
+  return '';
+}
+var SEL_OCUPADO = false;
+function selPintar_(){
+  var b = document.getElementById('selBarra'); if(!b) return;
+  var n = Object.keys(SEL).length, modo = selModo_();
+  if(!n || !modo){ b.style.display = 'none'; b.innerHTML = ''; return; }
+  var hoy = (typeof entHoy_==='function') ? entHoy_() : new Date().toISOString().slice(0,10);
+  var t = { prometida:['Fecha prometida', 'Reemplaza la fecha del cronograma. No notifica a la unidad.'],
+            entregar :['Registrar entrega', 'Quedan entregados con esta fecha.'],
+            corregir :['Corregir fecha de entrega', 'Quedan con esta fecha de entrega.'] }[modo];
+  b.style.display = '';
+  b.innerHTML = '<b>'+n+' seleccionados</b><span>'+t[0]+':</span>'+
+    '<input type="date" id="selFec" value="'+hoy+'"'+(modo==='prometida'?'':' max="'+hoy+'"')+' aria-label="Fecha">'+
+    (modo!=='prometida' ? '<input id="selRec" placeholder="Recibi\u00f3 (opcional)" aria-label="Recibi\u00f3">' : '')+
+    '<button class="ap" id="selAp" onclick="selAplicar_()"'+(SEL_OCUPADO?' disabled':'')+'>Aplicar a los '+n+'</button><small id="selMsg">'+t[1]+'</small>'+
+    '<button class="qs" onclick="SEL={};render()">Quitar selecci\u00f3n</button>';
+}
+async function selAplicar_(){
+  var ids = Object.keys(SEL), modo = selModo_(), fec = (document.getElementById('selFec')||{}).value || '';
+  var rec = ((document.getElementById('selRec')||{}).value || '').trim();
+  if(!ids.length || !modo) return;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(fec)){ alert('Elige la fecha.'); return; }
+  var pin = await pinSesion_(ids.length+' pedidos'); if(!pin) return;
+  SEL_OCUPADO = true; var ap = document.getElementById('selAp'), msg = document.getElementById('selMsg');
+  var ok = 0, err = [], i = 0;
+  for(i = 0; i < ids.length; i++){
+    var id = ids[i];
+    if(ap){ ap.disabled = true; ap.textContent = 'Aplicando '+(i+1)+' de '+ids.length+'\u2026'; }
+    try{
+      var r = (modo==='prometida')
+        ? await pedir('file=kanban_comprometer&id='+encodeURIComponent(id)+'&fecha='+encodeURIComponent(fec)+'&pin='+encodeURIComponent(pin))
+        : await pedir('file=kb_llave_hito&id='+encodeURIComponent(id)+'&etapa=ENTREGADO&fecha='+encodeURIComponent(fec)+'&pin='+encodeURIComponent(pin)+
+                      (rec?'&receptor='+encodeURIComponent(rec):'')+'&nota='+encodeURIComponent(modo==='corregir'?'Correcci\u00f3n masiva de fecha':'Entrega registrada en bloque'));
+      if(r && r.ok !== false){
+        ok++; delete SEL[id];
+        var k = _buscNorm(id);
+        F8.forEach(function(f){ if(_buscNorm(f.id)===k){
+          if(modo==='prometida') f.fechaComprometida = fec;
+          else { f.entregado = true; f.fEntrega = fec; } } });
+        if(modo!=='prometida') (typeof ENTREGADOS_MEM!=='undefined'&&ENTREGADOS_MEM?ENTREGADOS_MEM:[]).forEach(function(m){ if(_buscNorm(m.id)===k) m.fEntrega = fec; });
+      } else err.push(id+': '+((r&&r.msg)||'rechazado'));
+    }catch(e){ err.push(id+': sin conexi\u00f3n'); }
+  }
+  SEL_OCUPADO = false;
+  try{ taMarcarEscritura_(); }catch(e){}
+  render();
+  alert(ok+' de '+ids.length+' actualizados'+(PIN_SES&&PIN_SES.nombre?' por '+PIN_SES.nombre:'')+'.'+
+        (err.length ? '\n\nNo se aplicaron (siguen marcados):\n'+err.slice(0,10).join('\n')+(err.length>10?'\n\u2026':'') : ''));
+}
 
 /* ── F1 (24-sep-2026) · MIGAS: dónde estás, qué filtros hay y cómo volver ── */
 function rdMigas_(v){
