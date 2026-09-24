@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Kanban de Seguimiento — Tablero del Almacén por Unidad EjecutorA</title>
+<title>Kanban de Seguimiento — Tablero del Almacén por Unidad Ejecutora</title>
 <link rel="icon" href="./favicon.ico?v=1"/>
 <style>
   :root{
@@ -524,7 +524,25 @@
   .entp-dia .hoy{border:1px solid #1f3864;background:#fff;color:#1f3864;border-radius:5px;padding:6px 10px;font-weight:600;cursor:pointer}
   .entp-dia input[type=date]{border:1px solid #c6ccd4;border-radius:5px;padding:6px 8px;font-size:13px}
   .entp-dia .ent-red{margin-left:auto;font-size:12px}
-  .entp-pasos{display:flex;gap:8px;margin:0 0 10px;flex-wrap:wrap}
+  .entp-pasos{display:none}
+  /* F2 (24-sep) · cada paso es una sección delimitada con su estado */
+  .entp-sec{padding:0!important;overflow:visible;position:relative}
+  .entp-sec > .ent-tit:first-child{display:flex;align-items:center;gap:6px;margin:0;padding:9px 12px;background:#f4f6f9;border-bottom:1px solid #d9dde3;border-radius:7px 7px 0 0}
+  .entp-sec > :not(:first-child){margin-left:12px;margin-right:12px}
+  .entp-sec > :last-child{margin-bottom:12px}
+  .entp-sec > .entp-guia{margin-top:10px}
+  .entp-st{margin-left:auto;font-size:12px;font-weight:600;border-radius:12px;padding:3px 10px;background:#eceff3;color:#5a6675}
+  .entp-sec.on{border-color:#1f3864;box-shadow:0 0 0 2px rgba(31,56,100,.1)}
+  .entp-sec.on > .ent-tit:first-child{background:#dde8f6}.entp-sec.on .entp-st{background:#1f3864;color:#fff}
+  .entp-sec.ok{border-color:#9bc9a2}.entp-sec.ok > .ent-tit:first-child{background:#e6f3e8;color:#2e6b36}.entp-sec.ok .entp-st{background:#2e6b36;color:#fff}
+  .entp-inf{background:#2e7d46!important;color:#fff!important;border:0!important}
+  .entp-sug .ck{width:16px;height:16px;flex:none;margin:0}
+  .entp-sugwrap{max-height:320px;overflow:auto}
+  .entp-sugpie{display:flex;gap:8px;align-items:center;justify-content:space-between;border-top:1px solid #d9dde3;margin-top:4px;padding:6px 6px 2px;font-size:12px;color:#5a6675}
+  .entp-sugpie button{border:1px solid #1f3864;background:#fff;color:#1f3864;border-radius:5px;padding:4px 10px;font-weight:600;cursor:pointer}
+  .entp-sugpie button.pr{background:#1f3864;color:#fff}
+  .entp-retb{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#eef4fb;border:1px solid #cfe0f2;border-radius:6px;padding:8px 10px;margin-top:10px;font-size:13px;color:#1f3864}
+  .entp-retb input{padding:7px 9px;border:1px solid #c6ccd4;border-radius:6px;min-width:240px}
   .entp-pasos > span{flex:1;min-width:180px;border:1px solid #d9dde3;border-radius:6px;padding:7px 10px;font-size:13px;color:#555;background:#fff}
   .entp-pasos > span.on{border-color:#1f3864;color:#1f3864;font-weight:600;background:#eef2f8}
   .entp-pasos > span.ok{border-color:#9bc9a2;color:#2e6b36;background:#e6f3e8}
@@ -2891,6 +2909,7 @@ function entSubir(){
               '&etapa=ENTREGADO&fecha=' + encodeURIComponent(it.fecha || entHoy_()) +
               '&pin=' + encodeURIComponent(pin) +
               (entReceptorItem_(it) ? '&receptor=' + encodeURIComponent(entReceptorItem_(it)) : '') +
+              (it.colado && it.ue ? '&ue=' + encodeURIComponent(it.ue) : '') +
               '&nota=' + encodeURIComponent('Entrega registrada en bahía ' + it.hora +
                 ((it.fecha && it.fecha !== entHoy_()) ? ' · carga retroactiva del ' + it.fecha : ''));
     fetch(u).then(function(r){ return r.json(); }).then(function(r){
@@ -3109,18 +3128,13 @@ function entRender(){
     '<div id="entAviso" class="ent-aviso" style="display:none"></div>'+
     (entRetro_() ? '<div class="ent-retro">Día pasado: lo que agregues aquí queda como entregado el '+dia+
                    '. En el libro ese día constan <b>'+libro.length+'</b> entregas'+(libro.length ? ' (abajo).' : '.')+'</div>' : '')+
-    '<div class="entp-pasos">'+
-      '<span class="'+clsPaso(1,p1ok)+'"><span class="entp-n">1</span>Anota los pedidos'+(p1ok ? ' &middot; '+cola.length : '')+'</span>'+
-      '<span class="'+clsPaso(2,p2ok)+'"><span class="entp-n">2</span>Foto de la lista'+(p2ok ? ' &middot; '+fotos.length : '')+'</span>'+
-      '<span class="'+clsPaso(3,p3ok)+'"><span class="entp-n">3</span>Sube y genera el informe'+(pend.length ? ' &middot; faltan '+pend.length : '')+'</span>'+
-    '</div>'+
 
     /* PASO 1 · captar el pedido */
-    '<div class="ent-caja"><div class="ent-tit"><span class="entp-n">1</span>Anota los pedidos que salen</div>'+
+    '<div class="ent-caja entp-sec '+clsPaso(1,p1ok)+'"><div class="ent-tit"><span class="entp-n">1</span>Anota los pedidos que salen<span class="entp-st">'+(p1ok?'&#10003; '+cola.length+' anotados':'en curso')+'</span></div>'+
       '<p class="entp-guia">Escribe el número de la Forma 8 o el nombre de la unidad y elige el pedido. La unidad se llena sola.</p>'+
       '<div class="entp-cap">'+
         '<div class="c-f8"><label>Forma 8<input id="entCapF8" placeholder="479 · torrijos · 8066-2026-1-479" '+
-          'oninput="entCapSug()" onkeydown="entCapTecla(event,\'f8\')" autocomplete="off" autocapitalize="off" '+
+          'oninput="ENT_IDX=0;entCapSug()" onkeydown="entCapTecla(event,\'f8\')" autocomplete="off" autocapitalize="off" '+
           'spellcheck="false" value="'+entEsc_(entStF8)+'"></label><div id="entCapSug" class="entp-sugs"></div></div>'+
         '<label class="c-ue">Unidad ejecutora<input id="entCapUE"'+(entStUEAuto?' class="auto"':'')+' list="entUEs" placeholder="se llena sola" '+
           'oninput="entCapUECambia()" onkeydown="entCapTecla(event,\'ue\')" autocomplete="off" value="'+entEsc_(entStUE)+'"></label>'+
@@ -3151,6 +3165,13 @@ function entRender(){
       return '<option value="'+entEsc_(entRepTxt_(p.n,p.c))+'">'; }).join('')+'</datalist>';
     return id;
   };
+  if (ENT_ULTIMOS.length){
+    var _u0 = cola.filter(function(x){ return x.f8 === ENT_ULTIMOS[0]; })[0];
+    h += '<div class="entp-retb"><span>Agregaste <b>'+ENT_ULTIMOS.length+'</b>'+(_u0?' de '+entEsc_(_u0.ue):'')+'. &iquest;Qui&eacute;n los retir&oacute;?</span>'+
+         '<input id="entRetIn" list="entGenteCap" placeholder="nombre y c&eacute;dula (opcional)" onkeydown="if(event.key===\'Enter\')entRetUltimos()">'+
+         '<button class="btn-si" onclick="entRetUltimos()">Aplicar a los '+ENT_ULTIMOS.length+'</button>'+
+         '<button class="btn-mini" onclick="ENT_ULTIMOS=[];entRender()">Omitir</button></div>';
+  }
   h += '<div class="ent-tit" style="margin-top:12px">Pedidos entregados &mdash; '+cola.length+
        (pend.length ? ' <span class="rd-pill warn"><b>'+pend.length+'</b> por registrar</span>' : '')+
        ((cola.length-pend.length) ? ' <span class="rd-pill ok"><b>'+(cola.length-pend.length)+'</b> registrados</span>' : '')+
@@ -3189,7 +3210,7 @@ function entRender(){
   }
 
   /* PASO 2 · foto de la lista de asistencia */
-  h += '<div class="ent-caja"><div class="ent-tit"><span class="entp-n">2</span>Foto de la lista de asistencia</div>'+
+  h += '<div class="ent-caja entp-sec '+clsPaso(2,p2ok)+'"><div class="ent-tit"><span class="entp-n">2</span>Foto de la lista de asistencia<span class="entp-st">'+(p2ok?'&#10003; '+fotos.length+(fotos.length===1?' hoja':' hojas'):'pendiente')+'</span></div>'+
        '<p class="entp-guia">Toma una foto de la hoja firmada por quienes retiraron. Sale en el informe como prueba; no hace falta escribir los nombres uno por uno.</p>'+
        '<div class="entp-fotos">'+
          fotos.map(function(f, i){
@@ -3202,12 +3223,12 @@ function entRender(){
 
   /* PASO 3 · subir y generar el informe */
   const txtBtn = pend.length ? ('Subir ' + pend.length + (pend.length===1 ? ' al Kanban' : ' al Kanban')) : 'Todo subido';
-  h += '<div class="ent-caja"><div class="ent-tit"><span class="entp-n">3</span>Sube al Kanban y genera el informe</div>'+
+  h += '<div class="ent-caja entp-sec '+clsPaso(3,p3ok)+'"><div class="ent-tit"><span class="entp-n">3</span>Sube al Kanban y genera el informe<span class="entp-st">'+(p3ok?'&#10003; todo subido':(pend.length?'faltan '+pend.length:'&mdash;'))+'</span></div>'+
        '<p class="entp-guia">'+(pend.length ? 'Faltan <b>'+pend.length+'</b> por subir. Escribe tu PIN y súbelas; después genera el informe del día.'
                                            : (cola.length ? 'Todo está en el Kanban. Genera el informe del día.' : 'Cuando anotes pedidos, aquí los subes al Kanban.'))+'</p>'+
        '<div class="ent-acc"><input id="entPin" type="password" placeholder="PIN" maxlength="8" inputmode="numeric">'+
        '<button class="btn-si" id="entBtnSubir" onclick="entSubir()"'+((ENT_SUBIENDO || !pend.length) ? ' disabled' : '')+'>'+(ENT_SUBIENDO ? 'Subiendo…' : txtBtn)+'</button>'+
-       '<button class="btn-no" onclick="entInforme()">Generar informe del día</button>'+
+       '<button class="btn-no entp-inf" onclick="entInforme()">Generar informe del día</button>'+
        '<span class="entp-prog" id="entProg"></span></div></div>';
 
   cont.innerHTML = h;
@@ -3422,26 +3443,60 @@ function entCapSug(){
     var be = entIdParcial_(b.id).slice(-nid.length)===nid ? 0 : 1;
     return ae - be;
   });
-  var total = hits.length; hits = hits.slice(0,8);
+  var total = hits.length; hits = hits.slice(0,40);
+  ENT_SUGS = hits.map(function(f){ return f.id; });
+  if (ENT_IDX >= hits.length) ENT_IDX = hits.length - 1; if (ENT_IDX < 0) ENT_IDX = 0;
   var exacto = entBuscarPedido_(q);
   /* Solo se toca la unidad cuando hay certeza: el número corresponde a un
      pedido (se llena) o es una Forma 8 completa que no existe (se vacía).
      Mientras se teclea a medias, no se toca nada. */
   if (exacto) entCapUEAuto_(exacto);
   else if (entNormF8_(q)) entCapUEAuto_(null);
-  var h = hits.map(function(f,i){
-    return '<button class="entp-sug'+(i===0?' pri':'')+'" onclick="entCapElegir(\''+String(f.id).replace(/'/g,'')+'\')">'+
-      '<span class="id">'+entMarcar_(f.id, nid.length>=2 ? nid : '')+'</span>'+
-      '<span class="ue">'+entMarcar_(f.ue||'', nq.length>=3 ? q : '')+'</span>'+
-      (f.etapa ? '<span class="et">'+entEsc_(f.etapa)+'</span>' : '')+'</button>';
-  }).join('');
-  if (total > hits.length) h += '<div class="ent-nota">'+total+' pedidos coinciden · sigue escribiendo para acotar</div>';
+  /* F2 (24-sep) · flechas para moverse, Enter para elegir; casillas para
+     marcar varios pedidos (p. ej. todos los de una unidad) y agregarlos juntos. */
+  var nMk = Object.keys(ENT_MK).length;
+  var h = hits.length ? '<div class="entp-sugwrap">'+hits.map(function(f,i){
+    var idq = String(f.id).replace(/'/g,'');
+    return '<div class="entp-sug'+(i===ENT_IDX?' pri':'')+'" id="entSg'+i+'">'+
+      '<input type="checkbox" class="ck" aria-label="Marcar '+entEsc_(f.id)+'"'+(ENT_MK[f.id]?' checked':'')+' onchange="entMarca(\''+idq+'\',this.checked)">'+
+      '<span class="id" style="cursor:pointer" onclick="entCapElegir(\''+idq+'\')">'+entMarcar_(f.id, nid.length>=2 ? nid : '')+'</span>'+
+      '<span class="ue" style="cursor:pointer" onclick="entCapElegir(\''+idq+'\')">'+entMarcar_(f.ue||'', nq.length>=3 ? q : '')+'</span>'+
+      (f.etapa ? '<span class="et">'+entEsc_(f.etapa)+'</span>' : '')+'</div>';
+  }).join('')+'</div>' : '';
+  if (hits.length) h += '<div class="entp-sugpie"><span>'+total+' pendientes coinciden'+(total>hits.length?' (se muestran '+hits.length+')':'')+' &middot; &uarr;&darr; y Enter</span>'+
+      '<span><button onclick="entMarcaTodos()">Marcar '+hits.length+'</button> '+(nMk?'<button class="pr" onclick="entAgregarMarcados()">Agregar '+nMk+' marcados</button>':'')+'</span></div>';
   if (!total){
     if (exacto && exacto.entregado) h = '<div class="entp-aviso">Este pedido ya figura como entregado en el Kanban.</div>';
     else if (entNormF8_(q)) h = '<div class="entp-aviso">Este pedido no está en el tablero. Escribe su unidad ejecutora al lado y agrégalo: queda registrado igual.</div>';
     else h = '<div class="ent-nota">Ningún pedido pendiente coincide.</div>';
   }
   box.innerHTML = h;
+  var sel = document.getElementById('entSg'+ENT_IDX); if (sel && sel.scrollIntoView) try{ sel.scrollIntoView({block:'nearest'}); }catch(e){}
+}
+var ENT_SUGS = [], ENT_IDX = 0, ENT_MK = {}, ENT_ULTIMOS = [];
+function entMarca(id, v){ if (v) ENT_MK[id] = 1; else delete ENT_MK[id]; entCapSug(); }
+function entMarcaTodos(){ ENT_SUGS.forEach(function(id){ ENT_MK[id] = 1; }); entCapSug(); }
+function entAgregarMarcados(){
+  var ids = Object.keys(ENT_MK); if (!ids.length) return;
+  var cola = entCola_(), ya = {}; cola.forEach(function(x){ ya[entIdParcial_(x.f8)] = 1; });
+  var r = entRepParse_((document.getElementById('entCapRep')||{}).value);
+  var hEnt = entHoraOk_((document.getElementById('entCapHora')||{}).value) || entHora_();
+  var n = 0; ENT_ULTIMOS = [];
+  ids.forEach(function(id){
+    var p = entBuscarPedido_(id); if (!p || ya[entIdParcial_(p.id)]) return;
+    cola.push({ f8:String(p.id).trim(), ue:p.ue, hora:hEnt, fecha:entFechaSel_(), estado:'pendiente', rep:r.rep, ced:r.ced, colado:false });
+    ENT_ULTIMOS.push(String(p.id).trim()); n++;
+  });
+  entColaSet_(cola); ENT_MK = {}; ENT_IDX = 0; entStF8 = '';
+  entRender();
+  entAviso_(n + (n===1?' pedido agregado':' pedidos agregados'), 'ok');
+  var ri = document.getElementById('entRetIn'); if (ri) ri.focus();
+}
+/* después de agregar varios: quién los retiró, una sola vez para todos */
+function entRetUltimos(){
+  var r = entRepParse_((document.getElementById('entRetIn')||{}).value), cola = entCola_();
+  cola.forEach(function(x){ if (ENT_ULTIMOS.indexOf(x.f8) >= 0 && x.estado !== 'subida'){ x.rep = r.rep; x.ced = r.ced; } });
+  entColaSet_(cola); ENT_ULTIMOS = []; entFoco = true; entRender();
 }
 /* La unidad se llena sola cuando la Forma 8 corresponde a un pedido conocido. */
 function entCapUEAuto_(p){
@@ -3476,12 +3531,16 @@ function entCapUECambia(){
 }
 function entCapRepCambia(){ var r = document.getElementById('entCapRep'); if(r) entStRep = r.value; }
 function entCapTecla(ev, campo){
+  if (campo === 'f8' && ENT_SUGS.length && (ev.key === 'ArrowDown' || ev.key === 'ArrowUp')){
+    ev.preventDefault(); ENT_IDX = Math.max(0, Math.min(ENT_SUGS.length-1, ENT_IDX + (ev.key === 'ArrowDown' ? 1 : -1))); entCapSug(); return;
+  }
+  if (campo === 'f8' && ev.key === 'Escape'){ var bx = document.getElementById('entCapSug'); if (bx) bx.innerHTML = ''; ENT_SUGS = []; return; }
   if (ev.key !== 'Enter') return;
   ev.preventDefault();
+  if (campo === 'f8' && Object.keys(ENT_MK).length){ entAgregarMarcados(); return; }
   if (campo === 'f8'){
-    var pri = document.querySelector('#entCapSug .entp-sug.pri');
     var q = (document.getElementById('entCapF8')||{}).value || '';
-    if (pri && !entBuscarPedido_(q)){ pri.click(); return; }
+    if (ENT_SUGS.length && !entBuscarPedido_(q)){ entCapElegir(ENT_SUGS[ENT_IDX] || ENT_SUGS[0]); return; }
   }
   entCapAgregar();
 }
