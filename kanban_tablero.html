@@ -2226,7 +2226,8 @@ function _actualizarBadgesBusqueda(q){
   const cont={
     reparto:  F8.filter(f=>!f.anulado && f.macro!=='DISTRIBUCION' && match(f)).length,
     crono:    F8.filter(f=>!f.anulado && match(f)).length,
-    entregas: F8.filter(f=>(f.despachado||f.entregado) && !f.anulado && match(f)).length,
+    entregas: F8.filter(f=>(f.despachado||f.entregado) && !f.anulado && match(f)).length
+              + ((typeof ENTREGADOS_MEM!=='undefined' && ENTREGADOS_MEM) ? ENTREGADOS_MEM.filter(function(f){ return f && !F8.some(function(x){ return x.id===f.id; }) && match(f); }).length : 0),
     noasig:   F8.filter(f=>f.ceroDesabasto && match(f)).length,
     anulados: F8.filter(f=>f.anulado && match(f)).length
   };
@@ -2258,7 +2259,19 @@ function buscarDoc(){
   // filtrada arriba (render con BUSCA_NAV). No se muestra panel flotante que
   // tape la vista. Solo si NO hay ninguna activa se consulta cerrados (abajo).
   const _hayActivos = F8.some(f=> !f.anulado && (_buscNorm(f.id).indexOf(q)>=0 || _buscNorm(f.ue).indexOf(q)>=0));
+  clearTimeout(BUSC_T); BUSC_SEQ++;                     /* E2 · anula búsquedas en el servidor ya en curso */
   if(_hayActivos){ panel.style.display='none'; panel.innerHTML=''; return; }
+
+  /* E2 (25-sep) · UN PEDIDO YA ENTREGADO SE ABRE DONDE VIVE. La memoria de
+     entregas ya está en el navegador: se busca ahí primero (al instante) y se
+     lleva al supervisor a Entregas › Memoria con el pedido filtrado, en vez de
+     mostrarlo solo en la lista flotante tras esperar al servidor. */
+  const _enMemoria = rdMemoria_().some(f=> _buscNorm(f.id).indexOf(q)>=0 || _buscNorm(f.ue).indexOf(q)>=0);
+  if(_enMemoria){
+    panel.style.display='none'; panel.innerHTML='';
+    if(!(VISTA==='entregas' && EN_TAB==='hechas')) rdIrEntregas('memoria'); else render();
+    return;
+  }
 
   // Coincidencia por Forma 8 (contiene) o por Unidad Ejecutora (contiene).
   const hits=F8.filter(f=> _buscNorm(f.id).indexOf(q)>=0 || _buscNorm(f.ue).indexOf(q)>=0 );
@@ -2276,7 +2289,10 @@ function buscarDoc(){
     // vía backend, para que el supervisor rastree su trabajo ya hecho.
     html+='<div class="busc-vacio">Buscando en pedidos ya cerrados\u2026</div>';
     panel.innerHTML=html; panel.style.display='';
-    buscarCerrados(q, panel);
+    /* E2 · al servidor solo cuando se deja de teclear (antes: una consulta de
+       ~8 s por cada letra, y respondían en desorden). */
+    const _seq = BUSC_SEQ;
+    BUSC_T = setTimeout(function(){ if(_seq===BUSC_SEQ) buscarCerrados(q, panel, _seq); }, 700);
     return;
   }
   hits.slice(0,BUSC_MAX).forEach(f=>{
@@ -2307,9 +2323,11 @@ function buscarDoc(){
 // Busca en pedidos CERRADOS (entregados/despachados) vía backend. Se llama
 // cuando el buscador no halla el pedido en el universo activo. Así el
 // supervisor rastrea su trabajo ya hecho sin engordar el tablero.
-async function buscarCerrados(q, panel){
+var BUSC_T=null, BUSC_SEQ=0;
+async function buscarCerrados(q, panel, seq){
   try{
     const res=await pedir('file=kb_buscar_cerrado&q='+encodeURIComponent(q));
+    if(seq!=null && seq!==BUSC_SEQ) return;              /* E2 · respuesta de una búsqueda ya reemplazada */
     const hits=(res&&res.hits)||[];
     let html='<div class="busc-cab">'+hits.length+' pedido'+(hits.length===1?'':'s')+' cerrado'+(hits.length===1?'':'s')+' \u00b7 '+_esc(q)+'</div>';
     if(!hits.length){
