@@ -642,6 +642,8 @@
   #vistaEntregasDia .entp-dia{margin-top:0;padding-top:4px}
   .ver-mas{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 12px;font-size:12.5px;color:#5a6675}
   .ver-mas button{border:1px solid #1f3864;background:#fff;color:#1f3864;border-radius:6px;padding:6px 14px;font-weight:600;cursor:pointer}
+  /* F5 · número de pestaña resaltado cuando hay búsqueda */
+  .vsw-btn .tbn.tbn-q{background:var(--tc);color:#fff;border-radius:9px;padding:1px 7px}
 </style>
 </head>
 <body>
@@ -2138,7 +2140,7 @@ function renderNoAsignadas(){
   });
   // badge en el botón: coherente con la tarjeta (fase SIN_ASIGNAR)
   const total=F8.filter(f=>f.macro==='SIN_ASIGNAR').length;
-  const bd=document.getElementById('naBadge'); if(bd) bd.textContent='('+total+')';
+  const bd=document.getElementById('naBadge'); if(bd) bd.textContent='';   /* F5: el número va en .tbn */
 
   // agrupar por UE
   const porUE={};
@@ -2171,13 +2173,11 @@ function render(){
   pintarBanda(); pintarKPIs(); rdPintarCabecera_(); try{ rdNav_(VISTA); }catch(e){}   // las tarjetas reaccionan al contexto (UE/grupo/triage/pendiente)
   // Badge de Anulados: se actualiza siempre, se vea la vista que se vea.
   const nAn=F8.filter(f=>f.anulado).length;
-  const ab=document.getElementById('anBadge'); if(ab) ab.textContent=nAn?('('+nAn+')'):'';
+  const ab=document.getElementById('anBadge'); if(ab) ab.textContent='';   /* F5: el número va en .tbn */
   // Badge de Entregas: pendientes por confirmar (despachados, no entregados, no retirados).
   const nEn=F8.filter(f=>f.despachado && !f.entregado && !f.anulado).length;
-  const eb=document.getElementById('enBadge'); if(eb) eb.textContent=nEn?nEn.toLocaleString():'';
-  /* F1: números de las pestañas nuevas */
-  try{ const td=document.getElementById('tbDentro'); if(td) td.textContent=F8.filter(f=>!f.anulado && ['RECEPCION','ASIGNACION','RECOLECCION','PICKING','FACTURACION'].indexOf(f.macro)>=0).length.toLocaleString();
-       const tm=document.getElementById('tbMem'); if(tm) tm.textContent=rdMemoria_().length.toLocaleString(); }catch(e){}
+  /* F5: todas las pestañas con su número, contado igual que su lista (y con la búsqueda, si hay) */
+  try{ _actualizarBadgesBusqueda(BUSCA_NAV||''); }catch(e){}
   if(VISTA==='entdia') return;   /* la bahía se pinta sola: no se le quita el foco a quien teclea */
   const rows=filtrados();
   if(VISTA==='crono'){ renderPlanEntregas(); return; }   // Plan de Entregas: pedidos con fecha PROMETIDA por el supervisor, agrupados por día
@@ -2313,31 +2313,36 @@ function _etapaLabel(f){
 }
 // Muestra, en cada pestaña, cuántos pedidos coinciden con la búsqueda actual.
 // Así el supervisor sabe DÓNDE hay resultados sin adivinar entre pestañas.
-function _actualizarBadgesBusqueda(q){
-  const btns=document.querySelectorAll('.vsw-btn');
-  if(!q){
-    // Sin búsqueda: quitar todos los badges de conteo.
-    btns.forEach(b=>{ const bd=b.querySelector('.busc-badge'); if(bd) bd.remove(); });
-    return;
-  }
-  // Contar coincidencias por vista (mismos criterios que cada vista usa).
-  const match=f=> _buscNorm(f.id).indexOf(q)>=0 || _buscNorm(f.ue).indexOf(q)>=0;
-  const cont={
-    reparto:  F8.filter(f=>!f.anulado && f.macro!=='DISTRIBUCION' && match(f)).length,
-    crono:    F8.filter(f=>!f.anulado && match(f)).length,
-    entregas: F8.filter(f=>(f.despachado||f.entregado) && !f.anulado && match(f)).length
-              + ((typeof ENTREGADOS_MEM!=='undefined' && ENTREGADOS_MEM) ? ENTREGADOS_MEM.filter(function(f){ return f && !F8.some(function(x){ return x.id===f.id; }) && match(f); }).length : 0),
-    noasig:   F8.filter(f=>f.ceroDesabasto && match(f)).length,
-    anulados: F8.filter(f=>f.anulado && match(f)).length
+/* F5 (24-sep-2026) · UN SOLO NÚMERO POR PESTAÑA, CON EL CRITERIO DE ESA PESTAÑA.
+   Antes, al buscar, aparecía además una etiqueta roja contada con criterios
+   viejos: "Plan de entregas 379" contaba TODOS los pedidos de la búsqueda (el
+   plan solo muestra los que tienen fecha prometida: 0), y "Dentro del almacén
+   108" contaba también los de cero por desabasto y los despachados (la lista
+   mostraba 84). Ahora cada pestaña muestra UN número, contado igual que su
+   lista; con búsqueda, ese número es el de la búsqueda y se resalta. */
+var TB_DENTRO_ = ['RECEPCION','ASIGNACION','RECOLECCION','PICKING','FACTURACION'];
+function tbContar_(q){
+  const match = q ? (f=> _buscNorm(f.id).indexOf(q)>=0 || _buscNorm(f.ue).indexOf(q)>=0) : (()=>true);
+  const mem = (typeof rdMemoria_==='function') ? rdMemoria_() : [];
+  return {
+    reparto:   F8.filter(f=>!f.anulado && TB_DENTRO_.indexOf(f.macro)>=0 && match(f)).length,
+    'ent-conf':F8.filter(f=>f.despachado && !f.entregado && !f.anulado && match(f)).length,
+    'ent-mem': mem.filter(match).length,
+    crono:     F8.filter(f=>f.fechaComprometida && !f.entregado && !f.anulado && match(f)).length,
+    noasig:    F8.filter(f=>!f.anulado && f.macro==='SIN_ASIGNAR' && match(f)).length,
+    anulados:  F8.filter(f=>f.anulado && match(f)).length
   };
-  btns.forEach(b=>{
-    const v=b.getAttribute('data-vista');
-    let bd=b.querySelector('.busc-badge');
-    const n=cont[v]||0;
-    if(n>0){
-      if(!bd){ bd=document.createElement('span'); bd.className='busc-badge'; b.appendChild(bd); }
-      bd.textContent=n;
-    } else if(bd){ bd.remove(); }
+}
+function _actualizarBadgesBusqueda(q){
+  document.querySelectorAll('.vsw-btn .busc-badge').forEach(function(bd){ bd.remove(); });   // ya no hay etiqueta aparte
+  const c = tbContar_(q || '');
+  document.querySelectorAll('.vsw-btn').forEach(function(b){
+    const v = b.getAttribute('data-vista'); if(!(v in c)) return;
+    let n = b.querySelector('.tbn');
+    if(!n){ n = document.createElement('span'); n.className = 'tbn'; b.appendChild(n); }
+    n.textContent = c[v].toLocaleString();
+    n.classList.toggle('tbn-q', !!q);
+    n.title = q ? 'pedidos de esta pestaña que coinciden con la búsqueda' : '';
   });
 }
 
