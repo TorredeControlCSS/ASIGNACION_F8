@@ -736,7 +736,7 @@ async function cargar(silencioso, desdeMotor){
     TA_DATOS_MS = (fuente==='archivo') ? (Date.parse(res.generadoISO||'')||Date.now()) : Date.now();
     F8=res.f8||[]; MACROS=res.macros||[]; UETOT=res.ueTotales||{};
     MACROS.forEach(m=>COLOR[m.clave]=m.color);
-    document.getElementById('gen').innerHTML='Actualizado: '+(res.generado||'\u2014')+
+    document.getElementById('gen').innerHTML='Revisado: '+(res.generado||'\u2014')+' PTY'+
       (fuente==='archivo'?' \u00b7 archivo':' \u00b7 Motor')+'<br>Hoy: '+(res.diaHoy||'\u2014')+' \u00b7 '+F8.length+' F8 activas';
     pintarLeyenda(); poblarFiltros(); render();
     if(fuente==='archivo' && (Date.now()-TA_DATOS_MS)>TA_VIEJO_MS && !TA_REFRESCANDO){
@@ -3403,8 +3403,8 @@ function rdKpi(id){
 
 /* ── el flujo Kanban ── */
 var RD_ET_FUERA=[
-  {clave:'DISTRIBUCION', label:'Distribuci\u00f3n', pie:'salieron'},
-  {clave:'DESPACHADO',   label:'Despachado',        pie:'por confirmar'},
+  {clave:'DISTRIBUCION', label:'Distribuci\u00f3n', pie:'sali\u00f3 con documento'},
+  {clave:'DESPACHADO',   label:'Despachado',        pie:'cierre f\u00edsico en bah\u00eda'},
   {clave:'ENTREGADO',    label:'Entregado en la UE', pie:'confirmados'}
 ];
 function rdPintarFlujo_(){
@@ -3416,8 +3416,10 @@ function rdPintarFlujo_(){
     return { clave:Fa.clave, label:Fa.label, equipo:Fa.equipo, n:l.length, v7:v7 };
   });
   var cu=null, max=0; dentro.forEach(function(x){ if(x.v7>max){ max=x.v7; cu=x.clave; } });
-  var nDist=F.filter(function(f){ return f.macro==='DISTRIBUCION' && !f.despachado && !f.entregado; }).length;
-  var nDesp=rdPorConfirmar_().length;
+  /* E1 (25-sep): Distribución = salió con documento y sin cierre físico;
+     Despachado = cierre físico en bahía. Los dos esperan confirmar entrega. */
+  var nDist=F.filter(function(f){ return (f.despachado||f.macro==='DISTRIBUCION') && !f.despFisico && !f.entregado && !f.anulado; }).length;
+  var nDesp=F.filter(function(f){ return f.despFisico && !f.entregado && !f.anulado; }).length;
   var fu=(document.getElementById('fUE')||{}).value||'', fg=(document.getElementById('fGrupo')||{}).value||'';
   var nEnt=rdMemoria_().filter(function(f){ return (!fu||f.ue===fu)&&(!fg||f.grupo===fg); }).length;
   var fuera=[nDist,nDesp,nEnt];
@@ -3443,7 +3445,7 @@ function rdIrEtapa(clave){
   RD_KPI=null; RD_MAS90=false;
   if(clave==='DESPACHADO'){ rdIrEntregas('confirmar'); return; }
   if(clave==='ENTREGADO'){ rdIrEntregas('memoria'); return; }
-  if(clave==='DISTRIBUCION'){ return; }
+  if(clave==='DISTRIBUCION'){ rdIrEntregas('confirmar'); return; }   // E1: también espera confirmar entrega
   if(typeof rpColapsado!=='undefined') rpColapsado[clave]=false;
   cambiarVista('reparto');
   setTimeout(function(){ var el=document.getElementById('rpfase_'+clave); if(el&&el.scrollIntoView) el.scrollIntoView({behavior:'smooth',block:'start'}); }, 60);
@@ -3465,8 +3467,8 @@ function rdIndicadores_(){
   var pc=F.filter(function(f){ return f.despachado && !f.entregado; });
   var dd=pc.map(function(f){ return _diasDesde_(f.fDespacho)||0; });
   var fuera=[
-    { label:'Distribuci\u00f3n', n:F.filter(function(f){ return f.macro==='DISTRIBUCION' && !f.despachado && !f.entregado; }).length },
-    { label:'Despachado', n:pc.length },
+    { label:'Distribuci\u00f3n', n:F.filter(function(f){ return (f.despachado||f.macro==='DISTRIBUCION') && !f.despFisico && !f.entregado; }).length },
+    { label:'Despachado', n:F.filter(function(f){ return f.despFisico && !f.entregado; }).length },
     { label:'Entregado en la UE', n:rdMemoria_().length }
   ];
   var tD=dentro.reduce(function(s,x){return s+x.n;},0), tF=fuera.reduce(function(s,x){return s+x.n;},0);
