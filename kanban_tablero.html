@@ -556,6 +556,44 @@
   .entp-modal h4{margin:0 0 4px;color:#1f3864;font-size:16px}
   .entp-modal textarea{width:100%;box-sizing:border-box;font-family:Consolas,monospace;font-size:14px;padding:9px;border:1px solid #c6ccd4;border-radius:5px;margin:10px 0}
   .entp-modal .acc{display:flex;gap:8px;justify-content:flex-end}
+  /* ══ F1 (24-sep-2026) · diseño aprobado en el dummy ══ */
+  /* pestañas de color */
+  .vistas-sw{display:flex;gap:4px;flex-wrap:wrap;align-items:flex-end;border:0;border-bottom:2px solid #d9dee5;background:none;margin-top:12px}
+  .vsw-btn{border:1px solid #d9dee5!important;border-bottom:0!important;border-top:4px solid var(--tc,#9fb3cf)!important;background:var(--tb,#f4f6f9);
+           border-radius:7px 7px 0 0;margin-bottom:-2px;padding:8px 14px;font-size:13px;color:#1d2733;opacity:.8}
+  .vsw-btn:hover{opacity:1}
+  .vsw-btn.activa{opacity:1;background:#fff!important;color:#1d2733!important;border-bottom:2px solid #fff!important;box-shadow:0 -2px 6px rgba(0,0,0,.05)}
+  .vsw-btn.sec{font-weight:500}
+  .vsw-btn .tbn{font-family:Consolas,monospace;font-size:11.5px;font-weight:700;color:var(--tc);margin-left:5px}
+  .vsw-div{width:1px;height:22px;background:#d9dee5;margin:0 6px 8px}
+  .vsw-btn[data-vista="reparto"]{--tc:#2c4a78;--tb:#e7edf6}
+  .vsw-btn[data-vista="ent-conf"]{--tc:#2e6b36;--tb:#e6f3e8}
+  .vsw-btn[data-vista="ent-reg"]{--tc:#1f3864;--tb:#dde8f6}
+  .vsw-btn[data-vista="ent-mem"]{--tc:#0F6E56;--tb:#dff1ea}
+  .vsw-btn[data-vista="crono"]{--tc:#6b5b95;--tb:#efecf6}
+  .vsw-btn[data-vista="noasig"]{--tc:#8c1d18;--tb:#f8e6e6}
+  .vsw-btn[data-vista="anulados"]{--tc:#6b7280;--tb:#eef0f3}
+  #rdSub{display:none!important}               /* las sub-pestañas pasan a ser pestañas */
+  /* tarjetas delgadas debajo del flujo */
+  .rd-kpis{margin:8px 0 0;gap:8px}
+  .rd-kpi{flex-direction:row;align-items:baseline;gap:8px;padding:7px 12px;border-radius:8px;min-width:190px}
+  .rd-kpi b{font-size:19px}
+  .rd-kpi small{margin-left:auto}
+  /* migas: dónde estás y cómo volver */
+  .rd-migas{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;color:#5a6675;margin:8px 0 2px;min-height:26px}
+  .rd-migas b{color:#1d2733}
+  .rd-migas .chipf{background:#eef2f8;border:1px solid #c9d4e4;border-radius:14px;padding:3px 10px;font-size:12px;color:#1f3864}
+  .rd-migas .chipf button{border:0;background:none;color:#1f3864;cursor:pointer;padding:0 0 0 4px}
+  .rd-migas .volver{border:1px solid #d9dee5;background:#fff;border-radius:6px;padding:4px 10px;color:#1f3864;font-weight:600;cursor:pointer}
+  /* una sola paleta: se retiran la leyenda de triage y el color de fila por triage */
+  #leyenda{display:none}
+  tr.row-ROJO td,tr.row-NARANJA td,tr.row-AMARILLO td,tr.row-VERDE td,tr.row-AZUL td{background:transparent}
+  tr.row-ROJO td:first-child,tr.row-NARANJA td:first-child,tr.row-AMARILLO td:first-child,tr.row-VERDE td:first-child,tr.row-AZUL td:first-child{border-left-color:transparent}
+  /* sin controles técnicos para el supervisor: la memoria se publica sola */
+  .rd-mem{display:none!important}
+  /* el detalle se abre al costado, sin tapar la lista */
+  .modal-bg{align-items:stretch!important;justify-content:flex-end!important;padding:0!important;background:rgba(15,25,45,.3)!important}
+  .modal-bg .modal{max-width:500px!important;width:100%;height:100vh!important;max-height:none!important;border:0!important;border-radius:0!important}
 </style>
 </head>
 <body>
@@ -598,14 +636,18 @@
     <div class="kpi fact" id="kpi_FACTURACION" onclick="filtrarMacro('FACTURACION')"><div class="lbl">Facturaci&oacute;n</div><div class="val num" id="k_FACTURACION">&ndash;</div></div>
     <div class="kpi dist" id="kpi_DISTRIBUCION" onclick="filtrarMacro('DISTRIBUCION')"><div class="lbl">Distribuci&oacute;n</div><div class="val num" id="k_DISTRIBUCION">&ndash;</div></div>
   </div>
-  <div id="rdKpis" class="rd-kpis"></div>
   <div id="rdFlujo" class="rd-flujo"></div>
+  <div id="rdKpis" class="rd-kpis"></div>
+  <!-- F1 (24-sep-2026) · pestañas en el orden del flujo, cada una con su color -->
   <div class="vistas-sw">
-    <button class="vsw-btn activa" data-vista="ent" onclick="RD_KPI=null;rdIrEntregas('registrar')">Entregas <span id="enBadge" style="font-family:Consolas;font-size:11px;opacity:.8"></span><span id="edBadge" style="font-family:Consolas;font-size:11px;margin-left:3px"></span></button>
-    <button class="vsw-btn" data-vista="reparto" onclick="cambiarVista('reparto')">Reparto por fase</button>
-    <button class="vsw-btn" data-vista="crono" onclick="cambiarVista('crono')">Plan de Entregas</button>
-    <button class="vsw-btn" data-vista="noasig" onclick="cambiarVista('noasig')">Cero por desabasto <span id="naBadge" style="font-family:Consolas;font-size:11px;opacity:.8"></span></button>
-    <button class="vsw-btn" data-vista="anulados" onclick="cambiarVista('anulados')">Retirados del ciclo <span id="anBadge" style="font-family:Consolas;font-size:11px;opacity:.8"></span></button>
+    <button class="vsw-btn" data-vista="reparto" onclick="RD_KPI=null;cambiarVista('reparto')">Dentro del almac&eacute;n <span id="tbDentro" class="tbn"></span></button>
+    <button class="vsw-btn" data-vista="ent-conf" onclick="RD_KPI=null;rdIrEntregas('confirmar')">Por confirmar entrega <span id="enBadge" class="tbn"></span></button>
+    <button class="vsw-btn activa" data-vista="ent-reg" onclick="RD_KPI=null;rdIrEntregas('registrar')">Registrar hoy <span id="edBadge" class="tbn"></span></button>
+    <button class="vsw-btn" data-vista="ent-mem" onclick="RD_KPI=null;rdIrEntregas('memoria')">Memoria <span id="tbMem" class="tbn"></span></button>
+    <span class="vsw-div"></span>
+    <button class="vsw-btn sec" data-vista="crono" onclick="cambiarVista('crono')">Plan de entregas</button>
+    <button class="vsw-btn sec" data-vista="noasig" onclick="cambiarVista('noasig')">Cero por desabasto <span id="naBadge" style="font-family:Consolas;font-size:11px;opacity:.8"></span></button>
+    <button class="vsw-btn sec" data-vista="anulados" onclick="cambiarVista('anulados')">Retirados del ciclo <span id="anBadge" style="font-family:Consolas;font-size:11px;opacity:.8"></span></button>
   </div>
   <div class="toolbar rd-tb" id="rdTb">
     <div class="buscador-wrap">
@@ -617,10 +659,11 @@
     <select id="fGrupo" title="Grupo"><option value="">Todos los grupos</option></select>
     <select id="fTipo" title="Tipo de pedido"><option value="">Urgencias y mensuales</option><option value="URG">Urgencias</option><option value="MEN">Mensuales</option></select>
     <select id="fDiaEnt" class="rd-solo-dia" title="Día de entrega de la unidad"><option value="">Cualquier d&iacute;a de entrega</option><option value="1">Lunes</option><option value="2">Martes</option><option value="3">Mi&eacute;rcoles</option><option value="4">Jueves</option><option value="5">Viernes</option></select>
-    <button class="rd-limpiar" id="btnLimpiar" style="display:none">&#10005; Limpiar filtros</button>
+    <button class="rd-limpiar" id="btnLimpiar" style="display:none">&#10005; Limpiar todo</button>
     <div class="spacer"></div><span class="count" id="cnt"></span>
   </div>
   <div id="rdSub" class="rd-sub" style="display:none"></div>
+  <div id="rdMigas" class="rd-migas"></div>
   <div id="vistaCrono" style="display:none;"><div class="rd-ctx"><button class="rd-ctxbtn pend-toggle" id="btnPendiente" title="Ocultar los pedidos que ya salieron en distribuci&oacute;n">Solo pendiente</button></div><div id="grillaSemanal"></div></div>
   <div id="vistaUE" style="display:none;"><div id="lista"></div></div>
   <div id="vistaEntregasDia"></div>
@@ -897,6 +940,10 @@ function filtrarMacro(clave){
 }
 function limpiarFiltros(){
   accionFiltro=''; macroFiltro=''; _cuelloActivo=false; triFiltro=''; diaFiltro='';
+  /* F1 (24-sep): la búsqueda también se limpia. Antes solo se borraba el texto
+     del buscador y el filtro seguía activo (BUSCA_NAV): "queda pegado". */
+  BUSCA_NAV=''; RD_KPI=null; RD_MAS90=false;
+  try{ _actualizarBadgesBusqueda(''); }catch(e){}
   document.getElementById('fGrupo').value='';
   document.getElementById('fUE').value='';
   { const el=document.getElementById('fTipo'); if(el) el.value=''; }
@@ -2078,7 +2125,10 @@ function render(){
   const ab=document.getElementById('anBadge'); if(ab) ab.textContent=nAn?('('+nAn+')'):'';
   // Badge de Entregas: pendientes por confirmar (despachados, no entregados, no retirados).
   const nEn=F8.filter(f=>f.despachado && !f.entregado && !f.anulado).length;
-  const eb=document.getElementById('enBadge'); if(eb) eb.textContent=nEn?('('+nEn+')'):'';
+  const eb=document.getElementById('enBadge'); if(eb) eb.textContent=nEn?nEn.toLocaleString():'';
+  /* F1: números de las pestañas nuevas */
+  try{ const td=document.getElementById('tbDentro'); if(td) td.textContent=F8.filter(f=>!f.anulado && ['RECEPCION','ASIGNACION','RECOLECCION','PICKING','FACTURACION'].indexOf(f.macro)>=0).length.toLocaleString();
+       const tm=document.getElementById('tbMem'); if(tm) tm.textContent=rdMemoria_().length.toLocaleString(); }catch(e){}
   if(VISTA==='entdia') return;   /* la bahía se pinta sola: no se le quita el foco a quien teclea */
   const rows=filtrados();
   if(VISTA==='crono'){ renderPlanEntregas(); return; }   // Plan de Entregas: pedidos con fecha PROMETIDA por el supervisor, agrupados por día
@@ -3730,6 +3780,7 @@ function rdBarra_(){
   var dia=document.getElementById('fDiaEnt');
   if(dia) dia.style.display = (VISTA==='reparto' || VISTA==='crono') ? '' : 'none';
   var hay=['fUE','fGrupo','fTipo','fDiaEnt','fBuscar'].some(function(id){ var e=document.getElementById(id); return e && String(e.value||'').trim(); });
+  hay = hay || !!BUSCA_NAV || !!macroFiltro || !!RD_MAS90;   /* F1: también búsqueda, etapa o +90 días */
   var bl=document.getElementById('btnLimpiar'); if(bl) bl.style.display = hay ? '' : 'none';
 }
 
@@ -3749,10 +3800,12 @@ function rdIrEntregas(sub){
 }
 function rdNav_(v){
   var enEnt = (v==='entdia' || v==='entregas');
+  var actEnt = (v==='entdia') ? 'ent-reg' : (v==='entregas' ? (EN_TAB==='hechas' ? 'ent-mem' : 'ent-conf') : '');
   document.querySelectorAll('.vsw-btn').forEach(function(b){
     var d=b.getAttribute('data-vista');
-    b.classList.toggle('activa', d===v || (d==='ent' && enEnt));
+    b.classList.toggle('activa', d===v || (actEnt && d===actEnt));
   });
+  try{ rdMigas_(v); }catch(e){}
   var sub=document.getElementById('rdSub'); if(!sub) return;
   sub.style.display = enEnt ? '' : 'none';
   if(!enEnt) return;
@@ -3762,6 +3815,28 @@ function rdNav_(v){
   sub.innerHTML=[['registrar','Registrar',nCola],['confirmar','Por confirmar',nPc],['memoria','Memoria',nMem]].map(function(x){
     return '<button class="'+(act===x[0]?'on':'')+'" onclick="RD_KPI=null;rdIrEntregas(\''+x[0]+'\')">'+x[1]+'<b>'+x[2].toLocaleString()+'</b></button>';
   }).join('');
+}
+
+
+/* ── F1 (24-sep-2026) · MIGAS: dónde estás, qué filtros hay y cómo volver ── */
+function rdMigas_(v){
+  var box=document.getElementById('rdMigas'); if(!box) return;
+  var nom={reparto:'Dentro del almac\u00e9n',crono:'Plan de entregas',noasig:'Cero por desabasto',anulados:'Retirados del ciclo',entdia:'Registrar hoy'}[v]
+          || (v==='entregas' ? (EN_TAB==='hechas'?'Memoria de entregas':'Por confirmar entrega') : '');
+  var h='<span>Est\u00e1s en: <b>'+nom+'</b></span>';
+  if(v==='reparto' && macroFiltro){ var F=(RP_FASES||[]).filter(function(x){return x.clave===macroFiltro;})[0];
+    h+='<span>\u203a</span><b>'+(F?F.label:macroFiltro)+'</b><button class="volver" onclick="macroFiltro=\'\';render()">&larr; Todas las fases</button>'; }
+  if(v==='entregas' && RD_MAS90){ h+='<span>\u203a</span><b>M\u00e1s de 90 d\u00edas</b><button class="volver" onclick="RD_MAS90=false;RD_KPI=null;render()">&larr; Todos</button>'; }
+  var ch=[], g=function(id){ var e=document.getElementById(id); return e?e.value:''; };
+  if(BUSCA_NAV) ch.push(['q','B\u00fasqueda: '+(document.getElementById('fBuscar')||{}).value]);
+  if(g('fUE')) ch.push(['fUE',g('fUE')]); if(g('fGrupo')) ch.push(['fGrupo',g('fGrupo')]);
+  if(g('fTipo')) ch.push(['fTipo',g('fTipo')==='URG'?'Urgencias':'Mensuales']);
+  ch.forEach(function(c){ h+='<span class="chipf">'+_esc(c[1])+'<button onclick="rdQuitarFiltro_(\''+c[0]+'\')" aria-label="Quitar filtro">&times;</button></span>'; });
+  box.innerHTML = (v==='entdia') ? '' : h;
+}
+function rdQuitarFiltro_(k){
+  if(k==='q'){ var i=document.getElementById('fBuscar'); if(i){ i.value=''; } BUSCA_NAV=''; try{ buscarDoc(); }catch(e){} render(); return; }
+  var e=document.getElementById(k); if(e){ e.value=''; e.dispatchEvent(new Event('change')); } render();
 }
 
 /* ── botón Actualizar memoria: publica desde el tablero, con PIN ── */
