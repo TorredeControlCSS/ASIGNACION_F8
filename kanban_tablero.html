@@ -361,6 +361,9 @@
   .ent-barra{display:flex;align-items:center;gap:10px;background:#1f3864;color:#fff;padding:9px 14px;border-radius:6px;font-size:14px;margin-bottom:10px}
   .ent-red{margin-left:auto;font-size:12px;font-family:Consolas,monospace}
   .ent-red .ok{color:#8fe08f}.ent-red .off{color:#ffc9a0}
+  /* F4: sobre fondo claro el verde pálido no se leía */
+  .entp-dia .ent-red, .entp-dia .ent-red *{color:#1d5e26!important;font-weight:600}
+  .entp-dia .ent-red .off, .entp-dia .ent-red .off *{color:#8a4b00!important}
   .ent-oferta{background:#e8f1fb;border:1px solid #1f6bb8;border-left:4px solid #1f6bb8;padding:11px 14px;border-radius:5px;margin-bottom:10px;font-size:14px}
   .ent-aviso{padding:9px 13px;border-radius:5px;margin-bottom:10px;font-size:13px}
   .ent-aviso.ok{background:#eaf5ea;border-left:4px solid #2e7d32}
@@ -633,6 +636,12 @@
   .sel-barra .ap:disabled{opacity:.6;cursor:progress}
   .sel-barra .qs{border:1px solid rgba(255,255,255,.6);background:none;color:#fff;border-radius:6px;padding:6px 10px;cursor:pointer}
   .sel-barra small{opacity:.85;font-size:12px}
+  /* F4 · sin hueco entre la barra y la bahía; botón Ver más */
+  .rd-migas:empty{display:none}
+  .rd-tb{margin-bottom:6px}
+  #vistaEntregasDia .entp-dia{margin-top:0;padding-top:4px}
+  .ver-mas{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 12px;font-size:12.5px;color:#5a6675}
+  .ver-mas button{border:1px solid #1f3864;background:#fff;color:#1f3864;border-radius:6px;padding:6px 14px;font-weight:600;cursor:pointer}
 </style>
 </head>
 <body>
@@ -1622,7 +1631,8 @@ function renderReparto(){
       +'<span class="rp-n">'+lista.length+' pedidos'+(urg?' &middot; '+urg+' urg':'')+'</span></div>';
     html+='<div class="rp-cuerpo">';
     html+='<div class="rp-sub">'+atrasados+' atrasados &middot; priorizado: m\u00e1s atrasado primero &middot; responsable: '+_escNA(F.equipo)+'</div>';
-    html+='<div class="rp-scroll"><table class="rp-t"><thead><tr>'+selCab_('rp'+(F.clave||''), lista)
+    const _clRp='rp'+(F.clave||''), _ordRp=lista.slice().sort(rpOrdenActivo_), _visRp=_ordRp.slice(0, LIM_(_clRp));
+    html+='<div class="rp-scroll"><table class="rp-t"><thead><tr>'+selCab_(_clRp, _visRp)
       +'<th class="ord" onclick="rpOrdenarPor(\'id\')">Forma 8'+rpOrdInd('id')+'</th>'
       +'<th class="ord" onclick="rpOrdenarPor(\'ue\')">Unidad Ejecutora'+rpOrdInd('ue')+'</th>'
       +'<th class="ord" onclick="rpOrdenarPor(\'grupo\')">Grupo'+rpOrdInd('grupo')+'</th>'
@@ -1633,7 +1643,7 @@ function renderReparto(){
       +'<th class="ord" onclick="rpOrdenarPor(\'fechaVencimiento\')">F. Entrega'+rpOrdInd('fechaVencimiento')+'</th>'
       +'<th style="background:#0F6E56;color:#fff">F. prometida</th>'
       +'<th style="text-align:center;width:220px" title="Saneamiento y acciones (requiere Supervisor o Jefe)">Acciones (Supervisor)</th></tr></thead><tbody>';
-    lista.slice().sort(rpOrdenActivo_).forEach(f=>{
+    _visRp.forEach(f=>{
       const atrColor=(f.diasAtraso!=null && f.diasAtraso>=0)?'#C00000':'#5a6b7a';
       html+='<tr'+(f.tipo==='URG'?' class="urg"':'')+'>'+selCelda_(f.id)
         +'<td class="mono">'+_escNA(f.id)+'</td>'
@@ -1654,7 +1664,7 @@ function renderReparto(){
           +'<button class="btn-anular" onclick="anularPedido(\''+_esc(f.id)+'\')" title="Retirar del ciclo (requiere Supervisor o Jefe)">\u2715</button>'
         +'</td></tr>';
     });
-    html+='</tbody></table></div></div></div>';
+    html+='</tbody></table>'+verMas_(_clRp, _ordRp.length)+'</div></div></div>';
   });
 
   cont.innerHTML=html;
@@ -1895,11 +1905,12 @@ function renderEntregas(){
   // ---- Sección: por confirmar (solo si el toggle está en 'pend') ----
   if(EN_TAB==='pend' && pend.length){
     html+='<div class="en-secc">Por confirmar &middot; '+pend.length.toLocaleString()+'</div>';
-    html+='<div class="rp-scroll"><table class="en-t"><thead><tr>'+selCab_('pend', pend)
+    const _visPend=pend.slice(0, LIM_('pend'));
+    html+='<div class="rp-scroll"><table class="en-t"><thead><tr>'+selCab_('pend', _visPend)
       +'<th>Forma 8</th><th>Unidad Ejecutora</th><th>Grupo</th><th>Tipo</th>'
       +'<th>Despachado</th><th>En espera</th><th style="text-align:center">Acci\u00f3n</th>'
       +'</tr></thead><tbody>';
-    pend.forEach(f=>{
+    _visPend.forEach(f=>{
       const esp=_diasDesde_(f.fDespacho);
       const espCol=(esp!=null&&esp>=3)?'#C00000':'#5a6b7a';
       html+='<tr>'+selCelda_(f.id)
@@ -1912,17 +1923,18 @@ function renderEntregas(){
         +'<td style="text-align:center"><button class="btn-entregar" onclick="registrarEntrega(\''+_esc(f.id)+'\')" title="Registrar la entrega con fecha y hora reales (requiere PIN)">Registrar entrega</button></td>'
         +'</tr>';
     });
-    html+='</tbody></table></div>';
+    html+='</tbody></table>'+verMas_('pend', pend.length)+'</div>';
   }
 
   // ---- Sección: entregadas / memoria (solo si el toggle está en 'hechas') ----
   if(EN_TAB==='hechas' && hechas.length){
     html+='<div class="en-secc hecha">Entregadas &middot; '+hechas.length.toLocaleString()+'</div>';
-    html+='<div class="rp-scroll"><table class="en-t"><thead><tr>'+selCab_('mem', hechas)
+    const _visMem=hechas.slice(0, LIM_('mem'));
+    html+='<div class="rp-scroll"><table class="en-t"><thead><tr>'+selCab_('mem', _visMem)
       +'<th>Forma 8</th><th>Unidad Ejecutora</th><th>Grupo</th><th>Tipo</th>'
       +'<th>Entregado (ATA)</th><th style="text-align:center">Acci\u00f3n</th>'
       +'</tr></thead><tbody>';
-    hechas.forEach(f=>{
+    _visMem.forEach(f=>{
       html+='<tr class="hecha">'+selCelda_(f.id)
         +'<td class="mono">'+_escNA(f.id)+'</td>'
         +'<td>'+_escNA(f.ue)+'</td>'
@@ -1934,7 +1946,7 @@ function renderEntregas(){
             : '<button class="btn-entregar" style="padding:3px 9px;font-size:10px;background:#5a6b7a" onclick="verDoc(\''+_esc(f.id)+'\')">Ver</button>')+'</td>'
         +'</tr>';
     });
-    html+='</tbody></table></div>';
+    html+='</tbody></table>'+verMas_('mem', hechas.length)+'</div>';
   }
   // Mensaje si la sección activa del toggle está vacía.
   if(EN_TAB==='pend' && !pend.length){
@@ -2351,7 +2363,7 @@ function buscarDoc(){
     panel.style.display='none'; panel.innerHTML='';
     /* F3b · desde Registrar hoy (que no lista pedidos) la búsqueda lleva a la
        pestaña donde está el pedido: dentro del almacén, por confirmar o cero. */
-    if(VISTA==='entdia'){
+    if(VISTA==='entdia' && q.length>=4){
       const m=F8.filter(f=> !f.anulado && (_buscNorm(f.id).indexOf(q)>=0 || _buscNorm(f.ue).indexOf(q)>=0));
       const porConf=m.some(f=>f.despachado && !f.entregado), dentro=m.some(f=>['RECEPCION','ASIGNACION','RECOLECCION','PICKING','FACTURACION'].indexOf(f.macro)>=0);
       if(porConf) rdIrEntregas('confirmar'); else if(dentro) cambiarVista('reparto'); else if(m.some(f=>f.macro==='SIN_ASIGNAR')) cambiarVista('noasig'); else rdIrEntregas('memoria');
@@ -2714,7 +2726,8 @@ function verDoc(id){
   document.getElementById('buscPanel').style.display='none';
 }
 
-document.getElementById('fBuscar').addEventListener('input', buscarDoc);
+var _BUSC_T = null;
+document.getElementById('fBuscar').addEventListener('input', function(){ clearTimeout(_BUSC_T); _BUSC_T = setTimeout(function(){ LIM = {}; buscarDoc(); }, 250); });
 document.getElementById('fBuscar').addEventListener('input', function(){ try{ rdBarra_(); }catch(e){} });
 document.getElementById('fBuscar').addEventListener('focus', function(){ if(this.value.trim()) buscarDoc(); });
 document.getElementById('btnBuscarX').onclick=function(){
@@ -3894,7 +3907,7 @@ function rdNav_(v){
     b.classList.toggle('activa', d===v || (actEnt && d===actEnt));
   });
   try{ rdMigas_(v); }catch(e){}
-  if(rdNav_._v !== v || rdNav_._t !== EN_TAB){ SEL = {}; rdNav_._v = v; rdNav_._t = EN_TAB; }
+  if(rdNav_._v !== v || rdNav_._t !== EN_TAB){ SEL = {}; LIM = {}; rdNav_._v = v; rdNav_._t = EN_TAB; }
   try{ selPintar_(); pinPintar_(); }catch(e){}
   var sub=document.getElementById('rdSub'); if(!sub) return;
   sub.style.display = enEnt ? '' : 'none';
@@ -3908,6 +3921,19 @@ function rdNav_(v){
 }
 
 
+
+/* ══ F4 (24-sep-2026) · RAPIDEZ ═══════════════════════════════════════════
+   Medido: Por confirmar dibujaba las 5,291 filas y Memoria las 1,592, y cada
+   tecla del buscador volvía a dibujar la vista entera. Ahora cada lista
+   muestra 100 filas y un botón "Ver 200 más"; el buscador espera a que se
+   deje de teclear (250 ms). ═════════════════════════════════════════════ */
+var LIM = {}, LIM_BASE = 100;
+function LIM_(k){ return LIM[k] || LIM_BASE; }
+function verMas_(k, total){
+  var n = LIM_(k); if (total <= n) return '';
+  return '<div class="ver-mas"><button onclick="LIM[\''+k+'\']='+(n+200)+';render()">Ver 200 m\u00e1s</button>'+
+         '<span>Mostrando '+n.toLocaleString()+' de '+total.toLocaleString()+'. Usa el buscador o los filtros para ir directo.</span></div>';
+}
 
 /* ══ F3 (24-sep-2026) · SESIÓN DE PIN ═══════════════════════════════════════
    El PIN se escribe una vez: se valida contra PERSONAL (kanban_login) y queda
