@@ -57,6 +57,8 @@ tr.calc td span{font-size:12px;font-weight:600;color:var(--sub)}
 details{border-top:1px solid var(--rule);padding:10px 0}
 details summary{cursor:pointer;font-weight:600;color:var(--navy)}
 details p{margin:8px 0 0}
+.diagrama{overflow-x:auto;margin:12px 0}
+.diagrama svg{min-width:900px}
 footer{color:var(--sub);font-size:13px;text-align:center;padding:0 22px 30px}
 @media (max-width:860px){ .w2{grid-template-columns:1fr} nav.indice{position:static;display:flex;flex-wrap:wrap;gap:4px 12px} nav.indice b{flex:1 1 100%} nav.indice a{border-left:0;padding:2px 0} section{padding:18px} }
 @media print{ nav.indice, header.top .volver{display:none} .w2{grid-template-columns:1fr} section{break-inside:avoid} }
@@ -74,6 +76,7 @@ footer{color:var(--sub);font-size:13px;text-align:center;padding:0 22px 30px}
 <nav class="indice" aria-label="Contenido">
   <b>Contenido</b>
   <a href="#resumen">En una página</a>
+  <a href="#proceso">El proceso</a>
   <a href="#ejemplo">Un ejemplo resuelto</a>
   <a href="#otif">OTIF del servicio</a>
   <a href="#almacen">Almacén a tiempo</a>
@@ -106,6 +109,80 @@ footer{color:var(--sub);font-size:13px;text-align:center;padding:0 22px 30px}
   <p>Todo se calcula desde <b>SEGUIMIENTO_PEDIDOS</b> y se actualiza solo cada 30 minutos.</p>
 </section>
 
+<section id="proceso">
+  <h2>El proceso y dónde se mide cada indicador</h2>
+  <p>Una Forma 8 recorre estas etapas. Los recuadros de arriba marcan <b>en qué momento</b> se toma cada dato que usan los indicadores; los de abajo, los casos que se cuentan aparte.</p>
+  <div class="diagrama"><svg viewBox="0 0 1160 440" role="img" aria-labelledby="flujoT flujoD" style="width:100%;height:auto;font-family:IBM Plex Sans,Segoe UI,Arial,sans-serif">
+<title id="flujoT">Flujo de una Forma 8 y dónde se mide cada indicador</title>
+<desc id="flujoD">Recepción, asignación, recolección, picking, facturación, distribución, despachado y entregado. La fecha esperada nace en la recepción, lo completo se decide en la asignación, el a tiempo se mide en la distribución y la entrega confirmada al final.</desc>
+<defs><marker id="fl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#56606e"/></marker></defs>
+<rect x="12" y="106" width="694" height="124" rx="10" fill="#eef2f8"/>
+<text x="20" y="126" font-size="13" font-weight="700" fill="#1f3864">Dentro del almacén</text>
+<rect x="712" y="106" width="414" height="124" rx="10" fill="#e6f3e8"/>
+<text x="720" y="126" font-size="13" font-weight="700" fill="#2e6b36">Salió del almacén</text>
+<rect x="20" y="150" width="118" height="64" rx="8" fill="#fff" stroke="#1f3864" stroke-width="1.6"/>
+<text x="79.0" y="177" text-anchor="middle" font-size="14" font-weight="700" fill="#1f3864">Recepción</text>
+<text x="79.0" y="197" text-anchor="middle" font-size="11.5" fill="#56606e">llega la Forma 8</text>
+<line x1="138" y1="182.0" x2="158" y2="182.0" stroke="#56606e" stroke-width="1.6" marker-end="url(#fl)"/>
+<rect x="160" y="150" width="118" height="64" rx="8" fill="#fff" stroke="#1f3864" stroke-width="1.6"/>
+<text x="219.0" y="177" text-anchor="middle" font-size="14" font-weight="700" fill="#1f3864">Asignación</text>
+<text x="219.0" y="197" text-anchor="middle" font-size="11.5" fill="#56606e">el Motor asigna</text>
+<line x1="278" y1="182.0" x2="298" y2="182.0" stroke="#56606e" stroke-width="1.6" marker-end="url(#fl)"/>
+<rect x="300" y="150" width="118" height="64" rx="8" fill="#fff" stroke="#1f3864" stroke-width="1.6"/>
+<text x="359.0" y="177" text-anchor="middle" font-size="14" font-weight="700" fill="#1f3864">Recolección</text>
+<text x="359.0" y="197" text-anchor="middle" font-size="11.5" fill="#56606e">capturadores</text>
+<line x1="418" y1="182.0" x2="438" y2="182.0" stroke="#56606e" stroke-width="1.6" marker-end="url(#fl)"/>
+<rect x="440" y="150" width="118" height="64" rx="8" fill="#fff" stroke="#1f3864" stroke-width="1.6"/>
+<text x="499.0" y="177" text-anchor="middle" font-size="14" font-weight="700" fill="#1f3864">Picking</text>
+<text x="499.0" y="197" text-anchor="middle" font-size="11.5" fill="#56606e">almacenistas</text>
+<line x1="558" y1="182.0" x2="578" y2="182.0" stroke="#56606e" stroke-width="1.6" marker-end="url(#fl)"/>
+<rect x="580" y="150" width="118" height="64" rx="8" fill="#fff" stroke="#1f3864" stroke-width="1.6"/>
+<text x="639.0" y="177" text-anchor="middle" font-size="14" font-weight="700" fill="#1f3864">Facturación</text>
+<text x="639.0" y="197" text-anchor="middle" font-size="11.5" fill="#56606e">SAP SAFIRO</text>
+<line x1="698" y1="182.0" x2="718" y2="182.0" stroke="#56606e" stroke-width="1.6" marker-end="url(#fl)"/>
+<rect x="720" y="150" width="118" height="64" rx="8" fill="#fff" stroke="#2e6b36" stroke-width="1.6"/>
+<text x="779.0" y="177" text-anchor="middle" font-size="14" font-weight="700" fill="#2e6b36">Distribución</text>
+<text x="779.0" y="197" text-anchor="middle" font-size="10.5" fill="#56606e">sale con documento</text>
+<line x1="838" y1="182.0" x2="858" y2="182.0" stroke="#56606e" stroke-width="1.6" marker-end="url(#fl)"/>
+<rect x="860" y="150" width="118" height="64" rx="8" fill="#fff" stroke="#2e6b36" stroke-width="1.6"/>
+<text x="919.0" y="177" text-anchor="middle" font-size="14" font-weight="700" fill="#2e6b36">Despachado</text>
+<text x="919.0" y="197" text-anchor="middle" font-size="11.5" fill="#56606e">cierre en bahía</text>
+<line x1="978" y1="182.0" x2="998" y2="182.0" stroke="#56606e" stroke-width="1.6" marker-end="url(#fl)"/>
+<rect x="1000" y="150" width="118" height="64" rx="8" fill="#fff" stroke="#2e6b36" stroke-width="1.6"/>
+<text x="1059.0" y="177" text-anchor="middle" font-size="14" font-weight="700" fill="#2e6b36">Entregado</text>
+<text x="1059.0" y="197" text-anchor="middle" font-size="10.5" fill="#56606e">confirmado en la UE</text>
+<line x1="79.0" y1="58" x2="79.0" y2="104" stroke="#1f3864" stroke-width="1.4" stroke-dasharray="4 3"/>
+<rect x="4" y="18" width="184" height="40" rx="7" fill="#ffffff" stroke="#1f3864"/>
+<text x="96" y="34" text-anchor="middle" font-size="12" font-weight="700" fill="#1f3864">Nace la fecha esperada</text>
+<text x="96" y="50" text-anchor="middle" font-size="11.5" fill="#1f3864">según el cronograma de la UE</text>
+<line x1="219.0" y1="98" x2="219.0" y2="104" stroke="#7a5a00" stroke-width="1.4" stroke-dasharray="4 3"/>
+<rect x="199" y="58" width="196" height="40" rx="7" fill="#fff4d6" stroke="#7a5a00"/>
+<text x="297" y="74" text-anchor="middle" font-size="12" font-weight="700" fill="#7a5a00">Se decide lo completo</text>
+<text x="297" y="90" text-anchor="middle" font-size="11.5" fill="#7a5a00">asignado ÷ pedido = fill rate</text>
+<line x1="779.0" y1="58" x2="779.0" y2="104" stroke="#2e6b36" stroke-width="1.4" stroke-dasharray="4 3"/>
+<rect x="687" y="18" width="184" height="40" rx="7" fill="#ffffff" stroke="#2e6b36"/>
+<text x="779" y="34" text-anchor="middle" font-size="12" font-weight="700" fill="#2e6b36">Se mide el a tiempo</text>
+<text x="779" y="50" text-anchor="middle" font-size="11.5" fill="#2e6b36">fecha de salida vs esperada</text>
+<line x1="1059.0" y1="98" x2="1059.0" y2="104" stroke="#0F6E56" stroke-width="1.4" stroke-dasharray="4 3"/>
+<rect x="967" y="58" width="184" height="40" rx="7" fill="#ffffff" stroke="#0F6E56"/>
+<text x="1059" y="74" text-anchor="middle" font-size="12" font-weight="700" fill="#0F6E56">Entrega confirmada</text>
+<text x="1059" y="90" text-anchor="middle" font-size="11.5" fill="#0F6E56">registrada en la bahía</text>
+<line x1="219.0" y1="214" x2="219.0" y2="268" stroke="#8c1d18" stroke-width="1.6" marker-end="url(#fl)"/>
+<text x="227.0" y="244" font-size="11.5" fill="#8c1d18">asignó 0</text>
+<rect x="20" y="270" width="258" height="52" rx="8" fill="#f8e2e2" stroke="#8c1d18" stroke-width="1.4"/>
+<text x="149.0" y="292" text-anchor="middle" font-size="13" font-weight="700" fill="#8c1d18">Cero por desabasto</text>
+<text x="149.0" y="310" text-anchor="middle" font-size="11.5" fill="#8c1d18">no hay producto: atrasado sin producto</text>
+<path d="M300 228 v8 h398 v-8" fill="none" stroke="#1f3864" stroke-width="1.3"/>
+<text x="499.0" y="254" text-anchor="middle" font-size="12" fill="#1f3864">Atrasados con producto = siguen aquí y su fecha esperada ya pasó</text>
+<path d="M79.0 342 v10 h700.0 v-10" fill="none" stroke="#56606e" stroke-width="1.3"/>
+<text x="429.0" y="370" text-anchor="middle" font-size="12" fill="#56606e">Tiempo de ciclo = días de la recepción a la salida</text>
+<text x="429.0" y="387" text-anchor="middle" font-size="12" fill="#56606e">Salidas por día hábil = cuántos pedidos llegan a distribución por día</text>
+<rect x="720" y="270" width="398" height="52" rx="8" fill="#ffffff" stroke="#9aa3ae" stroke-dasharray="5 4"/>
+<text x="919.0" y="292" text-anchor="middle" font-size="12.5" font-weight="700" fill="#56606e">Laboratorio (G13–G15)</text>
+<text x="919.0" y="310" text-anchor="middle" font-size="11.5" fill="#56606e">fuera de la asignación: no entra en los indicadores</text>
+</svg></div>
+  <p>Resumen: la <b>fecha esperada</b> nace al recibir el pedido; lo <b>completo</b> y el <b>fill rate</b> se deciden cuando el Motor asigna; el <b>a tiempo</b> se mide cuando el pedido sale con su documento (distribución), y la <b>entrega confirmada</b> cuando la bahía la registra.</p>
+</section>
 <section id="ejemplo">
   <h2>Un ejemplo resuelto</h2>
   <p>Diez pedidos que salieron en el mes. <b>Cada fila es un pedido</b> y se evalúa por sí mismo: si salió a tiempo, qué parte de lo pedido se le asignó (su fill rate), si salió completo y si cumplió las dos cosas (OTIF). La última fila hace el cálculo del mes con todos los pedidos.</p>
