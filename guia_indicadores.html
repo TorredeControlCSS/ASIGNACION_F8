@@ -49,6 +49,9 @@ td.n{text-align:right;font-variant-numeric:tabular-nums}
 td.c{text-align:center}
 .si{color:var(--ok);font-weight:700} .no{color:var(--mal);font-weight:700} .na{color:var(--sub)}
 tr.tot td{background:var(--gris);font-weight:700}
+tr.calc td{background:#e8eef7;color:var(--navy);vertical-align:top;white-space:normal}
+tr.calc td b{font-size:16px}
+tr.calc td span{font-size:12px;font-weight:600;color:var(--sub)}
 .paso{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:10px 0;align-items:baseline}
 .paso .r{font-weight:700;color:var(--navy);font-variant-numeric:tabular-nums;white-space:nowrap}
 .aviso{background:var(--ambf);border-radius:6px;padding:10px 14px;color:#5c4a00;font-size:14.5px}
@@ -108,31 +111,33 @@ footer{color:var(--sub);font-size:13px;text-align:center;padding:0 22px 30px}
 
 <section id="ejemplo">
   <h2>Un ejemplo resuelto</h2>
-  <p>Diez pedidos que salieron en el mes. Para cada uno se comparan fechas y cantidades, y se anota <b>1</b> si cumple o <b>0</b> si no. Al final se suman las columnas y con esas sumas se calculan los indicadores.</p>
-  <div class="tabla"><table>
-    <thead><tr><th>Pedido</th><th>Fecha esperada</th><th>Salió</th><th>Días de diferencia</th><th>A tiempo<br><small>(diferencia ≤ 0)</small></th>
-      <th>Pidió</th><th>Se asignó</th><th>% servido</th><th>Completo<br><small>(100%)</small></th><th>A tiempo y completo</th><th>Tenía producto<br><small>(asignado &gt; 0)</small></th><th>A tiempo, con producto</th></tr></thead>
+  <p>Diez pedidos que salieron en el mes. <b>Cada fila es un pedido</b> y se evalúa por sí mismo: si salió a tiempo, qué parte de lo pedido se le asignó (su fill rate), si salió completo y si cumplió las dos cosas (OTIF). La última fila hace el cálculo del mes con todos los pedidos.</p>
+  <div class="tabla"><table class="ej">
+    <thead><tr><th>Pedido</th><th>Fecha esperada</th><th>Salió</th><th>On-time<br><small>¿salió en su fecha o antes?</small></th>
+      <th>Pidió</th><th>Se asignó</th><th>Fill rate del pedido<br><small>asignado ÷ pedido</small></th><th>Completo<br><small>¿fill rate de 100%?</small></th><th>OTIF<br><small>¿on-time y completo?</small></th></tr></thead>
     <tbody>
-<tr><td>P1</td><td class="c">15/09</td><td class="c">14/09</td><td class="n">-1</td><td class="c si">1</td><td class="n">100</td><td class="n">100</td><td class="n">100.0%</td><td class="c si">1</td><td class="c si">1</td><td class="c">1</td><td class="c">1</td></tr>
-<tr><td>P2</td><td class="c">15/09</td><td class="c">15/09</td><td class="n">+0</td><td class="c si">1</td><td class="n">200</td><td class="n">150</td><td class="n">75.0%</td><td class="c no">0</td><td class="c no">0</td><td class="c">1</td><td class="c">1</td></tr>
-<tr><td>P3</td><td class="c">16/09</td><td class="c">19/09</td><td class="n">+3</td><td class="c no">0</td><td class="n">50</td><td class="n">50</td><td class="n">100.0%</td><td class="c si">1</td><td class="c no">0</td><td class="c">1</td><td class="c">0</td></tr>
-<tr><td>P4</td><td class="c">16/09</td><td class="c">22/09</td><td class="n">+6</td><td class="c no">0</td><td class="n">80</td><td class="n">40</td><td class="n">50.0%</td><td class="c no">0</td><td class="c no">0</td><td class="c">1</td><td class="c">0</td></tr>
-<tr><td>P5</td><td class="c">17/09</td><td class="c">17/09</td><td class="n">+0</td><td class="c si">1</td><td class="n">60</td><td class="n">60</td><td class="n">100.0%</td><td class="c si">1</td><td class="c si">1</td><td class="c">1</td><td class="c">1</td></tr>
-<tr><td>P6</td><td class="c">17/09</td><td class="c">16/09</td><td class="n">-1</td><td class="c si">1</td><td class="n">120</td><td class="n">0</td><td class="n">0.0%</td><td class="c no">0</td><td class="c no">0</td><td class="c">0</td><td class="c">0</td></tr>
-<tr><td>P7</td><td class="c">18/09</td><td class="c">23/09</td><td class="n">+5</td><td class="c no">0</td><td class="n">300</td><td class="n">300</td><td class="n">100.0%</td><td class="c si">1</td><td class="c no">0</td><td class="c">1</td><td class="c">0</td></tr>
-<tr><td>P8</td><td class="c">18/09</td><td class="c">18/09</td><td class="n">+0</td><td class="c si">1</td><td class="n">40</td><td class="n">30</td><td class="n">75.0%</td><td class="c no">0</td><td class="c no">0</td><td class="c">1</td><td class="c">1</td></tr>
-<tr><td>P9</td><td class="c">19/09</td><td class="c">24/09</td><td class="n">+5</td><td class="c no">0</td><td class="n">90</td><td class="n">0</td><td class="n">0.0%</td><td class="c no">0</td><td class="c no">0</td><td class="c">0</td><td class="c">0</td></tr>
-<tr><td>P10</td><td class="c">22/09</td><td class="c">22/09</td><td class="n">+0</td><td class="c si">1</td><td class="n">70</td><td class="n">70</td><td class="n">100.0%</td><td class="c si">1</td><td class="c si">1</td><td class="c">1</td><td class="c">1</td></tr>
-<tr class="tot"><td>Suma</td><td></td><td></td><td></td><td class="c">6</td><td class="n">1,110</td><td class="n">800</td><td></td><td class="c">5</td><td class="c">3</td><td class="c">8</td><td class="c">5</td></tr>
+<tr><td>P1</td><td class="c">15/09</td><td class="c">14/09</td><td class="c si">Sí</td><td class="n">100</td><td class="n">100</td><td class="n si">100 ÷ 100 = 100%</td><td class="c si">Sí</td><td class="c si">Sí</td></tr>
+<tr><td>P2</td><td class="c">15/09</td><td class="c">15/09</td><td class="c si">Sí</td><td class="n">200</td><td class="n">150</td><td class="n ">150 ÷ 200 = 75%</td><td class="c no">No</td><td class="c no">No</td></tr>
+<tr><td>P3</td><td class="c">16/09</td><td class="c">19/09</td><td class="c no">No</td><td class="n">50</td><td class="n">50</td><td class="n si">50 ÷ 50 = 100%</td><td class="c si">Sí</td><td class="c no">No</td></tr>
+<tr><td>P4</td><td class="c">16/09</td><td class="c">22/09</td><td class="c no">No</td><td class="n">80</td><td class="n">40</td><td class="n ">40 ÷ 80 = 50%</td><td class="c no">No</td><td class="c no">No</td></tr>
+<tr><td>P5</td><td class="c">17/09</td><td class="c">17/09</td><td class="c si">Sí</td><td class="n">60</td><td class="n">60</td><td class="n si">60 ÷ 60 = 100%</td><td class="c si">Sí</td><td class="c si">Sí</td></tr>
+<tr><td>P6</td><td class="c">17/09</td><td class="c">16/09</td><td class="c si">Sí</td><td class="n">120</td><td class="n">0</td><td class="n no">0 ÷ 120 = 0%</td><td class="c no">No</td><td class="c no">No</td></tr>
+<tr><td>P7</td><td class="c">18/09</td><td class="c">23/09</td><td class="c no">No</td><td class="n">300</td><td class="n">300</td><td class="n si">300 ÷ 300 = 100%</td><td class="c si">Sí</td><td class="c no">No</td></tr>
+<tr><td>P8</td><td class="c">18/09</td><td class="c">18/09</td><td class="c si">Sí</td><td class="n">40</td><td class="n">30</td><td class="n ">30 ÷ 40 = 75%</td><td class="c no">No</td><td class="c no">No</td></tr>
+<tr><td>P9</td><td class="c">19/09</td><td class="c">24/09</td><td class="c no">No</td><td class="n">90</td><td class="n">0</td><td class="n no">0 ÷ 90 = 0%</td><td class="c no">No</td><td class="c no">No</td></tr>
+<tr><td>P10</td><td class="c">22/09</td><td class="c">22/09</td><td class="c si">Sí</td><td class="n">70</td><td class="n">70</td><td class="n si">70 ÷ 70 = 100%</td><td class="c si">Sí</td><td class="c si">Sí</td></tr>
+      <tr class="calc"><td>El mes</td><td></td><td></td>
+        <td class="c">6 de 10 = <b>60%</b><br><span>On-time</span></td>
+        <td class="n">1,110</td><td class="n">800</td>
+        <td class="c">800 ÷ 1,110 = <b>72.1%</b><br><span>Fill rate</span></td>
+        <td class="c">5 de 10 = <b>50%</b><br><span>Abasto completo</span></td>
+        <td class="c">3 de 10 = <b>30%</b><br><span>OTIF del servicio</span></td></tr>
     </tbody>
   </table></div>
-  <h3>Los cálculos con esas sumas</h3>
-  <div class="paso"><span class="r">30.0%</span><span><b>OTIF del servicio</b> = suma de "a tiempo y completo" ÷ pedidos que salieron = 3 ÷ 10</span></div>
-  <div class="paso"><span class="r">62.5%</span><span><b>Almacén a tiempo</b> = suma de "a tiempo, con producto" ÷ suma de "tenía producto" = 5 ÷ 8. P6 y P9 salieron con 0 asignado: no se le cargan al almacén.</span></div>
-  <div class="paso"><span class="r">50.0%</span><span><b>Abasto completo</b> = suma de "completo" ÷ pedidos que salieron = 5 ÷ 10</span></div>
-  <div class="paso"><span class="r">72.1%</span><span><b>Fill rate</b> = suma de lo asignado ÷ suma de lo pedido = 800 ÷ 1,110</span></div>
-  <div class="paso"><span class="r">60.0%</span><span><b>On-time</b> (solo a tiempo, sin mirar cantidades) = suma de "a tiempo" ÷ pedidos que salieron = 6 ÷ 10. Se muestra en el detalle al pasar el mouse.</span></div>
-  <p>Por qué dan distinto: el <b>fill rate</b> (72%) mide cantidades, y la mayor parte de lo pedido llegó. El <b>abasto completo</b> (50%) cuenta pedidos, y a la mitad le faltó algo. El <b>OTIF</b> (30%) exige las dos condiciones a la vez, por eso es el más bajo.</p>
+  <h3>Por pedido y en el total</h3>
+  <p>En <b>cada pedido</b>, el on-time, el completo y el OTIF son un <b>sí o no</b>: un pedido salió a tiempo o no salió a tiempo. El único que es un porcentaje por pedido es el <b>fill rate</b>, porque mide cantidades (a P2 le asignaron 150 de 200: 75%).</p>
+  <p>En el <b>total del mes</b>, cada sí o no se convierte en un porcentaje: de los 10 pedidos, cuántos dijeron sí. Así salen el 60% de on-time, el 50% de abasto completo y el 30% de OTIF.</p>
+  <p>El <b>fill rate del mes</b> no es el promedio de la columna de fill rate (daría 70.0%): es la suma de lo asignado entre la suma de lo pedido (<b>72.1%</b>). Así un pedido de 300 unidades pesa más que uno de 40, como corresponde.</p>
 </section>
 
 <section id="otif">
@@ -146,6 +151,7 @@ footer{color:var(--sub);font-size:13px;text-align:center;padding:0 22px 30px}
   <h2>Almacén a tiempo <span class="duenio d-alm">Almacén</span></h2>
   <div class="formula"><i>Almacén a tiempo</i> = pedidos con producto que salieron a tiempo ÷ pedidos con producto que salieron</div>
   <p>Mide la ejecución del almacén: recibir, asignar, recolectar, facturar y despachar. Solo cuenta los pedidos que <b>tenían producto asignado</b>: si el Motor asignó 0 porque no había existencias, el almacén no tenía nada que despachar y ese pedido no se le carga.</p>
+  <p><i>Con el ejemplo:</i> P6 y P9 salieron con 0 asignado, así que quedan fuera. De los 8 pedidos restantes, 5 salieron a tiempo (P1, P2, P5, P8 y P10): <b>5 ÷ 8 = 62.5%</b>.</p>
 </section>
 
 <section id="abasto">
