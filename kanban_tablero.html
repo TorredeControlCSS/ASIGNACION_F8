@@ -613,7 +613,8 @@
   /* sin controles técnicos para el supervisor: la memoria se publica sola */
   .rd-mem{display:none!important}
   /* el detalle se abre al costado, sin tapar la lista */
-  .modal-bg{align-items:stretch!important;justify-content:flex-end!important;padding:0!important;background:rgba(15,25,45,.3)!important}
+  .modal-bg{align-items:stretch!important;justify-content:flex-end!important;padding:0!important;background:rgba(15,25,45,.3)!important;z-index:10050!important}
+  .pin-m{z-index:10060!important}.entp-modal{z-index:10040!important}
   .modal-bg .modal{max-width:500px!important;width:100%;height:100vh!important;max-height:none!important;border:0!important;border-radius:0!important}
   /* ══ F3 (24-sep-2026) · sesión de PIN y cambios masivos ══ */
   .pin-ses{display:inline-flex;align-items:center;gap:6px;font-size:12px;background:rgba(255,255,255,.14);color:#fff;border-radius:14px;padding:4px 10px;margin-right:8px}
@@ -1796,6 +1797,7 @@ function renderAnulados(){
   const fu=document.getElementById('fUE').value;
   const lista=F8.filter(f=>f.anulado)
     .filter(f=>(!fg||f.grupo===fg) && (!fu||f.ue===fu))
+    .filter(f=>!BUSCA_NAV || _buscNorm(f.id).indexOf(BUSCA_NAV)>=0 || _buscNorm(f.ue).indexOf(BUSCA_NAV)>=0)   /* F5: la búsqueda filtra */
     .sort((a,b)=>String(b.anuladoTs||'').localeCompare(String(a.anuladoTs||'')));
   let html='<div class="an-head">PEDIDOS RETIRADOS DEL CICLO &mdash; '+lista.length.toLocaleString()
     +' fuera del flujo activo. Cada uno penaliza el fill rate como no entregado. Retirar no es despachar: se sac\u00f3 a prop\u00f3sito y queda trazable. Puede devolverse al ciclo con autorizaci\u00f3n.</div>';
@@ -2136,6 +2138,8 @@ function renderNoAsignadas(){
     if(fu && f.ue!==fu) return false;
     if(ft && f.tipo!==ft) return false;
     if(fe && f.macro!==fe) return false;
+    /* F5: la búsqueda también filtra esta vista (antes mostraba las 1,168 con "ciudad" escrito) */
+    if(BUSCA_NAV && _buscNorm(f.id).indexOf(BUSCA_NAV)<0 && _buscNorm(f.ue).indexOf(BUSCA_NAV)<0) return false;
     return true;
   });
   // badge en el botón: coherente con la tarjeta (fase SIN_ASIGNAR)
@@ -2636,7 +2640,8 @@ function _verEntregadoMemoria_(m){
     +fila('Etapa','<span class="bi-etapa" style="background:#0F6E56">\u2713 ENTREGADO</span>')
     +fila('Tipo', _escNA(String(m.tipo||'').toUpperCase().indexOf('URG')>=0?'Urgencia':'Mensual'))
     +fila('Grupo', _escNA(m.grupo||'\u2014'))
-    +fila('Entregado', _escNA(m.fEntrega||'\u2014'))
+    +fila('Entregado', _escNA(String(m.fEntrega||'\u2014').slice(0,10))+(m.hora?' &middot; '+_escNA(m.hora):''))
+    +fila('Recibió en la UE', m.recibio ? _escNA(m.recibio) : '<span style="color:#8a6a00;font-weight:400">no se anotó</span>')
     +(m.despachoPor?fila('Despachó / registró', _escNA(m.despachoPor)):'')
     +'</table>';
   body+=_corregirEntregaHTML(m.id, m.fEntrega);
@@ -3738,7 +3743,8 @@ function rdPorConfirmar_(){ return (typeof F8!=='undefined'&&F8?F8:[]).filter(fu
 function rdMemoria_(){
   var m={}, lst=[];
   (typeof ENTREGADOS_MEM!=='undefined' && ENTREGADOS_MEM ? ENTREGADOS_MEM : []).forEach(function(f){ if(f&&f.id) m[_buscNorm(f.id)]=f; });
-  (typeof F8!=='undefined'&&F8?F8:[]).forEach(function(f){ if(f.entregado && !f.anulado) m[_buscNorm(f.id)]=f; });
+  (typeof F8!=='undefined'&&F8?F8:[]).forEach(function(f){ if(f.entregado && !f.anulado){ var k=_buscNorm(f.id), prev=m[k];
+    m[k] = prev ? Object.assign({}, prev, f, { recibio: prev.recibio||'', hora: prev.hora||'', despachoPor: f.despachoPor||prev.despachoPor||'' }) : f; } });
   for (var k in m) lst.push(m[k]);
   return lst;
 }
