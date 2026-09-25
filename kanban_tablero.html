@@ -714,6 +714,7 @@
   .rd-kpi.kpi2 span{font-size:11.5px}
   .rd-kpi.kpi2 small{font-size:10.5px}
   .kpi-tit{font-size:12px}
+  #entCapHora.mal{border-color:#c0392b;background:#fdecea}
 </style>
 </head>
 <body>
@@ -2885,6 +2886,8 @@ setInterval(function(){
   // ciclo y refresca en el próximo.
   var act=document.activeElement;
   if(act && act.classList && act.classList.contains('comp-inp')) return;
+  /* 25-sep: tampoco mientras se escribe en la bahía (Registrar hoy) o en una ventana abierta */
+  if(act && act.closest && (act.closest('#vistaEntregasDia') || act.closest('.pin-m') || act.closest('.pl-m') || act.closest('.modal-bg'))) return;
   cargar(true);
 }, 180000);   // refresco silencioso cada 3 min (sin parpadeo)
 
@@ -3269,12 +3272,12 @@ function entRender(){
           'oninput="entCapUECambia()" onkeydown="entCapTecla(event,\'ue\')" autocomplete="off" value="'+entEsc_(entStUE)+'"></label>'+
         '<label class="c-rep">Retiró <small>(opcional)</small><input id="entCapRep" list="entGenteCap" placeholder="nombre y cédula" '+
           'oninput="entCapRepCambia()" onkeydown="entCapTecla(event,\'rep\')" autocomplete="off" value="'+entEsc_(entStRep)+'"></label>'+
-        '<label class="c-hora">Hora <small>(vacía = ahora)</small><input id="entCapHora" type="time" '+
-          'oninput="entCapHoraCambia()" onkeydown="entCapTecla(event,\'hora\')" value="'+entEsc_(entStHora)+'"></label>'+
+        '<label class="c-hora">Hora <small>(vacía = ahora)</small><input id="entCapHora" type="text" inputmode="numeric" maxlength="5" placeholder="hh:mm" autocomplete="off" '+
+          'oninput="entCapHoraCambia()" onkeydown="entCapTecla(event,\'hora\')" value="'+entEsc_(entStHoraTxt)+'"></label>'+
         '<button class="btn-si" onclick="entCapAgregar()">Agregar</button>'+
       '</div>'+
       '<datalist id="entUEs">'+UEs.map(function(u){ return '<option value="'+entEsc_(u)+'">'; }).join('')+'</datalist>'+
-      '<datalist id="entGenteCap"></datalist>'+
+      '<datalist id="entGenteCap">'+entGenteDe_(entStUE).map(function(p){ return '<option value="'+entEsc_(entRepTxt_(p.n,p.c))+'">'; }).join('')+'</datalist>'+
       /* 25-sep: "Pegar varias" sale de la bahía; la carga de listas vive en Por confirmar (plPegarLista) */
       /* E2 · pegar varias: ventana aparte, no un cuadro grande dentro del paso */
       (entLoteOn ? '<div class="entp-modal" onclick="if(event.target===this)entLoteToggle()" onkeydown="if(event.key===\'Escape\')entLoteToggle()">'+
@@ -3393,7 +3396,8 @@ var entFechaAct = null;   /* fecha de entrega que se está cargando; null = hoy 
 var entStF8 = '', entStUE = '', entStRep = '';   /* lo tecleado sobrevive al repintado */
 var entStUEAuto = false;  /* la unidad la puso el pedido, no la escribió el supervisor */
 var entLoteOn = false, entFoco = false;
-var entStHora = '';       /* hora de entrega tecleada; vacía = la hora actual */
+var entStHora = '';       /* hora de entrega válida (hh:mm); vacía = la hora actual */
+var entStHoraTxt = '';    /* lo que se lleva escrito en el campo de hora, aunque esté incompleto */
 var entAsisAbierta = false;
 var ENT_SUBIENDO = false;   /* E2: mientras sube, el botón no se reactiva al repintar */
 var ENT_LS_ASISH = 'cedis_entregas_horas_v1';   /* llegada/salida capturadas a mano */
@@ -3435,9 +3439,13 @@ function entUnidades_(){
   return Object.keys(m).sort();
 }
 function entGenteDe_(ue){
-  if(!ue) return [];
-  return ENT_ROSTER.filter(function(p){ return entMismaUE_(p.u, ue); })
-                   .sort(function(a,b){ return b.v - a.v; });
+  /* 25-sep: sin unidad elegida se ofrece toda la lista (antes quedaba vacía y
+     parecía que la lista de nombres se había borrado). Con unidad, sus
+     representantes primero y después los demás. */
+  var vistos = {}, unicos = ENT_ROSTER.filter(function(p){ var k = (p.n + '|' + p.c).toUpperCase(); if (vistos[k]) return false; vistos[k] = 1; return true; });
+  var suyos = ue ? unicos.filter(function(p){ return entMismaUE_(p.u, ue); }).sort(function(a,b){ return b.v - a.v; }) : [];
+  var resto = unicos.filter(function(p){ return suyos.indexOf(p) < 0; }).sort(function(a,b){ return String(a.n).localeCompare(String(b.n), 'es'); });
+  return suyos.concat(resto);
 }
 /* "Moisés Angulo (8-955-659)" o "Moisés Angulo 8-955-659" -> {rep, ced} */
 function entRepParse_(t){
@@ -3697,7 +3705,7 @@ function entCapAgregar(){
               estado:'pendiente', rep:r.rep, ced:r.ced, colado:!p });
   entColaSet_(cola);
   entStF8 = ''; entStUE = ue; entStUEAuto = !!p; entStRep = entRepTxt_(r.rep, r.ced);
-  entStHora = entHoraOk_((document.getElementById('entCapHora')||{}).value);
+  entStHora = entHoraOk_((document.getElementById('entCapHora')||{}).value); entStHoraTxt = entStHora;
   entFoco = true; entRender();
   entAviso_(p ? (String(p.id).trim() + ' · ' + ue)
               : (f8 + ' agregado como pedido que no estaba en el tablero'), p ? 'ok' : 'warn');
@@ -3773,7 +3781,18 @@ function entFilaRep(k, val){
    El informe del día lleva la hora de entrega de cada pedido y la llegada y
    salida de cada representante. Cuando se registra al momento, la hora sale
    sola; cuando se carga después o desde un informe atrasado, se escribe. */
-function entCapHoraCambia(){ var e = document.getElementById('entCapHora'); if(e) entStHora = entHoraOk_(e.value); }
+/* 25-sep: la hora es un campo de texto de 24 h. El campo de hora del navegador
+   (type=time) mostraba AM/PM según el equipo y, si la bahía se volvía a dibujar
+   mientras se escribía, se perdía lo tecleado (solo guardaba la hora completa).
+   Ahora se guarda lo que se va escribiendo y los ":" se ponen solos: "1200" → "12:00". */
+function entCapHoraCambia(){
+  var e = document.getElementById('entCapHora'); if(!e) return;
+  var d = e.value.replace(/[^0-9]/g, '').slice(0, 4);
+  var t = d.length > 2 ? d.slice(0, 2) + ':' + d.slice(2) : d;
+  if (t !== e.value){ e.value = t; try{ e.setSelectionRange(t.length, t.length); }catch(x){} }
+  entStHoraTxt = t; entStHora = entHoraOk_(t);
+  e.classList.toggle('mal', t.length === 5 && !entStHora);
+}
 function entFilaHora(k, val){
   var h = entHoraOk_(val); if(!h){ entRender(); entAviso_('Hora no válida. Usa el formato 24 horas, por ejemplo 09:35.', 'warn'); return; }
   var cola = entCola_();
