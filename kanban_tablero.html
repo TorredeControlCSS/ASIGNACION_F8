@@ -675,6 +675,14 @@
   #vistaReparto > .rd-ctx, #vistaCrono > .rd-ctx{display:none}
   .rd-limpiar.rd-limpiar-off{opacity:.45;cursor:default}
   .topbar h1:hover{text-decoration:underline}
+  /* 25-sep · tarjetas de indicadores */
+  .rd-kpis{flex-wrap:wrap}
+  .kpi-tit{flex:1 1 100%;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;font-size:12.5px;color:#1f3864;font-weight:600;margin:2px 2px 0}
+  .kpi-tit span{font-weight:400;color:#5a6675;font-size:11.5px}
+  .kpi-alerta{margin-left:auto;border:0;background:#fde7c8;color:#7a4b00;border-radius:12px;padding:3px 10px;font-weight:700;font-size:12px;cursor:pointer}
+  .rd-kpi.ambar{background:#fff4d6;color:#7a5a00}
+  .rd-kpi{flex:1 1 180px}
+  .pl-btn.on{background:#2e6b36;color:#fff}
 </style>
 </head>
 <body>
@@ -902,7 +910,7 @@ async function cargar(silencioso, desdeMotor){
     if(!res||res.ok===false) throw new Error((res&&res.msg)||'Respuesta vac\u00eda');
     TA_FUENTE=fuente;
     TA_DATOS_MS = (fuente==='archivo') ? (Date.parse(res.generadoISO||'')||Date.now()) : Date.now();
-    F8=res.f8||[]; MACROS=res.macros||[]; UETOT=res.ueTotales||{};
+    F8=res.f8||[]; MACROS=res.macros||[]; UETOT=res.ueTotales||{}; KPI=res.kpi||KPI;
     MACROS.forEach(m=>COLOR[m.clave]=m.color);
     document.getElementById('gen').innerHTML='Revisado: '+(res.generado||'\u2014')+' PTY'+
       (fuente==='archivo'?' \u00b7 archivo':' \u00b7 Motor')+'<br>Hoy: '+(res.diaHoy||'\u2014')+' \u00b7 '+F8.length+' F8 activas';
@@ -1926,7 +1934,8 @@ function renderEntregas(){
     +'<button class="en-tg'+(EN_TAB==='hechas'?' on':'')+'" onclick="EN_TAB=\'hechas\';cargarEntregadosJSON().then(()=>render());">Entregadas (memoria) <b>'+hechas.length.toLocaleString()+'</b></button>'
     +'</div>';
   html+='<div class="en-sub">Se aplican los filtros de la barra (Unidad Ejecutora, Grupo, Tipo) y el buscador.'+
-        (EN_TAB!=='hechas' ? ' <button class="pl-btn" onclick="plAbrir()">&#128203; Pegar lista de Formas 8</button>' : '')+'</div>';
+        (EN_TAB!=='hechas' ? ' <button class="pl-btn" onclick="plAbrir()">&#128203; Pegar lista de Formas 8</button>'+
+           ' <button class="pl-btn'+(RD_MAS90?' on':'')+'" onclick="RD_MAS90=!RD_MAS90;render()">'+(RD_MAS90?'\u2713 ':'')+'Solo m\u00e1s de '+RD_CORTE+' d\u00edas</button>' : '')+'</div>';
   if(EN_TAB==='pend' && RD_MAS90) html+='<div class="rd-filtro90">Solo los de m&aacute;s de '+RD_CORTE+' d&iacute;as sin confirmar &middot; <a href="#" onclick="RD_MAS90=false;RD_KPI=null;render();return false">ver todos</a></div>';
   if(EN_TAB==='hechas') html+='<div class="rd-mem"><input id="rdMemPin" type="password" placeholder="PIN" maxlength="8" onkeydown="if(event.key===\'Enter\')rdPublicarMemoria()"><button id="rdMemBtn" onclick="rdPublicarMemoria()">Actualizar memoria</button><span id="rdMemMsg" class="rd-memmsg" style="display:none"></span></div>';
   if(EN_TAB==='hechas') html+='<div class="en-sub">'+(ENTREGADOS_MEM
@@ -3784,7 +3793,46 @@ function rdMemoria_(){
 }
 
 /* ── las cuatro cifras ── */
+/* ══ 25-sep-2026 · TARJETAS = INDICADORES DEL KANBAN (mes en curso) ══════════
+   Mismo cálculo del PDF diario y de los correos (kpiCalcular_ en el backend).
+   OTIF = salidas a tiempo ÷ salidas del mes, contra el cronograma de cada
+   unidad y la fecha de DISTRIBUCIÓN. Si hay una unidad filtrada, las tarjetas
+   muestran esa unidad. Si el archivo aún no trae indicadores, quedan las
+   tarjetas anteriores. */
+var KPI=null;
+var MES_TXT=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+function kpiNum_(x,d){ return (x==null||isNaN(x))?'\u2014':Number(x).toLocaleString(undefined,{maximumFractionDigits:d==null?0:d}); }
 function rdPintarKpis_(){
+  var box=document.getElementById('rdKpis'); if(!box) return;
+  if(!KPI || !KPI.mes){ return rdPintarKpisViejo_(); }
+  var fu=(document.getElementById('fUE')||{}).value||'', u=fu&&KPI.ue?KPI.ue[fu]:null;
+  var g=KPI.mes, a=KPI.ant||{}, m=KPI.meta||{};
+  var mesN=m.mes?MES_TXT[+m.mes.slice(5,7)-1]:'', antN=m.mesAnterior?MES_TXT[+m.mesAnterior.slice(5,7)-1]:'';
+  var hoyTxt=m.hoy?m.hoy.slice(8,10)+'/'+m.hoy.slice(5,7):'';
+  var sal=u?u.s:g.salidas, at=u?u.t:g.aTiempo, ot=u?u.o:g.otif, ci=u?u.c:g.cicloMediana, pe=u?u.p:g.pendientes, ve=u?u.v:g.vencidos, vc=u?u.vc:g.vencidosCero, cf=u?u.cf:g.confPct;
+  var dif=(!u && g.otif!=null && a.otif!=null) ? Math.round(10*(g.otif-a.otif))/10 : null;
+  var col=function(v,a1,a2){ return v==null?'azul':(v>=a2?'verde':(v>=a1?'ambar':'rosa')); };
+  var pc=rdPorConfirmar_(), dd=pc.map(function(f){ return _diasDesde_(f.fDespacho)||0; }), m90=dd.filter(function(d){ return d>RD_CORTE; }).length;
+  var k=[
+    ['otif', col(ot,50,80), kpiNum_(ot,1)+(ot==null?'':'%'), 'OTIF del mes', at+' de '+kpiNum_(sal)+' salieron a tiempo'+(dif==null?'':' \u00b7 '+antN+' '+kpiNum_(a.otif,1)+'% '+(dif>=0?'\u25b2 ':'\u25bc ')+Math.abs(dif)+' pts')],
+    ['sal','azul', u?kpiNum_(sal):kpiNum_(g.salidasPorDia,1), u?'Salidas del mes':'Salidas por día hábil', u?'de '+fu:kpiNum_(g.salidas)+' en '+m.diasHabiles+' días hábiles'],
+    ['ciclo','azul', ci==null?'\u2014':ci+' d', 'Tiempo de ciclo', 'mediana recepción \u2192 salida'+(!u&&a.cicloMediana!=null?' \u00b7 '+antN+' '+a.cicloMediana+' d':'')],
+    ['venc', ve?'rosa':'verde', kpiNum_(ve), 'Vencidos sin salir', kpiNum_(vc)+' en cero por desabasto \u00b7 '+kpiNum_(pe)+' pendientes'],
+    ['conf', col(cf,60,90), kpiNum_(cf,1)+(cf==null?'':'%'), 'Entregas confirmadas', 'de las salidas del mes \u00b7 '+pc.length.toLocaleString()+' por confirmar, '+m90.toLocaleString()+' de +'+RD_CORTE+' d']
+  ];
+  var cola=(typeof entCola_==='function')?entCola_():[], sinSubir=cola.filter(function(x){return x.estado!=='subida';}).length;
+  box.innerHTML='<div class="kpi-tit">Desempeño de '+mesN+' al '+hoyTxt+(u?' \u00b7 <b>'+_esc(fu)+'</b>':' \u00b7 CEDIS Panamá')+
+      ' <span>A tiempo = salió a más tardar en su fecha según el cronograma de la unidad.</span>'+
+      (sinSubir?'<button class="kpi-alerta" onclick="rdIrEntregas(\'registrar\')">\u26a0 '+sinSubir+' entregas anotadas sin subir al Kanban</button>':'')+'</div>'+
+    k.map(function(x){ return '<button class="rd-kpi '+x[1]+'" onclick="kpiIr_(\''+x[0]+'\')" title="Ver los pedidos"><b>'+x[2]+'</b><span>'+x[3]+'</span><small>'+x[4]+'</small></button>'; }).join('');
+}
+function kpiIr_(id){
+  RD_KPI=null; RD_MAS90=false;
+  if(id==='venc') cambiarVista('reparto');
+  else if(id==='conf') rdIrEntregas('confirmar');
+  else rdIrEntregas('memoria');
+}
+function rdPintarKpisViejo_(){
   var box=document.getElementById('rdKpis'); if(!box) return;
   var pc=rdPorConfirmar_(), dd=pc.map(function(f){ return _diasDesde_(f.fDespacho)||0; });
   var m90=dd.filter(function(d){ return d>RD_CORTE; }).length;
