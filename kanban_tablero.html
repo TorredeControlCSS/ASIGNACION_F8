@@ -3844,7 +3844,8 @@ function rdPintarKpis_(){
          'OTIF del servicio = pedidos que salieron A TIEMPO y COMPLETOS, sobre lo que salió este mes: es lo que vive la unidad. '+
          'Almacén a tiempo = de lo que tenía producto, qué parte salió a más tardar en su fecha del cronograma (responsabilidad del almacén). '+
          'Abasto completo = qué parte salió con toda la cantidad pedida (responsabilidad de abastecimiento). '+
-         (a.otif!=null?'Mes anterior: '+kpiNum_(a.otif,1)+'%.':'')]
+         (a.otif!=null?'Mes anterior: '+kpiNum_(a.otif,1)+'%. ':'')+
+         (m.fuera&&m.fuera.pedidos?'Laboratorio maneja sus pedidos fuera del proceso de asignación: sus '+m.fuera.pedidos+' pedidos no entran en estos indicadores.':'')]
       : ['otif', col(on,50,80), kpiNum_(on,1)+'%', 'On-time del mes', at+'/'+kpiNum_(sal)+' a tiempo',
          'De lo que salió este mes, qué parte salió a más tardar en su fecha del cronograma de la unidad.']),
     ['sal','azul', u?kpiNum_(sal):kpiNum_(g.salidasPorDia,1), u?'Salidas del mes':'Salidas por día hábil', u?'pedidos que salieron':kpiNum_(g.salidas)+' en '+m.diasHabiles+' días hábiles',
