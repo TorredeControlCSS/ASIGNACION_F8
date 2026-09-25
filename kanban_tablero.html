@@ -3142,12 +3142,15 @@ function entAsistQuitar(i){
 
 /* ── Informe del día. Se genera del dato capturado; nadie lo escribe. ── */
 function entInforme(){
-  const cola = entCola_(), asis = entAsist_(), fotos = entFotos_();   /* E2: fotos de la lista */
+  /* 25-sep: el informe es del DÍA ELEGIDO arriba (‹ fecha ›). Con un día anterior
+     elegido, solo lleva los pedidos anotados con esa fecha y dice esa fecha.
+     Antes siempre decía hoy y mezclaba todo lo de la jornada. */
+  const dia = entFechaSel_();
+  const cola = entCola_().filter(function(x){ return (x.fecha || entHoy_()) === dia; }), asis = entAsist_(), fotos = entFotos_();   /* E2: fotos de la lista */
   const reg  = cola.filter(function(x){ return x.estado==='subida'; }).length;
   const pend = cola.length - reg;
-  const f = entPtyAhora_();
   const MES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-  const fTxt = f.getUTCDate() + ' de ' + MES[f.getUTCMonth()] + ' de ' + f.getUTCFullYear();
+  const fTxt = (+dia.slice(8,10)) + ' de ' + MES[+dia.slice(5,7) - 1] + ' de ' + dia.slice(0,4);
 
   const filasF8 = cola.map(function(x,i){
     return '<tr><td>'+(i+1)+'</td><td>'+(x.ue||'&mdash;')+'</td><td class="mono">'+x.f8+'</td><td>'+x.hora+'</td>'+
@@ -3173,7 +3176,7 @@ function entInforme(){
       'El hecho de la entrega consta en este documento con su hora; el registro en el Kanban se completa al subirlas.</div>';
   }
 
-  const html = '<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Informe CEDIS '+entHoy_()+'</title>'+
+  const html = '<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Informe CEDIS '+dia+'</title>'+
     '<style>@page{margin:14mm;size:letter}body{font-family:Calibri,Arial,sans-serif;font-size:11pt;margin:0;color:#111}'+
     'h1{font-size:15pt;color:#1F3864;margin:0 0 2px}h2{font-size:12pt;color:#1F3864;margin:18px 0 6px;border-bottom:1px solid #1F3864;padding-bottom:3px}'+
     '.sub{color:#444;font-size:10pt}table{border-collapse:collapse;width:100%;margin-top:6px;font-size:10pt}'+
@@ -4209,6 +4212,20 @@ function plRevisar(){
   var ap = document.getElementById('plAp'); ap.disabled = !n; ap.textContent = n ? 'Registrar '+n+' entregas' : 'Registrar';
   document.getElementById('plMsg').textContent = filas.length ? (n+' por confirmar de '+filas.length+' en la lista. Las demás no se tocan.') : '';
 }
+/* 25-sep: lo registrado con "Pegar lista" también entra a la jornada de la
+   bahía (ya subido), para que salga en el informe del día. Antes quedaba
+   registrado en el Kanban pero la bahía no lo veía y no dejaba generar el
+   informe con esos pedidos. Si el pedido ya estaba en la jornada, no se repite. */
+function plAJornada_(x, rec){
+  try{
+    var cola = entCola_(), k = entIdParcial_(x.id);
+    if (cola.some(function(c){ return entIdParcial_(c.f8) === k; })) return;
+    var r = rec ? entRepParse_(rec) : { rep:'', ced:'' };
+    cola.push({ f8:x.id, ue:x.ue || '', hora:entHora_(), fecha:x.fecha, estado:'subida', rep:r.rep || '', ced:r.ced || '',
+                colado:false, origen:'lista', msg:'registrado desde Pegar lista' });
+    entColaSet_(cola);
+  }catch(e){}
+}
 async function plRegistrar(){
   var lista = PL.filas.filter(function(x){ return x.ok; }); if(!lista.length) return;
   var pin = await pinSesion_(lista.length+' entregas'); if(!pin) return;
@@ -4221,7 +4238,8 @@ async function plRegistrar(){
       var r = await pedir('file=kb_llave_hito&id='+encodeURIComponent(x.id)+'&etapa=ENTREGADO&fecha='+encodeURIComponent(x.fecha)+
                           '&pin='+encodeURIComponent(pin)+(rec?'&receptor='+encodeURIComponent(rec):'')+'&nota='+encodeURIComponent('Carga de lista (Por confirmar)'));
       if(r && r.ok !== false){ ok++; x.ok = false; x.est = '\u2713 registrado'; x.cls = 'ok';
-        F8.forEach(function(f){ if(f.id === x.id){ f.entregado = true; f.fEntrega = x.fecha; } }); }
+        F8.forEach(function(f){ if(f.id === x.id){ f.entregado = true; f.fEntrega = x.fecha; } });
+        plAJornada_(x, rec); }
       else { err.push(x.id); x.est = 'no se registró: '+((r&&r.msg)||'error'); x.cls = 'no'; }
     }catch(e){ err.push(x.id); x.est = 'sin conexión'; x.cls = 'no'; }
   }
