@@ -681,7 +681,11 @@
   .kpi-tit span{font-weight:400;color:#5a6675;font-size:11.5px}
   .kpi-alerta{margin-left:auto;border:0;background:#fde7c8;color:#7a4b00;border-radius:12px;padding:3px 10px;font-weight:700;font-size:12px;cursor:pointer}
   .rd-kpi.ambar{background:#fff4d6;color:#7a5a00}
-  .rd-kpi{flex:1 1 180px}
+  .rd-kpi{flex:1 1 180px;flex-wrap:wrap;row-gap:2px}
+  /* 25-sep: número y título en una línea, detalle debajo (antes "OTIF del mes" y "9 d" se partían) */
+  .rd-kpi b{white-space:nowrap}
+  .rd-kpi span{white-space:nowrap}
+  .rd-kpi small{flex:1 1 100%;margin-left:0!important}
   .pl-btn.on{background:#2e6b36;color:#fff}
 </style>
 </head>
