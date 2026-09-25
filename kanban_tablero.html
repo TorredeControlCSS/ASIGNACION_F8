@@ -690,7 +690,8 @@
   .rd-kpi.kpi2{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:10px;row-gap:0;align-items:center;padding:6px 12px;min-width:0}
   .rd-kpi.kpi2 b{grid-row:1 / span 2;font-size:22px;line-height:1}
   .rd-kpi.kpi2 span{font-size:12.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis}
-  .rd-kpi.kpi2 small{flex:none;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.85}
+  .rd-kpi.kpi2 small{flex:none;font-size:11px;white-space:normal;line-height:1.25;opacity:.85}
+  .topbar .gen{margin-left:12px;text-align:right}
   .pl-btn.on{background:#2e6b36;color:#fff}
   /* 25-sep · menos filas: las bandas de cada vista y la leyenda del flujo se retiran;
      su descripción corta va en la línea "Estás en" (y completa al pasar el mouse) */
@@ -710,10 +711,11 @@
   <img src="./icons/icon-512.png" alt="logo" onerror="this.style.display='none'" onclick="irInicio()" style="cursor:pointer" title="Volver al inicio"/>
   <div><h1 onclick="irInicio()" style="cursor:pointer" title="Volver al inicio">Kanban de Seguimiento &mdash; Tablero del Almac&eacute;n</h1>
     <div class="sub">Torre de Control &middot; DINALOG / CEDIS &middot; Solo lectura</div></div>
-  <div class="spacer"></div><span class="pin-ses" id="pinSes"></span><div class="gen" id="gen"></div><span class="rk-wrap"><button class="rd-refresh" id="btnRepKan" onclick="rkMenu(event)" title="Descargar el reporte Kanban completo con los datos de este momento">&#128202; Reporte Kanban</button>
+  <div class="spacer"></div><span class="pin-ses" id="pinSes"></span><span class="rk-wrap"><button class="rd-refresh" id="btnRepKan" onclick="rkMenu(event)" title="Descargar el reporte Kanban completo con los datos de este momento">&#128202; Reporte Kanban</button>
     <span class="rk-menu" id="rkMenu"><button onclick="rkDescargar('xlsx')">Excel completo</button><button onclick="rkDescargar('pdf')">PDF (OTIF)</button>
     <small>Se arma con los datos de este momento. Tarda 1 a 3 minutos. El correo diario sigue igual.</small></span></span>
   <button class="rd-refresh" id="btnRefresh" title="Traer los datos m&aacute;s recientes del Kanban">&#8635; Actualizar</button>
+  <div class="gen" id="gen"></div>
 </div>
 <div class="wrap">
   <div id="errBox"></div>
@@ -3839,7 +3841,7 @@ function rdPintarKpis_(){
   var k=[
     (g.onTime!=null
       ? ['otif', col(ot,50,80), kpiNum_(ot,1)+'%', 'OTIF del servicio',
-         (g.onTimeAlmacen!=null ? 'Almacén a tiempo '+kpiNum_(u?u.oa:g.onTimeAlmacen,1)+'% \u00b7 Abasto completo '+kpiNum_(u?u.ac:g.abastoCompleto,1)+'%'
+         (g.onTimeAlmacen!=null ? 'Almacén '+kpiNum_(u?u.oa:g.onTimeAlmacen,1)+'% \u00b7 Abasto '+kpiNum_(u?u.ac:g.abastoCompleto,1)+'%'
                                 : 'On-time '+kpiNum_(on,1)+'% \u00b7 Fill rate '+kpiNum_(fr,1)+'%'),
          'OTIF del servicio = pedidos que salieron A TIEMPO y COMPLETOS, sobre lo que salió este mes: es lo que vive la unidad. '+
          'Almacén a tiempo = de lo que tenía producto, qué parte salió a más tardar en su fecha del cronograma (responsabilidad del almacén). '+
@@ -3850,7 +3852,7 @@ function rdPintarKpis_(){
          'De lo que salió este mes, qué parte salió a más tardar en su fecha del cronograma de la unidad.']),
     ['sal','azul', u?kpiNum_(sal):kpiNum_(g.salidasPorDia,1), u?'Salidas del mes':'Salidas por día hábil', u?'pedidos que salieron':kpiNum_(g.salidas)+' en '+m.diasHabiles+' días hábiles',
       'Formas 8 que salieron del almacén con documento, en promedio por día hábil del mes.'],
-    ['ciclo','azul', ci==null?'\u2014':ci+(ci===1?' día':' días'), 'Tiempo de ciclo', 'de la recepción a la salida'+(!u&&a.cicloMediana!=null?' \u00b7 en '+antN+': '+a.cicloMediana+' días':''),
+    ['ciclo','azul', ci==null?'\u2014':ci+(ci===1?' día':' días'), 'Tiempo de ciclo', 'recepción \u2192 salida'+(!u&&a.cicloMediana!=null?' \u00b7 '+antN+': '+a.cicloMediana+' días':''),
       'Días desde que se recibió la Forma 8 hasta que salió (mediana de lo que salió este mes).'],
     ['venc', vs?'rosa':'verde', kpiNum_(vs), 'Atrasados con producto', 'más '+kpiNum_(vc)+' atrasados sin producto (cero)',
       'Pedidos que todavía no salen del almacén, que SÍ tienen producto asignado, y cuya fecha de entrega según el cronograma ya pasó. Aparte, los atrasados que están en cero por desabasto: no salen porque no hay producto.'],
