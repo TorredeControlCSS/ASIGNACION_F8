@@ -3841,7 +3841,8 @@ function rdPintarKpis_(){
   var k=[
     (g.onTime!=null
       ? ['otif', col(ot,50,80), kpiNum_(ot,1)+'%', 'OTIF del servicio',
-         (g.onTimeAlmacen!=null ? 'Almacén '+kpiNum_(u?u.oa:g.onTimeAlmacen,1)+'% \u00b7 Abasto '+kpiNum_(u?u.ac:g.abastoCompleto,1)+'%'
+         (g.onTimeAlmacen!=null ? 'Almacén '+kpiNum_(u?u.oa:g.onTimeAlmacen,1)+'% \u00b7 Abasto '+kpiNum_(u?u.ac:g.abastoCompleto,1)+'%'+
+                                  (!u&&a.otif!=null ? ' \u00b7 '+antN+' '+kpiNum_(a.otif,1)+'% '+(dif>=0?'\u25b2':'\u25bc') : '')
                                 : 'On-time '+kpiNum_(on,1)+'% \u00b7 Fill rate '+kpiNum_(fr,1)+'%'),
          'OTIF del servicio = pedidos que salieron A TIEMPO y COMPLETOS, sobre lo que salió este mes: es lo que vive la unidad. '+
          'Almacén a tiempo = de lo que tenía producto, qué parte salió a más tardar en su fecha del cronograma (responsabilidad del almacén). '+
