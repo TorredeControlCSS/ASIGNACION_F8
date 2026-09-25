@@ -2953,7 +2953,7 @@ setInterval(function(){
 
 const ENT_LS_COLA  = 'cedis_entregas_cola_v1';
 const ENT_LS_ASIST = 'cedis_asistencia_v1';
-const ENT_PING_MS  = 45000;     // cada cuánto se tantea la red
+const ENT_PING_MS  = 60000;     // cada cuánto se tantea la red (25-sep: 45 s → 60 s)
 
 /* ── Persistencia local. Todo vive en el dispositivo hasta que él suba. ── */
 /* Fecha y hora SIEMPRE en Panamá, nunca la del dispositivo. Diego da soporte
@@ -3116,9 +3116,15 @@ function entSondear_(){
      bien. La sonda no toca hojas y cuesta nada: se ejecuta siempre y lo que
      depende de `pend` es solo OFRECER la subida, no medir la red. */
   if (!navigator.onLine){ ENT_RED.estable = false; ENT_RED.ofrecido = false; ENT_RED.probado = true; entPintarRed_(); return; }
+  /* 25-sep (2): un solo ping (antes eran dos seguidos), solo con la bahía a la
+     vista y sin encimarse con otro ping que no ha terminado. Cada ping es una
+     ejecución del Motor: menos pings = el Motor atiende más rápido lo demás. */
+  if (typeof VISTA !== 'undefined' && VISTA !== 'entdia' && ENT_RED.probado) return;
+  if (ENT_RED.enCurso) return;
+  ENT_RED.enCurso = true;
   const t0 = Date.now();
   fetch(WEBAPP_BASE + '?file=kanban_ping&t=' + t0, { method:'GET' })
-    .then(function(){ return fetch(WEBAPP_BASE + '?file=kanban_ping&t=' + (t0+1)); })
+    .finally(function(){ ENT_RED.enCurso = false; })
     .then(function(){
       const antes = ENT_RED.estable;
       ENT_RED.estable = true; ENT_RED.huboRed = true; ENT_RED.probado = true; entPintarRed_();
