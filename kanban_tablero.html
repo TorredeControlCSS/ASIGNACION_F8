@@ -653,12 +653,34 @@
   .rk-menu button:hover{background:#eef2f8}
   .rk-menu small{display:block;padding:6px 10px 2px;color:#5a6675;font-size:11.5px;line-height:1.35}
   #btnRepKan[disabled]{opacity:.75;cursor:progress}
+  /* 25-sep · Pegar lista (Por confirmar) */
+  .pl-btn{margin-left:10px;border:1px solid #2e6b36;background:#fff;color:#2e6b36;border-radius:6px;padding:5px 12px;font-weight:600;cursor:pointer;font-size:12.5px}
+  .pl-m{position:fixed;inset:0;background:rgba(15,25,45,.45);display:flex;align-items:flex-start;justify-content:center;padding:6vh 12px;z-index:10045}
+  .pl-m .hoja{background:#fff;border-radius:10px;max-width:760px;width:100%;max-height:86vh;overflow:auto;padding:18px 20px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+  .pl-m h4{margin:0 0 4px;color:#1f3864;font-size:16px}.pl-m p{margin:0 0 8px;font-size:12.5px;color:#5a6675}
+  .pl-m textarea{width:100%;box-sizing:border-box;font-family:Consolas,monospace;font-size:13px;padding:9px;border:1px solid #c6ccd4;border-radius:6px}
+  .pl-m .fila{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}
+  .pl-m input{padding:7px 9px;border:1px solid #c6ccd4;border-radius:6px;font-size:13px}
+  .pl-m table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:8px}
+  .pl-m th{text-align:left;font-size:11px;color:#5a6675;border-bottom:1px solid #d9dee5;padding:5px}
+  .pl-m td{padding:5px;border-bottom:1px solid #eef0f3}
+  .pl-m .ok{color:#2e6b36;font-weight:600}.pl-m .no{color:#8c1d18}.pl-m .ya{color:#5a6675}
+  .pl-m .acc{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap;align-items:center}
+  .pl-m .acc button{border-radius:6px;padding:8px 14px;font-weight:600;cursor:pointer}
+  .pl-m .no-b{border:1px solid #1f3864;background:#fff;color:#1f3864}.pl-m .si-b{border:0;background:#2e7d46;color:#fff}
+  .pl-m .si-b:disabled{opacity:.6;cursor:progress}
+  /* 25-sep · línea "Estás en" con los botones de la vista; Limpiar todo fijo */
+  .rd-migas-der{margin-left:auto;display:inline-flex;gap:6px}
+  .rd-migas-der .rd-ctxbtn{margin:0}
+  #vistaReparto > .rd-ctx, #vistaCrono > .rd-ctx{display:none}
+  .rd-limpiar.rd-limpiar-off{opacity:.45;cursor:default}
+  .topbar h1:hover{text-decoration:underline}
 </style>
 </head>
 <body>
 <div class="topbar">
-  <img src="./icons/icon-512.png" alt="logo" onerror="this.style.display='none'"/>
-  <div><h1>Kanban de Seguimiento &mdash; Tablero del Almac&eacute;n</h1>
+  <img src="./icons/icon-512.png" alt="logo" onerror="this.style.display='none'" onclick="irInicio()" style="cursor:pointer" title="Volver al inicio"/>
+  <div><h1 onclick="irInicio()" style="cursor:pointer" title="Volver al inicio">Kanban de Seguimiento &mdash; Tablero del Almac&eacute;n</h1>
     <div class="sub">Torre de Control &middot; DINALOG / CEDIS &middot; Solo lectura</div></div>
   <div class="spacer"></div><span class="pin-ses" id="pinSes"></span><div class="gen" id="gen"></div><span class="rk-wrap"><button class="rd-refresh" id="btnRepKan" onclick="rkMenu(event)" title="Descargar el reporte Kanban completo con los datos de este momento">&#128202; Reporte Kanban</button>
     <span class="rk-menu" id="rkMenu"><button onclick="rkDescargar('xlsx')">Excel completo</button><button onclick="rkDescargar('pdf')">PDF (OTIF)</button>
@@ -1903,7 +1925,8 @@ function renderEntregas(){
     +'<button class="en-tg'+(EN_TAB==='pend'?' on':'')+'" onclick="EN_TAB=\'pend\';render();">Por confirmar <b>'+pend.length.toLocaleString()+'</b></button>'
     +'<button class="en-tg'+(EN_TAB==='hechas'?' on':'')+'" onclick="EN_TAB=\'hechas\';cargarEntregadosJSON().then(()=>render());">Entregadas (memoria) <b>'+hechas.length.toLocaleString()+'</b></button>'
     +'</div>';
-  html+='<div class="en-sub">Se aplican los filtros de la barra (Unidad Ejecutora, Grupo, Tipo) y el buscador.</div>';
+  html+='<div class="en-sub">Se aplican los filtros de la barra (Unidad Ejecutora, Grupo, Tipo) y el buscador.'+
+        (EN_TAB!=='hechas' ? ' <button class="pl-btn" onclick="plAbrir()">&#128203; Pegar lista de Formas 8</button>' : '')+'</div>';
   if(EN_TAB==='pend' && RD_MAS90) html+='<div class="rd-filtro90">Solo los de m&aacute;s de '+RD_CORTE+' d&iacute;as sin confirmar &middot; <a href="#" onclick="RD_MAS90=false;RD_KPI=null;render();return false">ver todos</a></div>';
   if(EN_TAB==='hechas') html+='<div class="rd-mem"><input id="rdMemPin" type="password" placeholder="PIN" maxlength="8" onkeydown="if(event.key===\'Enter\')rdPublicarMemoria()"><button id="rdMemBtn" onclick="rdPublicarMemoria()">Actualizar memoria</button><span id="rdMemMsg" class="rd-memmsg" style="display:none"></span></div>';
   if(EN_TAB==='hechas') html+='<div class="en-sub">'+(ENTREGADOS_MEM
@@ -3209,7 +3232,7 @@ function entRender(){
       '</div>'+
       '<datalist id="entUEs">'+UEs.map(function(u){ return '<option value="'+entEsc_(u)+'">'; }).join('')+'</datalist>'+
       '<datalist id="entGenteCap"></datalist>'+
-      '<button class="entp-lnk" onclick="entLoteToggle()">Pegar varias Formas 8 a la vez</button>'+
+      /* 25-sep: "Pegar varias" sale de la bahía; la carga de listas vive en Por confirmar (plPegarLista) */
       /* E2 · pegar varias: ventana aparte, no un cuadro grande dentro del paso */
       (entLoteOn ? '<div class="entp-modal" onclick="if(event.target===this)entLoteToggle()" onkeydown="if(event.key===\'Escape\')entLoteToggle()">'+
                    '<div class="hoja"><h4>Pegar varias Formas 8</h4>'+
@@ -3904,7 +3927,7 @@ function rdBarra_(){
   if(dia) dia.style.display = (VISTA==='reparto' || VISTA==='crono') ? '' : 'none';
   var hay=['fUE','fGrupo','fTipo','fDiaEnt','fBuscar'].some(function(id){ var e=document.getElementById(id); return e && String(e.value||'').trim(); });
   hay = hay || !!BUSCA_NAV || !!macroFiltro || !!RD_MAS90;   /* F1: también búsqueda, etapa o +90 días */
-  var bl=document.getElementById('btnLimpiar'); if(bl) bl.style.display = hay ? '' : 'none';
+  var bl=document.getElementById('btnLimpiar'); if(bl){ bl.style.display=''; bl.classList.toggle('rd-limpiar-off', !hay); bl.title = hay ? 'Quitar búsqueda, filtros y etapa' : 'No hay filtros activos'; }
 }
 
 /* ── navegación: Entregas es una sola pestaña con tres partes ── */
@@ -3943,6 +3966,89 @@ function rdNav_(v){
 }
 
 
+
+
+/* ══ 25-sep-2026 · PEGAR LISTA DE FORMAS 8 (Por confirmar entrega) ══════════
+   Para el arrastre desde mayo: una lista copiada de un Excel o del PDF de
+   seguimiento, de muchas unidades. Cada línea es una Forma 8 y, si se quiere,
+   su propia fecha delante ("2026-08-29 8106-2026-1-1232" o "29/08/2026 …").
+   Antes de registrar muestra qué encontró: cuáles están por confirmar, cuáles
+   ya estaban entregados y cuáles no están en el tablero. Registra solo las
+   que están por confirmar, cada una con su fecha, con la sesión de PIN. */
+var PL = { filas:[] };
+function plAbrir(){
+  var hoy = (typeof entHoy_==='function') ? entHoy_() : new Date().toISOString().slice(0,10);
+  var d = document.createElement('div'); d.className = 'pl-m'; d.id = 'plM';
+  d.onclick = function(ev){ if(ev.target === d) plCerrar(); };
+  d.innerHTML = '<div class="hoja" role="dialog" aria-label="Pegar lista de Formas 8"><h4>Pegar lista de Formas 8</h4>'+
+    '<p>Una por línea (o separadas por espacio). Si una línea empieza con una fecha, esa entrega queda con esa fecha; si no, con la fecha de abajo.</p>'+
+    '<textarea id="plTxt" rows="8" placeholder="8066-2026-1-479&#10;2026-08-29 8106-2026-1-1232&#10;29/08/2026 8047-2026-1-2178"></textarea>'+
+    '<div class="fila"><label style="font-size:12.5px;color:#5a6675">Fecha para las líneas sin fecha <input type="date" id="plFec" value="'+hoy+'" max="'+hoy+'"></label>'+
+    '<input id="plRec" placeholder="Recibió (opcional, para todas)" style="min-width:220px">'+
+    '<button class="no-b" style="border:1px solid #1f3864;background:#fff;color:#1f3864;border-radius:6px;padding:7px 12px;font-weight:600;cursor:pointer" onclick="plRevisar()">Revisar lista</button></div>'+
+    '<div id="plRes"></div>'+
+    '<div class="acc"><span id="plMsg" style="font-size:12.5px;color:#5a6675;margin-right:auto"></span>'+
+    '<button class="no-b" onclick="plCerrar()">Cerrar</button><button class="si-b" id="plAp" onclick="plRegistrar()" disabled>Registrar</button></div></div>';
+  document.body.appendChild(d);
+  setTimeout(function(){ var t = document.getElementById('plTxt'); if(t) t.focus(); }, 30);
+}
+function plCerrar(){ var m = document.getElementById('plM'); if(m) m.remove(); }
+function plFecha_(t){
+  var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t); if(m) return t;
+  m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(t); if(m) return m[3]+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[1]).slice(-2);
+  return '';
+}
+function plRevisar(){
+  var txt = (document.getElementById('plTxt')||{}).value || '', fDef = (document.getElementById('plFec')||{}).value || '';
+  var hoy = (typeof entHoy_==='function') ? entHoy_() : new Date().toISOString().slice(0,10);
+  var mem = {}; rdMemoria_().forEach(function(m){ mem[_buscNorm(m.id)] = m; });
+  var vistos = {}, filas = [];
+  txt.split(/\n+/).forEach(function(lin){
+    var toks = lin.trim().split(/[\s,;\t]+/).filter(Boolean), fecha = '';
+    if(toks.length && plFecha_(toks[0])){ fecha = plFecha_(toks[0]); toks.shift(); }
+    toks.forEach(function(tok){
+      var k = _buscNorm(tok); if(k.length < 6 || vistos[k]) return; vistos[k] = 1;
+      var f = F8.filter(function(x){ return _buscNorm(x.id) === k; })[0], fe = fecha || fDef, est, cls;
+      if(fe > hoy){ est = 'fecha futura'; cls = 'no'; }
+      else if(f && f.anulado){ est = 'retirado del ciclo'; cls = 'ya'; }
+      else if(f && f.entregado || mem[k]){ est = 'ya estaba entregado'+(mem[k]&&mem[k].fEntrega?' ('+String(mem[k].fEntrega).slice(0,10)+')':''); cls = 'ya'; }
+      else if(f && f.despachado){ est = 'por confirmar'; cls = 'ok'; }
+      else if(f){ est = 'todavía dentro del almacén'; cls = 'no'; }
+      else { est = 'no está en el tablero'; cls = 'no'; }
+      filas.push({ id: f ? f.id : (mem[k] ? mem[k].id : tok), ue: f ? f.ue : (mem[k] ? mem[k].ue : ''), fecha: fe, est: est, cls: cls, ok: cls === 'ok' });
+    });
+  });
+  PL.filas = filas;
+  var n = filas.filter(function(x){ return x.ok; }).length;
+  var res = document.getElementById('plRes');
+  res.innerHTML = filas.length ? '<table><tr><th>Forma 8</th><th>Unidad ejecutora</th><th>Fecha de entrega</th><th>Estado</th></tr>'+
+    filas.map(function(x){ return '<tr><td style="font-family:Consolas">'+_esc(x.id)+'</td><td>'+_esc(x.ue||'—')+'</td><td style="font-family:Consolas">'+_esc(x.fecha)+'</td><td class="'+x.cls+'">'+_esc(x.est)+'</td></tr>'; }).join('')+'</table>'
+    : '<p>No encontré Formas 8 en el texto.</p>';
+  var ap = document.getElementById('plAp'); ap.disabled = !n; ap.textContent = n ? 'Registrar '+n+' entregas' : 'Registrar';
+  document.getElementById('plMsg').textContent = filas.length ? (n+' por confirmar de '+filas.length+' en la lista. Las demás no se tocan.') : '';
+}
+async function plRegistrar(){
+  var lista = PL.filas.filter(function(x){ return x.ok; }); if(!lista.length) return;
+  var pin = await pinSesion_(lista.length+' entregas'); if(!pin) return;
+  var rec = ((document.getElementById('plRec')||{}).value || '').trim();
+  var ap = document.getElementById('plAp'), msg = document.getElementById('plMsg'), ok = 0, err = [];
+  ap.disabled = true;
+  for(var i = 0; i < lista.length; i++){
+    var x = lista[i]; ap.textContent = 'Registrando '+(i+1)+' de '+lista.length+'\u2026';
+    try{
+      var r = await pedir('file=kb_llave_hito&id='+encodeURIComponent(x.id)+'&etapa=ENTREGADO&fecha='+encodeURIComponent(x.fecha)+
+                          '&pin='+encodeURIComponent(pin)+(rec?'&receptor='+encodeURIComponent(rec):'')+'&nota='+encodeURIComponent('Carga de lista (Por confirmar)'));
+      if(r && r.ok !== false){ ok++; x.ok = false; x.est = '\u2713 registrado'; x.cls = 'ok';
+        F8.forEach(function(f){ if(f.id === x.id){ f.entregado = true; f.fEntrega = x.fecha; } }); }
+      else { err.push(x.id); x.est = 'no se registró: '+((r&&r.msg)||'error'); x.cls = 'no'; }
+    }catch(e){ err.push(x.id); x.est = 'sin conexión'; x.cls = 'no'; }
+  }
+  try{ taMarcarEscritura_(); }catch(e){}
+  var tb = document.querySelector('#plRes table');
+  if(tb) tb.innerHTML = '<tr><th>Forma 8</th><th>Unidad ejecutora</th><th>Fecha de entrega</th><th>Estado</th></tr>'+PL.filas.map(function(x){ return '<tr><td style="font-family:Consolas">'+_esc(x.id)+'</td><td>'+_esc(x.ue||'—')+'</td><td style="font-family:Consolas">'+_esc(x.fecha)+'</td><td class="'+x.cls+'">'+_esc(x.est)+'</td></tr>'; }).join('');
+  msg.textContent = ok+' registradas'+(PIN_SES&&PIN_SES.nombre?' por '+PIN_SES.nombre:'')+(err.length?' · '+err.length+' no se registraron (siguen por confirmar)':'')+'.';
+  ap.textContent = 'Listo'; try{ render(); }catch(e){}
+}
 
 /* ══ 25-sep-2026 · REPORTE KANBAN "FRESCO" DESDE EL TABLERO ══════════════
    El mismo Excel y el mismo PDF del correo diario, armados en el momento
@@ -4115,7 +4221,25 @@ function rdMigas_(v){
   if(g('fUE')) ch.push(['fUE',g('fUE')]); if(g('fGrupo')) ch.push(['fGrupo',g('fGrupo')]);
   if(g('fTipo')) ch.push(['fTipo',g('fTipo')==='URG'?'Urgencias':'Mensuales']);
   ch.forEach(function(c){ h+='<span class="chipf">'+_esc(c[1])+'<button onclick="rdQuitarFiltro_(\''+c[0]+'\')" aria-label="Quitar filtro">&times;</button></span>'; });
+  /* 25-sep: los botones propios de la vista (Expandir/Colapsar todo, Solo
+     pendiente) se muestran en esta misma línea, a la derecha, en vez de
+     ocupar una fila entera. Se mueven los botones originales (conservan su
+     función); si la vista no los usa, vuelven a su lugar oculto. */
+  var bE=document.getElementById('btnExpand'), bP=document.getElementById('btnPendiente');
   box.innerHTML = (v==='entdia') ? '' : h;
+  var der=document.createElement('span'); der.className='rd-migas-der';
+  if(v==='reparto' && bE) der.appendChild(bE); else if(bE) (document.querySelector('#vistaReparto .rd-ctx')||document.body).appendChild(bE);
+  if(v==='crono' && bP) der.appendChild(bP); else if(bP) (document.querySelector('#vistaCrono .rd-ctx')||document.body).appendChild(bP);
+  if(der.childNodes.length && v!=='entdia') box.appendChild(der);
+}
+/* 25-sep: el título lleva a la vista de inicio, sin filtros ni selección */
+function irInicio(){
+  try{ limpiarFiltros(); }catch(e){}
+  SEL={}; LIM={};
+  var mb=document.getElementById('modalBg'); if(mb) mb.classList.remove('open');
+  ['plM','rkMenu'].forEach(function(id){ var x=document.getElementById(id); if(x){ if(id==='rkMenu') x.classList.remove('on'); else x.remove(); } });
+  EN_TAB='pend'; rdIrEntregas('registrar');
+  window.scrollTo(0,0);
 }
 function rdQuitarFiltro_(k){
   if(k==='q'){ var i=document.getElementById('fBuscar'); if(i){ i.value=''; } BUSCA_NAV=''; try{ buscarDoc(); }catch(e){} render(); return; }
