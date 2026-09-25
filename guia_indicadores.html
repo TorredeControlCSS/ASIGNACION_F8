@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cómo se calculan los indicadores · Kanban del Almacén · CEDIS Panamá</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#1f3864; --navy2:#2c4a78; --ink:#1d2733; --sub:#56606e; --rule:#d9dee5; --paper:#ffffff; --fondo:#f3f5f8;
+  --ok:#2e6b36; --okf:#e6f3e8; --mal:#8c1d18; --malf:#f8e2e2; --amb:#7a5a00; --ambf:#fff4d6; --gris:#eef1f5;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box}
+html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 16px)}
+body{margin:0;background:var(--fondo);color:var(--ink);font:16px/1.6 "IBM Plex Sans","Segoe UI",Arial,sans-serif}
+a{color:var(--navy2)}
+header.top{background:var(--navy);color:#fff;padding:18px 22px}
+header.top .w{max-width:1120px;margin:0 auto;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+header.top h1{margin:0;font:600 22px/1.25 "IBM Plex Serif",Georgia,serif}
+header.top p{margin:2px 0 0;opacity:.85;font-size:14px}
+header.top .volver{margin-left:auto;color:#fff;border:1px solid rgba(255,255,255,.6);border-radius:6px;padding:7px 12px;text-decoration:none;font-weight:600;font-size:14px}
+.w2{max-width:1120px;margin:0 auto;display:grid;grid-template-columns:230px 1fr;gap:28px;padding:24px 22px 60px}
+nav.indice{position:sticky;top:16px;align-self:start;font-size:14px}
+nav.indice b{display:block;color:var(--sub);font-weight:600;margin-bottom:6px}
+nav.indice a{display:block;padding:5px 0 5px 10px;border-left:2px solid var(--rule);color:var(--ink);text-decoration:none}
+nav.indice a:hover{border-left-color:var(--navy);color:var(--navy)}
+main{min-width:0}
+section{background:var(--paper);border:1px solid var(--rule);border-radius:8px;padding:22px 26px;margin-bottom:18px}
+section h2{margin:0 0 6px;font:600 21px/1.3 "IBM Plex Serif",Georgia,serif;color:var(--navy)}
+section h3{margin:18px 0 4px;font-size:16px;color:var(--navy)}
+section p,section li{max-width:76ch}
+.resumen{border-left:4px solid var(--navy)}
+.cifras{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:14px 0 4px}
+.cifra{border:1px solid var(--rule);border-radius:6px;padding:10px 12px}
+.cifra b{display:block;font-size:24px;line-height:1.1;color:var(--navy)}
+.cifra span{font-size:13px;color:var(--sub)}
+.formula{background:var(--gris);border-radius:6px;padding:10px 14px;margin:8px 0;font-weight:500}
+.formula i{font-style:normal;color:var(--navy);font-weight:700}
+.duenio{display:inline-block;font-size:12.5px;font-weight:600;border-radius:12px;padding:2px 10px;margin-left:6px;vertical-align:middle}
+.d-alm{background:#dde8f6;color:var(--navy)} .d-abs{background:var(--ambf);color:var(--amb)} .d-srv{background:var(--okf);color:var(--ok)}
+.tabla{overflow-x:auto;margin:10px 0}
+table{border-collapse:collapse;width:100%;font-size:14px;min-width:820px}
+th{background:var(--navy);color:#fff;font-weight:600;text-align:left;padding:7px 9px;font-size:13px;vertical-align:bottom}
+th small{font-weight:400;opacity:.85}
+td{border-bottom:1px solid var(--rule);padding:6px 9px}
+td.n{text-align:right;font-variant-numeric:tabular-nums}
+td.c{text-align:center}
+.si{color:var(--ok);font-weight:700} .no{color:var(--mal);font-weight:700} .na{color:var(--sub)}
+tr.tot td{background:var(--gris);font-weight:700}
+.paso{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:10px 0;align-items:baseline}
+.paso .r{font-weight:700;color:var(--navy);font-variant-numeric:tabular-nums;white-space:nowrap}
+.aviso{background:var(--ambf);border-radius:6px;padding:10px 14px;color:#5c4a00;font-size:14.5px}
+details{border-top:1px solid var(--rule);padding:10px 0}
+details summary{cursor:pointer;font-weight:600;color:var(--navy)}
+details p{margin:8px 0 0}
+footer{color:var(--sub);font-size:13px;text-align:center;padding:0 22px 30px}
+@media (max-width:860px){ .w2{grid-template-columns:1fr} nav.indice{position:static;display:flex;flex-wrap:wrap;gap:4px 12px} nav.indice b{flex:1 1 100%} nav.indice a{border-left:0;padding:2px 0} section{padding:18px} }
+@media print{ nav.indice, header.top .volver{display:none} .w2{grid-template-columns:1fr} section{break-inside:avoid} }
+:focus-visible{outline:3px solid #7aa7e0;outline-offset:2px}
+</style>
+</head>
+<body>
+<header class="top"><div class="w">
+  <div><h1>Cómo se calculan los indicadores del Kanban</h1>
+  <p>Torre de Control · DINALOG · CEDIS Panamá — la misma regla en el tablero, el PDF diario, el Excel, el cierre mensual y el nivel de servicio</p></div>
+  <a class="volver" href="kanban_tablero.html">Volver al tablero</a>
+</div></header>
+
+<div class="w2">
+<nav class="indice" aria-label="Contenido">
+  <b>Contenido</b>
+  <a href="#resumen">En una página</a>
+  <a href="#ejemplo">Un ejemplo resuelto</a>
+  <a href="#otif">OTIF del servicio</a>
+  <a href="#almacen">Almacén a tiempo</a>
+  <a href="#abasto">Abasto completo</a>
+  <a href="#fill">Fill rate</a>
+  <a href="#fecha">La fecha esperada</a>
+  <a href="#ritmo">Salidas y ciclo</a>
+  <a href="#atrasados">Atrasados</a>
+  <a href="#confirmadas">Entregas confirmadas</a>
+  <a href="#fuera">Qué no entra</a>
+  <a href="#donde">Dónde se ve cada uno</a>
+  <a href="#preguntas">Preguntas frecuentes</a>
+</nav>
+
+<main>
+<section id="resumen" class="resumen">
+  <h2>En una página</h2>
+  <p>Los indicadores miden <b>lo que salió del almacén</b> en el periodo (el día o el mes), sin importar cuándo llegó el pedido. Un pedido "sale" cuando tiene fecha de distribución: salió con su documento. A cada pedido que salió se le hacen dos preguntas:</p>
+  <ol>
+    <li><b>¿Salió a tiempo?</b> A más tardar el día de su fecha esperada, según el cronograma de retiro de la unidad.</li>
+    <li><b>¿Salió completo?</b> Con toda la cantidad que la unidad pidió.</li>
+  </ol>
+  <p>De esas dos respuestas salen los indicadores principales, y cada uno tiene un responsable:</p>
+  <div class="cifras">
+    <div class="cifra"><b>OTIF del servicio</b><span>a tiempo <u>y</u> completo · lo que vive la unidad</span></div>
+    <div class="cifra"><b>Almacén a tiempo</b><span>de lo que tenía producto, salió a tiempo · almacén</span></div>
+    <div class="cifra"><b>Abasto completo</b><span>salió con toda la cantidad · abastecimiento</span></div>
+    <div class="cifra"><b>Fill rate</b><span>cantidad servida ÷ cantidad pedida</span></div>
+  </div>
+  <p>Todo se calcula desde <b>SEGUIMIENTO_PEDIDOS</b> y se actualiza solo cada 30 minutos.</p>
+</section>
+
+<section id="ejemplo">
+  <h2>Un ejemplo resuelto</h2>
+  <p>Diez pedidos que salieron en el mes. Para cada uno se comparan fechas y cantidades, y se anota <b>1</b> si cumple o <b>0</b> si no. Al final se suman las columnas y con esas sumas se calculan los indicadores.</p>
+  <div class="tabla"><table>
+    <thead><tr><th>Pedido</th><th>Fecha esperada</th><th>Salió</th><th>Días de diferencia</th><th>A tiempo<br><small>(diferencia ≤ 0)</small></th>
+      <th>Pidió</th><th>Se asignó</th><th>% servido</th><th>Completo<br><small>(100%)</small></th><th>A tiempo y completo</th><th>Tenía producto<br><small>(asignado &gt; 0)</small></th><th>A tiempo, con producto</th></tr></thead>
+    <tbody>
+<tr><td>P1</td><td class="c">15/09</td><td class="c">14/09</td><td class="n">-1</td><td class="c si">1</td><td class="n">100</td><td class="n">100</td><td class="n">100.0%</td><td class="c si">1</td><td class="c si">1</td><td class="c">1</td><td class="c">1</td></tr>
+<tr><td>P2</td><td class="c">15/09</td><td class="c">15/09</td><td class="n">+0</td><td class="c si">1</td><td class="n">200</td><td class="n">150</td><td class="n">75.0%</td><td class="c no">0</td><td class="c no">0</td><td class="c">1</td><td class="c">1</td></tr>
+<tr><td>P3</td><td class="c">16/09</td><td class="c">19/09</td><td class="n">+3</td><td class="c no">0</td><td class="n">50</td><td class="n">50</td><td class="n">100.0%</td><td class="c si">1</td><td class="c no">0</td><td class="c">1</td><td class="c">0</td></tr>
+<tr><td>P4</td><td class="c">16/09</td><td class="c">22/09</td><td class="n">+6</td><td class="c no">0</td><td class="n">80</td><td class="n">40</td><td class="n">50.0%</td><td class="c no">0</td><td class="c no">0</td><td class="c">1</td><td class="c">0</td></tr>
+<tr><td>P5</td><td class="c">17/09</td><td class="c">17/09</td><td class="n">+0</td><td class="c si">1</td><td class="n">60</td><td class="n">60</td><td class="n">100.0%</td><td class="c si">1</td><td class="c si">1</td><td class="c">1</td><td class="c">1</td></tr>
+<tr><td>P6</td><td class="c">17/09</td><td class="c">16/09</td><td class="n">-1</td><td class="c si">1</td><td class="n">120</td><td class="n">0</td><td class="n">0.0%</td><td class="c no">0</td><td class="c no">0</td><td class="c">0</td><td class="c">0</td></tr>
+<tr><td>P7</td><td class="c">18/09</td><td class="c">23/09</td><td class="n">+5</td><td class="c no">0</td><td class="n">300</td><td class="n">300</td><td class="n">100.0%</td><td class="c si">1</td><td class="c no">0</td><td class="c">1</td><td class="c">0</td></tr>
+<tr><td>P8</td><td class="c">18/09</td><td class="c">18/09</td><td class="n">+0</td><td class="c si">1</td><td class="n">40</td><td class="n">30</td><td class="n">75.0%</td><td class="c no">0</td><td class="c no">0</td><td class="c">1</td><td class="c">1</td></tr>
+<tr><td>P9</td><td class="c">19/09</td><td class="c">24/09</td><td class="n">+5</td><td class="c no">0</td><td class="n">90</td><td class="n">0</td><td class="n">0.0%</td><td class="c no">0</td><td class="c no">0</td><td class="c">0</td><td class="c">0</td></tr>
+<tr><td>P10</td><td class="c">22/09</td><td class="c">22/09</td><td class="n">+0</td><td class="c si">1</td><td class="n">70</td><td class="n">70</td><td class="n">100.0%</td><td class="c si">1</td><td class="c si">1</td><td class="c">1</td><td class="c">1</td></tr>
+<tr class="tot"><td>Suma</td><td></td><td></td><td></td><td class="c">6</td><td class="n">1,110</td><td class="n">800</td><td></td><td class="c">5</td><td class="c">3</td><td class="c">8</td><td class="c">5</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Los cálculos con esas sumas</h3>
+  <div class="paso"><span class="r">30.0%</span><span><b>OTIF del servicio</b> = suma de "a tiempo y completo" ÷ pedidos que salieron = 3 ÷ 10</span></div>
+  <div class="paso"><span class="r">62.5%</span><span><b>Almacén a tiempo</b> = suma de "a tiempo, con producto" ÷ suma de "tenía producto" = 5 ÷ 8. P6 y P9 salieron con 0 asignado: no se le cargan al almacén.</span></div>
+  <div class="paso"><span class="r">50.0%</span><span><b>Abasto completo</b> = suma de "completo" ÷ pedidos que salieron = 5 ÷ 10</span></div>
+  <div class="paso"><span class="r">72.1%</span><span><b>Fill rate</b> = suma de lo asignado ÷ suma de lo pedido = 800 ÷ 1,110</span></div>
+  <div class="paso"><span class="r">60.0%</span><span><b>On-time</b> (solo a tiempo, sin mirar cantidades) = suma de "a tiempo" ÷ pedidos que salieron = 6 ÷ 10. Se muestra en el detalle al pasar el mouse.</span></div>
+  <p>Por qué dan distinto: el <b>fill rate</b> (72%) mide cantidades, y la mayor parte de lo pedido llegó. El <b>abasto completo</b> (50%) cuenta pedidos, y a la mitad le faltó algo. El <b>OTIF</b> (30%) exige las dos condiciones a la vez, por eso es el más bajo.</p>
+</section>
+
+<section id="otif">
+  <h2>OTIF del servicio <span class="duenio d-srv">DINALOG en conjunto</span></h2>
+  <div class="formula"><i>OTIF</i> = pedidos que salieron a tiempo <u>y</u> completos ÷ pedidos que salieron en el periodo</div>
+  <p>Es el indicador principal: lo que experimenta la unidad ejecutora. Un pedido cuenta solo si cumplió <b>las dos condiciones</b>. Por eso suele ser mucho más bajo que el a tiempo o el completo por separado.</p>
+  <p><b>Completo</b> quiere decir 100% de lo pedido: si una unidad pidió 5,470 y salieron 5,450, ese pedido no cuenta como completo. Es la definición estándar de OTIF.</p>
+</section>
+
+<section id="almacen">
+  <h2>Almacén a tiempo <span class="duenio d-alm">Almacén</span></h2>
+  <div class="formula"><i>Almacén a tiempo</i> = pedidos con producto que salieron a tiempo ÷ pedidos con producto que salieron</div>
+  <p>Mide la ejecución del almacén: recibir, asignar, recolectar, facturar y despachar. Solo cuenta los pedidos que <b>tenían producto asignado</b>: si el Motor asignó 0 porque no había existencias, el almacén no tenía nada que despachar y ese pedido no se le carga.</p>
+</section>
+
+<section id="abasto">
+  <h2>Abasto completo <span class="duenio d-abs">Abastecimiento</span></h2>
+  <div class="formula"><i>Abasto completo</i> = pedidos que salieron con toda la cantidad pedida ÷ pedidos que salieron</div>
+  <p>Mide la disponibilidad de producto. Aquí sí cuentan los pedidos que salieron sin nada: son el caso extremo de un pedido incompleto. Un abasto completo bajo con un almacén a tiempo alto dice que el problema es de producto, no de operación.</p>
+</section>
+
+<section id="fill">
+  <h2>Fill rate</h2>
+  <div class="formula"><i>Fill rate</i> = suma de lo asignado ÷ suma de lo pedido, de los pedidos que salieron</div>
+  <p>Mide <b>cantidades</b>, no pedidos. Si la unidad pidió 1,000 y recibió 800, su fill rate es 80%. Lo asignado de un pedido nunca cuenta por encima de lo pedido: si por redondeo al empaque se asignaron 1,020 de 1,000, cuenta 1,000.</p>
+  <div class="aviso">En las hojas de detalle del Excel (por triage, urgencias, por unidad) la columna <b>"Renglones con asignación"</b> es otra cosa: cuántos renglones del pedido recibieron algo, aunque sea poco. El fill rate oficial es el de cantidades.</div>
+</section>
+
+<section id="fecha">
+  <h2>La fecha esperada: cuándo un pedido está "a tiempo"</h2>
+  <p>Cada unidad tiene días de retiro en su cronograma (por ejemplo, <i>martes / jueves</i>). La fecha esperada depende del tipo de pedido:</p>
+  <h3>Urgencia</h3>
+  <p>El <b>primer día de cronograma</b> que deje al menos <b>2 días hábiles</b> de preparación después de la recepción.</p>
+  <p><i>Ejemplo:</i> urgencia recibida el <b>lunes</b>, unidad con cronograma <b>martes / jueves</b>. El martes solo deja 1 día hábil, no alcanza. El jueves deja 3 (martes, miércoles y jueves): la fecha esperada es el <b>jueves</b>.</p>
+  <h3>Mensual</h3>
+  <p><b>Recepción + 15 días corridos</b>, y de ahí el <b>siguiente día de cronograma</b>.</p>
+  <p><i>Ejemplo:</i> mensual recibida el <b>1 de septiembre</b>. Más 15 días es el miércoles 16. Con cronograma martes / jueves, la fecha esperada es el <b>jueves 17</b>.</p>
+  <p>Un pedido está <b>a tiempo</b> si su fecha de distribución es igual o anterior a esa fecha. Se compara el <b>día</b>, no la hora: salir a las 3 de la tarde del día esperado sigue siendo a tiempo. Si la unidad no tiene cronograma registrado, se usa recepción + 2 días (urgencias) o recepción + 15 días (mensuales).</p>
+</section>
+
+<section id="ritmo">
+  <h2>Salidas por día hábil y tiempo de ciclo</h2>
+  <div class="formula"><i>Salidas por día hábil</i> = pedidos que salieron en el mes ÷ días de lunes a viernes transcurridos del mes</div>
+  <p>Es la capacidad real del almacén. <i>Ejemplo:</i> 1,377 salidas en 19 días hábiles = 72.5 por día.</p>
+  <div class="formula"><i>Tiempo de ciclo</i> = mediana de los días entre la recepción y la salida, de lo que salió en el mes</div>
+  <p>Se usa la <b>mediana</b> (el valor del medio) y no el promedio, para que unos pocos pedidos muy viejos no distorsionen el número. <i>Ejemplo:</i> si cinco pedidos tardaron 3, 5, 9, 12 y 60 días, la mediana es 9; el promedio sería 18, inflado por el de 60.</p>
+</section>
+
+<section id="atrasados">
+  <h2>Atrasados en el almacén</h2>
+  <p>Son pedidos que <b>todavía no salen</b> y cuya <b>fecha esperada ya pasó</b>. Se separan en dos grupos, porque tienen causas y responsables distintos:</p>
+  <ul>
+    <li><b>Con producto:</b> tienen asignación y siguen dentro. Es trabajo pendiente del almacén: es el número que va en la tarjeta.</li>
+    <li><b>Sin producto:</b> están en cero por desabasto (el Motor asignó 0). No salen porque no hay qué despachar.</li>
+  </ul>
+  <p>Es una foto del momento: cuenta lo que está atrasado <b>hoy</b>.</p>
+</section>
+
+<section id="confirmadas">
+  <h2>Entregas confirmadas</h2>
+  <div class="formula"><i>Entregas confirmadas</i> = pedidos que salieron en el mes y ya tienen su entrega registrada en la bahía ÷ pedidos que salieron en el mes</div>
+  <p>No mide al almacén: mide cuánto se está <b>cerrando el ciclo</b> con la entrega real a la unidad. Cuando este número esté cerca del 100% de forma estable, el OTIF podrá medirse con la fecha de entrega en lugar de la fecha de salida.</p>
+</section>
+
+<section id="fuera">
+  <h2>Qué no entra en los indicadores</h2>
+  <ul>
+    <li><b>Laboratorio</b> (G13, G14, G15): maneja sus pedidos fuera del proceso de asignación del Motor. Sin asignación registrada no se puede saber si salieron completos, así que se cuentan aparte.</li>
+    <li><b>Pedidos retirados del ciclo</b> (anulados).</li>
+    <li><b>Entregados sin fecha de salida:</b> se sabe que se entregaron, pero no cuándo salieron; no se puede decir si fue a tiempo.</li>
+    <li><b>Unidades que no atiende CEDIS Panamá</b>, según la matriz de alias.</li>
+  </ul>
+</section>
+
+<section id="donde">
+  <h2>Dónde se ve cada indicador</h2>
+  <div class="tabla"><table>
+    <thead><tr><th>Dónde</th><th>Qué muestra</th><th>Periodo</th></tr></thead>
+    <tbody>
+      <tr><td>Tarjetas del tablero</td><td>OTIF, almacén y abasto, salidas por día, ciclo, atrasados, confirmadas; por unidad si se filtra una</td><td>Mes en curso, cada 30 min</td></tr>
+      <tr><td>PDF diario (7:00 y 12:00)</td><td>Por unidad y por grupo, ordenado de peor a mejor OTIF</td><td>Día de cierre y mes</td></tr>
+      <tr><td>Excel del reporte Kanban</td><td>Hojas <i>FILL_RATE_POR_UE</i> (por unidad) y <i>FILL_RATE_OTIF</i> (por día)</td><td>Mes y últimos 14 días</td></tr>
+      <tr><td>Cierre mensual (día 1)</td><td>Resumen del mes cerrado</td><td>Mes anterior</td></tr>
+      <tr><td>Nivel de servicio (viernes)</td><td>Cada unidad recibe lo suyo, mes a mes</td><td>Por mes de recepción</td></tr>
+    </tbody>
+  </table></div>
+  <p>El <b>nivel de servicio</b> de los viernes cuenta los pedidos en el <b>mes en que se recibieron</b> ("de lo que pediste en mayo, cuánto se sirvió"). Los demás cuentan en el <b>mes en que salieron</b>. Por eso sus porcentajes pueden diferir: responden preguntas distintas.</p>
+</section>
+
+<section id="preguntas">
+  <h2>Preguntas frecuentes</h2>
+  <details><summary>¿Por qué el OTIF es tan bajo si el fill rate es de casi 50%?</summary>
+    <p>Porque el OTIF exige que el pedido esté <b>completo al 100%</b> y además a tiempo. Un pedido al que le faltó una sola unidad de un renglón ya no cuenta. El fill rate, en cambio, suma cantidades: ese mismo pedido aporta casi todo lo que llevó.</p></details>
+  <details><summary>¿Por qué las salidas del día aparecen bajas en la mañana?</summary>
+    <p>Las salidas de un día llegan con el archivo de distribución de la mañana siguiente (6:00). Antes de esa hora, el día más reciente se ve incompleto.</p></details>
+  <details><summary>¿Cada cuánto se actualiza?</summary>
+    <p>El tablero recalcula cada 30 minutos sin intervención de nadie. Los correos salen a sus horas programadas con el cálculo de ese momento.</p></details>
+  <details><summary>Un pedido salió sin producto (0 asignado). ¿A quién se le carga?</summary>
+    <p>Al abastecimiento: cuenta como incompleto en el abasto completo y en el OTIF del servicio, pero no afecta el almacén a tiempo.</p></details>
+</section>
+</main>
+</div>
+<footer>Caja de Seguro Social · Dirección Nacional de Logística · Torre de Control CEDIS Panamá · versión del 25 de septiembre de 2026</footer>
+</body>
+</html>
