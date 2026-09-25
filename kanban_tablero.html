@@ -704,6 +704,7 @@
   th.ts.on .fl{opacity:1;color:#1f3864}
   .entp-g{font-weight:400;font-size:12px;color:#7a8594;margin-left:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1 1 auto}
   .entp-sec > :nth-child(2){margin-top:10px}
+  .kpi-guia{font-size:12px;font-weight:600;color:#1f3864;text-decoration:underline}
 </style>
 </head>
 <body>
@@ -3863,6 +3864,7 @@ function rdPintarKpis_(){
   var cola=(typeof entCola_==='function')?entCola_():[], sinSubir=cola.filter(function(x){return x.estado!=='subida';}).length;
   box.innerHTML='<div class="kpi-tit">Desempeño de '+mesN+' al '+hoyTxt+(u?' \u00b7 <b>'+_esc(fu)+'</b>':' \u00b7 CEDIS Panamá')+
       ' <span>A tiempo = salió a más tardar en su fecha según el cronograma de la unidad.</span>'+
+      ' <a class="kpi-guia" href="guia_indicadores.html" target="_blank" rel="noopener">¿Cómo se calcula?</a>'+
       (sinSubir?'<button class="kpi-alerta" onclick="rdIrEntregas(\'registrar\')">\u26a0 '+sinSubir+' entregas anotadas sin subir al Kanban</button>':'')+'</div>'+
     k.map(function(x){ return '<button class="rd-kpi kpi2 '+x[1]+'" onclick="kpiIr_(\''+x[0]+'\')" title="'+_esc(x[5])+'"><b>'+x[2]+'</b><span>'+x[3]+'</span><small>'+x[4]+'</small></button>'; }).join('');
 }
