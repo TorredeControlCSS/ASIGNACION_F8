@@ -716,7 +716,10 @@
   .kpi-tit{font-size:12px}
   #entCapHora.mal, .entp-t.mal{border-color:#c0392b;background:#fdecea}
   .entp-t{width:64px}
-  .asis-t{width:100%;border-collapse:collapse;font-size:12.5px;margin:4px 0 10px}
+  .asis-t{width:100%;border-collapse:collapse;font-size:12.5px;margin:4px 0 10px;table-layout:fixed}
+  .asis-t th:nth-child(3), .asis-t th:nth-child(4){width:72px}
+  .asis-t td{overflow-wrap:anywhere}
+  .asis-t .entp-t{width:62px;max-width:100%;box-sizing:border-box;padding:4px 5px}
   .asis-t th{text-align:left;font-size:11px;color:#5a6675;border-bottom:1px solid #d9dee5;padding:4px}
   .asis-t td{border-bottom:1px solid #eef0f3;padding:3px 4px}
   .asis-t small{color:#8a94a3}
@@ -726,6 +729,11 @@
   #ibM td{border-bottom:1px solid #eef0f3;padding:6px 5px;white-space:nowrap}
   #ibM .ib-q{color:#5a6675;font-size:12px}
   #ibM .ib-pend{background:#fff4d6;color:#7a5a00;border-radius:6px;padding:6px 10px}
+  .ent-plega{cursor:pointer;user-select:none}
+  .ent-plega .plg{display:inline-block;width:16px;color:#1f3864}
+  .ent-plega .plg-txt{font-weight:400;font-size:12px;color:#7a8594}
+  .ent-otros{font-size:12.5px;color:#7a5a00;background:#fff4d6;border-radius:6px;padding:5px 10px;margin:4px 0 6px}
+  #ibM button[disabled]{opacity:.7;cursor:progress}
 </style>
 </head>
 <body>
@@ -3329,13 +3337,26 @@ function entRender(){
          '<button class="btn-si" onclick="entRetUltimos()">Aplicar a los '+ENT_ULTIMOS.length+'</button>'+
          '<button class="btn-mini" onclick="ENT_ULTIMOS=[];entRender()">Omitir</button></div>';
   }
-  h += '<div class="ent-tit" style="margin-top:12px">Pedidos entregados &mdash; '+cola.length+
-       (pend.length ? ' <span class="rd-pill warn"><b>'+pend.length+'</b> por registrar</span>' : '')+
-       ((cola.length-pend.length) ? ' <span class="rd-pill ok"><b>'+(cola.length-pend.length)+'</b> registrados</span>' : '')+
-       (sinUE ? ' <span class="rd-pill alerta"><b>'+sinUE+'</b> sin unidad ejecutora</span>' : '')+'</div>';
-  if (cola.length){
+  /* 25-sep: la lista muestra solo los pedidos del DÍA ELEGIDO (como el informe y
+     la asistencia) y se puede plegar. Si en la jornada hay pedidos de otros
+     días, se avisa cuántos. Plegada por defecto cuando todo ya está registrado. */
+  const colaDia = cola.filter(function(x){ return (x.fecha || hoy) === dia; });
+  const pendDia = colaDia.filter(function(x){ return x.estado !== 'subida'; }).length;
+  const sinUEDia = colaDia.filter(function(x){ return !x.ue; }).length;
+  const otros = cola.length - colaDia.length;
+  const abierta = (ENT_LISTA_ABIERTA[dia] != null) ? ENT_LISTA_ABIERTA[dia] : (pendDia > 0 || colaDia.length <= 8);
+  h += '<div class="ent-tit ent-plega" style="margin-top:12px" role="button" tabindex="0" aria-expanded="'+abierta+'" '+
+       'onclick="entListaPlegar(\''+dia+'\','+(!abierta)+')" onkeydown="if(event.key===\'Enter\')entListaPlegar(\''+dia+'\','+(!abierta)+')">'+
+       '<span class="plg">'+(abierta ? '&#9662;' : '&#9656;')+'</span>Pedidos entregados el '+entEsc_(entDiaTxt_(dia))+' &mdash; '+colaDia.length+
+       (pendDia ? ' <span class="rd-pill warn"><b>'+pendDia+'</b> por registrar</span>' : '')+
+       ((colaDia.length-pendDia) ? ' <span class="rd-pill ok"><b>'+(colaDia.length-pendDia)+'</b> registrados</span>' : '')+
+       (sinUEDia ? ' <span class="rd-pill alerta"><b>'+sinUEDia+'</b> sin unidad ejecutora</span>' : '')+
+       (abierta ? '' : ' <span class="plg-txt">(toca para ver)</span>')+'</div>'+
+       (otros ? '<div class="ent-otros">Esta jornada también tiene <b>'+otros+'</b> pedido'+(otros>1?'s':'')+' de otro día. Cambia la fecha arriba para verlos.</div>' : '');
+  if (!abierta){ /* plegada: no se dibuja la tabla */ }
+  else if (colaDia.length){
     h += '<table class="ent-tb"><tr><th>Forma 8</th><th>Unidad ejecutora</th><th>Retiró</th><th>Entregado</th><th>Estado</th><th></th></tr>'+
-      cola.slice().reverse().map(function(x){
+      colaDia.slice().reverse().map(function(x){
         const k = entIdParcial_(x.f8), fx = x.fecha || entHoy_(), vivo = x.estado !== 'subida';
         const celUE = (vivo && (!x.ue || x.colado))
           ? '<input class="entp-in'+(x.ue?'':' falta')+'" list="entUEs" value="'+entEsc_(x.ue||'')+'" placeholder="escribe la unidad" '+
@@ -3353,15 +3374,20 @@ function entRender(){
           '<td><button class="x" onclick="entQuitar(\''+entEsc_(x.f8)+'\')">&times;</button></td></tr>';
       }).join('')+'</table>'+dlHtml;
   } else {
-    h += '<div class="ent-vacio">Todavía no hay pedidos anotados en esta jornada.</div>';
+    h += '<div class="ent-vacio">Todavía no hay pedidos anotados para este día.</div>';
   }
   h += '</div>';
 
   /* día pasado: lo que quedó en el libro ese día */
-  if (entRetro_() && libro.length){
-    h += '<div class="ent-caja entp-libro"><div class="ent-tit">En el libro el '+entEsc_(entDiaTxt_(dia))+' &mdash; '+libro.length+'</div>'+
+  /* 25-sep: antes repetía los pedidos de la lista de arriba (ya subidos). Ahora
+     solo muestra los registrados ese día por otras vías (Por confirmar, otro equipo). */
+  const enLista = {}; colaDia.forEach(function(x){ enLista[entIdParcial_(x.f8)] = 1; });
+  const libroOtros = libro.filter(function(f){ return !enLista[entIdParcial_(f.id)]; });
+  if (entRetro_() && libroOtros.length){
+    h += '<div class="ent-caja entp-libro"><div class="ent-tit">Registrados ese día por otra vía &mdash; '+libroOtros.length+
+         '<span class="entp-g">desde Por confirmar u otro equipo; no están en la lista de arriba</span></div>'+
          '<table class="ent-tb"><tr><th>Forma 8</th><th>Unidad ejecutora</th><th>Entregado</th></tr>'+
-         libro.slice().sort(function(a,b){ return String(a.fEntrega).localeCompare(String(b.fEntrega)); }).map(function(f){
+         libroOtros.slice().sort(function(a,b){ return String(a.fEntrega).localeCompare(String(b.fEntrega)); }).map(function(f){
            return '<tr><td class="mono">'+entEsc_(f.id)+'</td><td>'+entEsc_(f.ue||'—')+'</td><td class="mono">'+entEsc_(f.fEntrega||'')+'</td></tr>';
          }).join('')+'</table></div>';
   }
@@ -3424,7 +3450,9 @@ var entStUEAuto = false;  /* la unidad la puso el pedido, no la escribió el sup
 var entLoteOn = false, entFoco = false;
 var entStHora = '';       /* hora de entrega válida (hh:mm); vacía = la hora actual */
 var entStHoraTxt = '';
-var entStRet = '';        /* "¿quién los retiró?" de los pedidos recién agregados, mientras se escribe */    /* lo que se lleva escrito en el campo de hora, aunque esté incompleto */
+var entStRet = '';
+var ENT_LISTA_ABIERTA = {};   /* por día: true/false si el usuario plegó o abrió la lista */
+function entListaPlegar(dia, abrir){ ENT_LISTA_ABIERTA[dia] = !!abrir; entRender(); }        /* "¿quién los retiró?" de los pedidos recién agregados, mientras se escribe */    /* lo que se lleva escrito en el campo de hora, aunque esté incompleto */
 var entAsisAbierta = false;
 var ENT_SUBIENDO = false;   /* E2: mientras sube, el botón no se reactiva al repintar */
 var ENT_LS_ASISH = 'cedis_entregas_horas_v1';   /* llegada/salida capturadas a mano */
@@ -4192,25 +4220,45 @@ async function ibAbrir(){
       return '<tr><td><b>' + DS[f.getDay()] + ' ' + (+x.fecha.slice(8, 10)) + ' ' + MS[+x.fecha.slice(5, 7) - 1] + ' ' + x.fecha.slice(0, 4) + '</b></td>'+
         '<td>' + x.pedidos + (x.pedidos === 1 ? ' pedido' : ' pedidos') + '</td><td>' + x.representantes + (x.representantes === 1 ? ' representante' : ' representantes') + '</td><td>' + (x.fotos ? x.fotos + ' foto' + (x.fotos > 1 ? 's' : '') : 'sin foto') + '</td>'+
         '<td class="ib-q">' + _esc(x.por || '') + (x.generado ? ' · ' + _esc(x.generado.slice(11)) : '') + '</td>'+
-        '<td><button class="no-b" onclick="ibVer(\'' + x.id + '\',false)">Ver</button> <button class="no-b" onclick="ibVer(\'' + x.id + '\',true)">Descargar</button></td></tr>';
+        '<td><button class="no-b" onclick="ibVer(\'' + x.id + '\',false,this)">Ver</button> <button class="no-b" onclick="ibVer(\'' + x.id + '\',\'pdf\',this)" title="Abre el informe y la ventana de impresión: elige Guardar como PDF">PDF</button></td></tr>';
     }).join('');
     box.innerHTML = (pend.length ? '<p class="ib-pend">Pendientes de guardar en este equipo (sin red): ' + pend.join(', ') + '</p>' : '') +
       (filas ? '<table>' + filas + '</table>' : '<p>Todavía no hay informes guardados. Se guardan desde que se generan con esta versión del tablero.</p>');
   }catch(e){ box.innerHTML = '<p>Sin conexión. Intenta de nuevo.</p>'; }
 }
-async function ibVer(id, descargar){
+async function ibVer(id, descargar, btn){
+  /* 25-sep: el botón muestra que está trabajando (el informe con fotos tarda unos
+     segundos en llegar) y la ventana se abre al instante con "Cargando…". */
+  /* 25-sep: "PDF" abre el informe y la ventana de impresión del navegador, donde
+     se elige "Guardar como PDF". Así el PDF sale igual al informe, con las fotos. */
+  var pdf = descargar === 'pdf'; if (pdf) descargar = false;
+  var txt = btn ? btn.innerHTML : '', w = null;
+  if (btn){ btn.disabled = true; btn.innerHTML = descargar ? 'Descargando&hellip;' : (pdf ? 'Preparando&hellip;' : 'Abriendo&hellip;'); }
+  if (!descargar){
+    w = window.open('', '_blank');
+    if (w) w.document.write('<p style="font:16px Arial;color:#1f3864;padding:30px">Cargando el informe&hellip;</p>');
+  }
   try{
     var r = await pedir('file=kb_informe&id=' + encodeURIComponent(id));
-    if (!r || !r.ok){ alert((r && r.msg) || 'No se pudo abrir el informe.'); return; }
+    if (!r || !r.ok){ if (w) w.close(); alert((r && r.msg) || 'No se pudo abrir el informe.'); return; }
     if (descargar){
       var url = URL.createObjectURL(new Blob([r.html], { type:'text/html' })), a = document.createElement('a');
       a.href = url; a.download = r.nombre || 'Informe_bahia.html'; document.body.appendChild(a); a.click(); a.remove();
       setTimeout(function(){ URL.revokeObjectURL(url); }, 20000);
-    } else {
-      var w = window.open('', '_blank'); if (!w){ alert('El navegador bloqueó la ventana. Permite las ventanas emergentes.'); return; }
-      w.document.write(r.html); w.document.close();
-    }
-  }catch(e){ alert('Sin conexión. Intenta de nuevo.'); }
+      entAviso_('Informe descargado: ' + (r.nombre || 'Informe_bahia.html') + ' (carpeta Descargas).', 'ok');
+    } else if (w){
+      w.document.open(); w.document.write(r.html); w.document.close();
+      if (pdf){
+        var imprimir = function(){ try{ w.focus(); w.print(); }catch(x){} };
+        var imgs = w.document.images, faltan = imgs ? imgs.length : 0;
+        if (!faltan) setTimeout(imprimir, 300);
+        else { var listo = function(){ if (--faltan <= 0) setTimeout(imprimir, 200); };
+               for (var i = 0; i < imgs.length; i++){ if (imgs[i].complete) listo(); else { imgs[i].onload = listo; imgs[i].onerror = listo; } } }
+        entAviso_('En la ventana de impresión elige "Guardar como PDF" como destino.', 'ok');
+      }
+    } else { alert('El navegador bloqueó la ventana. Permite las ventanas emergentes.'); }
+  }catch(e){ if (w) w.close(); alert('Sin conexión. Intenta de nuevo.'); }
+  finally{ if (btn){ btn.disabled = false; btn.innerHTML = (descargar ? '&#10003; Descargado' : txt); } }
 }
 
 /* ══ 25-sep-2026 · ORDENAR COLUMNAS ═════════════════════════════════════════
