@@ -719,7 +719,15 @@
   .asis-t{width:100%;border-collapse:collapse;font-size:12.5px;margin:4px 0 10px;table-layout:fixed}
   .asis-t th:nth-child(3), .asis-t th:nth-child(4){width:72px}
   .asis-t td{overflow-wrap:anywhere}
-  .asis-t .entp-t{width:62px;max-width:100%;box-sizing:border-box;padding:4px 5px}
+  /* 25-sep (2): la columna del grid podía crecer más que la mitad de la pantalla
+     (un hijo de grid no se encoge por debajo de su contenido): se le permite
+     encogerse, y cada campo de hora ocupa exactamente el ancho de su celda. */
+  .entp-par > .entp-sec{min-width:0;overflow:hidden}
+  .asis-t th:nth-child(3), .asis-t th:nth-child(4){width:70px}
+  .asis-t td:nth-child(3), .asis-t td:nth-child(4){padding-right:8px}
+  .asis-t .entp-t{width:100%;max-width:62px;min-width:0;box-sizing:border-box;padding:4px 4px;font-size:12.5px}
+  /* el recuadro le pone 12 px de margen a cada lado a lo que contiene: con width:100% la tabla se salía 24 px */
+  .entp-sec > .asis-t{width:calc(100% - 24px)}
   .asis-t th{text-align:left;font-size:11px;color:#5a6675;border-bottom:1px solid #d9dee5;padding:4px}
   .asis-t td{border-bottom:1px solid #eef0f3;padding:3px 4px}
   .asis-t small{color:#8a94a3}
