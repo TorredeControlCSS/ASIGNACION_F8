@@ -645,6 +645,14 @@
   .ver-mas button{border:1px solid #1f3864;background:#fff;color:#1f3864;border-radius:6px;padding:6px 14px;font-weight:600;cursor:pointer}
   /* F5 · número de pestaña resaltado cuando hay búsqueda */
   .vsw-btn .tbn.tbn-q{background:var(--tc);color:#fff;border-radius:9px;padding:1px 7px}
+  /* 25-sep · descarga del reporte Kanban */
+  .rk-wrap{position:relative;display:inline-block;margin-right:8px}
+  .rk-menu{display:none;position:absolute;right:0;top:calc(100% + 6px);background:#fff;color:#1d2733;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.25);padding:8px;width:250px;z-index:10020}
+  .rk-menu.on{display:block}
+  .rk-menu button{display:block;width:100%;text-align:left;border:0;background:#fff;padding:9px 10px;border-radius:6px;font-weight:600;color:#1f3864;cursor:pointer}
+  .rk-menu button:hover{background:#eef2f8}
+  .rk-menu small{display:block;padding:6px 10px 2px;color:#5a6675;font-size:11.5px;line-height:1.35}
+  #btnRepKan[disabled]{opacity:.75;cursor:progress}
 </style>
 </head>
 <body>
@@ -652,7 +660,10 @@
   <img src="./icons/icon-512.png" alt="logo" onerror="this.style.display='none'"/>
   <div><h1>Kanban de Seguimiento &mdash; Tablero del Almac&eacute;n</h1>
     <div class="sub">Torre de Control &middot; DINALOG / CEDIS &middot; Solo lectura</div></div>
-  <div class="spacer"></div><span class="pin-ses" id="pinSes"></span><div class="gen" id="gen"></div><button class="rd-refresh" id="btnRefresh" title="Traer los datos m&aacute;s recientes del Kanban">&#8635; Actualizar</button>
+  <div class="spacer"></div><span class="pin-ses" id="pinSes"></span><div class="gen" id="gen"></div><span class="rk-wrap"><button class="rd-refresh" id="btnRepKan" onclick="rkMenu(event)" title="Descargar el reporte Kanban completo con los datos de este momento">&#128202; Reporte Kanban</button>
+    <span class="rk-menu" id="rkMenu"><button onclick="rkDescargar('xlsx')">Excel completo</button><button onclick="rkDescargar('pdf')">PDF (OTIF)</button>
+    <small>Se arma con los datos de este momento. Tarda 1 a 3 minutos. El correo diario sigue igual.</small></span></span>
+  <button class="rd-refresh" id="btnRefresh" title="Traer los datos m&aacute;s recientes del Kanban">&#8635; Actualizar</button>
 </div>
 <div class="wrap">
   <div id="errBox"></div>
@@ -3932,6 +3943,29 @@ function rdNav_(v){
 }
 
 
+
+/* ══ 25-sep-2026 · REPORTE KANBAN "FRESCO" DESDE EL TABLERO ══════════════
+   El mismo Excel y el mismo PDF del correo diario, armados en el momento
+   (endpoint kb_reporte_kanban). No pide PIN: es solo lectura. */
+function rkMenu(ev){ ev.stopPropagation(); var m=document.getElementById('rkMenu'); if(m) m.classList.toggle('on'); }
+document.addEventListener('click', function(){ var m=document.getElementById('rkMenu'); if(m) m.classList.remove('on'); });
+var RK_OCUPADO=false;
+async function rkDescargar(formato){
+  var m=document.getElementById('rkMenu'); if(m) m.classList.remove('on');
+  if(RK_OCUPADO) return;
+  var b=document.getElementById('btnRepKan'), txt=b.innerHTML, t0=Date.now();
+  RK_OCUPADO=true; b.disabled=true;
+  var reloj=setInterval(function(){ b.textContent='Generando '+(formato==='pdf'?'PDF':'Excel')+'\u2026 '+Math.round((Date.now()-t0)/1000)+' s'; }, 1000);
+  try{
+    var r=await pedir('file=kb_reporte_kanban&formato='+encodeURIComponent(formato));
+    if(!r || !r.ok || !r.b64){ alert((r&&r.msg)||'No se pudo generar el reporte.'); return; }
+    var bin=atob(r.b64), u=new Uint8Array(bin.length); for(var i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i);
+    var url=URL.createObjectURL(new Blob([u],{type:r.mime||'application/octet-stream'}));
+    var a=document.createElement('a'); a.href=url; a.download=r.nombre||('Reporte_Kanban.'+formato); document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 20000);
+  }catch(e){ alert('Sin conexión o el servidor tardó demasiado. Intenta de nuevo.'); }
+  finally{ clearInterval(reloj); b.innerHTML=txt; b.disabled=false; RK_OCUPADO=false; }
+}
 
 /* ══ F4 (24-sep-2026) · RAPIDEZ ═══════════════════════════════════════════
    Medido: Por confirmar dibujaba las 5,291 filas y Memoria las 1,592, y cada
