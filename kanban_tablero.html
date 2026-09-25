@@ -686,7 +686,21 @@
   .rd-kpi b{white-space:nowrap}
   .rd-kpi span{white-space:nowrap}
   .rd-kpi small{flex:1 1 100%;margin-left:0!important}
+  /* 25-sep · tarjeta de indicador: número a la izquierda; título y detalle en dos líneas cortas */
+  .rd-kpi.kpi2{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:10px;row-gap:0;align-items:center;padding:6px 12px;min-width:0}
+  .rd-kpi.kpi2 b{grid-row:1 / span 2;font-size:22px;line-height:1}
+  .rd-kpi.kpi2 span{font-size:12.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis}
+  .rd-kpi.kpi2 small{flex:none;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.85}
   .pl-btn.on{background:#2e6b36;color:#fff}
+  /* 25-sep · menos filas: las bandas de cada vista y la leyenda del flujo se retiran;
+     su descripción corta va en la línea "Estás en" (y completa al pasar el mouse) */
+  .plan-cab, .rp-head, .an-head, .en-head, .na-head, .en-toggle, .rd-ley{display:none!important}
+  .rd-migas .hint{color:#8a94a3;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:48%}
+  .en-sub.en-sub-pend{display:none}
+  th.ts{cursor:pointer;user-select:none;white-space:nowrap}
+  th.ts:hover{color:#1f3864}
+  th.ts .fl{font-size:10px;opacity:.55;margin-left:3px}
+  th.ts.on .fl{opacity:1;color:#1f3864}
 </style>
 </head>
 <body>
@@ -1937,7 +1951,7 @@ function renderEntregas(){
     +'<button class="en-tg'+(EN_TAB==='pend'?' on':'')+'" onclick="EN_TAB=\'pend\';render();">Por confirmar <b>'+pend.length.toLocaleString()+'</b></button>'
     +'<button class="en-tg'+(EN_TAB==='hechas'?' on':'')+'" onclick="EN_TAB=\'hechas\';cargarEntregadosJSON().then(()=>render());">Entregadas (memoria) <b>'+hechas.length.toLocaleString()+'</b></button>'
     +'</div>';
-  html+='<div class="en-sub">Se aplican los filtros de la barra (Unidad Ejecutora, Grupo, Tipo) y el buscador.'+
+  html+='<div class="en-sub en-sub-pend">Se aplican los filtros de la barra (Unidad Ejecutora, Grupo, Tipo) y el buscador.'+
         (EN_TAB!=='hechas' ? ' <button class="pl-btn" onclick="plAbrir()">&#128203; Pegar lista de Formas 8</button>'+
            ' <button class="pl-btn'+(RD_MAS90?' on':'')+'" onclick="RD_MAS90=!RD_MAS90;render()">'+(RD_MAS90?'\u2713 ':'')+'Solo m\u00e1s de '+RD_CORTE+' d\u00edas</button>' : '')+'</div>';
   if(EN_TAB==='pend' && RD_MAS90) html+='<div class="rd-filtro90">Solo los de m&aacute;s de '+RD_CORTE+' d&iacute;as sin confirmar &middot; <a href="#" onclick="RD_MAS90=false;RD_KPI=null;render();return false">ver todos</a></div>';
@@ -1956,10 +1970,11 @@ function renderEntregas(){
   // ---- Sección: por confirmar (solo si el toggle está en 'pend') ----
   if(EN_TAB==='pend' && pend.length){
     html+='<div class="en-secc">Por confirmar &middot; '+pend.length.toLocaleString()+'</div>';
+    tsOrdenar_(pend, 'pend');
     const _visPend=pend.slice(0, LIM_('pend'));
     html+='<div class="rp-scroll"><table class="en-t"><thead><tr>'+selCab_('pend', _visPend)
-      +'<th>Forma 8</th><th>Unidad Ejecutora</th><th>Grupo</th><th>Tipo</th>'
-      +'<th>Despachado</th><th>En espera</th><th style="text-align:center">Acci\u00f3n</th>'
+      +tsTh_('pend','id','Forma 8')+tsTh_('pend','ue','Unidad Ejecutora')+tsTh_('pend','grupo','Grupo')+tsTh_('pend','tipo','Tipo')
+      +tsTh_('pend','fDespacho','Despachado')+tsTh_('pend','fDespacho','En espera')+'<th style="text-align:center">Acci\u00f3n</th>'
       +'</tr></thead><tbody>';
     _visPend.forEach(f=>{
       const esp=_diasDesde_(f.fDespacho);
@@ -1980,10 +1995,11 @@ function renderEntregas(){
   // ---- Sección: entregadas / memoria (solo si el toggle está en 'hechas') ----
   if(EN_TAB==='hechas' && hechas.length){
     html+='<div class="en-secc hecha">Entregadas &middot; '+hechas.length.toLocaleString()+'</div>';
+    tsOrdenar_(hechas, 'mem');
     const _visMem=hechas.slice(0, LIM_('mem'));
     html+='<div class="rp-scroll"><table class="en-t"><thead><tr>'+selCab_('mem', _visMem)
-      +'<th>Forma 8</th><th>Unidad Ejecutora</th><th>Grupo</th><th>Tipo</th>'
-      +'<th>Entregado (ATA)</th><th style="text-align:center">Acci\u00f3n</th>'
+      +tsTh_('mem','id','Forma 8')+tsTh_('mem','ue','Unidad Ejecutora')+tsTh_('mem','grupo','Grupo')+tsTh_('mem','tipo','Tipo')
+      +tsTh_('mem','fEntrega','Entregado (ATA)')+'<th style="text-align:center">Acci\u00f3n</th>'
       +'</tr></thead><tbody>';
     _visMem.forEach(f=>{
       html+='<tr class="hecha">'+selCelda_(f.id)
@@ -3818,17 +3834,22 @@ function rdPintarKpis_(){
   var col=function(v,a1,a2){ return v==null?'azul':(v>=a2?'verde':(v>=a1?'ambar':'rosa')); };
   var pc=rdPorConfirmar_(), dd=pc.map(function(f){ return _diasDesde_(f.fDespacho)||0; }), m90=dd.filter(function(d){ return d>RD_CORTE; }).length;
   var k=[
-    ['otif', col(ot,50,80), kpiNum_(ot,1)+(ot==null?'':'%'), 'OTIF del mes', at+' de '+kpiNum_(sal)+' salieron a tiempo'+(dif==null?'':' \u00b7 '+antN+' '+kpiNum_(a.otif,1)+'% '+(dif>=0?'\u25b2 ':'\u25bc ')+Math.abs(dif)+' pts')],
-    ['sal','azul', u?kpiNum_(sal):kpiNum_(g.salidasPorDia,1), u?'Salidas del mes':'Salidas por día hábil', u?'de '+fu:kpiNum_(g.salidas)+' en '+m.diasHabiles+' días hábiles'],
-    ['ciclo','azul', ci==null?'\u2014':ci+' d', 'Tiempo de ciclo', 'mediana recepción \u2192 salida'+(!u&&a.cicloMediana!=null?' \u00b7 '+antN+' '+a.cicloMediana+' d':'')],
-    ['venc', ve?'rosa':'verde', kpiNum_(ve), 'Vencidos sin salir', kpiNum_(vc)+' en cero por desabasto \u00b7 '+kpiNum_(pe)+' pendientes'],
-    ['conf', col(cf,60,90), kpiNum_(cf,1)+(cf==null?'':'%'), 'Entregas confirmadas', 'de las salidas del mes \u00b7 '+pc.length.toLocaleString()+' por confirmar, '+m90.toLocaleString()+' de +'+RD_CORTE+' d']
+    ['otif', col(ot,50,80), kpiNum_(ot,1)+(ot==null?'':'%'), 'OTIF del mes', at+'/'+kpiNum_(sal)+' a tiempo'+(dif==null?'':' \u00b7 '+antN.slice(0,3)+' '+kpiNum_(a.otif,1)+'% '+(dif>=0?'\u25b2':'\u25bc')+Math.abs(dif)),
+      'De lo que salió este mes, qué parte salió a más tardar en su fecha del cronograma de la unidad.'],
+    ['sal','azul', u?kpiNum_(sal):kpiNum_(g.salidasPorDia,1), u?'Salidas del mes':'Salidas por día hábil', u?'pedidos que salieron':kpiNum_(g.salidas)+' en '+m.diasHabiles+' días hábiles',
+      'Formas 8 que salieron del almacén con documento, en promedio por día hábil del mes.'],
+    ['ciclo','azul', ci==null?'\u2014':ci+' d', 'Tiempo de ciclo', 'recepción \u2192 salida'+(!u&&a.cicloMediana!=null?' \u00b7 '+antN.slice(0,3)+' '+a.cicloMediana+' d':''),
+      'Días desde que se recibió la Forma 8 hasta que salió (mediana de lo que salió este mes).'],
+    ['venc', ve?'rosa':'verde', kpiNum_(ve), 'Atrasados en el almacén', kpiNum_(vc)+' en cero por desabasto',
+      'Pedidos que todavía no salen y ya pasó la fecha en que debían entregarse según el cronograma. De ellos, los que están en cero por desabasto no tienen producto.'],
+    ['conf', col(cf,60,90), kpiNum_(cf,1)+(cf==null?'':'%'), 'Entregas confirmadas', pc.length.toLocaleString()+' por confirmar \u00b7 '+m90.toLocaleString()+' de +'+RD_CORTE+' d',
+      'De lo que salió este mes, qué parte ya tiene su entrega registrada en la bahía.']
   ];
   var cola=(typeof entCola_==='function')?entCola_():[], sinSubir=cola.filter(function(x){return x.estado!=='subida';}).length;
   box.innerHTML='<div class="kpi-tit">Desempeño de '+mesN+' al '+hoyTxt+(u?' \u00b7 <b>'+_esc(fu)+'</b>':' \u00b7 CEDIS Panamá')+
       ' <span>A tiempo = salió a más tardar en su fecha según el cronograma de la unidad.</span>'+
       (sinSubir?'<button class="kpi-alerta" onclick="rdIrEntregas(\'registrar\')">\u26a0 '+sinSubir+' entregas anotadas sin subir al Kanban</button>':'')+'</div>'+
-    k.map(function(x){ return '<button class="rd-kpi '+x[1]+'" onclick="kpiIr_(\''+x[0]+'\')" title="Ver los pedidos"><b>'+x[2]+'</b><span>'+x[3]+'</span><small>'+x[4]+'</small></button>'; }).join('');
+    k.map(function(x){ return '<button class="rd-kpi kpi2 '+x[1]+'" onclick="kpiIr_(\''+x[0]+'\')" title="'+_esc(x[5])+'"><b>'+x[2]+'</b><span>'+x[3]+'</span><small>'+x[4]+'</small></button>'; }).join('');
 }
 function kpiIr_(id){
   RD_KPI=null; RD_MAS90=false;
@@ -4006,6 +4027,7 @@ function rdNav_(v){
   try{ rdMigas_(v); }catch(e){}
   if(rdNav_._v !== v || rdNav_._t !== EN_TAB){ SEL = {}; LIM = {}; rdNav_._v = v; rdNav_._t = EN_TAB; }
   try{ selPintar_(); pinPintar_(); }catch(e){}
+  try{ ['grillaSemanal','listaNoAsig','listaAnulados'].forEach(function(id){ var el=document.getElementById(id); if(el) tsDom_(el); }); }catch(e){}
   var sub=document.getElementById('rdSub'); if(!sub) return;
   sub.style.display = enEnt ? '' : 'none';
   if(!enEnt) return;
@@ -4019,6 +4041,58 @@ function rdNav_(v){
 
 
 
+
+
+/* ══ 25-sep-2026 · ORDENAR COLUMNAS ═════════════════════════════════════════
+   Clic en el encabezado: ascendente; otro clic: descendente. En Por confirmar
+   y Memoria se ordenan los datos completos (no solo las 100 filas visibles).
+   En Plan, Cero por desabasto y Retirados (que muestran todas sus filas) se
+   ordena la tabla en pantalla. Dentro del almacén ya tenía su propio orden. */
+var TS = {};   // { clave: {k:campo, d:1|-1} }
+function tsTh_(clave, campo, txt){
+  var o = TS[clave], on = o && o.k === campo && o.t === txt;
+  return '<th class="ts'+(on?' on':'')+'" onclick="tsClic_(\''+clave+'\',\''+campo+'\',\''+txt.replace(/'/g,'')+'\')">'+txt+
+         '<span class="fl">'+(on ? (o.d > 0 ? '\u25b2' : '\u25bc') : '\u21c5')+'</span></th>';
+}
+function tsClic_(clave, campo, txt){
+  var o = TS[clave]; TS[clave] = (o && o.k === campo && o.t === txt) ? { k:campo, t:txt, d:-o.d } : { k:campo, t:txt, d:1 };
+  LIM = {}; render();
+}
+function tsOrdenar_(arr, clave){
+  var o = TS[clave]; if (!o) return arr;
+  var k = o.k, d = o.d;
+  return arr.sort(function(a, b){
+    var x = a[k], y = b[k];
+    if (x == null || x === '') return 1; if (y == null || y === '') return -1;
+    if (typeof x === 'number' && typeof y === 'number') return d * (x - y);
+    return d * String(x).localeCompare(String(y), 'es', { numeric:true });
+  });
+}
+/* tablas que muestran todas sus filas: se ordena el DOM */
+function tsDom_(raiz){
+  (raiz || document).querySelectorAll('table').forEach(function(tb){
+    if (tb.dataset.ts || tb.closest('#listaReparto') || tb.closest('#listaEntregas')) return;
+    var cab = tb.querySelector('thead tr') || tb.querySelector('tr'); if (!cab) return;
+    var ths = cab.querySelectorAll('th'); if (!ths.length) return;
+    tb.dataset.ts = '1';
+    ths.forEach(function(th, i){
+      if (/acci/i.test(th.textContent) || th.querySelector('input')) return;
+      th.classList.add('ts'); th.insertAdjacentHTML('beforeend', '<span class="fl">\u21c5</span>');
+      th.addEventListener('click', function(){
+        var d = th.dataset.d === '1' ? -1 : 1; ths.forEach(function(t){ t.classList.remove('on'); delete t.dataset.d; var f = t.querySelector('.fl'); if (f) f.textContent = '\u21c5'; });
+        th.dataset.d = String(d); th.classList.add('on'); th.querySelector('.fl').textContent = d > 0 ? '\u25b2' : '\u25bc';
+        var cuerpo = tb.tBodies[0] || tb, filas = Array.prototype.slice.call(cuerpo.querySelectorAll(':scope > tr')).filter(function(r){ return r !== cab && r.children.length === ths.length; });
+        filas.sort(function(a, b){
+          var x = (a.children[i].textContent || '').trim(), y = (b.children[i].textContent || '').trim();
+          var nx = parseFloat(x.replace(/[^\d.\-]/g, '')), ny = parseFloat(y.replace(/[^\d.\-]/g, ''));
+          if (!/^\d{4}-\d{2}-\d{2}/.test(x) && !isNaN(nx) && !isNaN(ny) && /^[\d.,\-\s%d]+$/.test(x) && /^[\d.,\-\s%d]+$/.test(y)) return d * (nx - ny);
+          return d * x.localeCompare(y, 'es', { numeric:true });
+        });
+        filas.forEach(function(r){ cuerpo.appendChild(r); });
+      });
+    });
+  });
+}
 
 /* ══ 25-sep-2026 · PEGAR LISTA DE FORMAS 8 (Por confirmar entrega) ══════════
    Para el arrastre desde mayo: una lista copiada de un Excel o del PDF de
@@ -4278,10 +4352,20 @@ function rdMigas_(v){
      ocupar una fila entera. Se mueven los botones originales (conservan su
      función); si la vista no los usa, vuelven a su lugar oculto. */
   var bE=document.getElementById('btnExpand'), bP=document.getElementById('btnPendiente');
+  var HINT={reparto:'Priorizado por atraso · cada fase es un equipo · imprime su hoja desde el encabezado',
+            crono:'Pedidos con fecha prometida por el supervisor, agrupados por día · es lo que se notifica a cada unidad',
+            noasig:'El Motor asignó 0: no había stock del renglón para asignar · cuentan como falla en OTIF',
+            anulados:'Pedidos retirados del ciclo, con su motivo',
+            entregas:(EN_TAB==='hechas'?'Pedidos con entrega confirmada · Ver abre el detalle y permite corregir la fecha':'Salieron del almacén y esperan que se registre su entrega · los más antiguos primero')};
+  if(HINT[v]) h+='<span class="hint" title="'+HINT[v]+'">'+HINT[v]+'</span>';
   box.innerHTML = (v==='entdia') ? '' : h;
   var der=document.createElement('span'); der.className='rd-migas-der';
   if(v==='reparto' && bE) der.appendChild(bE); else if(bE) (document.querySelector('#vistaReparto .rd-ctx')||document.body).appendChild(bE);
   if(v==='crono' && bP) der.appendChild(bP); else if(bP) (document.querySelector('#vistaCrono .rd-ctx')||document.body).appendChild(bP);
+  if(v==='entregas' && EN_TAB!=='hechas'){
+    der.insertAdjacentHTML('beforeend','<button class="rd-ctxbtn" onclick="plAbrir()">&#128203; Pegar lista</button>'+
+      '<button class="rd-ctxbtn'+(RD_MAS90?' pend-toggle on':'')+'" onclick="RD_MAS90=!RD_MAS90;render()">'+(RD_MAS90?'\u2713 ':'')+'Solo +'+RD_CORTE+' d\u00edas</button>');
+  }
   if(der.childNodes.length && v!=='entdia') box.appendChild(der);
 }
 /* 25-sep: el título lleva a la vista de inicio, sin filtros ni selección */
