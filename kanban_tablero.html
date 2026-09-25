@@ -624,7 +624,7 @@
   .pin-m .hoja{background:#fff;border-radius:10px;padding:18px 20px;width:min(360px,92vw);box-shadow:0 10px 30px rgba(0,0,0,.25)}
   .pin-m h4{margin:0 0 4px;color:#1f3864;font-size:16px}.pin-m p{margin:0 0 10px;font-size:12.5px;color:#5a6675}
   .pin-m input{width:100%;box-sizing:border-box;padding:10px;font-size:18px;letter-spacing:6px;text-align:center;border:1px solid #c6ccd4;border-radius:6px}
-  .pin-m .err{color:#8c1d18;font-size:12px;min-height:16px;margin-top:6px}
+  .pin-m .pin-err{color:#8c1d18;font-size:12px;min-height:16px;margin-top:6px}
   .pin-m .acc{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
   .pin-m .acc button{border-radius:6px;padding:8px 14px;font-weight:600;cursor:pointer}
   .pin-m .no{border:1px solid #1f3864;background:#fff;color:#1f3864}.pin-m .si{border:0;background:#1f3864;color:#fff}
@@ -3839,6 +3839,8 @@ function rdPintarKpis_(){
   var dif=(!u && g.otif!=null && a.otif!=null) ? Math.round(10*(g.otif-a.otif))/10 : null;   // se muestra como "agosto X%" en la tarjeta
   var col=function(v,a1,a2){ return v==null?'azul':(v>=a2?'verde':(v>=a1?'ambar':'rosa')); };
   var pc=rdPorConfirmar_(), dd=pc.map(function(f){ return _diasDesde_(f.fDespacho)||0; }), m90=dd.filter(function(d){ return d>RD_CORTE; }).length;
+  /* total en cero por desabasto (lo que muestra su pestaña), para dar contexto a los atrasados sin producto */
+  var nCero=(typeof F8!=='undefined'&&F8?F8:[]).filter(function(f){ return !f.anulado && f.macro==='SIN_ASIGNAR' && (!fu || f.ue===fu); }).length;
   var k=[
     (g.onTime!=null
       ? ['otif', col(ot,50,80), kpiNum_(ot,1)+'%', 'OTIF del servicio',
@@ -3856,8 +3858,8 @@ function rdPintarKpis_(){
       'Formas 8 que salieron del almacén con documento, en promedio por día hábil del mes.'],
     ['ciclo','azul', ci==null?'\u2014':ci+(ci===1?' día':' días'), 'Tiempo de ciclo', 'recepción \u2192 salida'+(!u&&a.cicloMediana!=null?' \u00b7 '+antN+': '+a.cicloMediana+' días':''),
       'Días desde que se recibió la Forma 8 hasta que salió (mediana de lo que salió este mes).'],
-    ['venc', vs?'rosa':'verde', kpiNum_(vs), 'Atrasados con producto', 'más '+kpiNum_(vc)+' atrasados sin producto (cero)',
-      'Pedidos que todavía no salen del almacén, que SÍ tienen producto asignado, y cuya fecha de entrega según el cronograma ya pasó. Aparte, los atrasados que están en cero por desabasto: no salen porque no hay producto.'],
+    ['venc', vs?'rosa':'verde', kpiNum_(vs), 'Atrasados con producto', 'más '+kpiNum_(vc)+' sin producto, de '+kpiNum_(nCero)+' en cero',
+      'Pedidos que todavía no salen del almacén, que SÍ tienen producto asignado, y cuya fecha de entrega según el cronograma ya pasó. Aparte, los atrasados que están en cero por desabasto: no salen porque no hay producto. La pestaña Cero por desabasto muestra todos los pedidos en cero; aquí solo cuentan los que ya pasaron su fecha.'],
     ['conf', col(cf,60,90), kpiNum_(cf,1)+(cf==null?'':'%'), 'Entregas confirmadas', pc.length.toLocaleString()+' por confirmar \u00b7 '+m90.toLocaleString()+' de +'+RD_CORTE+' d',
       'De lo que salió este mes, qué parte ya tiene su entrega registrada en la bahía.']
   ];
@@ -4261,10 +4263,10 @@ function pinSesion_(motivo){
     var d = document.createElement('div'); d.className = 'pin-m';
     d.innerHTML = '<div class="hoja" role="dialog" aria-label="PIN"><h4>Tu PIN</h4><p>'+(motivo?_esc(motivo)+'. ':'')+
       'Lo escribes una vez: queda abierto '+PIN_MIN+' minutos en esta pantalla o hasta que cierres sesi\u00f3n.</p>'+
-      '<input type="password" inputmode="numeric" maxlength="8" aria-label="PIN"><div class="err"></div>'+
+      '<input type="password" inputmode="numeric" maxlength="8" aria-label="PIN"><div class="pin-err" role="alert"></div>'+
       '<div class="acc"><button class="no">Cancelar</button><button class="si">Entrar</button></div></div>';
     document.body.appendChild(d);
-    var i = d.querySelector('input'), er = d.querySelector('.err'), si = d.querySelector('.si');
+    var i = d.querySelector('input'), er = d.querySelector('.pin-err'), si = d.querySelector('.si');
     var fin = function(v){ d.remove(); res(v); };
     var ok = async function(){
       var v = String(i.value||'').trim(); if(!v){ er.textContent = 'Escribe tu PIN.'; return; }
