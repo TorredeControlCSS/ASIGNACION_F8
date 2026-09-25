@@ -3282,7 +3282,9 @@ function entRender(){
       '</div>'+
       '<datalist id="entUEs">'+UEs.map(function(u){ return '<option value="'+entEsc_(u)+'">'; }).join('')+'</datalist>'+
       '<datalist id="entGenteCap">'+entGenteDe_(entStUE).map(function(p){ return '<option value="'+entEsc_(entRepTxt_(p.n,p.c))+'">'; }).join('')+'</datalist>'+
-      /* 25-sep: "Pegar varias" sale de la bahía; la carga de listas vive en Por confirmar (plPegarLista) */
+      /* 25-sep: vuelve a la bahía (a pedido del supervisor): la lista pegada entra a la jornada del día
+         elegido arriba, y sigue el flujo normal: foto de la lista, subir con PIN e informe del día. */
+      '<button class="entp-lnk" onclick="entLoteToggle()">&#128203; Pegar varias Formas 8 (de una lista o un Excel)</button>'+
       /* E2 · pegar varias: ventana aparte, no un cuadro grande dentro del paso */
       (entLoteOn ? '<div class="entp-modal" onclick="if(event.target===this)entLoteToggle()" onkeydown="if(event.key===\'Escape\')entLoteToggle()">'+
                    '<div class="hoja"><h4>Pegar varias Formas 8</h4>'+
