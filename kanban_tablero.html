@@ -714,7 +714,8 @@
   .rd-kpi.kpi2 span{font-size:11.5px}
   .rd-kpi.kpi2 small{font-size:10.5px}
   .kpi-tit{font-size:12px}
-  #entCapHora.mal{border-color:#c0392b;background:#fdecea}
+  #entCapHora.mal, .entp-t.mal{border-color:#c0392b;background:#fdecea}
+  .entp-t{width:64px}
 </style>
 </head>
 <body>
@@ -3300,7 +3301,7 @@ function entRender(){
   if (ENT_ULTIMOS.length){
     var _u0 = cola.filter(function(x){ return x.f8 === ENT_ULTIMOS[0]; })[0];
     h += '<div class="entp-retb"><span>Agregaste <b>'+ENT_ULTIMOS.length+'</b>'+(_u0?' de '+entEsc_(_u0.ue):'')+'. &iquest;Qui&eacute;n los retir&oacute;?</span>'+
-         '<input id="entRetIn" list="entGenteCap" placeholder="nombre y c&eacute;dula (opcional)" onkeydown="if(event.key===\'Enter\')entRetUltimos()">'+
+         '<input id="entRetIn" list="entGenteCap" placeholder="nombre y c&eacute;dula (opcional)" value="'+entEsc_(entStRet)+'" oninput="entStRet=this.value" onkeydown="if(event.key===\'Enter\')entRetUltimos()">'+
          '<button class="btn-si" onclick="entRetUltimos()">Aplicar a los '+ENT_ULTIMOS.length+'</button>'+
          '<button class="btn-mini" onclick="ENT_ULTIMOS=[];entRender()">Omitir</button></div>';
   }
@@ -3322,8 +3323,8 @@ function entRender(){
           : entEsc_(entRepTxt_(x.rep,x.ced) || '—');
         return '<tr'+(fx!==entHoy_()?' class="e-retro"':'')+'><td class="mono">'+entEsc_(x.f8)+'</td>'+
           '<td>'+celUE+'</td><td>'+celRep+'</td>'+
-          '<td class="mono">'+fx+' '+(vivo ? '<input type="time" class="entp-t" value="'+entEsc_(x.hora)+'" '+
-              'onchange="entFilaHora(\''+k+'\',this.value)">' : entEsc_(x.hora))+'</td>'+
+          '<td class="mono">'+fx+' '+(vivo ? '<input type="text" inputmode="numeric" maxlength="5" placeholder="hh:mm" class="entp-t" value="'+entEsc_(x.hora)+'" '+
+              'oninput="entHoraFmt_(this)" onchange="entFilaHora(\''+k+'\',this.value)">' : entEsc_(x.hora))+'</td>'+
           '<td class="e-'+x.estado+'">'+(est[x.estado]||x.estado)+(x.estado==='error'?entEsc_(x.msg||''):'')+'</td>'+
           '<td><button class="x" onclick="entQuitar(\''+entEsc_(x.f8)+'\')">&times;</button></td></tr>';
       }).join('')+'</table>'+dlHtml;
@@ -3397,7 +3398,8 @@ var entStF8 = '', entStUE = '', entStRep = '';   /* lo tecleado sobrevive al rep
 var entStUEAuto = false;  /* la unidad la puso el pedido, no la escribió el supervisor */
 var entLoteOn = false, entFoco = false;
 var entStHora = '';       /* hora de entrega válida (hh:mm); vacía = la hora actual */
-var entStHoraTxt = '';    /* lo que se lleva escrito en el campo de hora, aunque esté incompleto */
+var entStHoraTxt = '';
+var entStRet = '';        /* "¿quién los retiró?" de los pedidos recién agregados, mientras se escribe */    /* lo que se lleva escrito en el campo de hora, aunque esté incompleto */
 var entAsisAbierta = false;
 var ENT_SUBIENDO = false;   /* E2: mientras sube, el botón no se reactiva al repintar */
 var ENT_LS_ASISH = 'cedis_entregas_horas_v1';   /* llegada/salida capturadas a mano */
@@ -3632,7 +3634,7 @@ function entAgregarMarcados(){
 }
 /* después de agregar varios: quién los retiró, una sola vez para todos */
 function entRetUltimos(){
-  var r = entRepParse_((document.getElementById('entRetIn')||{}).value), cola = entCola_();
+  var r = entRepParse_((document.getElementById('entRetIn')||{}).value), cola = entCola_(); entStRet = '';
   cola.forEach(function(x){ if (ENT_ULTIMOS.indexOf(x.f8) >= 0 && x.estado !== 'subida'){ x.rep = r.rep; x.ced = r.ced; } });
   entColaSet_(cola); ENT_ULTIMOS = []; entFoco = true; entRender();
 }
@@ -3792,6 +3794,11 @@ function entCapHoraCambia(){
   if (t !== e.value){ e.value = t; try{ e.setSelectionRange(t.length, t.length); }catch(x){} }
   entStHoraTxt = t; entStHora = entHoraOk_(t);
   e.classList.toggle('mal', t.length === 5 && !entStHora);
+}
+function entHoraFmt_(e){
+  var d = e.value.replace(/[^0-9]/g, '').slice(0, 4), t = d.length > 2 ? d.slice(0, 2) + ':' + d.slice(2) : d;
+  if (t !== e.value){ e.value = t; try{ e.setSelectionRange(t.length, t.length); }catch(x){} }
+  e.classList.toggle('mal', t.length === 5 && !entHoraOk_(t));
 }
 function entFilaHora(k, val){
   var h = entHoraOk_(val); if(!h){ entRender(); entAviso_('Hora no válida. Usa el formato 24 horas, por ejemplo 09:35.', 'warn'); return; }
