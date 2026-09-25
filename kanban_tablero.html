@@ -716,6 +716,16 @@
   .kpi-tit{font-size:12px}
   #entCapHora.mal, .entp-t.mal{border-color:#c0392b;background:#fdecea}
   .entp-t{width:64px}
+  .asis-t{width:100%;border-collapse:collapse;font-size:12.5px;margin:4px 0 10px}
+  .asis-t th{text-align:left;font-size:11px;color:#5a6675;border-bottom:1px solid #d9dee5;padding:4px}
+  .asis-t td{border-bottom:1px solid #eef0f3;padding:3px 4px}
+  .asis-t small{color:#8a94a3}
+  .asis-vacio{font-size:12.5px;color:#7a8594;margin:2px 0 10px}
+  .ib-btn{margin-left:10px;border:1px solid #1f3864;background:#fff;color:#1f3864;border-radius:6px;padding:6px 12px;font-weight:600;cursor:pointer;font-size:13px}
+  #ibM table{width:100%;border-collapse:collapse;font-size:13px}
+  #ibM td{border-bottom:1px solid #eef0f3;padding:6px 5px;white-space:nowrap}
+  #ibM .ib-q{color:#5a6675;font-size:12px}
+  #ibM .ib-pend{background:#fff4d6;color:#7a5a00;border-radius:6px;padding:6px 10px}
 </style>
 </head>
 <body>
@@ -2953,8 +2963,8 @@ function entGuardar_(clave, obj){
 }
 function entCola_(){ const t = entLeer_(ENT_LS_COLA); return t[entHoy_()] || []; }
 function entColaSet_(arr){ const t = entLeer_(ENT_LS_COLA); t[entHoy_()] = arr; entGuardar_(ENT_LS_COLA, t); }
-function entAsist_(){ const t = entLeer_(ENT_LS_ASIST); return t[entHoy_()] || []; }
-function entAsistSet_(arr){ const t = entLeer_(ENT_LS_ASIST); t[entHoy_()] = arr; entGuardar_(ENT_LS_ASIST, t); }
+function entAsist_(){ const t = entLeer_(ENT_LS_ASIST); return t[entFechaSel_()] || []; }
+function entAsistSet_(arr){ const t = entLeer_(ENT_LS_ASIST); t[entFechaSel_()] = arr; entGuardar_(ENT_LS_ASIST, t); }
 
 /* Normaliza un número de Forma 8 tecleado o pegado. Acepta las formas reales
    medidas en producción: prefijo numérico (8107) o alfabético (CDCH, CDDI),
@@ -3045,7 +3055,12 @@ async function entSubir(){
               (it.colado && it.ue ? '&ue=' + encodeURIComponent(it.ue) : '') +
               '&nota=' + encodeURIComponent('Entrega registrada en bahía ' + it.hora +
                 ((it.fecha && it.fecha !== entHoy_()) ? ' · carga retroactiva del ' + it.fecha : ''));
-    fetch(u).then(function(r){ return r.json(); }).then(function(r){
+    /* 25-sep: un reintento automático a los 2 s antes de marcar el pedido. Y el
+       motivo dice si fue la red o el servidor (antes todo decía "sin conexión",
+       también cuando el servidor respondía con un error y no con datos). */
+    function llamar(){ return fetch(u).then(function(r){
+      return r.text().then(function(t){ try { return JSON.parse(t); } catch(e){ var er = new Error('servidor'); er.servidor = true; throw er; } }); }); }
+    llamar().catch(function(e){ return new Promise(function(ok){ setTimeout(ok, 2000); }).then(llamar); }).then(function(r){
       if (r && r.ok){
         it.estado = 'subida'; it.msg = '';
         /* La UE la resuelve el servidor: la vista captura sin red y los pedidos
@@ -3062,7 +3077,9 @@ async function entSubir(){
       }
       else { it.estado = 'error'; it.msg = (r && r.msg) || 'rechazada'; err++; }
     }).catch(function(e){
-      it.estado = 'error'; it.msg = 'sin conexión'; err++;
+      it.estado = 'error';
+      it.msg = (e && e.servidor) ? 'el servidor no respondió bien; vuelve a subir' : 'sin conexión; vuelve a subir cuando haya red';
+      err++;
     }).then(function(){
       entColaSet_(entCola_().map(function(x){ return x.f8===it.f8 ? it : x; }));
       setTimeout(siguiente, 120);
@@ -3225,8 +3242,9 @@ function entInforme(){
     '</body></html>';
 
   const w = window.open('', '_blank');
-  if (!w){ entAviso_('El navegador bloqueó la ventana. Permite las ventanas emergentes.', 'warn'); return; }
-  w.document.write(html); w.document.close();
+  if (!w){ entAviso_('El navegador bloqueó la ventana. Permite las ventanas emergentes.', 'warn'); }
+  else { w.document.write(html); w.document.close(); }
+  ibGuardar_({ fecha:dia, html:html, pedidos:cola.length, registradas:reg, representantes:asis.length, fotos:fotos.length });
   setTimeout(function(){ try{ w.print(); }catch(e){} }, 400);
 }
 
@@ -3258,6 +3276,7 @@ function entRender(){
       '<button class="fl" onclick="entDiaMover(1)" aria-label="Día siguiente"'+(dia >= hoy ? ' disabled' : '')+'>&rsaquo;</button>'+
       (entRetro_() ? '<button class="hoy" onclick="entFechaHoy()">Volver a hoy</button>' : '')+
       '<input type="date" id="entFecha" value="'+dia+'" max="'+hoy+'" onchange="entFechaCambia()" aria-label="Elegir día">'+
+      '<button class="ib-btn" onclick="ibAbrir()">&#128193; Informes anteriores</button>'+
       '<span class="ent-red" id="entRed"></span>'+
     '</div>'+
     '<div id="entOferta" class="ent-oferta" style="display:none"></div>'+
@@ -3349,8 +3368,9 @@ function entRender(){
 
   /* PASO 2 · foto de la lista de asistencia */
   h += '<div class="entp-par">';   /* 25-sep: pasos 2 y 3 lado a lado */
-  h += '<div class="ent-caja entp-sec '+clsPaso(2,p2ok)+'"><div class="ent-tit"><span class="entp-n">2</span>Foto de la lista de asistencia<span class="entp-g">La hoja firmada por quienes retiraron; sale en el informe como prueba</span><span class="entp-st">'+(p2ok?'&#10003; '+fotos.length+(fotos.length===1?' hoja':' hojas'):'pendiente')+'</span></div>'+
+  h += '<div class="ent-caja entp-sec '+clsPaso(2,p2ok)+'"><div class="ent-tit"><span class="entp-n">2</span>Asistencia: llegada, salida y foto<span class="entp-g">Hora en que llegó y salió cada representante, y la hoja firmada</span><span class="entp-st">'+(p2ok?'&#10003; '+fotos.length+(fotos.length===1?' hoja':' hojas'):'pendiente')+'</span></div>'+
 
+       entAsisTabla_()+
        '<div class="entp-fotos">'+
          fotos.map(function(f, i){
            return '<div class="entp-foto"><img src="'+f.src+'" alt="Lista de asistencia '+(i+1)+'" onclick="entFotoVer('+i+')">'+
@@ -3461,8 +3481,8 @@ function entRepParse_(t){
   return m ? { rep:m[1].trim(), ced:m[2] } : { rep:s, ced:'' };
 }
 function entHoraOk_(h){ return /^([01]\d|2[0-3]):[0-5]\d$/.test(String(h||'').trim()) ? String(h).trim() : ''; }
-function entHorasMan_(){ var t = entLeer_(ENT_LS_ASISH); return t[entHoy_()] || {}; }
-function entHorasManSet_(m){ var t = entLeer_(ENT_LS_ASISH); t[entHoy_()] = m; entGuardar_(ENT_LS_ASISH, t); }
+function entHorasMan_(){ var t = entLeer_(ENT_LS_ASISH); return t[entFechaSel_()] || {}; }
+function entHorasManSet_(m){ var t = entLeer_(ENT_LS_ASISH); t[entFechaSel_()] = m; entGuardar_(ENT_LS_ASISH, t); }
 function entRepTxt_(rep, ced){ return rep ? rep + (ced ? ' (' + ced + ')' : '') : ''; }
 
 /* ── fecha de la entrega ─────────────────────────────────────────────── */
@@ -3548,8 +3568,10 @@ function entReceptorItem_(it){ return entRepTxt_(it.rep, it.ced); }
 function entAsistSync_(){
   var manual = entAsist_().filter(function(a){ return !a.auto; });
   var m = {}, orden = [];
+  var diaSel = entFechaSel_();
   entCola_().forEach(function(x){
     if(!x.rep) return;
+    if((x.fecha || entHoy_()) !== diaSel) return;   // solo los pedidos del día elegido
     var k = entNorm_(x.rep) + '|' + entNorm_(x.ue);
     if(!m[k]){ m[k] = { ue:x.ue, rep:x.rep, ced:x.ced||'', lleg:x.hora, sal:'', auto:true, n:0 }; orden.push(k); }
     if (x.hora < m[k].lleg) m[k].lleg = x.hora;
@@ -3811,6 +3833,20 @@ function entFilaHora(k, val){
   cola.forEach(function(x){ if (entIdParcial_(x.f8) === k && x.estado !== 'subida') x.hora = h; });
   entColaSet_(cola); entRender();
 }
+/* 25-sep · Llegada y salida de cada representante (sale en el informe del día).
+   Una fila por persona y unidad, a partir de los pedidos anotados con "Retiró".
+   La llegada se propone con la primera hora de entrega; se puede corregir. */
+function entAsisTabla_(){
+  var a = entAsist_().filter(function(x){ return x.auto && x.k; });
+  if (!a.length) return '<div class="asis-vacio">La llegada y salida de cada representante aparece aquí cuando anotas pedidos con <b>Retiró</b>.</div>';
+  function inp(x, campo, i){ var v = x[campo] || '';
+    return '<input type="text" inputmode="numeric" maxlength="5" placeholder="hh:mm" class="entp-t" value="'+entEsc_(v)+'" '+
+           'oninput="entHoraFmt_(this)" onchange="entAsisHoraI('+i+',\''+campo+'\',this.value)" aria-label="'+(campo==='lleg'?'Hora de llegada':'Hora de salida')+'">'; }
+  return '<table class="asis-t"><tr><th>Unidad</th><th>Retiró</th><th>Llegó</th><th>Salió</th></tr>'+
+    a.map(function(x, i){ return '<tr><td>'+entEsc_(x.ue||'—')+'</td><td>'+entEsc_(entRepTxt_(x.rep, x.ced))+(x.n>1?' <small>('+x.n+' pedidos)</small>':'')+'</td>'+
+      '<td>'+inp(x,'lleg',i)+'</td><td>'+inp(x,'sal',i)+'</td></tr>'; }).join('')+'</table>';
+}
+function entAsisHoraI(i, campo, val){ var a = entAsist_().filter(function(x){ return x.auto && x.k; }); if (a[i]) entAsisHora(a[i].k, campo, val); }
 function entAsisHora(k, campo, val){
   var h = String(val||'').trim();
   entAsisAbierta = true;
@@ -4103,6 +4139,79 @@ function rdNav_(v){
 
 
 
+
+
+/* ══ 25-sep-2026 · INFORMES DEL DÍA GUARDADOS ═══════════════════════════════
+   Cada informe generado se guarda en el Motor (Drive, carpeta "Informes de la
+   bahía") y se consulta con "Informes anteriores". Guardar pide la sesión de
+   PIN; si no hay red, queda pendiente en el equipo y se guarda sola al volver
+   la conexión (mientras la sesión de PIN siga abierta). */
+var IB_LS = 'cedis_informes_pend_v1';
+async function ibGuardar_(inf){
+  var pin = pinVivo_() ? PIN_SES.pin : await pinSesion_('Guardar el informe del día');
+  if (!pin){ entAviso_('El informe se abrió, pero no se guardó (sin PIN). Vuelve a generarlo para guardarlo.', 'warn'); return; }
+  var r = await ibEnviar_(inf, pin);
+  if (r && r.ok){ entAviso_('Informe del ' + inf.fecha + ' guardado en Informes anteriores.', 'ok'); ibPendQuitar_(inf.fecha); }
+  else if (r && r.msg && !r.red){ entAviso_('El informe no se guardó: ' + r.msg, 'warn'); }
+  else { ibPendPoner_(inf); entAviso_('Sin conexión: el informe se guardará solo cuando vuelva la red.', 'warn'); }
+}
+async function ibEnviar_(inf, pin){
+  try{
+    var res = await fetch(WEBAPP_BASE, { method:'POST', body:JSON.stringify(Object.assign({ action:'informeBahiaGuardar', pin:pin }, inf)) });
+    var t = await res.text(); try { return JSON.parse(t); } catch(e){ return { ok:false, red:true }; }
+  }catch(e){ return { ok:false, red:true }; }
+}
+function ibPendLeer_(){ try{ return JSON.parse(localStorage.getItem(IB_LS) || '{}'); }catch(e){ return {}; } }
+function ibPendPoner_(inf){ var t = ibPendLeer_(); t[inf.fecha] = inf; try{ localStorage.setItem(IB_LS, JSON.stringify(t)); }catch(e){} }
+function ibPendQuitar_(fecha){ var t = ibPendLeer_(); delete t[fecha]; try{ localStorage.setItem(IB_LS, JSON.stringify(t)); }catch(e){} }
+var IB_REINTENTANDO = false;
+async function ibReintentar_(){
+  if (IB_REINTENTANDO || !pinVivo_()) return;
+  var t = ibPendLeer_(), fs = Object.keys(t); if (!fs.length) return;
+  IB_REINTENTANDO = true;
+  try{ for (var i = 0; i < fs.length; i++){ var r = await ibEnviar_(t[fs[i]], PIN_SES.pin); if (r && r.ok) ibPendQuitar_(fs[i]); else break; } }
+  finally{ IB_REINTENTANDO = false; }
+}
+setInterval(function(){ try{ if (typeof ENT_RED !== 'undefined' && ENT_RED.estable) ibReintentar_(); }catch(e){} }, 60000);
+
+async function ibAbrir(){
+  var d = document.createElement('div'); d.className = 'pl-m'; d.id = 'ibM';
+  d.onclick = function(ev){ if (ev.target === d) d.remove(); };
+  d.innerHTML = '<div class="hoja" role="dialog" aria-label="Informes anteriores"><h4>Informes anteriores</h4>'+
+    '<p>Informes del día guardados al generarlos en la bahía. Se abren igual que cuando se generaron y se pueden imprimir.</p>'+
+    '<div id="ibLista"><p>Cargando…</p></div>'+
+    '<div class="acc"><button class="no-b" onclick="document.getElementById(\'ibM\').remove()">Cerrar</button></div></div>';
+  document.body.appendChild(d);
+  var pend = Object.keys(ibPendLeer_()), box = document.getElementById('ibLista');
+  try{
+    var r = await pedir('file=kb_informes');
+    if (!r || !r.ok){ box.innerHTML = '<p>No se pudo leer la lista: ' + _esc((r && r.msg) || 'sin respuesta') + '</p>'; return; }
+    var DS = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'], MS = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+    var filas = (r.informes || []).map(function(x){
+      var f = new Date(x.fecha + 'T12:00:00');
+      return '<tr><td><b>' + DS[f.getDay()] + ' ' + (+x.fecha.slice(8, 10)) + ' ' + MS[+x.fecha.slice(5, 7) - 1] + ' ' + x.fecha.slice(0, 4) + '</b></td>'+
+        '<td>' + x.pedidos + (x.pedidos === 1 ? ' pedido' : ' pedidos') + '</td><td>' + x.representantes + (x.representantes === 1 ? ' representante' : ' representantes') + '</td><td>' + (x.fotos ? x.fotos + ' foto' + (x.fotos > 1 ? 's' : '') : 'sin foto') + '</td>'+
+        '<td class="ib-q">' + _esc(x.por || '') + (x.generado ? ' · ' + _esc(x.generado.slice(11)) : '') + '</td>'+
+        '<td><button class="no-b" onclick="ibVer(\'' + x.id + '\',false)">Ver</button> <button class="no-b" onclick="ibVer(\'' + x.id + '\',true)">Descargar</button></td></tr>';
+    }).join('');
+    box.innerHTML = (pend.length ? '<p class="ib-pend">Pendientes de guardar en este equipo (sin red): ' + pend.join(', ') + '</p>' : '') +
+      (filas ? '<table>' + filas + '</table>' : '<p>Todavía no hay informes guardados. Se guardan desde que se generan con esta versión del tablero.</p>');
+  }catch(e){ box.innerHTML = '<p>Sin conexión. Intenta de nuevo.</p>'; }
+}
+async function ibVer(id, descargar){
+  try{
+    var r = await pedir('file=kb_informe&id=' + encodeURIComponent(id));
+    if (!r || !r.ok){ alert((r && r.msg) || 'No se pudo abrir el informe.'); return; }
+    if (descargar){
+      var url = URL.createObjectURL(new Blob([r.html], { type:'text/html' })), a = document.createElement('a');
+      a.href = url; a.download = r.nombre || 'Informe_bahia.html'; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 20000);
+    } else {
+      var w = window.open('', '_blank'); if (!w){ alert('El navegador bloqueó la ventana. Permite las ventanas emergentes.'); return; }
+      w.document.write(r.html); w.document.close();
+    }
+  }catch(e){ alert('Sin conexión. Intenta de nuevo.'); }
+}
 
 /* ══ 25-sep-2026 · ORDENAR COLUMNAS ═════════════════════════════════════════
    Clic en el encabezado: ascendente; otro clic: descendente. En Por confirmar
