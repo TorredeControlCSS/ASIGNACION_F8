@@ -17,11 +17,11 @@ html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 16px)}
 body{margin:0;background:var(--fondo);color:var(--ink);font:16px/1.6 "IBM Plex Sans","Segoe UI",Arial,sans-serif}
 a{color:var(--navy2)}
 header.top{background:var(--navy);color:#fff;padding:18px 22px}
-header.top .w{max-width:1120px;margin:0 auto;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+header.top .w{max-width:1440px;margin:0 auto;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
 header.top h1{margin:0;font:600 22px/1.25 "IBM Plex Serif",Georgia,serif}
 header.top p{margin:2px 0 0;opacity:.85;font-size:14px}
 header.top .volver{margin-left:auto;color:#fff;border:1px solid rgba(255,255,255,.6);border-radius:6px;padding:7px 12px;text-decoration:none;font-weight:600;font-size:14px}
-.w2{max-width:1120px;margin:0 auto;display:grid;grid-template-columns:230px 1fr;gap:28px;padding:24px 22px 60px}
+.w2{max-width:1440px;margin:0 auto;display:grid;grid-template-columns:190px 1fr;gap:24px;padding:24px 22px 60px}
 nav.indice{position:sticky;top:16px;align-self:start;font-size:14px}
 nav.indice b{display:block;color:var(--sub);font-weight:600;margin-bottom:6px}
 nav.indice a{display:block;padding:5px 0 5px 10px;border-left:2px solid var(--rule);color:var(--ink);text-decoration:none}
@@ -41,10 +41,10 @@ section p,section li{max-width:76ch}
 .duenio{display:inline-block;font-size:12.5px;font-weight:600;border-radius:12px;padding:2px 10px;margin-left:6px;vertical-align:middle}
 .d-alm{background:#dde8f6;color:var(--navy)} .d-abs{background:var(--ambf);color:var(--amb)} .d-srv{background:var(--okf);color:var(--ok)}
 .tabla{overflow-x:auto;margin:10px 0}
-table{border-collapse:collapse;width:100%;font-size:14px;min-width:820px}
-th{background:var(--navy);color:#fff;font-weight:600;text-align:left;padding:7px 9px;font-size:13px;vertical-align:bottom}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th{background:var(--navy);color:#fff;font-weight:600;text-align:left;padding:7px 8px;font-size:12.5px;vertical-align:bottom;line-height:1.25}
 th small{font-weight:400;opacity:.85}
-td{border-bottom:1px solid var(--rule);padding:6px 9px}
+td{border-bottom:1px solid var(--rule);padding:6px 8px;white-space:nowrap}
 td.n{text-align:right;font-variant-numeric:tabular-nums}
 td.c{text-align:center}
 .si{color:var(--ok);font-weight:700} .no{color:var(--mal);font-weight:700} .na{color:var(--sub)}
@@ -55,6 +55,8 @@ tr.tot td{background:var(--gris);font-weight:700}
 details{border-top:1px solid var(--rule);padding:10px 0}
 details summary{cursor:pointer;font-weight:600;color:var(--navy)}
 details p{margin:8px 0 0}
+/* el texto sigue en columnas cómodas de leer; las tablas usan todo el ancho */
+section > p, section > ul, section > ol, section > h3, section > .formula, section > .paso, section > .aviso, section > details{max-width:80ch}
 footer{color:var(--sub);font-size:13px;text-align:center;padding:0 22px 30px}
 @media (max-width:860px){ .w2{grid-template-columns:1fr} nav.indice{position:static;display:flex;flex-wrap:wrap;gap:4px 12px} nav.indice b{flex:1 1 100%} nav.indice a{border-left:0;padding:2px 0} section{padding:18px} }
 @media print{ nav.indice, header.top .volver{display:none} .w2{grid-template-columns:1fr} section{break-inside:avoid} }
