@@ -701,6 +701,8 @@
   th.ts:hover{color:#1f3864}
   th.ts .fl{font-size:10px;opacity:.55;margin-left:3px}
   th.ts.on .fl{opacity:1;color:#1f3864}
+  .entp-g{font-weight:400;font-size:12px;color:#7a8594;margin-left:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1 1 auto}
+  .entp-sec > :nth-child(2){margin-top:10px}
 </style>
 </head>
 <body>
@@ -1864,7 +1866,7 @@ function renderAnulados(){
     html+='<div class="an-vacio">No hay pedidos retirados del ciclo'+((fg||fu)?' con los filtros actuales':'')+'.</div>';
     cont.innerHTML=html; return;
   }
-  html+='<div class="an-sub">Filtrado por los mismos controles de Unidad Ejecutora y Grupo de la barra superior.</div>';
+  /* 25-sep: la línea "Filtrado por…" se retira (la barra ya lo dice) */
   html+='<div class="rp-scroll"><table class="an-t"><thead><tr>'
     +'<th>Forma 8</th><th>Unidad Ejecutora</th><th>Grupo</th><th>Tipo</th>'
     +'<th>Motivo</th><th>Retirado por</th><th>Cuándo</th><th style="text-align:center">Devolver al ciclo</th>'
@@ -1878,7 +1880,7 @@ function renderAnulados(){
       +'<td class="motivo">'+_escNA(f.anuladoMotivo||'\u2014')+'</td>'
       +'<td>'+_escNA(f.anuladoPor||'\u2014')+'</td>'
       +'<td class="mono" style="font-size:10px">'+_escNA(f.anuladoTs||'\u2014')+'</td>'
-      +'<td style="text-align:center"><button class="btn-react" onclick="reactivarPedido(\''+_esc(f.id)+'\')" title="Devolver al ciclo (requiere Supervisor o Jefe)">\\u21BA Devolver al ciclo</button></td>'
+      +'<td style="text-align:center"><button class="btn-react" onclick="reactivarPedido(\''+_esc(f.id)+'\')" title="Devolver al ciclo (requiere Supervisor o Jefe)">&#8634; Devolver al ciclo</button></td>'
       +'</tr>';
   });
   html+='</tbody></table></div>';
@@ -1956,9 +1958,9 @@ function renderEntregas(){
            ' <button class="pl-btn'+(RD_MAS90?' on':'')+'" onclick="RD_MAS90=!RD_MAS90;render()">'+(RD_MAS90?'\u2713 ':'')+'Solo m\u00e1s de '+RD_CORTE+' d\u00edas</button>' : '')+'</div>';
   if(EN_TAB==='pend' && RD_MAS90) html+='<div class="rd-filtro90">Solo los de m&aacute;s de '+RD_CORTE+' d&iacute;as sin confirmar &middot; <a href="#" onclick="RD_MAS90=false;RD_KPI=null;render();return false">ver todos</a></div>';
   if(EN_TAB==='hechas') html+='<div class="rd-mem"><input id="rdMemPin" type="password" placeholder="PIN" maxlength="8" onkeydown="if(event.key===\'Enter\')rdPublicarMemoria()"><button id="rdMemBtn" onclick="rdPublicarMemoria()">Actualizar memoria</button><span id="rdMemMsg" class="rd-memmsg" style="display:none"></span></div>';
-  if(EN_TAB==='hechas') html+='<div class="en-sub">'+(ENTREGADOS_MEM
-    ? 'Memoria publicada'+(ENTREGADOS_TS?' el '+_escNA(ENTREGADOS_TS):'')+': '+ENTREGADOS_MEM.length.toLocaleString()+' pedidos'
-      +(posteriores?' &middot; m&aacute;s '+posteriores+' entregados despu&eacute;s, que ya cuentan aqu&iacute;':'')
+  /* 25-sep: "Memoria publicada…" va en la línea "Estás en"; aquí solo quedan los avisos */
+  if(EN_TAB==='hechas' && (sinFecha || !ENTREGADOS_MEM)) html+='<div class="en-sub">'+(ENTREGADOS_MEM
+    ? ''
       +(sinFecha?'<br><b style="color:#8a6a00">'+sinFecha+(sinFecha===1?' pedido figura':' pedidos figuran')+' como entregado sin fecha de entrega</b> &mdash; van arriba de la lista para revisarlos.':'')
     : (cargarEntregadosJSON._fallo ? 'La memoria publicada no carg&oacute;: se muestran solo los entregados del tablero.' : 'Cargando la memoria publicada&hellip;'))+'</div>';
 
@@ -3245,8 +3247,8 @@ function entRender(){
                    '. En el libro ese día constan <b>'+libro.length+'</b> entregas'+(libro.length ? ' (abajo).' : '.')+'</div>' : '')+
 
     /* PASO 1 · captar el pedido */
-    '<div class="ent-caja entp-sec '+clsPaso(1,p1ok)+'"><div class="ent-tit"><span class="entp-n">1</span>Anota los pedidos que salen<span class="entp-st">'+(p1ok?'&#10003; '+cola.length+' anotados':'en curso')+'</span></div>'+
-      '<p class="entp-guia">Escribe el número de la Forma 8 o el nombre de la unidad y elige el pedido. La unidad se llena sola.</p>'+
+    '<div class="ent-caja entp-sec '+clsPaso(1,p1ok)+'"><div class="ent-tit"><span class="entp-n">1</span>Anota los pedidos que salen<span class="entp-g">Escribe el número o la unidad y elige el pedido; la unidad se llena sola</span><span class="entp-st">'+(p1ok?'&#10003; '+cola.length+' anotados':'en curso')+'</span></div>'+
+
       '<div class="entp-cap">'+
         '<div class="c-f8"><label>Forma 8<input id="entCapF8" placeholder="479 · torrijos · 8066-2026-1-479" '+
           'oninput="ENT_IDX=0;entCapSug()" onkeydown="entCapTecla(event,\'f8\')" autocomplete="off" autocapitalize="off" '+
@@ -3325,8 +3327,8 @@ function entRender(){
   }
 
   /* PASO 2 · foto de la lista de asistencia */
-  h += '<div class="ent-caja entp-sec '+clsPaso(2,p2ok)+'"><div class="ent-tit"><span class="entp-n">2</span>Foto de la lista de asistencia<span class="entp-st">'+(p2ok?'&#10003; '+fotos.length+(fotos.length===1?' hoja':' hojas'):'pendiente')+'</span></div>'+
-       '<p class="entp-guia">Toma una foto de la hoja firmada por quienes retiraron. Sale en el informe como prueba; no hace falta escribir los nombres uno por uno.</p>'+
+  h += '<div class="ent-caja entp-sec '+clsPaso(2,p2ok)+'"><div class="ent-tit"><span class="entp-n">2</span>Foto de la lista de asistencia<span class="entp-g">La hoja firmada por quienes retiraron; sale en el informe como prueba</span><span class="entp-st">'+(p2ok?'&#10003; '+fotos.length+(fotos.length===1?' hoja':' hojas'):'pendiente')+'</span></div>'+
+
        '<div class="entp-fotos">'+
          fotos.map(function(f, i){
            return '<div class="entp-foto"><img src="'+f.src+'" alt="Lista de asistencia '+(i+1)+'" onclick="entFotoVer('+i+')">'+
@@ -3338,9 +3340,8 @@ function entRender(){
 
   /* PASO 3 · subir y generar el informe */
   const txtBtn = pend.length ? ('Subir ' + pend.length + (pend.length===1 ? ' al Kanban' : ' al Kanban')) : 'Todo subido';
-  h += '<div class="ent-caja entp-sec '+clsPaso(3,p3ok)+'"><div class="ent-tit"><span class="entp-n">3</span>Sube al Kanban y genera el informe<span class="entp-st">'+(p3ok?'&#10003; todo subido':(pend.length?'faltan '+pend.length:'&mdash;'))+'</span></div>'+
-       '<p class="entp-guia">'+(pend.length ? 'Faltan <b>'+pend.length+'</b> por subir. Escribe tu PIN y súbelas; después genera el informe del día.'
-                                           : (cola.length ? 'Todo está en el Kanban. Genera el informe del día.' : 'Cuando anotes pedidos, aquí los subes al Kanban.'))+'</p>'+
+  h += '<div class="ent-caja entp-sec '+clsPaso(3,p3ok)+'"><div class="ent-tit"><span class="entp-n">3</span>Sube al Kanban y genera el informe<span class="entp-g">'+(pend.length ? 'Faltan '+pend.length+' por subir; después genera el informe del día' : (cola.length ? 'Todo está en el Kanban: genera el informe del día' : 'Cuando anotes pedidos, aquí los subes'))+'</span><span class="entp-st">'+(p3ok?'&#10003; todo subido':(pend.length?'faltan '+pend.length:'&mdash;'))+'</span></div>'+
+
        '<div class="ent-acc"><input id="entPin" type="password" placeholder="PIN" maxlength="8" inputmode="numeric">'+
        '<button class="btn-si" id="entBtnSubir" onclick="entSubir()"'+((ENT_SUBIENDO || !pend.length) ? ' disabled' : '')+'>'+(ENT_SUBIENDO ? 'Subiendo…' : txtBtn)+'</button>'+
        '<button class="btn-no entp-inf" onclick="entInforme()">Generar informe del día</button>'+
@@ -3830,18 +3831,28 @@ function rdPintarKpis_(){
   var mesN=m.mes?MES_TXT[+m.mes.slice(5,7)-1]:'', antN=m.mesAnterior?MES_TXT[+m.mesAnterior.slice(5,7)-1]:'';
   var hoyTxt=m.hoy?m.hoy.slice(8,10)+'/'+m.hoy.slice(5,7):'';
   var sal=u?u.s:g.salidas, at=u?u.t:g.aTiempo, ot=u?u.o:g.otif, ci=u?u.c:g.cicloMediana, pe=u?u.p:g.pendientes, ve=u?u.v:g.vencidos, vc=u?u.vc:g.vencidosCero, cf=u?u.cf:g.confPct;
-  var dif=(!u && g.otif!=null && a.otif!=null) ? Math.round(10*(g.otif-a.otif))/10 : null;
+  var on=u?u.on:(g.onTime!=null?g.onTime:g.otif), fr=u?u.fr:g.fillRate, vs=(ve||0)-(vc||0);
+  if(g.onTime==null){ on=ot; }   /* archivo anterior sin desglose: la tarjeta mide solo el a tiempo */
+  var dif=(!u && g.otif!=null && a.otif!=null) ? Math.round(10*(g.otif-a.otif))/10 : null;   // se muestra como "agosto X%" en la tarjeta
   var col=function(v,a1,a2){ return v==null?'azul':(v>=a2?'verde':(v>=a1?'ambar':'rosa')); };
   var pc=rdPorConfirmar_(), dd=pc.map(function(f){ return _diasDesde_(f.fDespacho)||0; }), m90=dd.filter(function(d){ return d>RD_CORTE; }).length;
   var k=[
-    ['otif', col(ot,50,80), kpiNum_(ot,1)+(ot==null?'':'%'), 'OTIF del mes', at+'/'+kpiNum_(sal)+' a tiempo'+(dif==null?'':' \u00b7 '+antN.slice(0,3)+' '+kpiNum_(a.otif,1)+'% '+(dif>=0?'\u25b2':'\u25bc')+Math.abs(dif)),
-      'De lo que salió este mes, qué parte salió a más tardar en su fecha del cronograma de la unidad.'],
+    (g.onTime!=null
+      ? ['otif', col(ot,50,80), kpiNum_(ot,1)+'%', 'OTIF del servicio',
+         (g.onTimeAlmacen!=null ? 'Almacén a tiempo '+kpiNum_(u?u.oa:g.onTimeAlmacen,1)+'% \u00b7 Abasto completo '+kpiNum_(u?u.ac:g.abastoCompleto,1)+'%'
+                                : 'On-time '+kpiNum_(on,1)+'% \u00b7 Fill rate '+kpiNum_(fr,1)+'%'),
+         'OTIF del servicio = pedidos que salieron A TIEMPO y COMPLETOS, sobre lo que salió este mes: es lo que vive la unidad. '+
+         'Almacén a tiempo = de lo que tenía producto, qué parte salió a más tardar en su fecha del cronograma (responsabilidad del almacén). '+
+         'Abasto completo = qué parte salió con toda la cantidad pedida (responsabilidad de abastecimiento). '+
+         (a.otif!=null?'Mes anterior: '+kpiNum_(a.otif,1)+'%.':'')]
+      : ['otif', col(on,50,80), kpiNum_(on,1)+'%', 'On-time del mes', at+'/'+kpiNum_(sal)+' a tiempo',
+         'De lo que salió este mes, qué parte salió a más tardar en su fecha del cronograma de la unidad.']),
     ['sal','azul', u?kpiNum_(sal):kpiNum_(g.salidasPorDia,1), u?'Salidas del mes':'Salidas por día hábil', u?'pedidos que salieron':kpiNum_(g.salidas)+' en '+m.diasHabiles+' días hábiles',
       'Formas 8 que salieron del almacén con documento, en promedio por día hábil del mes.'],
-    ['ciclo','azul', ci==null?'\u2014':ci+' d', 'Tiempo de ciclo', 'recepción \u2192 salida'+(!u&&a.cicloMediana!=null?' \u00b7 '+antN.slice(0,3)+' '+a.cicloMediana+' d':''),
+    ['ciclo','azul', ci==null?'\u2014':ci+(ci===1?' día':' días'), 'Tiempo de ciclo', 'de la recepción a la salida'+(!u&&a.cicloMediana!=null?' \u00b7 en '+antN+': '+a.cicloMediana+' días':''),
       'Días desde que se recibió la Forma 8 hasta que salió (mediana de lo que salió este mes).'],
-    ['venc', ve?'rosa':'verde', kpiNum_(ve), 'Atrasados en el almacén', kpiNum_(vc)+' en cero por desabasto',
-      'Pedidos que todavía no salen y ya pasó la fecha en que debían entregarse según el cronograma. De ellos, los que están en cero por desabasto no tienen producto.'],
+    ['venc', vs?'rosa':'verde', kpiNum_(vs), 'Atrasados con producto', 'más '+kpiNum_(vc)+' atrasados sin producto (cero)',
+      'Pedidos que todavía no salen del almacén, que SÍ tienen producto asignado, y cuya fecha de entrega según el cronograma ya pasó. Aparte, los atrasados que están en cero por desabasto: no salen porque no hay producto.'],
     ['conf', col(cf,60,90), kpiNum_(cf,1)+(cf==null?'':'%'), 'Entregas confirmadas', pc.length.toLocaleString()+' por confirmar \u00b7 '+m90.toLocaleString()+' de +'+RD_CORTE+' d',
       'De lo que salió este mes, qué parte ya tiene su entrega registrada en la bahía.']
   ];
@@ -4356,7 +4367,7 @@ function rdMigas_(v){
             crono:'Pedidos con fecha prometida por el supervisor, agrupados por día · es lo que se notifica a cada unidad',
             noasig:'El Motor asignó 0: no había stock del renglón para asignar · cuentan como falla en OTIF',
             anulados:'Pedidos retirados del ciclo, con su motivo',
-            entregas:(EN_TAB==='hechas'?'Pedidos con entrega confirmada · Ver abre el detalle y permite corregir la fecha':'Salieron del almacén y esperan que se registre su entrega · los más antiguos primero')};
+            entregas:(EN_TAB==='hechas'?('Pedidos con entrega confirmada'+(typeof ENTREGADOS_TS!=='undefined'&&ENTREGADOS_TS?' · memoria publicada el '+ENTREGADOS_TS:'')+' · Ver abre el detalle y permite corregir la fecha'):'Salieron del almacén y esperan que se registre su entrega · los más antiguos primero')};
   if(HINT[v]) h+='<span class="hint" title="'+HINT[v]+'">'+HINT[v]+'</span>';
   box.innerHTML = (v==='entdia') ? '' : h;
   var der=document.createElement('span'); der.className='rd-migas-der';
