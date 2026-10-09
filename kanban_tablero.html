@@ -594,6 +594,7 @@
   .vsw-btn[data-vista="crono"]{--tc:#6b5b95;--tb:#efecf6}
   .vsw-btn[data-vista="noasig"]{--tc:#8c1d18;--tb:#f8e6e6}
   .vsw-btn[data-vista="anulados"]{--tc:#6b7280;--tb:#eef0f3}
+  .vsw-btn[data-vista="mapa"]{--tc:#0C447C;--tb:#e2eefb}
   #rdSub{display:none!important}               /* las sub-pestañas pasan a ser pestañas */
   /* tarjetas delgadas debajo del flujo */
   .rd-kpis{margin:8px 0 0;gap:8px}
@@ -800,6 +801,7 @@
     <button class="vsw-btn sec" data-vista="crono" onclick="cambiarVista('crono')">Plan de entregas</button>
     <button class="vsw-btn sec" data-vista="noasig" onclick="cambiarVista('noasig')">Cero por desabasto <span id="naBadge" style="font-family:Consolas;font-size:11px;opacity:.8"></span></button>
     <button class="vsw-btn sec" data-vista="anulados" onclick="cambiarVista('anulados')">Retirados del ciclo <span id="anBadge" style="font-family:Consolas;font-size:11px;opacity:.8"></span></button>
+    <button class="vsw-btn sec" data-vista="mapa" onclick="cambiarVista('mapa')">Mapa de despachos</button>
   </div>
   <div class="toolbar rd-tb" id="rdTb">
     <div class="buscador-wrap">
@@ -824,6 +826,7 @@
   <div id="vistaNoAsig" style="display:none;"><div id="listaNoAsig"></div></div>
   <div id="vistaAnulados" style="display:none;"><div id="listaAnulados"></div></div>
   <div id="vistaEntregas" style="display:none;"><div id="listaEntregas"></div></div>
+  <div id="vistaMapa" style="display:none;"></div>
 </div>
 
 <!-- MODAL detalle por UE (vista Cronograma) -->
@@ -1642,8 +1645,10 @@ function cambiarVista(v){
   /* La captura NO pasa por render(): debe abrir aunque el tablero siga
      cargando o no haya red. */
   document.getElementById('vistaEntregasDia').style.display = (v==='entdia')? '' : 'none';
+  document.getElementById('vistaMapa').style.display = (v==='mapa')? '' : 'none';
   try{ rdNav_(v); rdPintarCabecera_(); }catch(e){}
   if (v==='entdia'){ entRender(); return; }
+  if (v==='mapa'){ try{ mfRender(); }catch(eMf){ console.error('mapa de despachos', eMf); } return; }
   render();
 }
 
@@ -4134,7 +4139,7 @@ function rdPintarCabecera_(){ try{ rdPintarKpis_(); rdPintarFlujo_(); rdBarra_()
    cuando hay algún filtro puesto. */
 function rdBarra_(){
   var tb=document.getElementById('rdTb'); if(!tb) return;
-  tb.style.display = '';   /* F3b (24-sep): la barra con el buscador se ve en todas las pestañas, como en el dummy aprobado */
+  tb.style.display = (VISTA==='mapa') ? 'none' : '';   /* 09-oct: el mapa trae sus propios controles · F3b (24-sep): la barra con el buscador se ve en todas las pestañas, como en el dummy aprobado */
   var dia=document.getElementById('fDiaEnt');
   if(dia) dia.style.display = (VISTA==='reparto' || VISTA==='crono') ? '' : 'none';
   var hay=['fUE','fGrupo','fTipo','fDiaEnt','fBuscar'].some(function(id){ var e=document.getElementById(id); return e && String(e.value||'').trim(); });
@@ -4583,7 +4588,7 @@ async function selAplicar_(){
 /* ── F1 (24-sep-2026) · MIGAS: dónde estás, qué filtros hay y cómo volver ── */
 function rdMigas_(v){
   var box=document.getElementById('rdMigas'); if(!box) return;
-  var nom={reparto:'Dentro del almac\u00e9n',crono:'Plan de entregas',noasig:'Cero por desabasto',anulados:'Retirados del ciclo',entdia:'Registrar hoy'}[v]
+  var nom={reparto:'Dentro del almac\u00e9n',crono:'Plan de entregas',noasig:'Cero por desabasto',anulados:'Retirados del ciclo',entdia:'Registrar hoy',mapa:'Mapa de despachos'}[v]
           || (v==='entregas' ? (EN_TAB==='hechas'?'Memoria de entregas':'Por confirmar entrega') : '');
   var h='<span>Est\u00e1s en: <b>'+nom+'</b></span>';
   if(v==='reparto' && macroFiltro){ var F=(RP_FASES||[]).filter(function(x){return x.clave===macroFiltro;})[0];
@@ -4603,6 +4608,7 @@ function rdMigas_(v){
             crono:'Pedidos con fecha prometida por el supervisor, agrupados por día · es lo que se notifica a cada unidad',
             noasig:'El Motor asignó 0: no había stock del renglón para asignar · cuentan como falla en OTIF',
             anulados:'Pedidos retirados del ciclo, con su motivo',
+            mapa:'Hacia dónde sale el despacho de CEDIS Panamá y dónde se acumula lo que no ha salido',
             entregas:(EN_TAB==='hechas'?('Pedidos con entrega confirmada'+(typeof ENTREGADOS_TS!=='undefined'&&ENTREGADOS_TS?' · memoria publicada el '+ENTREGADOS_TS:'')+' · Ver abre el detalle y permite corregir la fecha'):'Salieron del almacén y esperan que se registre su entrega · los más antiguos primero')};
   if(HINT[v]) h+='<span class="hint" title="'+HINT[v]+'">'+HINT[v]+'</span>';
   box.innerHTML = (v==='entdia') ? '' : h;
@@ -4662,5 +4668,268 @@ function entIniciar_(){
 }
 
 </script>
+<!-- ══ 09-oct-2026 · MAPA DE DESPACHOS ═══════════════════════════════════════
+     Flujo de CEDIS Panamá a cada unidad ejecutora: grosor y puntos en movimiento
+     = volumen despachado (B/. o cantidad de la distribución de SALMI del mes en
+     curso, o Formas 8 del Kanban); color = fill rate o a tiempo frente a la meta.
+     Solo lee JSON ya publicados (kpi_kanban.json, f8_renglones.json y las
+     coordenadas del portal); no llama al Motor. Todo va con prefijo mf/MF. -->
+<style>
+  #vistaMapa{--mf-mar:#dde8f3;--mf-tierra:#f8f7f3;--mf-lim:#aab6c3;
+    --ok-d:#1d5a27;--ok-p:#a9d4a9;--ok-f:#eef7ee;--bajo-d:#7a4a00;--bajo-p:#f0cf8f;--bajo-f:#fdf3e3;
+    --crit-d:#9b1c1c;--crit-p:#e3a5a5;--crit-f:#fbeaea;--con-d:#5a5a5a;--con-p:#d6d6d6;--con-f:#f2f2f2;}
+  #vistaMapa .mf-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-bottom:8px}
+  #vistaMapa .mf-kpi{background:#fff;border:1px solid var(--bord);border-radius:2px;padding:7px 10px}
+  #vistaMapa .mf-kpi .l{font-size:9px;color:#4a5560;text-transform:uppercase;letter-spacing:.3px;font-weight:700}
+  #vistaMapa .mf-kpi .v{font-size:20px;font-weight:700;font-family:Consolas,monospace;line-height:1.15;margin-top:2px}
+  #vistaMapa .mf-kpi .s{font-size:10px;color:var(--sub);margin-top:1px}
+  #vistaMapa .mf-kpi.ok{background:var(--ok-f)} #vistaMapa .mf-kpi.ok .v{color:var(--ok-d)}
+  #vistaMapa .mf-kpi.bajo{background:var(--bajo-f)} #vistaMapa .mf-kpi.bajo .v{color:var(--bajo-d)}
+  #vistaMapa .mf-kpi.crit{background:var(--crit-f)} #vistaMapa .mf-kpi.crit .v{color:var(--crit-d)}
+  #vistaMapa .mf-kpi.az{background:#e2eefb} #vistaMapa .mf-kpi.az .v{color:#0C447C}
+  #vistaMapa .mf-bar{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;background:#fff;border:1px solid var(--bord);padding:8px 11px;margin-bottom:8px}
+  #vistaMapa .mf-grp{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  #vistaMapa .mf-grp>span{font-size:11px;color:var(--sub)}
+  #vistaMapa .mf-seg{display:inline-flex;border:1px solid #0C447C}
+  #vistaMapa .mf-seg button{border:0;background:#fff;color:#0C447C;font:600 12px Arial,Helvetica,sans-serif;padding:5px 10px;cursor:pointer}
+  #vistaMapa .mf-seg button+button{border-left:1px solid #0C447C}
+  #vistaMapa .mf-seg button.on{background:#0C447C;color:#fff}
+  #vistaMapa .mf-seg button:disabled{color:#a9b3bf;cursor:not-allowed}
+  #vistaMapa .mf-main{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:10px;align-items:start}
+  #vistaMapa .mf-pn{background:#fff;border:1px solid var(--bord);display:flex;flex-direction:column;min-width:0}
+  #vistaMapa .mf-ph{display:flex;align-items:baseline;gap:8px;padding:8px 11px;border-bottom:1px solid #e3e6ea}
+  #vistaMapa .mf-ph h3{margin:0;font-size:13px;color:#0C447C}
+  #vistaMapa .mf-ph .d{font-size:11px;color:var(--sub)}
+  #vistaMapa .mf-mapa{position:relative;background:var(--mf-mar)}
+  #vistaMapa .mf-mapa svg{display:block;width:100%;height:auto}
+  #vistaMapa .prov{fill:var(--mf-tierra);stroke:var(--mf-lim);stroke-width:.8}
+  #vistaMapa .provl{font:600 10px Arial,Helvetica,sans-serif;fill:#8b97a4;letter-spacing:.6px;text-transform:uppercase;pointer-events:none}
+  #vistaMapa .cinta{fill:none;stroke-linecap:round;opacity:.78;transition:opacity .15s}
+  #vistaMapa .part{fill:none;stroke-linecap:round;stroke-dasharray:1 15;animation:mfCorre 1.15s linear infinite;pointer-events:none}
+  #vistaMapa .espera{fill:none;stroke-linecap:round;stroke-dasharray:2 7;opacity:.9}
+  @keyframes mfCorre{to{stroke-dashoffset:-16}}
+  #vistaMapa .nodo{stroke-width:1.6;cursor:pointer}
+  #vistaMapa .lbl{font:700 10.5px Arial,Helvetica,sans-serif;fill:#20303f;paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round;pointer-events:none}
+  #vistaMapa .origen{fill:#0C447C;stroke:#fff;stroke-width:2}
+  #vistaMapa .pulso{fill:none;stroke:#1e5a9e;stroke-width:2;animation:mfPulso 2.4s ease-out infinite;transform-box:fill-box;transform-origin:center}
+  @keyframes mfPulso{0%{opacity:.7;transform:scale(1)}100%{opacity:0;transform:scale(3.2)}}
+  #vistaMapa svg.foco .cinta{opacity:.12} #vistaMapa svg.foco .part{opacity:.15} #vistaMapa svg.foco .nodo{opacity:.35}
+  #vistaMapa svg.foco .on.cinta{opacity:.95} #vistaMapa svg.foco .on.part{opacity:1} #vistaMapa svg.foco .on.nodo{opacity:1}
+  #vistaMapa .mf-ley{display:flex;flex-wrap:wrap;gap:6px 14px;padding:7px 11px;border-top:1px solid #e3e6ea;font-size:11px;color:var(--sub);align-items:center}
+  #vistaMapa .mf-ley i{display:inline-block;width:18px;height:7px;border-radius:4px;vertical-align:middle;margin-right:5px}
+  #vistaMapa .mf-tip{position:absolute;pointer-events:none;background:#fff;border:1px solid var(--bord);box-shadow:0 2px 8px rgba(0,0,0,.18);padding:8px 10px;font-size:12px;min-width:220px;z-index:5}
+  #vistaMapa .mf-tip b{color:#0C447C}
+  #vistaMapa .mf-tip table{border-collapse:collapse;margin-top:5px;width:100%}
+  #vistaMapa .mf-tip td{padding:1px 0;color:#4a4a4a}
+  #vistaMapa .mf-tip td+td{font-family:Consolas,monospace;text-align:right;color:#20303f;padding-left:10px}
+  #vistaMapa .mf-tw{overflow:auto;max-height:640px}
+  #vistaMapa table.mf-t{border-collapse:collapse;width:100%;font-size:11.5px}
+  #vistaMapa .mf-t th{position:sticky;top:0;background:#f3f5f8;color:#4a5560;font-size:10px;text-transform:uppercase;letter-spacing:.3px;text-align:right;padding:6px 6px;border-bottom:1px solid var(--bord);cursor:pointer;white-space:nowrap}
+  #vistaMapa .mf-t th:first-child,#vistaMapa .mf-t td:first-child{text-align:left}
+  #vistaMapa .mf-t td{padding:5px 6px;border-bottom:1px solid #edf0f3;text-align:right;font-family:Consolas,monospace;white-space:nowrap}
+  #vistaMapa .mf-t td:first-child{font-family:Arial,Helvetica,sans-serif;white-space:normal;min-width:130px}
+  #vistaMapa .mf-t tr.fila{cursor:pointer}
+  #vistaMapa .mf-t tr.fila:hover td,#vistaMapa .mf-t tr.fila.on td{background:#eef4fb}
+  #vistaMapa .vb{display:flex;align-items:center;gap:6px;justify-content:flex-end}
+  #vistaMapa .vb i{display:block;height:6px;border-radius:3px;background:#1e5a9e;opacity:.55}
+  #vistaMapa .chip{display:inline-block;padding:1px 6px;border-radius:9px;font-size:11px;font-weight:700}
+  #vistaMapa .chip.ok{background:var(--ok-f);color:var(--ok-d)} #vistaMapa .chip.bajo{background:var(--bajo-f);color:var(--bajo-d)}
+  #vistaMapa .chip.crit{background:var(--crit-f);color:var(--crit-d)} #vistaMapa .chip.con{background:var(--con-f);color:var(--con-d)}
+  #vistaMapa .mf-nota{font-size:11px;color:var(--sub);padding:7px 11px;line-height:1.45;border-top:1px solid #e3e6ea}
+  #vistaMapa .mf-load{padding:40px;text-align:center;color:var(--sub);background:#fff;border:1px solid var(--bord)}
+  @media (max-width:980px){#vistaMapa .mf-main{grid-template-columns:minmax(0,1fr)}#vistaMapa .mf-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media (prefers-reduced-motion:reduce){#vistaMapa .part{animation:none;stroke-dasharray:none;opacity:.35}#vistaMapa .pulso{animation:none;opacity:0}}
+</style>
+<script>
+var MF={ D:null, P:null, cargando:null, vol:'val', mes:'', col:'fr', vis:'metro', sel:null, orden:'vol', W:900, H:560,
+  META:{'9':55,'1a':72},
+  ORIGEN:{lat:9.05473,lng:-79.42908},   /* CEDIS CSS Panamá · C. 137 Este */
+  PORTAL:'https://torredecontrolcss.github.io/SIGUELO_DINALOG/',
+  VISTAS:{pais:{lng:[-83.05,-77.15],lat:[7.15,9.72]},metro:{lng:[-79.86,-79.26],lat:[8.86,9.13]}},
+  HUB:{'CEDIS DIVISA':{lat:8.128,lng:-80.682,tipo:'CEDIS',nombre:'CEDIS Divisa (Herrera)'},'CEDIS CHIRIQUÍ':{lat:8.43,lng:-82.43,tipo:'CEDIS',nombre:'CEDIS Chiriquí (David)'}},
+  /* nombres de la distribución de SALMI que no son unidades del mapa, o que tienen otro nombre en el Kanban */
+  EXC:{'DIRECCION NACIONAL DE INGRESOS':1,'MINISTERIO DE SALUD (MINSA)':1,'ADMINISTRACION CDPA':1},
+  FIJO:{'CEDIS CHIRIQUI':'CEDIS CHIRIQUÍ','CEDIS DIVISA':'CEDIS DIVISA'},
+  CENTRO:{'Bocas del Toro':[-82.25,9.15],'Chiriquí':[-82.35,8.55],'Veraguas':[-81.05,8.25],'Coclé':[-80.45,8.6],'Herrera':[-80.75,7.85],'Los Santos':[-80.35,7.55],'Panamá':[-79.2,8.95],'Panamá Oeste':[-79.95,8.7],'Colón':[-79.75,9.3],'Darién':[-77.85,8.2]},
+  MESL:['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre']
+};
+function mfE(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function mfNum(v){return v==null?'—':Math.round(v).toLocaleString('en-US');}
+function mfPct(v){return v==null?'—':(Math.round(v*10)/10)+'%';}
+function mfBal(v){if(v==null)return '—'; return v>=1e6?'B/. '+(v/1e6).toFixed(2)+' M':v>=1e3?'B/. '+Math.round(v/1e3).toLocaleString('en-US')+' mil':'B/. '+Math.round(v);}
+function mfCnt(v){return v>=1e6?(v/1e6).toFixed(2)+' M und':v>=1e3?Math.round(v/1e3).toLocaleString('en-US')+' mil und':mfNum(v)+' und';}
+function mfMesL(m){return MF.MESL[+m.slice(5,7)-1]+' '+m.slice(0,4);}
+function mfEst(v,meta){if(v==null)return 'con'; if(v>=meta)return 'ok'; return v>=0.8*meta?'bajo':'crit';}
+function mfTok(s){
+  var st={POL:1,POLICLINICA:1,HOSP:1,HOSPITAL:1,DR:1,DRA:1,DE:1,LA:1,EL:1,LOS:1,LAS:1,CAPPS:1,ULAPS:1,C:1,H:1,M:1,REGIONAL:1,Y:1,DEL:1,J:1,P:1,D:1,S:1,O:1,T:1,ESP:1,SAN:1,STA:1,SANTA:1,PROF:1,BASICA:1};
+  var t={}; String(s||'').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Z0-9 ]/g,' ').split(/\s+/).forEach(function(w){ if(w.length>1&&!st[w]) t[w]=1; }); return t;
+}
+function mfSim(a,b){var n=0,u=0,k; for(k in a){u++; if(b[k]) n++;} for(k in b) if(!a[k]) u++; return u?n/u:0;}
+function mfJson(u){return fetch(u+(u.indexOf('?')<0?'?':'&')+'t='+Math.floor(Date.now()/60000),{cache:'no-cache'}).then(function(r){ if(!r.ok) throw new Error(u+' · HTTP '+r.status); return r.json(); });}
+function mfCargar(){
+  if(MF.cargando) return MF.cargando;
+  var poli=new Promise(function(res){ if(typeof PROVINCIAS_POLIGONOS!=='undefined') return res(); var s=document.createElement('script'); s.src=MF.PORTAL+'polygons_provincias.js'; s.onload=res; s.onerror=res; document.head.appendChild(s); });
+  MF.cargando=Promise.all([mfJson('kanban/kpi_kanban.json'),mfJson('kanban/f8_renglones.json'),mfJson(MF.PORTAL+'ue_coordenadas.json'),mfJson(MF.PORTAL+'ue_provincias.json').catch(function(){return {ue:{}};}),poli])
+  .then(function(r){ MF.D=mfArmar(r[0],r[1],r[2].ue||{},r[3].ue||{}); MF.P=(typeof PROVINCIAS_POLIGONOS!=='undefined')?PROVINCIAS_POLIGONOS:[]; })
+  .catch(function(e){ MF.cargando=null; throw e; });
+  return MF.cargando;
+}
+/* une Kanban (por unidad y mes) con la distribución de SALMI del mes en curso y las coordenadas */
+function mfArmar(K,R,C,PR){
+  var claves=Object.keys(C), tk={}; claves.forEach(function(c){ tk[c]=mfTok(c); });
+  var val={}, sinMapa={};
+  Object.keys(R.r||{}).forEach(function(cod){ var t=R.r[cod].t; if(!t||!t.p) return;
+    t.p.forEach(function(p){ var nm=p[0]; if(MF.EXC[nm]) return; var key=MF.FIJO[nm];
+      if(!key){ var a=mfTok(nm), best=null, bs=0; claves.forEach(function(c){ var s=mfSim(a,tk[c]); if(s>bs){bs=s;best=c;} }); key=bs>0?best:null; }
+      if(!key){ sinMapa[nm]=1; return; }
+      var v=val[key]=val[key]||[0,0,0]; v[0]++; v[1]+=+p[1]||0; v[2]+=+p[2]||0; }); });
+  var H=K.historico||{}, nombres={}; claves.forEach(function(n){nombres[n]=1;}); Object.keys(MF.HUB).forEach(function(n){nombres[n]=1;});
+  Object.keys(H).forEach(function(m){ Object.keys(H[m].ue||{}).forEach(function(n){nombres[n]=1;}); });
+  var nodes=[], sinXY=[];
+  Object.keys(nombres).sort().forEach(function(n){
+    if(/^ALMACEN GENERAL CEDIS$/i.test(n)) return;
+    var xy=C[n]||MF.HUB[n], m={}; Object.keys(H).forEach(function(k){ if(H[k].ue&&H[k].ue[n]) m[k]=H[k].ue[n]; });
+    if(!xy){ if(Object.keys(m).length||val[n]) sinXY.push(n); return; }
+    nodes.push({n:n,lat:xy.lat,lng:xy.lng,nom:xy.nombre||'',prov:PR[n]||(/CHIRI/.test(n)?'Chiriquí':/DIVISA/.test(n)?'Herrera':''),m:m,val:val[n]||null});
+  });
+  var res={}; Object.keys(H).forEach(function(k){ var o={}; Object.keys(H[k]).forEach(function(x){ if(x!=='ue') o[x]=H[k][x]; }); res[k]=o; });
+  return {generado:K.generado,mesValor:R.mesDespacho,genValor:R.generado,resumen:res,nodes:nodes,sinXY:sinXY,sinMapa:Object.keys(sinMapa)};
+}
+function mfRender(){
+  var box=document.getElementById('vistaMapa'); if(!box) return;
+  if(!MF.D){ box.innerHTML='<div class="mf-load">Cargando el mapa de despachos…</div>';
+    mfCargar().then(mfRender).catch(function(e){ box.innerHTML='<div class="mf-load">No se pudo cargar el mapa: '+mfE(e&&e.message)+'</div>'; }); return; }
+  var D=MF.D, meses=Object.keys(D.resumen).sort().reverse(); if(!MF.mes||!D.resumen[MF.mes]) MF.mes=meses[0];
+  if(!box.querySelector('.mf-main')){
+    box.innerHTML='<div class="mf-kpis" id="mfKpis"></div>'+
+      '<div class="mf-bar">'+
+        '<div class="mf-grp"><span>Volumen</span><div class="mf-seg" id="mfVol"><button data-v="val">B/. despachado</button><button data-v="cant">Cantidad despachada</button><button data-v="f8">Formas 8 despachadas</button><button data-v="atr">Formas 8 atrasadas</button></div></div>'+
+        '<div class="mf-grp"><span>Mes</span><div class="mf-seg" id="mfMes">'+meses.map(function(m){return '<button data-v="'+m+'">'+mfMesL(m)+'</button>';}).join('')+'</div></div>'+
+        '<div class="mf-grp"><span>Color por</span><div class="mf-seg" id="mfCol"><button data-v="fr">Fill rate</button><button data-v="on">A tiempo</button></div></div>'+
+        '<div class="mf-grp"><span>Vista</span><div class="mf-seg" id="mfVis"><button data-v="pais">País</button><button data-v="metro">Área metropolitana</button></div></div>'+
+      '</div>'+
+      '<div class="mf-main"><div class="mf-pn"><div class="mf-ph"><h3 id="mfTit"></h3><span class="d" id="mfDes"></span></div>'+
+        '<div class="mf-mapa" id="mfMapa"><svg id="mfSvg" role="img" aria-label="Mapa de flujos de despacho desde CEDIS Panamá"></svg><div class="mf-tip" id="mfTip" hidden></div></div>'+
+        '<div class="mf-ley" id="mfLey"></div></div>'+
+      '<div class="mf-pn"><div class="mf-ph"><h3>Unidades por volumen</h3><span class="d" id="mfDTab"></span></div><div class="mf-tw"><table class="mf-t" id="mfTab"></table></div><div class="mf-nota" id="mfNota"></div></div></div>';
+    [['mfVol','vol'],['mfMes','mes'],['mfCol','col'],['mfVis','vis']].forEach(function(s){
+      document.getElementById(s[0]).addEventListener('click',function(e){ var b=e.target.closest('button'); if(!b||b.disabled) return; MF[s[1]]=b.getAttribute('data-v'); mfTodo(); }); });
+    var svg=document.getElementById('mfSvg');
+    svg.addEventListener('mousemove',function(e){ var el=e.target.closest('[data-i]'); mfTip(el?+el.getAttribute('data-i'):null,e); });
+    svg.addEventListener('mouseleave',function(){ mfTip(null); });
+    svg.addEventListener('click',function(e){ var el=e.target.closest('[data-i]'); var i=el?+el.getAttribute('data-i'):null; MF.sel=(MF.sel===i?null:i); mfDibujar(); mfTabla(); });
+    var tab=document.getElementById('mfTab');
+    tab.addEventListener('click',function(e){ var th=e.target.closest('th'); if(th){ MF.orden=th.getAttribute('data-k'); mfTabla(); return; }
+      var tr=e.target.closest('tr.fila'); if(!tr) return; var i=+tr.getAttribute('data-i'); MF.sel=(MF.sel===i?null:i);
+      if(MF.sel!=null){ var x=MF.D.nodes[i], q=mfProy(MF.VISTAS[MF.vis])(x.lng,x.lat); if(q[0]<0||q[0]>MF.W||q[1]<0||q[1]>MF.H) MF.vis='pais'; }
+      mfTodo(); });
+    tab.addEventListener('keydown',function(e){ if(e.key==='Enter'){ var tr=e.target.closest('tr.fila'); if(tr) tr.click(); } });
+  }
+  mfTodo();
+}
+function mfMarcar(id,v){ Array.prototype.forEach.call(document.getElementById(id).querySelectorAll('button'),function(b){ b.classList.toggle('on',b.getAttribute('data-v')===v); }); }
+function mfTodo(){
+  var D=MF.D, cur=MF.mes===D.mesValor;
+  ['val','cant'].forEach(function(v){ var b=document.querySelector('#mfVol [data-v="'+v+'"]'); if(b) b.disabled=!cur; });
+  if(!cur&&(MF.vol==='val'||MF.vol==='cant')) MF.vol='f8';
+  mfMarcar('mfVol',MF.vol); mfMarcar('mfMes',MF.mes); mfMarcar('mfCol',MF.col); mfMarcar('mfVis',MF.vis);
+  mfKpis(); mfDibujar(); mfTabla();
+}
+function mfFilas(){
+  var D=MF.D, cur=MF.mes===D.mesValor;
+  return D.nodes.map(function(x,i){
+    var k=x.m[MF.mes]||{}, val=cur&&x.val?x.val[2]:null, cant=cur&&x.val?x.val[1]:null;
+    var vol=MF.vol==='val'?val:MF.vol==='cant'?cant:MF.vol==='f8'?(k.s||0):(k.v||0);
+    var c=MF.col==='fr'?k.fr:k.on, meta=MF.col==='fr'?MF.META['9']:MF.META['1a'];
+    return {i:i,x:x,k:k,val:val,cant:cant,vol:vol||0,est:(k.s>0)?mfEst(c,meta):'con',cedis:/^CEDIS/i.test(x.n)};
+  });
+}
+function mfProy(b){
+  var W=MF.W,H=MF.H,cx=Math.cos(8.7*Math.PI/180),dx=(b.lng[1]-b.lng[0])*cx,dy=b.lat[1]-b.lat[0],s=Math.min(W/dx,H/dy),ox=(W-dx*s)/2,oy=(H-dy*s)/2;
+  return function(lng,lat){ return [ox+(lng-b.lng[0])*cx*s, oy+(b.lat[1]-lat)*s]; };
+}
+function mfFmt(v){ return MF.vol==='val'?mfBal(v):MF.vol==='cant'?mfCnt(v):mfNum(v)+' F8'; }
+function mfCorto(n){ return n.replace(/^(POL\.|HOSP\.|C\. H\. M\.|ULAPS -?|CAPPS)\s*/i,'').replace(/\s*\(.*\)$/,'').replace(/^DR[A]?\.\s*/,'').slice(0,26); }
+function mfDibujar(){
+  var W=MF.W,H=MF.H,p=mfProy(MF.VISTAS[MF.vis]),F=mfFilas(),g='';
+  var anillo=function(ring){ return ring.map(function(c,i){ var q=p(c[0],c[1]); return (i?'L':'M')+q[0].toFixed(1)+' '+q[1].toFixed(1); }).join('')+'Z'; };
+  (MF.P||[]).forEach(function(pp){ var gm=pp.geometry, polys=gm.type==='Polygon'?[gm.coordinates]:gm.coordinates;
+    g+='<path class="prov" d="'+polys.map(function(poly){ return poly.map(anillo).join(''); }).join('')+'"/>'; });
+  Object.keys(MF.CENTRO).forEach(function(n){ var c=MF.CENTRO[n], q=p(c[0],c[1]); if(q[0]>20&&q[0]<W-20&&q[1]>14&&q[1]<H-10) g+='<text class="provl" x="'+q[0].toFixed(0)+'" y="'+q[1].toFixed(0)+'" text-anchor="middle">'+mfE(n)+'</text>'; });
+  var dentro=function(r){ var q=p(r.x.lng,r.x.lat); return q[0]>=-4&&q[0]<=W+4&&q[1]>=-4&&q[1]<=H+4; };
+  var fuera=F.filter(function(r){ return r.vol>0&&!dentro(r); }), vis=F.filter(function(r){ return r.vol>0&&dentro(r); });
+  var vmax=Math.max.apply(null,vis.map(function(r){ return r.vol; }).concat([1])), o=p(MF.ORIGEN.lng,MF.ORIGEN.lat), esperar=MF.vol==='atr';
+  vis.slice().sort(function(a,b){ return a.vol-b.vol; }).forEach(function(r,j){
+    var q=p(r.x.lng,r.x.lat), w=1.2+13*Math.sqrt(r.vol/vmax), on=(MF.sel===r.i?' on':'');
+    var mx=(o[0]+q[0])/2,my=(o[1]+q[1])/2,dx=q[0]-o[0],dy=q[1]-o[1],dd=Math.sqrt(dx*dx+dy*dy)||1,k=Math.min(0.28,40/dd+0.12)*(j%2?1:-1);
+    var d='M'+o[0].toFixed(1)+' '+o[1].toFixed(1)+'Q'+(mx-dy*k).toFixed(1)+' '+(my+dx*k).toFixed(1)+' '+q[0].toFixed(1)+' '+q[1].toFixed(1);
+    if(esperar) g+='<path class="espera'+on+'" data-i="'+r.i+'" d="'+d+'" stroke="var(--crit-p)" stroke-width="'+Math.max(1.5,w*.55).toFixed(1)+'"/>';
+    else g+='<path class="cinta'+on+'" data-i="'+r.i+'" d="'+d+'" stroke="var(--'+r.est+'-p)" stroke-width="'+w.toFixed(1)+'"/>'+
+            '<path class="part'+on+'" d="'+d+'" stroke="var(--'+r.est+'-d)" stroke-width="'+Math.max(1.6,Math.min(4.2,w*.42)).toFixed(1)+'" style="animation-duration:'+(1.4-0.6*Math.sqrt(r.vol/vmax)).toFixed(2)+'s"/>';
+  });
+  var lbls=[];
+  F.slice().sort(function(a,b){ return a.vol-b.vol; }).forEach(function(r){
+    var q=p(r.x.lng,r.x.lat); if(q[0]<-20||q[0]>W+20||q[1]<-20||q[1]>H+20) return;
+    var rr=r.vol>0?3.2+10*Math.sqrt(r.vol/vmax):2.6, e=r.vol>0?(esperar?'crit':r.est):'con', on=(MF.sel===r.i?' on':'');
+    if(r.cedis) g+='<rect class="nodo'+on+'" data-i="'+r.i+'" x="'+(q[0]-rr).toFixed(1)+'" y="'+(q[1]-rr).toFixed(1)+'" width="'+(2*rr).toFixed(1)+'" height="'+(2*rr).toFixed(1)+'" rx="2" fill="var(--'+e+'-p)" stroke="var(--'+e+'-d)"/>';
+    else g+='<circle class="nodo'+on+'" data-i="'+r.i+'" cx="'+q[0].toFixed(1)+'" cy="'+q[1].toFixed(1)+'" r="'+rr.toFixed(1)+'" fill="var(--'+e+'-p)" stroke="var(--'+e+'-d)"/>';
+    if(r.vol>0&&dentro(r)) lbls.push({q:q,r:rr,x:r});
+  });
+  g+='<circle class="pulso" cx="'+o[0].toFixed(1)+'" cy="'+o[1].toFixed(1)+'" r="9"/><circle class="origen" cx="'+o[0].toFixed(1)+'" cy="'+o[1].toFixed(1)+'" r="9"/>'+
+     '<text class="lbl" x="'+(o[0]+13).toFixed(0)+'" y="'+(o[1]-10).toFixed(0)+'">CEDIS Panamá</text>';
+  if(fuera.length){ var fv=fuera.reduce(function(s,r){ return s+r.vol; },0);
+    g+='<text class="lbl" x="'+(W-10)+'" y="'+(H-12)+'" text-anchor="end">Fuera de esta vista: '+fuera.length+' destinos · '+mfE(mfFmt(fv))+' (ver País)</text>'; }
+  var puestas=[[o[0]+13,o[1]-10,80]];
+  lbls.sort(function(a,b){ return b.x.vol-a.x.vol; }).slice(0,7).forEach(function(L){
+    var x=L.q[0]+L.r+4, y=L.q[1]+4, t=mfCorto(L.x.x.n), w=t.length*6.2; if(x+w>W-4) x=L.q[0]-L.r-4-w;
+    if(puestas.some(function(b){ return Math.abs(b[1]-y)<13&&x<b[0]+b[2]&&b[0]<x+w; })) return;
+    puestas.push([x,y,w]); g+='<text class="lbl" x="'+x.toFixed(0)+'" y="'+y.toFixed(0)+'">'+mfE(t)+'</text>'; });
+  var svg=document.getElementById('mfSvg'); svg.setAttribute('viewBox','0 0 '+W+' '+H); svg.innerHTML=g; svg.classList.toggle('foco',MF.sel!=null);
+  var c=MF.col==='fr'?'fill rate (meta ≥ 55%)':'a tiempo (meta ≥ 72%)';
+  document.getElementById('mfLey').innerHTML= esperar
+    ? '<span><i style="background:var(--crit-p)"></i>Formas 8 atrasadas, todavía dentro del almacén (línea punteada = no ha salido)</span><span>Grosor: cantidad atrasada · máx. '+mfNum(vmax)+'</span>'
+    : '<span>Grosor y puntos en movimiento: '+({val:'valor despachado',cant:'cantidad despachada (unidades de despacho)',f8:'Formas 8 despachadas'}[MF.vol])+' · máx. '+mfFmt(vmax)+'</span>'+
+      '<span><i style="background:var(--ok-p)"></i>En meta</span><span><i style="background:var(--bajo-p)"></i>Cerca de la meta</span><span><i style="background:var(--crit-p)"></i>Lejos de la meta</span><span><i style="background:var(--con-p)"></i>Sin despachos en el Kanban</span><span>Color: '+c+'</span><span>▢ CEDIS regional (reparte en su región)</span>';
+  document.getElementById('mfTit').textContent={val:'Hacia dónde sale el valor despachado',cant:'Hacia dónde sale la cantidad despachada',f8:'Hacia dónde salen las Formas 8',atr:'Dónde se acumula lo que no ha salido'}[MF.vol];
+  var R=MF.D.resumen[MF.mes]; document.getElementById('mfDes').textContent=mfMesL(MF.mes)+(esperar?' · foto de hoy':(R&&/^\d{4}-\d{2}-\d{2}$/.test(R.corte||'')?' · al '+R.corte:''));
+}
+function mfKpis(){
+  var D=MF.D, R=D.resumen[MF.mes]||{}, F=mfFilas(), tv=0, tc=0, atr=0, n=0, cur=MF.mes===D.mesValor;
+  F.forEach(function(r){ if(r.val) tv+=r.val; if(r.cant) tc+=r.cant; atr+=r.k.v||0; if((r.k.s||0)>0) n++; });
+  var k=function(c,l,v,s){ return '<div class="mf-kpi '+c+'"><div class="l">'+l+'</div><div class="v">'+v+'</div><div class="s">'+s+'</div></div>'; };
+  document.getElementById('mfKpis').innerHTML=
+    k('az','Despachado (SALMI)',cur?mfBal(tv):'—',cur?mfCnt(tc)+' · '+mfMesL(MF.mes):'solo el mes en curso')+
+    k('az','Formas 8 despachadas',mfNum(R.salidas),n+' unidades atendidas')+
+    k(mfEst(R['1a'],72),'A tiempo',mfPct(R['1a']),'meta ≥ 72%')+
+    k(mfEst(R['9'],55),'Fill rate',mfPct(R['9']),'meta ≥ 55%')+
+    k(atr?'crit':'ok','Formas 8 atrasadas hoy',mfNum(atr),'todavía en el almacén');
+}
+function mfTabla(){
+  var F=mfFilas().filter(function(r){ return r.vol>0||(r.k.s||0)>0||(r.k.v||0)>0; }), vmax=Math.max.apply(null,F.map(function(r){ return r.vol; }).concat([1])), key=MF.orden;
+  F.sort(function(a,b){ if(key==='n') return a.x.n.localeCompare(b.x.n,'es'); var va=key==='vol'?a.vol:a.k[key], vb=key==='vol'?b.vol:b.k[key]; return (vb==null?-1:vb)-(va==null?-1:va); });
+  var ch=function(v,meta){ return v==null?'—':'<span class="chip '+mfEst(v,meta)+'">'+mfPct(v)+'</span>'; };
+  var COLS=[['n','Unidad ejecutora'],['vol','Volumen'],['s','F8 desp.'],['on','A tiempo'],['fr','Fill rate'],['v','Atrasadas']];
+  document.getElementById('mfTab').innerHTML='<thead><tr>'+COLS.map(function(c){ return '<th data-k="'+c[0]+'">'+c[1]+(MF.orden===c[0]?' ▾':'')+'</th>'; }).join('')+'</tr></thead><tbody>'+
+    F.map(function(r){ return '<tr class="fila'+(MF.sel===r.i?' on':'')+'" tabindex="0" data-i="'+r.i+'"><td>'+mfE(r.x.n)+'</td><td><div class="vb"><span>'+(r.vol?mfFmt(r.vol):'—')+'</span><i style="width:'+Math.max(2,Math.round(46*r.vol/vmax))+'px"></i></div></td><td>'+mfNum(r.k.s||0)+'</td><td>'+(r.k.s?ch(r.k.on,72):'—')+'</td><td>'+(r.k.s?ch(r.k.fr,55):'—')+'</td><td>'+mfNum(r.k.v||0)+'</td></tr>'; }).join('')+'</tbody>';
+  document.getElementById('mfDTab').textContent=F.length+' unidades · '+mfMesL(MF.mes);
+  var D=MF.D;
+  document.getElementById('mfNota').innerHTML='El valor y la cantidad salen de la distribución de SALMI del mes en curso (publicada '+mfE(D.genValor)+'); la cantidad suma unidades de despacho de productos distintos. Despachadas, a tiempo y fill rate son del Kanban del mes; atrasadas es la foto de hoy.'+
+    (D.sinXY.length?' Sin coordenadas en el mapa: '+mfE(D.sinXY.join(', '))+'.':'')+(D.sinMapa.length?' Despacho sin unidad reconocida: '+mfE(D.sinMapa.join(', '))+'.':'');
+}
+function mfTip(i,ev){
+  var t=document.getElementById('mfTip'); if(!t) return; if(i==null){ t.hidden=true; return; }
+  var x=MF.D.nodes[i], k=x.m[MF.mes]||{}, cur=MF.mes===MF.D.mesValor&&x.val;
+  var L=function(a,b){ return '<tr><td>'+a+'</td><td>'+b+'</td></tr>'; };
+  t.innerHTML='<b>'+mfE(x.n)+'</b><div style="font-size:11px;color:#666">'+mfE(x.nom)+(x.prov?' · '+mfE(x.prov):'')+'</div><table>'+
+    L('Valor despachado',cur?mfBal(x.val[2]):'—')+L('Cantidad despachada',cur?mfCnt(x.val[1]):'—')+L('Renglones despachados',cur?mfNum(x.val[0]):'—')+
+    L('Formas 8 despachadas',mfNum(k.s||0))+L('A tiempo',k.s?mfPct(k.on):'—')+L('Completo',k.s?mfPct(k.ac):'—')+L('Fill rate',k.s?mfPct(k.fr):'—')+
+    L('Pendientes hoy (F8)',mfNum(k.p||0))+L('Atrasadas hoy (F8)',mfNum(k.v||0))+'</table>';
+  t.hidden=false;
+  var m=document.getElementById('mfMapa').getBoundingClientRect(), px=ev.clientX-m.left+14, py=ev.clientY-m.top+14;
+  if(px+240>m.width) px=ev.clientX-m.left-250; if(py+200>m.height) py=Math.max(4,ev.clientY-m.top-210);
+  t.style.left=px+'px'; t.style.top=py+'px';
+}
+</script>
+
 </body>
 </html>
