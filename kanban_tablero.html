@@ -4731,7 +4731,9 @@ function entIniciar_(){
   #vistaMapa .mf-t td{padding:5px 6px;border-bottom:1px solid #edf0f3;text-align:right;font-family:Consolas,monospace;white-space:nowrap}
   #vistaMapa .mf-t td:first-child{font-family:Arial,Helvetica,sans-serif;white-space:normal;min-width:130px}
   #vistaMapa .mf-t tr.fila{cursor:pointer}
-  #vistaMapa .mf-t tr.fila:hover td,#vistaMapa .mf-t tr.fila.on td{background:#eef4fb}
+  #vistaMapa .mf-t tr.fila:hover td{background:#eef4fb}
+  #vistaMapa .mf-t tr.fila.on td{background:#d6e4f5;color:#0C447C;font-weight:700}
+  #vistaMapa .mf-pop .leaflet-popup-content{margin:10px 12px;font-size:12px}
   #vistaMapa .vb{display:flex;align-items:center;gap:6px;justify-content:flex-end}
   #vistaMapa .vb i{display:block;height:6px;border-radius:3px;background:#1e5a9e;opacity:.55}
   #vistaMapa .chip{display:inline-block;padding:1px 6px;border-radius:9px;font-size:11px;font-weight:700}
@@ -4836,7 +4838,7 @@ function mfRender(){
     var tab=document.getElementById('mfTab');
     tab.addEventListener('click',function(e){ var th=e.target.closest('th'); if(th){ MF.orden=th.getAttribute('data-k'); mfTabla(); return; }
       var tr=e.target.closest('tr.fila'); if(!tr) return; var i=+tr.getAttribute('data-i'); MF.sel=(MF.sel===i?null:i);
-      if(MF.sel!=null){ var x=MF.D.nodes[i]; if(!MF.mapa.getBounds().contains([x.lat,x.lng])) MF.mapa.flyTo([x.lat,x.lng],Math.max(MF.mapa.getZoom()-1,8),{duration:.6}); }
+      if(MF.sel!=null){ var x=MF.D.nodes[i]; MF.volando=true; MF.mapa.once('moveend',function(){ MF.volando=false; mfPopup(); }); MF.mapa.flyToBounds([[MF.ORIGEN.lat,MF.ORIGEN.lng],[x.lat,x.lng]],{padding:[70,70],maxZoom:13,duration:.7}); }
       mfDibujar(); mfTabla(); });
     tab.addEventListener('keydown',function(e){ if(e.key==='Enter'){ var tr=e.target.closest('tr.fila'); if(tr) tr.click(); } });
   }
@@ -4875,6 +4877,7 @@ function mfDibujar(){
   var L=window.L, F=mfFilas(), capa=MF.capa; capa.clearLayers(); MF.capas={}; MF.lin=[];
   var vis=F.filter(function(r){ return r.vol>0; }), vmax=Math.max.apply(null,vis.map(function(r){ return r.vol; }).concat([1])), o=[MF.ORIGEN.lat,MF.ORIGEN.lng], esperar=MF.vol==='atr';
   var col=function(e,t){ return getComputedStyle(document.getElementById('vistaMapa')).getPropertyValue('--'+e+'-'+t).trim(); };
+  var selR=null;
   vis.slice().sort(function(a,b){ return a.vol-b.vol; }).forEach(function(r,j){
     var pts=mfCurva(o,[r.x.lat,r.x.lng],j%2?1:-1), w=1.2+13*Math.sqrt(r.vol/vmax), on=MF.sel===r.i?' on':'';
     var ls=[];
@@ -4884,16 +4887,24 @@ function mfDibujar(){
       ls.push([L.polyline(pts,{color:col(r.est,'d'),weight:Math.max(1.6,Math.min(4.2,w*.42)),opacity:1,dashArray:'1 15',className:'part'+on,interactive:false}).addTo(capa),1]);
     }
     MF.lin.push({ll:[r.x.lat,r.x.lng],ls:ls});
+    if(on) selR={pts:pts,w:w};
   });
+  /* ruta elegida: encima de todo, en azul institucional con halo blanco, para que se distinga de las demás */
+  if(selR){
+    L.polyline(selR.pts,{color:'#ffffff',weight:selR.w+8,opacity:.9,className:'on',interactive:false}).addTo(capa);
+    L.polyline(selR.pts,{color:'#1e5a9e',weight:selR.w+3,opacity:1,className:'on',interactive:false,dashArray:esperar?'4 6':null}).addTo(capa);
+    if(!esperar) L.polyline(selR.pts,{color:'#ffffff',weight:3,opacity:1,dashArray:'2 12',className:'part on',interactive:false}).addTo(capa);
+  }
   F.slice().sort(function(a,b){ return a.vol-b.vol; }).forEach(function(r){
     var rr=r.vol>0?3.2+10*Math.sqrt(r.vol/vmax):2.6, e=r.vol>0?(esperar?'crit':r.est):'con', on=MF.sel===r.i?' on':'', mk;
-    var est={color:col(e,'d'),fillColor:col(e,'p'),fillOpacity:1,weight:1.6,className:'nodo'+on};
+    var est={color:on?'#0C447C':col(e,'d'),fillColor:col(e,'p'),fillOpacity:1,weight:on?3.5:1.6,className:'nodo'+on}; if(on) rr+=3;
     if(r.cedis){ mk=L.marker([r.x.lat,r.x.lng],{icon:L.divIcon({className:'nodo'+on,iconSize:[2*rr,2*rr],iconAnchor:[rr,rr],html:'<div style="width:'+(2*rr)+'px;height:'+(2*rr)+'px;border-radius:2px;background:'+est.fillColor+';border:1.6px solid '+est.color+';box-sizing:border-box"></div>'})}); }
     else mk=L.circleMarker([r.x.lat,r.x.lng],Object.assign({radius:rr},est));
     mk.bindTooltip(function(){ return mfTipHtml(r.i); },{sticky:true,direction:'top',offset:[0,-6],className:'mf-tt'});
-    mk.on('click',function(ev){ L.DomEvent.stopPropagation(ev); MF.sel=(MF.sel===r.i?null:r.i); mfDibujar(); mfTabla(); });
-    mk.addTo(capa); MF.capas[r.i]={mk:mk,r:r};
+    mk.on('click',function(ev){ L.DomEvent.stopPropagation(ev); MF.sel=(MF.sel===r.i?null:r.i); mfDibujar(); mfTabla(); mfFilaVisible(); });
+    mk.addTo(capa); MF.capas[r.i]={mk:mk,r:r}; if(on) mk.bringToFront&&mk.bringToFront();
   });
+  mfPopup();
   document.getElementById('mfMapa').classList.toggle('foco',MF.sel!=null);
   mfEtiquetas();
   var c=MF.col==='fr'?'fill rate (meta ≥ 55%)':'a tiempo (meta ≥ 72%)';
@@ -4904,6 +4915,14 @@ function mfDibujar(){
   document.getElementById('mfTit').textContent={val:'Hacia dónde sale el valor despachado',cant:'Hacia dónde sale la cantidad despachada',f8:'Hacia dónde salen las Formas 8',atr:'Dónde se acumula lo que no ha salido'}[MF.vol];
   var R=MF.D.resumen[MF.mes]; document.getElementById('mfDes').textContent=mfMesL(MF.mes)+(esperar?' · foto de hoy':(R&&/^\d{4}-\d{2}-\d{2}$/.test(R.corte||'')?' · al '+R.corte:''));
 }
+/* ficha de la unidad elegida: se abre sola junto a su nodo; cerrarla quita la selección */
+function mfPopup(){
+  var m=MF.mapa; if(!m) return; MF.popCerrando=true; m.closePopup(); MF.popCerrando=false;
+  if(MF.sel==null||MF.volando) return; var x=MF.D.nodes[MF.sel];
+  MF.pop=window.L.popup({className:'mf-pop',autoPan:true,autoPanPadding:[30,30],maxWidth:320,offset:[0,-8]}).setLatLng([x.lat,x.lng]).setContent(mfTipHtml(MF.sel)).openOn(m);
+  MF.pop.on('remove',function(){ if(MF.popCerrando) return; if(MF.sel!=null){ MF.sel=null; mfDibujar(); mfTabla(); } });
+}
+function mfFilaVisible(){ var tr=document.querySelector('#mfTab tr.fila.on'); if(tr&&tr.scrollIntoView) tr.scrollIntoView({block:'nearest',behavior:'smooth'}); }
 /* nombres fijos solo para los 7 destinos mayores que se ven en pantalla, sin encimarse */
 function mfEtiquetas(){
   if(!MF.mapa||!MF.capas) return; var L=window.L, m=MF.mapa, b=m.getBounds(), lab=MF.lab; lab.clearLayers();
