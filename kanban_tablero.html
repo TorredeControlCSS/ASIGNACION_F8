@@ -4734,6 +4734,11 @@ function entIniciar_(){
   #vistaMapa .mf-t tr.fila:hover td{background:#eef4fb}
   #vistaMapa .mf-t tr.fila.on td{background:#d6e4f5;color:#0C447C;font-weight:700}
   #vistaMapa .mf-pop .leaflet-popup-content{margin:10px 12px;font-size:12px}
+  #vistaMapa .mf-limpiar{padding:5px 10px;border:1px solid var(--bord);background:#fff;color:#8b97a4;font:600 12px Arial,Helvetica,sans-serif;cursor:pointer}
+  #vistaMapa .mf-limpiar.activo{border-color:#0C447C;color:#0C447C}
+  #vistaMapa .mf-limpiar:hover{background:#eef4fb}
+  #vistaMapa .mf-gr{display:inline-flex;align-items:center;gap:5px}
+  #vistaMapa .mf-gr b{display:inline-block;width:26px;border-radius:8px;background:#9db3cc}
   #vistaMapa .vb{display:flex;align-items:center;gap:6px;justify-content:flex-end}
   #vistaMapa .vb i{display:block;height:6px;border-radius:3px;background:#1e5a9e;opacity:.55}
   #vistaMapa .chip{display:inline-block;padding:1px 6px;border-radius:9px;font-size:11px;font-weight:700}
@@ -4816,7 +4821,8 @@ function mfRender(){
         '<div class="mf-grp"><span>Mes</span><div class="mf-seg" id="mfMes">'+meses.map(function(m){return '<button data-v="'+m+'">'+mfMesL(m)+'</button>';}).join('')+'</div></div>'+
         '<div class="mf-grp"><span>Color por</span><div class="mf-seg" id="mfCol"><button data-v="fr">Fill rate</button><button data-v="on">A tiempo</button></div></div>'+
         '<div class="mf-grp"><span>Vista</span><div class="mf-seg" id="mfVis">'+['metro','pancol','oeste','pais'].map(function(v){ return '<button data-v="'+v+'">'+MF.VNOM[v]+'</button>'; }).join('')+'</div>'+
-          '<select class="mf-sel" id="mfProv" title="Acercar a una provincia"><option value="">Provincia…</option>'+Object.keys(MF.provB).sort(function(a,b){ return a.localeCompare(b,'es'); }).map(function(p){ return '<option>'+mfE(p)+'</option>'; }).join('')+'</select></div>'+
+          '<select class="mf-sel" id="mfProv" title="Acercar a una provincia"><option value="">Provincia…</option>'+Object.keys(MF.provB).sort(function(a,b){ return a.localeCompare(b,'es'); }).map(function(p){ return '<option>'+mfE(p)+'</option>'; }).join('')+'</select>'+
+          '<button type="button" class="mf-limpiar" id="mfLimpiar" title="Quitar la unidad elegida y volver a la vista completa">&#10005; Limpiar</button></div>'+
       '</div>'+
       '<div class="mf-main"><div class="mf-pn"><div class="mf-ph"><h3 id="mfTit"></h3><span class="d" id="mfDes"></span></div>'+
         '<div class="mf-mapa" id="mfMapa" role="img" aria-label="Mapa de flujos de despacho desde CEDIS Panamá"></div>'+
@@ -4825,7 +4831,8 @@ function mfRender(){
     [['mfVol','vol'],['mfMes','mes'],['mfCol','col']].forEach(function(s){
       document.getElementById(s[0]).addEventListener('click',function(e){ var b=e.target.closest('button'); if(!b||b.disabled) return; MF[s[1]]=b.getAttribute('data-v'); mfTodo(); }); });
     document.getElementById('mfVis').addEventListener('click',function(e){ var b=e.target.closest('button'); if(!b) return; MF.vis=b.getAttribute('data-v'); document.getElementById('mfProv').value=''; mfMarcar('mfVis',MF.vis); mfIr(MF.VISTAS[MF.vis]); });
-    document.getElementById('mfProv').addEventListener('change',function(){ var p=this.value; if(!p) return; MF.vis=''; mfMarcar('mfVis',''); mfIr(MF.provB[p]); });
+    document.getElementById('mfLimpiar').addEventListener('click',mfLimpiar);
+    document.getElementById('mfProv').addEventListener('change',function(){ var p=this.value; mfBotLimpiar(); if(!p) return; MF.vis=''; mfMarcar('mfVis',''); mfIr(MF.provB[p]); });
     var L=window.L, m=L.map('mfMapa',{scrollWheelZoom:true,zoomSnap:0.25}); MF.mapa=m;
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:17,attribution:'© OpenStreetMap'}).addTo(m);
     (MF.P||[]).forEach(function(pp){ L.geoJSON(pp.geometry,{style:{color:'#7a8899',weight:1,fill:false},interactive:false}).addTo(m); });
@@ -4905,12 +4912,13 @@ function mfDibujar(){
     mk.addTo(capa); MF.capas[r.i]={mk:mk,r:r}; if(on) mk.bringToFront&&mk.bringToFront();
   });
   mfPopup();
-  document.getElementById('mfMapa').classList.toggle('foco',MF.sel!=null);
+  document.getElementById('mfMapa').classList.toggle('foco',MF.sel!=null); mfBotLimpiar();
   mfEtiquetas();
   var c=MF.col==='fr'?'fill rate (meta ≥ 55%)':'a tiempo (meta ≥ 72%)';
   document.getElementById('mfLey').innerHTML= esperar
     ? '<span><i style="background:var(--crit-p)"></i>Formas 8 atrasadas, todavía dentro del almacén (línea punteada = no ha salido)</span><span>Grosor: cantidad atrasada · máx. '+mfNum(vmax)+'</span>'
-    : '<span>Grosor y puntos en movimiento: '+({val:'valor despachado',cant:'cantidad despachada (unidades de despacho)',f8:'Formas 8 despachadas'}[MF.vol])+' · máx. '+mfFmt(vmax)+'</span>'+
+    : '<span>Grosor: '+({val:'valor despachado',cant:'cantidad despachada (unidades de despacho)',f8:'Formas 8 despachadas'}[MF.vol])+'</span>'+
+      [1,0.25,0.04].map(function(f){ var w=1.2+13*Math.sqrt(f); return '<span class="mf-gr"><b style="height:'+w.toFixed(1)+'px"></b>'+mfFmt(vmax*f)+'</span>'; }).join('')+
       '<span><i style="background:var(--ok-p)"></i>En meta</span><span><i style="background:var(--bajo-p)"></i>Cerca de la meta</span><span><i style="background:var(--crit-p)"></i>Lejos de la meta</span><span><i style="background:var(--con-p)"></i>Sin despachos en el Kanban</span><span>Color: '+c+'</span><span>▢ CEDIS regional (reparte en su región)</span>';
   document.getElementById('mfTit').textContent={val:'Hacia dónde sale el valor despachado',cant:'Hacia dónde sale la cantidad despachada',f8:'Hacia dónde salen las Formas 8',atr:'Dónde se acumula lo que no ha salido'}[MF.vol];
   var R=MF.D.resumen[MF.mes]; document.getElementById('mfDes').textContent=mfMesL(MF.mes)+(esperar?' · foto de hoy':(R&&/^\d{4}-\d{2}-\d{2}$/.test(R.corte||'')?' · al '+R.corte:''));
@@ -4922,6 +4930,12 @@ function mfPopup(){
   MF.pop=window.L.popup({className:'mf-pop',autoPan:true,autoPanPadding:[30,30],maxWidth:320,offset:[0,-8]}).setLatLng([x.lat,x.lng]).setContent(mfTipHtml(MF.sel)).openOn(m);
   MF.pop.on('remove',function(){ if(MF.popCerrando) return; if(MF.sel!=null){ MF.sel=null; mfDibujar(); mfTabla(); } });
 }
+/* Limpiar: quita la unidad elegida y la provincia, y vuelve a la vista predeterminada */
+function mfLimpiar(){
+  MF.sel=null; var pv=document.getElementById('mfProv'); if(pv) pv.value='';
+  if(!MF.vis) MF.vis='metro'; mfMarcar('mfVis',MF.vis); mfDibujar(); mfTabla(); mfIr(MF.VISTAS[MF.vis]); mfBotLimpiar();
+}
+function mfBotLimpiar(){ var b=document.getElementById('mfLimpiar'), pv=document.getElementById('mfProv'); if(b) b.classList.toggle('activo', MF.sel!=null || !!(pv&&pv.value)); }
 function mfFilaVisible(){ var tr=document.querySelector('#mfTab tr.fila.on'); if(tr&&tr.scrollIntoView) tr.scrollIntoView({block:'nearest',behavior:'smooth'}); }
 /* nombres fijos solo para los 7 destinos mayores que se ven en pantalla, sin encimarse */
 function mfEtiquetas(){
