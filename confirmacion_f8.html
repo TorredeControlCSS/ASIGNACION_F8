@@ -1008,8 +1008,7 @@ async function dReintentar(){
     const r=await loadJsonp(`${WEBAPP_BASE}?file=bfd_reintentar&lote=${encodeURIComponent(lote)}`,240000);
     const seg=Math.round((Date.now()-t0)/1000);
     if(r&&r.ok){
-      DIA_DATA=r;
-      dPoblarLotes(r); dPoblarUE(r); dPintarCierre(r.resumen); dRender();
+      if(r.renglones){ DIA_DATA=r; dPoblarLotes(r); dPoblarUE(r); dPintarCierre(r.resumen); dRender(); }
       if(r.ocupado) dEstado('err','El Motor estaba ocupado con otra tarea y no pudo revisar SALMI ('+seg+' s). Vuelva a intentarlo en un minuto.');
       else dEstado('ok', (r.resueltas ? r.resueltas+' F8 resueltas desde SALMI' : 'Sin cambios: no aparecieron en SALMI')+' · '+seg+' s.');
     }else{
