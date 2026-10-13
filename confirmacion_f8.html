@@ -25,20 +25,32 @@
 
   .wrap{max-width:1200px;margin:0 auto;padding:14px;}
 
-  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px;}
+  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:12px;}
+  @media (max-width:760px){.kpis{grid-template-columns:repeat(2,1fr);}}
   .kpi{background:#fff;border:1px solid var(--bord);padding:9px 12px;border-left:4px solid var(--azul2);}
   .kpi .lbl{font-size:10px;color:var(--sub);text-transform:uppercase;letter-spacing:.4px;min-height:24px;}
   .kpi .val{font-size:24px;font-weight:700;font-family:Consolas,monospace;color:var(--azul2);}
   .kpi.pend{border-left-color:var(--rojo);} .kpi.pend .val{color:var(--rojo);}
   .kpi.buf{border-left-color:var(--azul);} .kpi.buf .val{color:var(--azul);}
   .kpi.asig{border-left-color:var(--verde);} .kpi.asig .val{color:var(--verde);}
+  .kpi.sinrec{border-left-color:var(--ambar);cursor:pointer;} .kpi.sinrec .val{color:var(--ambar);}
+  .kpi.sinrec:hover{background:#fff9ec;} .kpi.sinrec.on{background:#fff3d6;}
+  .kpi .hint{font-size:10px;color:var(--sub);margin-top:2px;}
+  .modo-bar{display:none;align-items:center;gap:10px;background:#fff6e0;border:1px solid #e6c98a;
+    padding:8px 12px;margin-bottom:10px;font-size:12px;color:#6b4e06;}
+  .modo-bar.on{display:flex;} .modo-bar .spacer{flex:1;}
+  .tag-est{display:inline-block;font-size:10px;font-weight:700;padding:1px 6px;margin-left:6px;}
+  .tag-sinrec{background:#fdf0d2;color:#8a6205;} .tag-enbuf{background:#e3edf8;color:var(--azul);}
+  .doc-row.bloq{opacity:.6;cursor:default;}
+  .buscar-todo{padding:16px;text-align:center;font-size:13px;color:var(--sub);}
+  .buscar-todo button{margin-top:8px;}
 
   .flow{background:#fff;border:1px solid var(--bord);padding:12px 14px;margin-bottom:12px;}
   .flow h3{margin:0 0 10px;font-size:12px;color:var(--azul2);text-transform:uppercase;letter-spacing:.4px;}
   .flow-bar{display:flex;height:30px;border:1px solid var(--bord);overflow:hidden;background:#f4f4f4;}
   .flow-seg{display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;
     font-weight:700;font-family:Consolas,monospace;min-width:2px;transition:width .4s;overflow:hidden;}
-  .seg-pend{background:var(--rojo);} .seg-buf{background:var(--azul);} .seg-asig{background:var(--verde);}
+  .seg-pend{background:var(--rojo);} .seg-buf{background:var(--azul);} .seg-asig{background:var(--verde);} .seg-sinrec{background:var(--ambar);}
   .flow-leg{display:flex;gap:18px;margin-top:8px;font-size:11px;color:var(--sub);flex-wrap:wrap;}
   .flow-leg .dot{display:inline-block;width:10px;height:10px;margin-right:5px;vertical-align:middle;}
 
@@ -207,6 +219,39 @@
   .btn-ref:disabled{opacity:.4;cursor:not-allowed;}
   .btn-clr{padding:5px 12px;background:#fff;color:var(--sub);border:1px solid var(--bord);
     cursor:pointer;font-size:11px;font-weight:700;}
+
+  /* ===== 12-oct-2026 · ESTILO: cuadros redondeados, pasteles, sin lineas laterales, tarjetas bajas ===== */
+  .kpis{gap:8px;margin-bottom:10px;}
+  .kpi{border:none;border-left:none;border-radius:12px;padding:7px 12px;background:#eef2f7;}
+  .kpi .lbl{min-height:0;font-size:10px;}
+  .kpi .val{font-size:20px;line-height:1.15;}
+  .kpi .hint{font-size:10px;margin-top:0;}
+  .kpi.pend{background:#fbe4e4;} .kpi.pend .val{color:#9b2c2c;}
+  .kpi.sinrec{background:#fdf1d8;} .kpi.sinrec .val{color:#8a6205;}
+  .kpi.sinrec:hover{background:#fbe8bf;} .kpi.sinrec.on{background:#f8dfa6;box-shadow:inset 0 0 0 2px #e2b85a;}
+  .kpi.buf{background:#e1ecf8;} .kpi.buf .val{color:#24589a;}
+  .kpi.asig{background:#e0f2e6;} .kpi.asig .val{color:#23703b;}
+  .flow{border:none;border-radius:12px;padding:9px 12px;margin-bottom:10px;}
+  .flow h3{margin-bottom:6px;}
+  .flow-bar{height:22px;border:none;border-radius:8px;}
+  .flow-seg{color:#20303f;font-size:11px;}
+  .seg-pend{background:#f3b9b9;} .seg-sinrec{background:#f6d58e;} .seg-buf{background:#b9d2ef;} .seg-asig{background:#b6e0c3;}
+  .dot.seg-pend,.dot.seg-sinrec,.dot.seg-buf,.dot.seg-asig{border-radius:3px;}
+  .toolbar{border:none;border-radius:12px;}
+  .modo-bar{border:none;border-radius:10px;background:#fdf1d8;}
+  .ue-group{border:none;border-radius:12px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.08);}
+  .ue-head{color:#0C447C;background:#e6edf6;padding:7px 12px;}
+  .ue-group.open .ue-head{background:#dbe6f3;}
+  .ue-fill{display:none;}
+  .ue-head .ue-name{flex:1;min-width:0;}
+  .ue-stats{flex-wrap:wrap;justify-content:flex-end;}
+  .tab{border-radius:10px 10px 0 0;}
+  .ue-stat{border-radius:999px;color:#20303f;}
+  .ue-stat.p{background:#f3b9b9;} .ue-stat.b{background:#b9d2ef;} .ue-stat.a{background:#b6e0c3;}
+  .ue-stat.t{background:#dfe5ec;} .ue-stat.s{background:#f6d58e;}
+  .tag-est{border-radius:999px;}
+  .btn,.btn.sec,.btn-conf,select,input[type=text]{border-radius:8px;}
+  .estampa{font-size:11px;color:var(--sub);margin-left:8px;}
 </style>
 </head>
 <body>
@@ -231,7 +276,8 @@
 
   <div class="kpis">
     <div class="kpi"><div class="lbl">F8 Emitidas a la fecha</div><div class="val num" id="k_total">–</div></div>
-    <div class="kpi pend"><div class="lbl">F8 Pendientes por recibir</div><div class="val num" id="k_pend">–</div></div>
+    <div class="kpi pend"><div class="lbl">F8 Pendientes por recibir</div><div class="val num" id="k_pend">–</div><div class="hint" id="k_pend_hint">emitidas en los últimos 15 días</div></div>
+    <div class="kpi sinrec" id="kSinRec" title="F8 emitidas hace más de 15 días que nunca se confirmaron en ventanilla. Toque para verlas."><div class="lbl" id="k_sinrec_lbl">Sin recepción · más de 15 días</div><div class="val num" id="k_sinrec">–</div><div class="hint">toque para consultarlas</div></div>
     <div class="kpi buf"><div class="lbl">F8 en Buffer (pend. asignación)</div><div class="val num" id="k_buf">–</div></div>
     <div class="kpi asig"><div class="lbl">F8 Asignadas</div><div class="val num" id="k_asig">–</div></div>
   </div>
@@ -241,6 +287,7 @@
     <div class="flow-bar" id="flowBar"></div>
     <div class="flow-leg">
       <span><span class="dot seg-pend"></span>Pendiente por recibir</span>
+      <span><span class="dot seg-sinrec"></span>Sin recepción (más de 15 días)</span>
       <span><span class="dot seg-buf"></span>En buffer (pend. asignación)</span>
       <span><span class="dot seg-asig"></span>Asignada</span>
     </div>
@@ -256,8 +303,10 @@
     <button class="btn sec" id="btnExpand">Expandir todo</button>
     <button class="btn sec" id="btnSelAll">Sel. visibles</button>
     <button class="btn sec" id="btnSelNone">Limpiar</button>
-    <span class="count" id="cnt"></span>
+    <span class="count" id="cnt"></span><span class="estampa" id="estampa"></span>
   </div>
+
+  <div class="modo-bar" id="modoBar"><span id="modoTxt"></span><span class="spacer"></span><button class="btn sec" id="btnVolver">← Volver a pendientes</button></div>
 
   <div id="lista"><div class="loading">Cargando documentos…</div></div>
 
@@ -326,6 +375,10 @@ const SEL = new Set();
 let CEDIS_ACTUAL = "CEDIS PANAMA";
 let expandAll = false;
 let OPERATIVO = "";        // se pide al confirmar, se recuerda en sesion
+/* 12-oct-2026 · MODO de la lista. 'pendientes' = lo emitido en los ultimos
+   DIAS_VENT dias (la vista de entrada, rapida). 'sin_recepcion' = lo mas viejo,
+   solo cuando se pide. 'buscar' = un Nº Doc en todas las F8 no asignadas. */
+let MODO = 'pendientes', Q_SERVIDOR = '', DIAS_VENT = 15, RESUMEN = null;
 
 function loadJsonp(url, timeoutMs){
   return new Promise((resolve,reject)=>{
@@ -345,20 +398,108 @@ function tipoTag(tipo){const tl=(tipo||'').toLowerCase();
   if(tl.includes('mensual'))return '<span class="tag tag-men">Mensual</span>';
   return '<span class="tag tag-otr">'+(tipo||'—')+'</span>';}
 
-async function cargar(){
+/* ==========================================================================
+   12-oct-2026 · EL PANEL SE LEE DE UN JSON PUBLICADO (GitHub Pages)
+   confirmacion/panel_<CEDIS>.json trae todo lo no asignado del CEDIS
+   (pendientes, sin recepción y en buffer). Se descarga comprimido en menos de
+   un segundo y todo lo demás —filtros, "sin recepción", búsqueda— ocurre aquí
+   mismo, sin volver a llamar al servidor. Lo regenera el Motor al cargar
+   Formas 8, en cada precalentado y al confirmar. Si el JSON no responde, se
+   usa el servidor como antes (respaldo).
+   ========================================================================== */
+let ALL = [], ALL_TODOS = null, PUB = null, BUSCAR_TODOS = false;
+const OVL_KEY = 'cf8_confirmadas_v1';      // F8 confirmadas en este equipo, hasta que el JSON las refleje
+function slugCedis(c){ return String(c||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/[^A-Z0-9]+/g,'_').replace(/^_|_$/g,''); }
+function ovlLeer(){ try{ return JSON.parse(localStorage.getItem(OVL_KEY)||'{}'); }catch(e){ return {}; } }
+function ovlGuardar(o){ try{ localStorage.setItem(OVL_KEY, JSON.stringify(o)); }catch(e){} }
+function ovlMarcar(docs){ const o=ovlLeer(), t=Date.now(); docs.forEach(d=>o[d]=t); ovlGuardar(o); }
+function expandir(pq){
+  const C={}; (pq.cols||[]).forEach((c,i)=>C[c]=i);
+  const o=ovlLeer(), lim=Date.now()-3*3600e3;
+  const docs=(pq.docs||[]).map(f=>{
+    const gr=String(f[C.grupos]||'').split('|').filter(Boolean).map(x=>{const k=x.lastIndexOf(':');return {grupo:x.slice(0,k),renglones:+x.slice(k+1)||0};});
+    let est=f[C.estado]==='P'?'PENDIENTE':f[C.estado]==='S'?'SIN_RECEPCION':'BUFFER';
+    const t=o[f[C.nDoc]];
+    if(t){
+      if(est==='BUFFER' || t<pq.generadoTs-60000 || t<lim) delete o[f[C.nDoc]];   // el JSON ya lo refleja
+      else est='BUFFER';                                                         // confirmada aqui, el JSON aun no
+    }
+    return {nDoc:f[C.nDoc], fecha:f[C.fecha], tipo:f[C.tipo], puntoInfo:f[C.ue], cedis:f[C.cedis], renglones:f[C.rgl],
+            cantidad:f[C.cant], grupos:gr, grupoDom:gr.length?gr.slice().sort((a,b)=>b.renglones-a.renglones)[0].grupo:'SIN GRUPO',
+            estado:est, origen:f[C.origen]==='M'?'MANUAL':'SISTEMA'};
+  });
+  Object.keys(o).forEach(k=>{ if(o[k]<lim) delete o[k]; }); ovlGuardar(o);
+  return docs;
+}
+function resumenLocal(lista){
+  let p=0,s=0,b=0; const ue={};
+  lista.forEach(d=>{
+    const u=ue[d.puntoInfo]||(ue[d.puntoInfo]={pend:0,buf:0,asig:0,sinRec:0,total:0}); u.total++;
+    if(d.estado==='PENDIENTE'){p++;u.pend++;} else if(d.estado==='SIN_RECEPCION'){s++;u.sinRec++;} else {b++;u.buf++;}
+  });
+  POR_UE=ue;
+  return {docsTotal:lista.length, pendientes:p, sinRecepcion:s, enBuffer:b,
+          asignados:(PUB&&PUB.conteos&&PUB.conteos.asignados)||0, diasVentanilla:DIAS_VENT};
+}
+function aplicarModo(){
+  const base = (MODO==='buscar' && BUSCAR_TODOS) ? ALL_TODOS : ALL;
+  if(MODO==='sin_recepcion') DOCS=base.filter(d=>d.estado==='SIN_RECEPCION');
+  else if(MODO==='buscar'){ const q=Q_SERVIDOR.toUpperCase(); DOCS=base.filter(d=>d.nDoc.toUpperCase().indexOf(q)>=0).slice(0,50); }
+  else DOCS=base.filter(d=>d.estado==='PENDIENTE');
+  DOCS.sort((a,b)=> a.fecha!==b.fecha ? (a.fecha<b.fecha?1:-1) : (a.puntoInfo!==b.puntoInfo ? (a.puntoInfo<b.puntoInfo?-1:1) : (a.nDoc<b.nDoc?-1:1)));
+  const r=resumenLocal(ALL);
+  if(MODO==='buscar') document.getElementById('fBuscar').value='';
+  poblarUE(); pintarKPIs(r); pintarFlow(r); pintarModo(); render();
+}
+async function bajarPaquete(cedis){
+  const res=await fetch(`${PCF_JSON_DIR}/panel_${slugCedis(cedis)}.json?_ts=${Date.now()}`, {cache:'no-store'});
+  if(!res.ok) throw new Error('JSON '+res.status);
+  const pq=await res.json(); if(!pq||!pq.ok||!pq.docs) throw new Error('JSON inválido');
+  return pq;
+}
+const PCF_JSON_DIR='confirmacion';
+async function cargar(modo, q){
+  MODO = modo || 'pendientes'; Q_SERVIDOR = (MODO==='buscar') ? (q||'') : '';
+  SEL.clear();
+  // Cambiar de vista NO vuelve a descargar: todo está en memoria.
+  if(ALL.length && (MODO==='sin_recepcion' || (MODO==='pendientes' && modo!=='__recargar'))){ aplicarModo(); return; }
+  if(MODO==='buscar'){
+    const qq=Q_SERVIDOR.toUpperCase();
+    BUSCAR_TODOS = !ALL.some(d=>d.nDoc.toUpperCase().indexOf(qq)>=0);   // primero en este CEDIS (ya en memoria)
+    if(BUSCAR_TODOS && !ALL_TODOS){
+      document.getElementById('lista').innerHTML='<div class="loading">Buscando '+Q_SERVIDOR+' en todos los CEDIS…</div>';
+      try{ ALL_TODOS=expandir(await bajarPaquete('TODOS')); }catch(e){ ALL_TODOS=null; return cargarServidor(); }
+    }
+    aplicarModo(); return;
+  }
+  return recargar();
+}
+async function recargar(){
+  if(MODO==='buscar') MODO='pendientes';
   document.getElementById('lista').innerHTML='<div class="loading">Cargando documentos…</div>';
-  const cedis=encodeURIComponent(CEDIS_ACTUAL);
   try{
-    const res = await loadJsonp(`${WEBAPP_BASE}?file=buffer_panel&ver=pendientes&cedis=${cedis}`);
-    PANEL = res;
-    DOCS = res.docs || [];
-    POR_UE = res.porUE || {};
-    poblarCedis(res.cedisDisponibles);
-    poblarGrupos(res.grupos || []);
-    poblarUE();
-    pintarKPIs(res.resumen);
-    pintarFlow(res.resumen);
-    render();
+    const pq=await bajarPaquete(CEDIS_ACTUAL);
+    PUB=pq; PANEL=pq; ALL=expandir(pq); ALL_TODOS=null;
+    if(pq.diasVentanilla) DIAS_VENT=pq.diasVentanilla;
+    poblarCedis(pq.cedisDisponibles); poblarGrupos(pq.grupos||[]);
+    document.getElementById('estampa').textContent='· datos de '+pq.generado;
+    aplicarModo();
+  }catch(err){
+    return cargarServidor();
+  }
+}
+/* Respaldo: el camino anterior, directo al Apps Script. */
+async function cargarServidor(){
+  const cedis=encodeURIComponent(CEDIS_ACTUAL);
+  document.getElementById('lista').innerHTML='<div class="loading">Cargando desde el servidor…</div>';
+  try{
+    const res = await loadJsonp(`${WEBAPP_BASE}?file=buffer_panel&ver=${MODO}&cedis=${cedis}`+(MODO==='buscar'?`&q=${encodeURIComponent(Q_SERVIDOR)}`:''));
+    PANEL = res; DOCS = res.docs || []; POR_UE = res.porUE || {};
+    if(res.resumen && res.resumen.diasVentanilla) DIAS_VENT = res.resumen.diasVentanilla;
+    poblarCedis(res.cedisDisponibles); poblarGrupos(res.grupos || []);
+    if(MODO==='buscar') document.getElementById('fBuscar').value='';
+    document.getElementById('estampa').textContent='· en vivo del servidor';
+    poblarUE(); pintarKPIs(res.resumen); pintarFlow(res.resumen); pintarModo(); render();
   }catch(err){
     document.getElementById('lista').innerHTML='<div class="empty">Error al cargar: '+err.message+'</div>';
     toast('Error: '+err.message, true);
@@ -386,25 +527,40 @@ function poblarUE(){
 }
 function pintarKPIs(r){
   if(!r)return;
+  RESUMEN = r;
+  const sr = (typeof r.sinRecepcion==='number') ? r.sinRecepcion : 0;
   document.getElementById('k_total').textContent=r.docsTotal;
   document.getElementById('k_pend').textContent=r.pendientes;
   document.getElementById('k_buf').textContent=r.enBuffer;
   document.getElementById('k_asig').textContent=r.asignados;
+  document.getElementById('k_sinrec').textContent=(typeof r.sinRecepcion==='number')?sr:'–';
+  document.getElementById('k_pend_hint').textContent='emitidas en los últimos '+DIAS_VENT+' días';
+  document.getElementById('k_sinrec_lbl').textContent='Sin recepción · más de '+DIAS_VENT+' días';
+}
+function pintarModo(){
+  const bar=document.getElementById('modoBar'), txt=document.getElementById('modoTxt');
+  document.getElementById('kSinRec').classList.toggle('on', MODO==='sin_recepcion');
+  if(MODO==='pendientes'){ bar.classList.remove('on'); return; }
+  txt.textContent = MODO==='sin_recepcion'
+    ? 'Mostrando Formas 8 emitidas hace más de '+DIAS_VENT+' días que nunca se confirmaron en ventanilla. Si alguna llegó, selecciónela y confírmela como siempre.'
+    : 'Resultado de buscar «'+Q_SERVIDOR+'» en todas las Formas 8 no asignadas'+(BUSCAR_TODOS?' de todos los CEDIS.':' de '+CEDIS_ACTUAL+' (incluye las de más de '+DIAS_VENT+' días).');
+  bar.classList.add('on');
 }
 function pintarFlow(r){
   if(!r)return;
-  const tot=r.pendientes+r.enBuffer+r.asignados || 1;
+  const sr=(typeof r.sinRecepcion==='number')?r.sinRecepcion:0;
+  const tot=r.pendientes+sr+r.enBuffer+r.asignados || 1;
   const seg=(v,cls,lbl)=>{const pct=(v/tot*100);return `<div class="flow-seg ${cls}" style="width:${pct}%" title="${lbl}: ${v}">${pct>7?v:''}</div>`;};
   document.getElementById('flowBar').innerHTML=
-    seg(r.pendientes,'seg-pend','Pendientes')+seg(r.enBuffer,'seg-buf','Buffer')+seg(r.asignados,'seg-asig','Asignadas');
+    seg(r.pendientes,'seg-pend','Pendientes')+seg(sr,'seg-sinrec','Sin recepción')+seg(r.enBuffer,'seg-buf','Buffer')+seg(r.asignados,'seg-asig','Asignadas');
 }
 
 /* Gradiente de llenado para el encabezado de UE segun proporcion de estados.
    Orden: pendiente (ambar) -> buffer (azul) -> asignado (verde) */
 function ueFillStyle(u){
-  if(!u||!u.total) return 'background:var(--azul2)';
+  if(!u||!u.total) return 'background:#d3e3f6';
   const p=u.pend/u.total*100, b=u.buf/u.total*100;
-  const roj='#a12626', azu='#1e5a9e', ver='#1c7c3a';
+  const roj='#f6cfcf', azu='#d3e3f6', ver='#d3ecdb';   // pasteles
   const s1=p, s2=p+b;
   return `background:linear-gradient(90deg,`+
     `${roj} 0%,${roj} ${s1}%,`+
@@ -426,9 +582,18 @@ function filtrados(){
 
 function render(){
   const rows=filtrados();
-  document.getElementById('cnt').textContent=rows.length+' F8 pendientes';
+  document.getElementById('cnt').textContent=rows.length+(MODO==='sin_recepcion'?' F8 sin recepción':MODO==='buscar'?' encontradas':' F8 pendientes');
   const cont=document.getElementById('lista');
-  if(!rows.length){cont.innerHTML='<div class="empty">No hay Formas 8 pendientes con este filtro.</div>';syncBar();return;}
+  if(!rows.length){
+    const q=document.getElementById('fBuscar').value.trim();
+    if(q.length>=4 && MODO==='pendientes'){
+      cont.innerHTML='<div class="buscar-todo">«'+q.replace(/[<>&"]/g,'')+'» no está entre los pendientes de los últimos '+DIAS_VENT+' días.<br>'+
+        '<button class="btn" onclick="cargar(\'buscar\', document.getElementById(\'fBuscar\').value.trim())">Buscar en todas las Formas 8</button></div>';
+    } else {
+      cont.innerHTML='<div class="empty">'+(MODO==='buscar'?'No se encontró ninguna Forma 8 sin asignar con ese número.':'No hay Formas 8 con este filtro.')+'</div>';
+    }
+    syncBar();return;
+  }
 
   const byUE=new Map();
   rows.forEach(d=>{if(!byUE.has(d.puntoInfo))byUE.set(d.puntoInfo,[]);byUE.get(d.puntoInfo).push(d);});
@@ -445,7 +610,7 @@ function render(){
         <span class="ue-name">${ue||'SIN UE'}</span>
         <span class="spacer"></span>
         <span class="ue-stats">
-          <span class="ue-stat p" title="Pendientes de recepción en ventanilla">PEND ${u.pend}</span>
+          <span class="ue-stat p" title="Pendientes de recepción en ventanilla (últimos ${DIAS_VENT} días)">PEND ${u.pend}</span>${u.sinRec?`<span class="ue-stat s" title="Sin recepción, más de ${DIAS_VENT} días">+${DIAS_VENT}D ${u.sinRec}</span>`:''}
           <span class="ue-stat b" title="En buffer">BUF ${u.buf}</span>
           <span class="ue-stat a" title="Asignadas">ASIG ${u.asig}</span>
           <span class="ue-stat t" title="Total F8 emitidas">TOTAL ${u.total}</span>
@@ -456,10 +621,14 @@ function render(){
           <span class="c">Fecha</span><span class="r">Rgl</span><span class="r">Solicitado</span><span>Grupos</span></div>`;
     list.forEach(d=>{
       const sel=SEL.has(d.nDoc);
+      const bloq=(d.estado==='BUFFER');
+      const dias=Math.max(0,Math.round((Date.now()-new Date(d.fecha+'T00:00:00'))/86400000));
+      const est=d.estado==='SIN_RECEPCION'?`<span class="tag-est tag-sinrec" title="Emitida hace ${dias} días, sin confirmación">SIN RECEPCIÓN · ${dias} d</span>`
+               :bloq?'<span class="tag-est tag-enbuf">YA EN BUFFER</span>':'';
       const grupos=d.grupos.map(g=>`<span class="gchip">${g.grupo} <span class="n">${g.renglones}</span></span>`).join('');
-      html+=`<div class="doc-row${sel?' sel':''}" data-doc="${d.nDoc}" onclick="toggleSel('${d.nDoc}')">
-        <span><input type="checkbox" class="chk" ${sel?'checked':''} onclick="event.stopPropagation();toggleSel('${d.nDoc}')"/></span>
-        <span class="ndoc">${d.nDoc}${d.origen==='MANUAL'?'<span class="origen-tag">MANUAL</span>':''}</span>
+      html+=`<div class="doc-row${sel?' sel':''}${bloq?' bloq':''}" data-doc="${d.nDoc}" ${bloq?'':`onclick="toggleSel('${d.nDoc}')"`}>
+        <span>${bloq?'':`<input type="checkbox" class="chk" ${sel?'checked':''} onclick="event.stopPropagation();toggleSel('${d.nDoc}')"/>`}</span>
+        <span class="ndoc">${d.nDoc}${d.origen==='MANUAL'?'<span class="origen-tag">MANUAL</span>':''}${est}</span>
         <span>${tipoTag(d.tipo)}</span>
         <span class="c num" style="font-size:11px">${d.fecha}</span>
         <span class="rgl">${d.renglones}</span>
@@ -484,12 +653,19 @@ function syncBar(){
   document.getElementById('btnConfirmar').disabled=SEL.size===0;
 }
 
-document.getElementById('fCedis').onchange=e=>{CEDIS_ACTUAL=e.target.value;SEL.clear();cargar();};
-document.getElementById('btnRefresh').onclick=cargar;
+document.getElementById('fCedis').onchange=e=>{CEDIS_ACTUAL=e.target.value;SEL.clear();ALL=[];MODO='pendientes';recargar();};
+document.getElementById('btnRefresh').onclick=()=>recargar();
+document.getElementById('btnVolver').onclick=()=>cargar('pendientes');
+document.getElementById('kSinRec').onclick=()=>cargar(MODO==='sin_recepcion'?'pendientes':'sin_recepcion');
+document.getElementById('fBuscar').addEventListener('keydown',function(e){
+  if(e.key!=='Enter') return;
+  const q=this.value.trim();
+  if(q.length>=4 && !filtrados().length) cargar('buscar', q);
+});
 ['fUE','fGrupo'].forEach(id=>document.getElementById(id).onchange=render);
 document.getElementById('fBuscar').oninput=render;
 document.getElementById('btnExpand').onclick=function(){expandAll=!expandAll;this.textContent=expandAll?'Colapsar todo':'Expandir todo';render();};
-document.getElementById('btnSelAll').onclick=()=>{filtrados().forEach(d=>SEL.add(d.nDoc));render();};
+document.getElementById('btnSelAll').onclick=()=>{filtrados().forEach(d=>{ if(d.estado!=='BUFFER') SEL.add(d.nDoc); });render();};
 document.getElementById('btnSelNone').onclick=()=>{SEL.clear();render();};
 
 document.getElementById('btnConfirmar').onclick=async ()=>{
@@ -502,9 +678,13 @@ document.getElementById('btnConfirmar').onclick=async ()=>{
   }));
   const btn=document.getElementById('btnConfirmar');
   btn.disabled=true;btn.textContent='Confirmando…';
-  // Quitar de la vista al instante
+  // Quitar de la vista al instante y recordarlo en este equipo hasta que el JSON lo refleje
+  const _conf=[...SEL];
+  ovlMarcar(_conf);
+  [ALL, ALL_TODOS||[]].forEach(l=>l.forEach(d=>{ if(SEL.has(d.nDoc)) d.estado='BUFFER'; }));
   DOCS=DOCS.filter(d=>!SEL.has(d.nDoc));
   SEL.clear();
+  if(ALL.length){ const r=resumenLocal(ALL); pintarKPIs(r); pintarFlow(r); }
   render();
   try{
     const payload=encodeURIComponent(JSON.stringify(seleccionados));
@@ -886,7 +1066,7 @@ document.getElementById('dNext').onclick=function(){
   if(s.selectedIndex>0){s.selectedIndex--;dCargar(s.value);}
 };
 
-cargar();
+recargar();
 </script>
 </body>
 </html>
