@@ -252,6 +252,11 @@
   .tag-est{border-radius:999px;}
   .btn,.btn.sec,.btn-conf,select,input[type=text]{border-radius:8px;}
   .estampa{font-size:11px;color:var(--sub);margin-left:8px;}
+  .d-estado{display:none;border-radius:10px;padding:9px 12px;margin:8px 0;font-size:12px;}
+  .d-estado.on{display:flex;gap:10px;align-items:center;}
+  .d-estado.run{background:#e1ecf8;color:#24589a;} .d-estado.ok{background:#e0f2e6;color:#23703b;}
+  .d-estado.err{background:#fbe4e4;color:#9b2c2c;}
+  .d-estado .x{margin-left:auto;cursor:pointer;font-weight:700;padding:0 6px;}
 </style>
 </head>
 <body>
@@ -332,6 +337,7 @@
       <button id="dClear" class="btn-clr" onclick="dLimpiar()">Limpiar filtros</button>
     </div>
 
+    <div id="dEstado" class="d-estado"></div>
     <div id="dCap"></div>
     <div id="dLista"><div class="loading">Cargando…</div></div>
   </div><!-- fin paneDia -->
@@ -981,25 +987,41 @@ function dRender(){
 
 /* --- Reintento forzado: el analista acabó de pegar el volcado y no quiere
        esperar los 5 min del trigger. Dispara bfdExpandirBuffer y recarga. --- */
+/* 13-oct-2026 · El aviso queda FIJO en pantalla (antes era un mensaje de 4 s
+   que se perdia) y se espera hasta 4 minutos con un contador a la vista. */
+function dEstado(cls, html){
+  const el=document.getElementById('dEstado');
+  if(!cls){ el.className='d-estado'; el.innerHTML=''; return; }
+  el.className='d-estado on '+cls;
+  el.innerHTML='<span>'+html+'</span>'+(cls==='run'?'':'<span class="x" title="Cerrar" onclick="dEstado()">×</span>');
+}
 async function dReintentar(){
   const lote=document.getElementById('dLote').value||dHoy();
   const btns=[...document.querySelectorAll('.cap-recheck, #dRefresh')];
   btns.forEach(b=>{b.disabled=true;});
   const r0=document.getElementById('dRefresh');
   if(r0) r0.textContent='Consultando…';
+  const t0=Date.now();
+  const tick=()=>dEstado('run','Consultando SALMI para el '+lote+'… '+Math.round((Date.now()-t0)/1000)+' s. Puede tardar unos minutos; no cierre la página.');
+  tick(); const iv=setInterval(tick,1000);
   try{
-    const r=await loadJsonp(`${WEBAPP_BASE}?file=bfd_reintentar&lote=${encodeURIComponent(lote)}`,90000);
+    const r=await loadJsonp(`${WEBAPP_BASE}?file=bfd_reintentar&lote=${encodeURIComponent(lote)}`,240000);
+    const seg=Math.round((Date.now()-t0)/1000);
     if(r&&r.ok){
       DIA_DATA=r;
       dPoblarLotes(r); dPoblarUE(r); dPintarCierre(r.resumen); dRender();
-      toast(r.resueltas ? `${r.resueltas} F8 resueltas desde SALMI.`
-                        : 'Sin cambios: no aparecieron en SALMI.');
+      if(r.ocupado) dEstado('err','El Motor estaba ocupado con otra tarea y no pudo revisar SALMI ('+seg+' s). Vuelva a intentarlo en un minuto.');
+      else dEstado('ok', (r.resueltas ? r.resueltas+' F8 resueltas desde SALMI' : 'Sin cambios: no aparecieron en SALMI')+' · '+seg+' s.');
     }else{
-      toast('No se pudo consultar SALMI.',true);
+      dEstado('err','No se pudo consultar SALMI ('+seg+' s): '+((r&&r.msg)||'error del servidor')+'.');
     }
   }catch(err){
-    toast('Conexión lenta: reintente. ('+err.message+')',true);
+    const seg=Math.round((Date.now()-t0)/1000);
+    dEstado('err', err.message==='Timeout'
+      ? 'El servidor no respondió en '+seg+' s. La consulta puede seguir corriendo: en unos minutos vuelva a abrir este día con el selector de fecha.'
+      : 'Se perdió la conexión ('+err.message+', '+seg+' s). Revise el internet y vuelva a intentarlo.');
   }finally{
+    clearInterval(iv);
     btns.forEach(b=>{b.disabled=false;});
     if(r0) r0.textContent='↻ Recargar SALMI';
   }
