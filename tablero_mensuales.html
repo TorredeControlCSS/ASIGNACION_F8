@@ -464,11 +464,18 @@ function pasarAMesa(key,modo){
   log('A MESA',m.ue,modo==='auto'?'Entró a mesa al liberarse un espacio':pos>0?`Tomado en la posición #${pos+1} de la cola (había ${pos} antes en la fila)`:'Tomado el primero de la cola','');
   return true;
 }
-function devolverACola(key){
+/* Devolver a la cola pide el PIN de un almacenista o del supervisor, para saber quién lo hizo */
+function pedirDevolver(key){
+  const m=MS.find(x=>x.key===key);if(!m||!S.mesa[key])return;
+  modalPin({titulo:'Devolver a la cola',texto:`<b>${esc(m.ue)}</b><br>Saldrá de la mesa y volverá a la cola. Las firmas ya hechas se conservan.<br>Escriba los últimos 4 dígitos de su cédula (o el PIN de supervisor).`,
+    validar:p=>{const x=S.personal.find(y=>y.p===p);if(x)return x.n;if(S.cfg.supPin&&p===S.cfg.supPin)return 'SUPERVISOR: '+(S.cfg.supNombre||'Supervisor');return null;},
+    ok:persona=>{devolverACola(key,persona);guardar();}});
+}
+function devolverACola(key,persona){
   const m=MS.find(x=>x.key===key);if(!m||!S.mesa[key])return;
   const habia=m.grupos.filter(g=>g.est==='ok'&&g.por&&g.por!=='Kanban').length;
   delete S.mesa[key];
-  log('DEVUELTO A LA COLA',m.ue,`Estuvo ${diasMesa(m)} día(s) hábil(es) en mesa${habia?'; sus firmas se conservan':''}`,'');
+  log('DEVUELTO A LA COLA',m.ue,`Estuvo ${diasMesa(m)} día(s) hábil(es) en mesa${habia?'; sus firmas se conservan':''}`,persona||'');
   toast(m.ue+' volvió a la cola. Sus firmas se conservan.');
 }
 function firmarGrupo(m,g,persona){
@@ -675,7 +682,7 @@ function verDetalle(key){
     if(S.notas[otro.key]){S.notas[ancla]=[S.notas[ancla],S.notas[otro.key]].filter(Boolean).join(' · ');delete S.notas[otro.key];}
     log('CORRECCIÓN',m.ue,`Mensuales recibidos ${dmy(dest.fr)} y ${dmy(m.fr)} unidos en uno`,'Supervisor');guardar();});});
   const bm=ov.querySelector('#dMesa');if(bm)bm.onclick=()=>{guardarNota();cerrar();if(pasarAMesa(key,'almacen'))guardar();else guardar();};
-  const bc=ov.querySelector('#dCola');if(bc)bc.onclick=()=>{guardarNota();cerrar();devolverACola(key);guardar();};
+  const bc=ov.querySelector('#dCola');if(bc)bc.onclick=()=>{guardarNota();cerrar();guardar();pedirDevolver(key);};
 }
 function modalDespachar(key){
   const m=MS.find(x=>x.key===key);
@@ -747,14 +754,14 @@ Despachado  si  el Kanban registró la salida de todas las F8 con existencia, o 
 Cola: primero los recibidos en los últimos 30 días, luego los de 1 a 2 meses y al final los de más de 2 meses (cerrados por defecto); dentro de cada grupo, del más reciente al más antiguo
 Despachado muestra hoy y el día hábil anterior; lo demás pasa a la pestaña Despachados
 F8 en cero: Formas 8 asignadas en cero por desabasto; no se esperan ni se preparan
-Devolver a la cola libera el espacio; las firmas ya hechas se conservan
+Devolver a la cola libera el espacio; pide el PIN de quien lo hace y las firmas ya hechas se conservan
 Días en mesa = días hábiles (lunes a viernes) desde que entró a mesa hasta hoy o hasta que quedó preparado
 Fecha límite = entrada a mesa + ${S.cfg.plazo} días hábiles
 Fuera de plazo  si  Días en mesa > ${S.cfg.plazo}
 Semáforo: verde ≤ ${S.cfg.plazo-2} · ámbar ${S.cfg.plazo-1} a ${S.cfg.plazo} · rojo > ${S.cfg.plazo}
 Días en mesa (promedio) = Σ días en mesa de los mensuales preparados ÷ número de mensuales preparados</span>
   <p class="note">Los feriados aún no se descuentan. Toda hora es de Panamá.</p>
-  <h4>Quién hace qué</h4><ul><li>Almacenista o supervisor: pasa mensuales a mesa y los devuelve a la cola (queda en la bitácora quién se tomó fuera de orden).</li><li>Almacenista: firma su grupo con los últimos 4 dígitos de su cédula.</li><li>Supervisor (PIN propio, sesión de 30 minutos): despacha, une o separa mensuales y cambia ajustes.</li></ul>
+  <h4>Quién hace qué</h4><ul><li>Almacenista o supervisor: pasa mensuales a mesa y los devuelve a la cola con su PIN (queda en la bitácora quién lo hizo).</li><li>Almacenista: firma su grupo con los últimos 4 dígitos de su cédula.</li><li>Supervisor (PIN propio, sesión de 30 minutos): despacha, une o separa mensuales y cambia ajustes.</li></ul>
   </div><div class="ft"><button class="btn btn-pri" id="hOk" autofocus>Entendido</button></div>`,true);
   document.getElementById('hOk').onclick=cerrar;
 }
@@ -836,7 +843,7 @@ document.addEventListener('click',e=>{
   if(t.dataset.tab)return setTab(t.dataset.tab);if(t.dataset.tabgo)return setTab(t.dataset.tabgo);
   if(t.dataset.kpi){const k=t.dataset.kpi;FILTRO=FILTRO===k?null:k;if(k==='DESP'){FILTRO=null;return setTab('historial');}if(k==='FUERA'&&FILTRO&&!de('MESA').some(fuera)){FILTRO=null;return setTab('incump');}render();return;}
   if(t.dataset.mesa){if(pasarAMesa(t.dataset.mesa,'almacen'))guardar();return;}
-  if(t.dataset.cola){devolverACola(t.dataset.cola);guardar();return;}
+  if(t.dataset.cola){pedirDevolver(t.dataset.cola);return;}
   if(t.dataset.g){const [k,g]=t.dataset.g.split('|');return tocarGrupo(k,+g);}
   if(t.dataset.ver)return verDetalle(t.dataset.ver);
   if(t.dataset.desp)return conSupervisor(()=>modalDespachar(t.dataset.desp));
