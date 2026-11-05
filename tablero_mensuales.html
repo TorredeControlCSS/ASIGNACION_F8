@@ -188,7 +188,7 @@ tr:nth-child(even) td{background:var(--surface2)}
       <button class="hbtn" id="btnMenu" aria-haspopup="true" aria-label="Menú"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Menú</button>
       <div class="menu-pop" id="menuPop" hidden>
         <div class="lbl">Datos del Kanban</div>
-        <button data-act="online">Actualizar por internet<small>Lee el archivo que publica el Kanban</small></button>
+        <button data-act="online">Actualizar ahora<small>Se hace solo; esto solo adelanta la consulta</small></button>
         <button data-act="usbIn">Cargar paquete del día (USB)<small>En la pantalla sin internet</small></button>
         <button data-act="usbOut">Preparar paquete del día (USB)<small>En la PC con internet, para llevar a la pantalla</small></button>
         <hr>
@@ -220,7 +220,6 @@ tr:nth-child(even) td{background:var(--surface2)}
     <button class="btn" id="btnLimpiar"><svg viewBox="0 0 24 24"><path d="M4 4l16 16M20 4L4 20"/></svg>Limpiar filtros</button>
     <button class="btn" id="btnXlsVista"><svg viewBox="0 0 24 24"><path d="M12 4v11m0 0l-4-4m4 4l4-4M5 20h14"/></svg>Excel (vista)</button>
     <button class="btn" id="btnXlsTodo"><svg viewBox="0 0 24 24"><path d="M12 4v11m0 0l-4-4m4 4l4-4M5 20h14"/></svg>Excel completo</button>
-    <button class="btn btn-pri" id="btnActualizar"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg>Actualizar datos</button>
   </div>
   <section id="vTablero"><div class="board" id="board"></div></section>
   <section id="vHistorial" hidden><div class="tblbox" id="tHist"></div><p class="note">Un mensual queda despachado cuando el Kanban registra la salida de todas sus Formas 8 con existencia, o cuando el supervisor lo marca. Los mensuales donde todo salió en cero por desabasto se listan aparte en el estado.</p></section>
@@ -321,6 +320,7 @@ function aplicarPaquete(p,fuente){
    - Si falla, sigue con lo que tiene en memoria y reintenta solo: 1, 2, 5 y luego cada 10 min.
    - Si vuelve la señal (evento online) o la pantalla se enciende, reintenta de inmediato.
    - Con señal estable, consulta cada 15 min si el Kanban publicó algo nuevo. */
+let PENDIENTE=null;
 const RED={estado:'off',ultimoOk:null,intentos:0,timer:null,enCurso:false};
 const ESPERAS=[1,2,5,10];
 async function bajarKanban(){
@@ -337,7 +337,7 @@ async function actualizarInternet(silencioso){
   let p=null;try{p=await bajarKanban();}catch(e){}
   RED.enCurso=false;clearTimeout(RED.timer);
   if(p){const nuevo=!S.paquete||p.generadoISO!==S.paquete.generadoISO;
-    if(nuevo)aplicarPaquete(p,'internet');
+    if(nuevo){if(document.getElementById('ov'))PENDIENTE=p;else aplicarPaquete(p,'internet');}
     RED.estado='ok';RED.ultimoOk=ahoraTs();RED.intentos=0;pintarRed();
     if(!silencioso)toast(nuevo?`Datos del Kanban al ${p.generado}`:'Ya tiene los datos más recientes del Kanban');
     RED.timer=setTimeout(()=>actualizarInternet(true),15*60000);return true;}
@@ -350,7 +350,7 @@ function pintarRed(){const el=document.getElementById('red');if(!el)return;
   if(RED.estado==='sync'){el.className='red sync';el.innerHTML='<i></i>Actualizando…';el.title='Descargando datos del Kanban';return;}
   if(RED.estado==='ok'){el.className='red ok';el.innerHTML='<i></i>En línea';el.title='Última consulta al Kanban: '+(RED.ultimoOk||'');return;}
   const m=RED.proximo?Math.max(1,Math.round((RED.proximo-Date.now())/60000)):0;
-  el.className='red off';el.innerHTML=`<i></i>Sin conexión${m?' · reintento en '+m+' min':''}`;el.title='Se trabaja con los datos guardados en la pantalla. Toque para reintentar ahora.';}
+  el.className='red off';el.innerHTML=`<i></i>Sin conexión${m?' · reintento en '+m+' min':''}`;el.title='Se trabaja con los datos guardados en la pantalla. Las firmas se guardan igual. El tablero reintenta solo.';}
 window.addEventListener('online',()=>{RED.intentos=0;actualizarInternet(true);});
 window.addEventListener('offline',()=>{RED.estado='off';pintarRed();});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&RED.estado!=='ok')actualizarInternet(true);});
@@ -448,7 +448,7 @@ const de=e=>MS.filter(m=>m.estado===e);
 const BANDAS=[{id:'b1',max:30,t:'Recibidos en los últimos 30 días'},{id:'b2',max:60,t:'Recibidos hace 1 a 2 meses'},{id:'b3',max:1e9,t:'Recibidos hace más de 2 meses',vieja:1}];
 function edad(m){return difDias(m.fr,hoyISO());}
 function banda(m){const e=edad(m);return BANDAS.findIndex(b=>e<=b.max);}
-function cola(){return de('ESPERA').filter(m=>!m.cero).sort((a,b)=>banda(a)-banda(b)||a.fr.localeCompare(b.fr)||a.key.localeCompare(b.key));}
+function cola(){return de('ESPERA').filter(m=>!m.cero).sort((a,b)=>banda(a)-banda(b)||b.fr.localeCompare(a.fr)||b.frMax.localeCompare(a.frMax)||a.key.localeCompare(b.key));}
 let BANDA_ABIERTA={b1:true,b2:true,b3:false};
 function diasMesa(m){return m.fm?habiles(m.fm,m.fp||hoyISO()):null;}
 function limite(m){return m.fm?sumarHabiles(m.fm,S.cfg.plazo):null;}
@@ -503,7 +503,7 @@ function pintarStamp(){
 }
 function pintarAvisos(){
   const p=S.paquete;let h='';
-  if(!p){h=`<div class="aviso azul"><span><b>Aún no hay datos del Kanban en esta pantalla.</b> Con internet, toque «Actualizar datos». Sin internet, prepare el paquete del día en la PC y cárguelo desde la USB.</span>
+  if(!p){h=`<div class="aviso azul"><span><b>Aún no hay datos del Kanban en esta pantalla.</b> Con señal se cargan solos en unos segundos. Sin internet, prepare el paquete del día en la PC y cárguelo desde la USB.</span>
     <button class="btn" data-act="online">Actualizar por internet</button><button class="btn" data-act="usbIn">Cargar paquete (USB)</button></div>`;}
   else{const gen=(p.generadoISO||'').slice(0,10);const viejo=gen&&habiles(gen,hoyISO())>=1;
     if(viejo)h=`<div class="aviso ambar"><span><b>Los datos del Kanban son del ${esc(p.generado)}.</b> Las firmas de hoy están guardadas. El tablero se actualiza solo cuando vuelva la señal; también puede cargar el paquete de hoy.</span><button class="btn" data-act="usbIn">Cargar paquete (USB)</button></div>`;}
@@ -557,7 +557,7 @@ function pintarBoard(){
   const cDesp=desp2.map(h=>`<div class="card"><div class="ue">${esc(h.ue)}</div><div class="meta"><span>Despachado <b>${dm(h.fd)}</b></span><span>${esc(h.grupos)}</span></div></div>`).join('');
   const col=(cls,t,sub,n,body,id)=>`<div class="col" id="${id}"><div class="chev ${cls}"><div>${t}<small>${sub}</small></div><span class="n">${n}</span></div><div class="lane">${body||'<div class="empty">Sin mensuales aquí</div>'}</div></div>`;
   document.getElementById('board').innerHTML=
-    col('c-esp','En espera','Recientes primero',q.length,cEsp,'colEsp')+
+    col('c-esp','En espera','Del más reciente al más antiguo',q.length,cEsp,'colEsp')+
     col('c-mesa','En mesa',`Máximo ${S.cfg.wip} · plazo ${S.cfg.plazo} días hábiles`,mesa.length+' / '+S.cfg.wip,cMesa,'colMesa')+
     col('c-prep','Preparado','Todos los grupos listos',prep.length,cPrep,'colPrep')+
     col('c-desp','Despachado',`Hoy y ${dm(desde)}`,desp2.length,(cDesp||'<div class="empty">Sin despachos hoy ni el día hábil anterior</div>')+(desp.length?`<button class="more" data-tabgo="historial">Ver histórico de despachados (${desp.length})</button>`:''),'colDesp');
@@ -610,7 +610,7 @@ combo(document.getElementById('fUe'),document.getElementById('fUeL'),{items:list
 function modal(html,wide){const r=document.getElementById('modalRoot');r.innerHTML=`<div class="ov" id="ov"><div class="mod${wide?' wide':''}" role="dialog" aria-modal="true">${html}</div></div>`;
   const ov=document.getElementById('ov');ov.addEventListener('mousedown',e=>{if(e.target===ov)cerrar();});
   const f=ov.querySelector('[autofocus]');if(f)setTimeout(()=>f.focus(),30);return ov;}
-function cerrar(){document.getElementById('modalRoot').innerHTML='';}
+function cerrar(){document.getElementById('modalRoot').innerHTML='';if(PENDIENTE){const p=PENDIENTE;PENDIENTE=null;setTimeout(()=>aplicarPaquete(p,'internet'),0);}}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')cerrar();});
 function confirmar(txt,btn,fn,cls){const ov=modal(`<h3>Confirmar</h3><div class="bd"><p style="margin:0">${esc(txt)}</p></div><div class="ft"><button class="btn" id="cfN">Cancelar</button><button class="btn ${cls||'btn-warn'}" id="cfY" autofocus>${esc(btn)}</button></div>`);
   ov.querySelector('#cfN').onclick=cerrar;ov.querySelector('#cfY').onclick=()=>{cerrar();fn();};ov.querySelector('#cfY').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();cerrar();fn();}};}
@@ -725,7 +725,8 @@ function modalAjustes(){
 function modalHelp(){
   modal(`<h3>Cómo funciona</h3><div class="bd help">
   <h4>De dónde salen los datos</h4><p>Del Kanban. El tablero toma las Formas 8 tipo mensual de los grupos de medicamentos (G1 Tabletas, G2 Soluciones, G3 Jarabes, G4 Cremas, G5 Óvulos, G11 Odontología). Nadie las digita.</p>
-  <div class="flujo"><div><b>1 · PC con internet</b>Menú › Preparar paquete del día. Se descarga un archivo pequeño.</div><div><b>2 · USB</b>Copie el archivo a la memoria USB.</div><div><b>3 · Pantalla</b>Menú › Cargar paquete del día. Si la pantalla tiene internet, basta «Actualizar datos».</div></div>
+  <div class="flujo"><div><b>1 · PC con internet</b>Menú › Preparar paquete del día. Se descarga un archivo pequeño.</div><div><b>2 · USB</b>Copie el archivo a la memoria USB.</div><div><b>3 · Pantalla</b>Menú › Cargar paquete del día. Si la pantalla tiene señal, se actualiza sola en segundo plano.</div></div>
+  <p>Nada de lo que hacen los usuarios espera al internet: firmas, mesa, notas y despachos se guardan al instante en la pantalla. Cuando hay señal, el tablero consulta el Kanban por su cuenta y, si alguien está firmando, aplica los datos nuevos al terminar.</p>
   <p>La pantalla guarda en su memoria lo que solo ocurre en el piso: quién está en mesa, las firmas de los almacenistas, las correcciones y las notas. Un paquete nuevo agrega Formas 8 y actualiza etapas, pero nunca borra lo firmado.</p>
   <h4>Cómo se arma un mensual</h4>
   <span class="f">Mismo UE + tipo mensual (MEN) + grupo de medicamentos
@@ -741,7 +742,7 @@ Preparado  si  todos los grupos están listos o sin existencia
 Despachado  si  el Kanban registró la salida de todas las F8 con existencia, o lo marca el supervisor</span>
   <h4>Mesa y plazo</h4>
   <span class="f">Máximo en mesa = ${S.cfg.wip} mensuales. Se puede tomar cualquiera de la cola
-Cola: primero los recibidos en los últimos 30 días, luego los de 1 a 2 meses y al final los de más de 2 meses (cerrados por defecto); dentro de cada grupo, el más antiguo primero
+Cola: primero los recibidos en los últimos 30 días, luego los de 1 a 2 meses y al final los de más de 2 meses (cerrados por defecto); dentro de cada grupo, del más reciente al más antiguo
 Despachado muestra hoy y el día hábil anterior; lo demás pasa a la pestaña Despachados
 F8 en cero: Formas 8 asignadas en cero por desabasto; no se esperan ni se preparan
 Devolver a la cola libera el espacio; las firmas ya hechas se conservan
@@ -802,7 +803,7 @@ async function excel(soloVista){
 }
 
 /* ---------- Tutorial ---------- */
-const PASOS=[['#btnActualizar','Datos del Kanban','Con internet, este botón trae las Formas 8 mensuales del Kanban. Sin internet, use el menú para cargar el paquete del día desde la USB.'],
+const PASOS=[['#red','Conexión','El tablero se actualiza solo con el Kanban cuando hay señal. Si no hay, sigue funcionando con lo guardado: las firmas y la mesa quedan en la pantalla y no se pierden.'],
   ['#kpis','Indicadores','Resumen de la semana. Toque una tarjeta para filtrar.'],
   ['#colEsp','En espera','Cada tarjeta es un mensual armado por el tablero con las Formas 8 de esa Unidad Ejecutora. Arriba van los recibidos en los últimos 30 días; los de más de 2 meses quedan cerrados al final. «F8 en cero» avisa las que no hay que esperar.'],
   ['#colMesa','En mesa',`Máximo ${S.cfg.wip} a la vez. Cada almacenista toca su grupo al terminar y firma con los últimos 4 dígitos de su cédula. Los grupos que el Kanban ya ve en Facturación se marcan solos. «Devolver a la cola» libera el espacio.`],
@@ -823,7 +824,7 @@ function aplicarTema(t){document.documentElement.setAttribute('data-theme',t);do
 /* ---------- Eventos ---------- */
 function setTab(t){TAB=t;document.querySelectorAll('.tab').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t));['tablero','historial','incump','bitacora'].forEach(v=>document.getElementById('v'+v[0].toUpperCase()+v.slice(1)).hidden=v!==t);render();}
 function accion(a){document.getElementById('menuPop').hidden=true;
-  if(a==='online')actualizarInternet(false);if(a==='usbIn')abrirArchivo('paquete');if(a==='usbOut')prepararPaquete();if(a==='firmasOut')exportarFirmas();
+  if(a==='online'){toast('Actualizando en segundo plano. Puede seguir trabajando.');actualizarInternet(true).then(ok=>{if(!ok)toast('Sin conexión. El tablero reintentará solo.',true);});}if(a==='usbIn')abrirArchivo('paquete');if(a==='usbOut')prepararPaquete();if(a==='firmasOut')exportarFirmas();
   if(a==='excelTodo')excel(false);if(a==='manual')conSupervisor(modalManual);if(a==='tour')tour(0);if(a==='help')modalHelp();if(a==='ajustes')conSupervisor(modalAjustes);}
 document.addEventListener('click',e=>{
   const th=e.target.closest('th[data-sort]');if(th){const [k,i]=th.dataset.sort.split('|');const s=SORT[k]||{i:-1,d:1};SORT[k]=s.i===+i?{i:+i,d:-s.d}:{i:+i,d:1};render();return;}
@@ -842,8 +843,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('click',e=>{if(!e.target.closest('.menu'))document.getElementById('menuPop').hidden=true;},true);
 document.getElementById('btnMenu').onclick=()=>{const p=document.getElementById('menuPop');p.hidden=!p.hidden;};
 document.getElementById('btnTheme').onclick=()=>aplicarTema(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark');
-document.getElementById('btnActualizar').onclick=async()=>{const b=document.getElementById('btnActualizar');b.disabled=true;await actualizarInternet(false);b.disabled=false;};
-document.getElementById('red').onclick=()=>{RED.intentos=0;actualizarInternet(false);};
+document.getElementById('red').onclick=()=>{const p=S.paquete;toast(RED.estado==='ok'?`En línea. Datos del Kanban al ${p?p.generado:'—'}.`:RED.estado==='sync'?'Actualizando en segundo plano. Puede seguir trabajando.':`Sin conexión. Todo lo que registre se guarda en esta pantalla; el tablero se actualiza solo cuando vuelva la señal.`);if(RED.estado==='off'){RED.intentos=0;actualizarInternet(true);}};
 document.getElementById('btnLimpiar').onclick=()=>{document.getElementById('fUe').value='';UE_SEL='';FILTRO=null;setTab('tablero');};
 document.getElementById('btnXlsVista').onclick=()=>excel(true);
 document.getElementById('btnXlsTodo').onclick=()=>excel(false);
