@@ -562,7 +562,7 @@ function pintarBoard(){
     col('c-prep','Preparado','Todos los grupos listos',prep.length,cPrep,'colPrep')+
     col('c-desp','Despachado',`Hoy y ${dm(desde)}`,desp2.length,(cDesp||'<div class="empty">Sin despachos hoy ni el día hábil anterior</div>')+(desp.length?`<button class="more" data-tabgo="historial">Ver histórico de despachados (${desp.length})</button>`:''),'colDesp');
 }
-function corto(n){if(!n)return '';if(n==='Kanban')return 'Según Kanban';const p=n.split(' ');return p.length>1?p[0][0]+'. '+p.slice(1).join(' '):n;}
+function corto(n){if(!n)return '';if(n==='Kanban')return 'Según Kanban';if(n.indexOf('SUPERVISOR: ')===0)return 'Supervisor';const p=n.split(' ');return p.length>1?p[0][0]+'. '+p.slice(1).join(' '):n;}
 
 function tabla(el,key,cols,rows,defSort){
   const s=SORT[key]||defSort||{i:0,d:1};
@@ -648,8 +648,9 @@ function tocarGrupo(key,g){
     return;
   }
   const gente=S.personal.filter(p=>p.g.includes(g));
-  modalPin({titulo:`G${g} ${GRUPOS[g]} terminado`,texto:`<b>${esc(m.ue)}</b> · ${gr.f8.length} Forma(s) 8: <span class="num">${gr.f8.map(r=>esc(r.id)).join(', ')}</span><br>Almacenista del grupo: escriba los últimos 4 dígitos de su cédula para firmar.`,
-    validar:p=>{const x=gente.find(y=>y.p===p);return x?x.n:null;},ok:persona=>{firmarGrupo(m,g,persona);guardar();}});
+  modalPin({titulo:`G${g} ${GRUPOS[g]} terminado`,texto:`<b>${esc(m.ue)}</b> · ${gr.f8.length} Forma(s) 8: <span class="num">${gr.f8.map(r=>esc(r.id)).join(', ')}</span><br>Almacenista del grupo: escriba los últimos 4 dígitos de su cédula para firmar. El supervisor también puede firmar con su PIN.`,
+    validar:p=>{const x=gente.find(y=>y.p===p);if(x)return x.n;if(S.cfg.supPin&&p===S.cfg.supPin)return 'SUPERVISOR: '+(S.cfg.supNombre||'Supervisor');return null;},
+    ok:persona=>{firmarGrupo(m,g,persona);if(persona.indexOf('SUPERVISOR: ')===0)S.log[0].det+=' · firmado por el supervisor en lugar del almacenista';guardar();}});
 }
 function verDetalle(key){
   const m=MS.find(x=>x.key===key);if(!m)return;
@@ -709,6 +710,7 @@ function modalAjustes(){
     <div class="fld"><span class="lab">Almacenistas por grupo · el PIN son los últimos 4 dígitos de la cédula</span>
       <div class="tblbox" style="margin:0"><table><thead><tr><th>Nombre</th><th>Grupos</th><th>PIN</th><th></th></tr></thead><tbody id="aPer"></tbody></table></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap"><input class="inp" id="nN" placeholder="Nombre" style="flex:2;min-width:140px"><input class="inp" id="nG" placeholder="Grupos (ej. 4,5,11)" style="flex:1;min-width:110px"><input class="inp num" id="nC" placeholder="Cédula" style="flex:1;min-width:110px"><button class="btn" id="nAdd">Agregar</button></div></div>
+    <div class="fld"><label for="aN">Nombre del supervisor (aparece cuando firma un grupo)</label><input class="inp" id="aN" value="${esc(S.cfg.supNombre||'')}" placeholder="Ej.: JUAN PÉREZ" style="max-width:360px"></div>
     <div class="fld"><label for="aS">Cambiar PIN de supervisor</label><input class="inp num" id="aS" maxlength="4" inputmode="numeric" placeholder="Dejar vacío para no cambiar" style="max-width:240px"></div>
     </div><div class="ft"><button class="btn btn-warn" id="aBorrar">Borrar la memoria de esta pantalla</button><span class="grow"></span><button class="btn" id="aC">Cancelar</button><button class="btn btn-pri" id="aOk">Guardar ajustes</button></div>`,true);
   let per=S.personal.map(p=>({...p,g:p.g.slice()}));
@@ -720,7 +722,7 @@ function modalAjustes(){
   ov.querySelector('#aBorrar').onclick=()=>confirmar('Se borrarán las firmas, la mesa, las correcciones y la bitácora de esta pantalla. Guarde las firmas en USB antes si quiere conservarlas.','Borrar memoria',()=>{const pin=S.cfg.supPin,per0=S.personal;S=memNueva();S.cfg.supPin=pin;S.personal=per0;log('SISTEMA','','Memoria de la pantalla reiniciada','Supervisor');guardar();});
   ov.querySelector('#aOk').onclick=()=>{const sp=ov.querySelector('#aS').value;if(sp&&!/^\d{4}$/.test(sp))return toast('El PIN de supervisor debe tener 4 dígitos',true);
     Object.assign(S.cfg,{wip:+ov.querySelector('#aW').value,plazo:+ov.querySelector('#aP').value,ventana:+ov.querySelector('#aV').value,repite:+ov.querySelector('#aR').value,auto:ov.querySelector('#aA').checked});
-    S.personal=per;if(sp)S.cfg.supPin=sp;log('AJUSTE','',`Mesa ${S.cfg.wip} · plazo ${S.cfg.plazo} d hábiles · ventana ${S.cfg.ventana} d · repetición ${S.cfg.repite} d`,'Supervisor');cerrar();guardar();toast('Ajustes guardados');};
+    S.personal=per;if(sp)S.cfg.supPin=sp;S.cfg.supNombre=ov.querySelector('#aN').value.trim().toUpperCase();log('AJUSTE','',`Mesa ${S.cfg.wip} · plazo ${S.cfg.plazo} d hábiles · ventana ${S.cfg.ventana} d · repetición ${S.cfg.repite} d`,'Supervisor');cerrar();guardar();toast('Ajustes guardados');};
 }
 function modalHelp(){
   modal(`<h3>Cómo funciona</h3><div class="bd help">

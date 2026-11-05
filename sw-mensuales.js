@@ -9,7 +9,7 @@
  *   una descarga incompleta.
  * Al publicar una versión nueva del tablero, subir CACHE_VER.
  * =========================================================================== */
-const CACHE_VER = 'mensuales-v2';
+const CACHE_VER = 'mensuales-v3';
 const PAGINA = './tablero_mensuales.html';
 const EXCEL = 'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js';
 
