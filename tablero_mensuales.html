@@ -199,7 +199,7 @@ tr:nth-child(even) td{background:var(--surface2)}
         <button data-act="manual">Agregar mensual hecho fuera de SALMI</button>
         <button data-act="tour">Ver tutorial guiado</button>
         <button data-act="help">Cómo funciona</button>
-        <div class="lbl" id="verTxt">Versión 1.6 · memoria compartida</div>
+        <div class="lbl" id="verTxt">Versión 1.7 · memoria compartida</div>
         <div class="lbl" id="syncTxt" style="text-transform:none;letter-spacing:0"></div>
         <button data-act="ajustes">Ajustes y personal</button>
       </div>
@@ -355,6 +355,19 @@ function aplicarRemoto(e){
   const cur=slotsActuales();if(s in cur)S.sync.base[s]=cur[s];else delete S.sync.base[s];
   return 'dato';
 }
+/* Conexión con el registro: primero como lectura directa (igual que abrir la
+   dirección en el navegador); si el navegador no lo permite, como script. */
+let VIA='fetch';
+async function llamar(url,ms){
+  if(VIA==='fetch'){
+    const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),ms);
+    try{const r=await fetch(url,{cache:'no-store',redirect:'follow',signal:ctl.signal});clearTimeout(t);
+      if(r.ok){const txt=await r.text();return JSON.parse(txt);}
+      throw new Error('http '+r.status);}
+    catch(e){clearTimeout(t);try{const d=await jsonp(url,ms);VIA='jsonp';return d;}catch(e2){throw new Error('fetch: '+(e.message||e)+' · script: '+(e2.message||e2));}}
+  }
+  try{return await jsonp(url,ms);}catch(e){VIA='fetch';throw e;}
+}
 function jsonp(url,ms){return new Promise((ok,no)=>{const cb='__tm'+Date.now().toString(36)+Math.floor(Math.random()*1e6);
   const sc=document.createElement('script');const t=setTimeout(()=>{fin(true);no(new Error('lento'));},ms);
   function fin(tarde){clearTimeout(t);window[cb]=tarde?function(){}:undefined;sc.remove();}
@@ -362,7 +375,7 @@ function jsonp(url,ms){return new Promise((ok,no)=>{const cb='__tm'+Date.now().t
   sc.src=url+(url.indexOf('?')>=0?'&':'?')+'callback='+cb+'&_='+Date.now();document.head.appendChild(sc);});}
 let RENDER_PEND=false;
 async function enviarLote(lote){
-  const r=await jsonp(SYNC_URL+'?accion=enviar&ev='+encodeURIComponent(JSON.stringify(lote)),25000);
+  const r=await llamar(SYNC_URL+'?accion=enviar&ev='+encodeURIComponent(JSON.stringify(lote)),25000);
   if(!r||!r.ok)throw new Error(r&&r.error||'envío');
   const acep=new Set(r.aceptados||[]);S.sync.out=S.sync.out.filter(ev=>!acep.has(ev.id));Mem.guardarCrudo(S);
 }
@@ -373,7 +386,7 @@ async function sincronizar(){
   try{
     let mas=true;
     while(mas){
-      const r=await jsonp(SYNC_URL+'?accion=leer&desde='+S.sync.seq,25000);
+      const r=await llamar(SYNC_URL+'?accion=leer&desde='+S.sync.seq,25000);
       if(!r||!r.ok)throw new Error(r&&r.error||'lectura');
       let log=false;(r.ev||[]).forEach(e=>{const a=aplicarRemoto(e);if(a)cambios=true;if(a==='log')log=true;});
       if(log)S.log.sort((a,b)=>String(b.ts).localeCompare(String(a.ts)));
@@ -381,7 +394,7 @@ async function sincronizar(){
       S.sync.seq=r.ultimo||S.sync.seq;mas=!!r.mas;Mem.guardarCrudo(S);
     }
     leyo=true;
-  }catch(err){SYNC.err='recibir: '+String(err&&err.message||err).slice(0,40);}
+  }catch(err){SYNC.err='recibir: '+String(err&&err.message||err).slice(0,90);}
   // 2. enviar pendientes en lotes cortos; si un lote falla, uno por uno
   if(leyo){
     S.sync.bad=S.sync.bad||[];
@@ -987,6 +1000,13 @@ let tema='light';try{tema=localStorage.getItem('tm_tema')||'light';}catch(e){}ap
 render();
 actualizarInternet(true);   // si hay internet, se pone al día solo; si no, sigue con la memoria
 programarSync(300);         // memoria compartida con los otros equipos
+/* Se actualiza sola: cada 10 min revisa si hay una versión nueva publicada y recarga cuando nadie esté firmando */
+const VER_ACTUAL=(document.getElementById('verTxt').textContent.match(/Versión ([\d.]+)/)||[])[1];
+async function revisarVersion(){try{const r=await fetch('tablero_mensuales.html?v='+Date.now(),{cache:'no-store'});if(!r.ok)return;
+  const m=(await r.text()).match(/id="verTxt">Versión ([\d.]+)/);
+  if(m&&VER_ACTUAL&&m[1]!==VER_ACTUAL){if(document.getElementById('ov'))return;Mem.guardarCrudo(S);location.reload();}}catch(e){}}
+setInterval(revisarVersion,10*60000);setTimeout(revisarVersion,60000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)revisarVersion();});
 /* La página queda guardada en la pantalla: abre aunque no haya internet */
 if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw-mensuales.js',{scope:'./tablero_mensuales.html'}).catch(()=>{});
 </script>
