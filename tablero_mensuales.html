@@ -199,7 +199,7 @@ tr:nth-child(even) td{background:var(--surface2)}
         <button data-act="manual">Agregar mensual hecho fuera de SALMI</button>
         <button data-act="tour">Ver tutorial guiado</button>
         <button data-act="help">Cómo funciona</button>
-        <div class="lbl" id="verTxt">Versión 1.5 · memoria compartida</div>
+        <div class="lbl" id="verTxt">Versión 1.6 · memoria compartida</div>
         <div class="lbl" id="syncTxt" style="text-transform:none;letter-spacing:0"></div>
         <button data-act="ajustes">Ajustes y personal</button>
       </div>
@@ -361,20 +361,16 @@ function jsonp(url,ms){return new Promise((ok,no)=>{const cb='__tm'+Date.now().t
   window[cb]=d=>{fin(false);ok(d);};sc.onerror=()=>{fin(true);no(new Error('red'));};
   sc.src=url+(url.indexOf('?')>=0?'&':'?')+'callback='+cb+'&_='+Date.now();document.head.appendChild(sc);});}
 let RENDER_PEND=false;
+async function enviarLote(lote){
+  const r=await jsonp(SYNC_URL+'?accion=enviar&ev='+encodeURIComponent(JSON.stringify(lote)),25000);
+  if(!r||!r.ok)throw new Error(r&&r.error||'envío');
+  const acep=new Set(r.aceptados||[]);S.sync.out=S.sync.out.filter(ev=>!acep.has(ev.id));Mem.guardarCrudo(S);
+}
 async function sincronizar(){
   if(!SYNC_URL||!S.sync||SYNC.enCurso)return;
-  SYNC.enCurso=true;let cambios=false,ok=true;
+  SYNC.enCurso=true;let cambios=false,leyo=false,envio=true;SYNC.err='';
+  // 1. recibir lo de los demás (siempre, aunque el envío falle)
   try{
-    // 1. enviar pendientes, en lotes pequeños (la dirección web tiene límite de largo)
-    while(S.sync.out.length){
-      const lote=[];let largo=0;
-      for(const ev of S.sync.out){const l=encodeURIComponent(JSON.stringify(ev)).length;if(lote.length&&largo+l>5500)break;lote.push(ev);largo+=l;}
-      const r=await jsonp(SYNC_URL+'?accion=enviar&ev='+encodeURIComponent(JSON.stringify(lote)),25000);
-      if(!r||!r.ok)throw new Error(r&&r.error||'envío');
-      const acep=new Set(r.aceptados||[]);S.sync.out=S.sync.out.filter(ev=>!acep.has(ev.id));Mem.guardarCrudo(S);
-      if(!acep.size)break;
-    }
-    // 2. descargar lo de los demás
     let mas=true;
     while(mas){
       const r=await jsonp(SYNC_URL+'?accion=leer&desde='+S.sync.seq,25000);
@@ -384,12 +380,32 @@ async function sincronizar(){
       if(S.log.length>4000)S.log.length=4000;
       S.sync.seq=r.ultimo||S.sync.seq;mas=!!r.mas;Mem.guardarCrudo(S);
     }
-    SYNC.estado='ok';SYNC.fallas=0;SYNC.ult=ahoraTs();
-  }catch(err){ok=false;SYNC.estado='off';SYNC.fallas++;SYNC.err=String(err&&err.message||err).slice(0,60);}
+    leyo=true;
+  }catch(err){SYNC.err='recibir: '+String(err&&err.message||err).slice(0,40);}
+  // 2. enviar pendientes en lotes cortos; si un lote falla, uno por uno
+  if(leyo){
+    S.sync.bad=S.sync.bad||[];
+    while(S.sync.out.length){
+      const lote=[];let largo=0;
+      for(const ev of S.sync.out){const l=encodeURIComponent(JSON.stringify(ev)).length;if(lote.length&&largo+l>1800)break;lote.push(ev);largo+=l;}
+      try{await enviarLote(lote);}
+      catch(err){
+        let alguno=false;
+        for(const ev of lote){
+          try{await enviarLote([ev]);alguno=true;}
+          catch(e2){ // el servidor responde a la lectura pero no acepta este cambio: se aparta para no trabar los demás
+            S.sync.out=S.sync.out.filter(x=>x.id!==ev.id);S.sync.bad.push(ev);Mem.guardarCrudo(S);
+            SYNC.err='cambio apartado: '+String(e2&&e2.message||e2).slice(0,30);}
+        }
+        if(!alguno&&lote.length>1){envio=false;break;}
+      }
+    }
+  }
+  SYNC.estado=leyo&&envio?'ok':'off';SYNC.fallas=SYNC.estado==='ok'?0:SYNC.fallas+1;if(leyo)SYNC.ult=ahoraTs();
   SYNC.enCurso=false;
   if(cambios){if(document.getElementById('ov'))RENDER_PEND=true;else render();}
   pintarRed();
-  programarSync(ok?(S.sync.out.length?5000:60000):Math.min(300000,15000*Math.pow(2,SYNC.fallas-1)));
+  programarSync(SYNC.estado==='ok'?(S.sync.out.length?5000:60000):Math.min(300000,15000*Math.pow(2,SYNC.fallas-1)));
 }
 function programarSync(ms){if(!SYNC_URL)return;clearTimeout(SYNC.timer);SYNC.timer=setTimeout(()=>{if(document.hidden&&!S.sync.out.length)return programarSync(60000);sincronizar();},ms);}
 window.addEventListener('online',()=>{SYNC.fallas=0;programarSync(500);});
@@ -451,7 +467,7 @@ async function actualizarInternet(silencioso){
   return false;
 }
 function pintarSyncTxt(){const el=document.getElementById('syncTxt');if(!el||!S.sync)return;
-  el.textContent=`Equipo ${S.sync.nombre||S.sync.eq.slice(-5)} · recibidos ${S.sync.seq} · por enviar ${S.sync.out.length} · ${SYNC.estado==='ok'?'último contacto '+(SYNC.ult||'').slice(11):SYNC.estado==='off'?'sin contacto con el registro'+(SYNC.err?' ('+SYNC.err+')':''):'sin registro'}`;}
+  el.textContent=`Equipo ${S.sync.nombre||S.sync.eq.slice(-5)} · recibidos ${S.sync.seq} · por enviar ${S.sync.out.length}${S.sync.bad&&S.sync.bad.length?' · apartados '+S.sync.bad.length:''} · ${SYNC.estado==='ok'?'último contacto '+(SYNC.ult||'').slice(11):SYNC.estado==='off'?'sin contacto con el registro'+(SYNC.err?' ('+SYNC.err+')':''):'sin registro'}`;}
 function pintarRed(){pintarSyncTxt();const el=document.getElementById('red');if(!el)return;
   const pend=S.sync&&SYNC_URL?S.sync.out.length:0, pTxt=pend?` · ${pend} cambio${pend>1?'s':''} por enviar`:'';
   if(SYNC_URL&&SYNC.estado==='off'&&RED.estado==='ok'){el.className='red off';el.innerHTML='<i></i>Sin conexión con los otros equipos'+pTxt;el.title='Los cambios se guardan en este equipo y se envían solos cuando haya señal.';return;}
