@@ -199,7 +199,7 @@ tr:nth-child(even) td{background:var(--surface2)}
         <button data-act="manual">Agregar mensual hecho fuera de SALMI</button>
         <button data-act="tour">Ver tutorial guiado</button>
         <button data-act="help">Cómo funciona</button>
-        <div class="lbl" id="verTxt">Versión 1.7 · memoria compartida</div>
+        <div class="lbl" id="verTxt">Versión 1.8 · memoria compartida</div>
         <div class="lbl" id="syncTxt" style="text-transform:none;letter-spacing:0"></div>
         <button data-act="ajustes">Ajustes y personal</button>
       </div>
@@ -268,8 +268,13 @@ function grupoNum(g){const m=String(g||'').match(/G-?\s*(\d+)/i);return m?+m[1]:
 
 /* ---------- Fechas (hora de Panamá) ---------- */
 const TZ='America/Panama';
-function hoyISO(){return new Intl.DateTimeFormat('en-CA',{timeZone:TZ}).format(new Date());}
-function ahoraTs(){const p=new Intl.DateTimeFormat('en-CA',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date());
+/* Reloj: si la hora de esta pantalla está corrida, se corrige con la hora del servidor
+   (se guarda la diferencia, así sigue corregida aunque se vaya el internet) */
+let OFS=0;try{OFS=+localStorage.getItem('tm_reloj_ofs')||0;}catch(e){}
+function ahora(){return new Date(Date.now()+OFS);}
+function ajustarReloj(r){try{const h=r.headers.get('Date');if(!h)return;const d=Date.parse(h)-Date.now();if(isNaN(d))return;OFS=Math.abs(d)>90000?d:0;localStorage.setItem('tm_reloj_ofs',String(OFS));}catch(e){}}
+function hoyISO(){return new Intl.DateTimeFormat('en-CA',{timeZone:TZ}).format(ahora());}
+function ahoraTs(){const p=new Intl.DateTimeFormat('en-CA',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(ahora());
   const g=t=>p.find(x=>x.type===t).value;return `${g('year')}-${g('month')}-${g('day')} ${g('hour')==='24'?'00':g('hour')}:${g('minute')}`;}
 function dmy(iso){if(!iso)return '';const [y,m,d]=String(iso).slice(0,10).split('-');return `${d}/${m}/${y.slice(2)}`;}
 function dm(iso){if(!iso)return '';const [,m,d]=String(iso).slice(0,10).split('-');return `${d}/${m}`;}
@@ -294,8 +299,8 @@ function memNueva(){return {v:2,cfg:{wip:4,plazo:5,auto:true,ventana:30,repite:7
   paquete:null, mesa:{}, desp:{}, firmas:{}, asig:{}, notas:{}, manual:[], inc:{}, hist:{}, log:[]};}
 let S=Mem.load();const MEM_NUEVA=!S;if(!S)S=memNueva();
 function guardar(){if(!Mem.save(S))toast('No se pudo guardar en esta pantalla. Guarde las firmas en USB para no perderlas.',true);render();}
-function log(tipo,ue,det,por){const e={id:idNuevo(),ts:ahoraTs(),tipo,ue:ue||'',det:det||'',por:por||'',eq:S.sync?(S.sync.nombre||S.sync.eq.slice(-4)):''};S.log.unshift(e);if(S.log.length>4000)S.log.length=4000;
-  if(S.sync&&SYNC_URL){S.sync.out.push({id:'L'+e.id,ts:new Date().toISOString(),eq:S.sync.eq,s:'L|'+e.id,v:e});programarSync(2000);}}
+function log(tipo,ue,det,por,idFijo){if(idFijo&&S.log.some(l=>l.id===idFijo))return;const e={id:idFijo||idNuevo(),ts:ahoraTs(),tipo,ue:ue||'',det:det||'',por:por||'',eq:S.sync?(S.sync.nombre||S.sync.eq.slice(-4)):''};S.log.unshift(e);if(S.log.length>4000)S.log.length=4000;
+  if(S.sync&&SYNC_URL){S.sync.out.push({id:'L'+e.id,ts:ahora().toISOString(),eq:S.sync.eq,s:'L|'+e.id,v:e});programarSync(2000);}}
 /* ---------- Memoria compartida entre equipos ----------
    Cada cambio (mesa, firmas, despachos, notas, correcciones, ajustes,
    bitácora) se guarda al instante en este equipo y queda en una lista de
@@ -323,13 +328,18 @@ function iniciarSync(nueva){
   S.sync={eq:'E'+Math.random().toString(36).slice(2,10),nombre:'',base:{},lw:{},out:[],seq:0};
   const cur=slotsActuales();
   if(nueva)S.sync.base=cur;                              // equipo nuevo: no anuncia valores por defecto
-  else{ if(cur.c===CFG_DEF)S.sync.base.c=cur.c; if(cur.p===PER_DEF)S.sync.base.p=cur.p;   // migración: sube lo que ya tenía
-    S.log.slice(0,500).forEach(l=>{if(!l.id){l.id=idNuevo();S.sync.out.push({id:'L'+l.id,ts:new Date().toISOString(),eq:S.sync.eq,s:'L|'+l.id,v:l});}}); }
+  else{ /* migración: sube lo que ya tenía, pero marcado como antiguo, para que solo
+           rellene lo que nadie más ha registrado y nunca pise un cambio más nuevo */
+    const viejo='2000-01-01T00:00:00.000Z';
+    Object.keys(cur).forEach(s=>{S.sync.base[s]=cur[s];
+      if((s==='c'&&cur.c===CFG_DEF)||(s==='p'&&cur.p===PER_DEF))return;
+      S.sync.out.push({id:'M'+idNuevo(),ts:viejo,eq:S.sync.eq,s,v:JSON.parse(cur[s])});S.sync.lw[s]=viejo;});
+    S.log.slice(0,500).forEach(l=>{if(!l.id){l.id=idNuevo();S.sync.out.push({id:'L'+l.id,ts:ahora().toISOString(),eq:S.sync.eq,s:'L|'+l.id,v:l});}}); }
 }
 /* Compara la memoria con lo último sincronizado y encola los cambios */
 function detectar(){
   if(!S.sync||!SYNC_URL)return 0;
-  const cur=slotsActuales(),b=S.sync.base,ts=new Date().toISOString();let n=0;
+  const cur=slotsActuales(),b=S.sync.base,ts=ahora().toISOString();let n=0;
   const put=(s,v)=>{S.sync.out.push({id:idNuevo(),ts,eq:S.sync.eq,s,v});S.sync.lw[s]=ts;n++;};
   Object.keys(cur).forEach(s=>{if(cur[s]!==b[s]){put(s,JSON.parse(cur[s]));b[s]=cur[s];}});
   Object.keys(b).forEach(s=>{if(!(s in cur)){put(s,null);delete b[s];}});
@@ -561,12 +571,12 @@ function evaluar(m){
 function sellar(L){
   let cambio=false;const hoy=hoyISO();
   L.forEach(m=>{const ms=S.mesa[m.key];
-    if(m.estado==='PREPARADO'&&ms&&!ms.fp){ms.fp=hoy;m.fp=hoy;cambio=true;log('PREPARADO',m.ue,`Todos los grupos listos en ${habiles(ms.fm,hoy)} día(s) hábil(es) de mesa`);}
+    if(m.estado==='PREPARADO'&&ms&&!ms.fp){ms.fp=hoy;m.fp=hoy;cambio=true;log('PREPARADO',m.ue,`Todos los grupos listos en ${habiles(ms.fm,hoy)} día(s) hábil(es) de mesa`,'','P-'+m.key);}
     if(m.estado==='PREPARADO'&&!ms){S.mesa[m.key]={fm:null,fp:hoy,ue:m.ue};cambio=true;}
     if(m.estado==='DESPACHADO'&&!S.hist[m.key]){S.hist[m.key]=resumen(m);cambio=true;
-      if(ms)log('DESPACHADO',m.ue,`Despachado ${dmy(m.fd)}${m.kanbanDesp&&!S.desp[m.key]?' (según el Kanban)':''}`);}
+      if(ms)log('DESPACHADO',m.ue,`Despachado ${dmy(m.fd)}${m.kanbanDesp&&!S.desp[m.key]?' (según el Kanban)':''}`,'','D-'+m.key);}
     if(m.estado==='MESA'&&!m.inc&&fuera(m)&&!S.inc[m.key]){S.inc[m.key]={ue:m.ue,fm:m.fm,lim:limite(m),pend:m.grupos.filter(g=>g.est==='pend').map(g=>g.g)};cambio=true;
-      log('FUERA DE PLAZO',m.ue,`Superó ${S.cfg.plazo} días hábiles en mesa. Pendientes: ${S.inc[m.key].pend.map(g=>'G'+g).join(', ')}`);}
+      log('FUERA DE PLAZO',m.ue,`Superó ${S.cfg.plazo} días hábiles en mesa. Pendientes: ${S.inc[m.key].pend.map(g=>'G'+g).join(', ')}`,'','F-'+m.key);}
   });
   /* Mensuales que estaban en mesa y ya no vienen en el Kanban (pasaron a entregados) */
   const vivos=new Set(L.map(m=>m.key));
@@ -1002,10 +1012,10 @@ actualizarInternet(true);   // si hay internet, se pone al día solo; si no, sig
 programarSync(300);         // memoria compartida con los otros equipos
 /* Se actualiza sola: cada 10 min revisa si hay una versión nueva publicada y recarga cuando nadie esté firmando */
 const VER_ACTUAL=(document.getElementById('verTxt').textContent.match(/Versión ([\d.]+)/)||[])[1];
-async function revisarVersion(){try{const r=await fetch('tablero_mensuales.html?v='+Date.now(),{cache:'no-store'});if(!r.ok)return;
+async function revisarVersion(){try{const r=await fetch('tablero_mensuales.html?v='+Date.now(),{cache:'no-store'});ajustarReloj(r);if(!r.ok)return;
   const m=(await r.text()).match(/id="verTxt">Versión ([\d.]+)/);
   if(m&&VER_ACTUAL&&m[1]!==VER_ACTUAL){if(document.getElementById('ov'))return;Mem.guardarCrudo(S);location.reload();}}catch(e){}}
-setInterval(revisarVersion,10*60000);setTimeout(revisarVersion,60000);
+setInterval(revisarVersion,10*60000);setTimeout(revisarVersion,4000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)revisarVersion();});
 /* La página queda guardada en la pantalla: abre aunque no haya internet */
 if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw-mensuales.js',{scope:'./tablero_mensuales.html'}).catch(()=>{});

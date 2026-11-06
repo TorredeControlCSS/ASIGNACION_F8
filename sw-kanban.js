@@ -31,9 +31,11 @@ self.addEventListener('install', ev => {
 });
 
 self.addEventListener('activate', ev => {
+  // Solo borra versiones viejas de SU caché: la copia sin internet del
+  // Tablero de Mensuales (mensuales-*) vive en el mismo sitio y no se toca.
   ev.waitUntil(
     caches.keys()
-      .then(ks => Promise.all(ks.filter(k => k !== CACHE_VER).map(k => caches.delete(k))))
+      .then(ks => Promise.all(ks.filter(k => k.startsWith('kanban-') && k !== CACHE_VER).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
