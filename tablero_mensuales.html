@@ -286,12 +286,114 @@ const sinAc=t=>String(t||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'
 /* ---------- Memoria de la pantalla ---------- */
 const KEY='tablero_mensuales_v2';
 const Mem={load(){try{const s=localStorage.getItem(KEY);return s?JSON.parse(s):null;}catch(e){return null;}},
-           save(x){try{localStorage.setItem(KEY,JSON.stringify(x));return true;}catch(e){return false;}}};
+           guardarCrudo(x){try{localStorage.setItem(KEY,JSON.stringify(x));return true;}catch(e){return false;}},
+           save(x){try{detectar();}catch(e){}return this.guardarCrudo(x);}};
 function memNueva(){return {v:2,cfg:{wip:4,plazo:5,auto:true,ventana:30,repite:7,supPin:''},personal:PERSONAL_BASE,
   paquete:null, mesa:{}, desp:{}, firmas:{}, asig:{}, notas:{}, manual:[], inc:{}, hist:{}, log:[]};}
-let S=Mem.load()||memNueva();
+let S=Mem.load();const MEM_NUEVA=!S;if(!S)S=memNueva();
 function guardar(){if(!Mem.save(S))toast('No se pudo guardar en esta pantalla. Guarde las firmas en USB para no perderlas.',true);render();}
-function log(tipo,ue,det,por){S.log.unshift({ts:ahoraTs(),tipo,ue:ue||'',det:det||'',por:por||''});if(S.log.length>4000)S.log.length=4000;}
+function log(tipo,ue,det,por){const e={id:idNuevo(),ts:ahoraTs(),tipo,ue:ue||'',det:det||'',por:por||'',eq:S.sync?(S.sync.nombre||S.sync.eq.slice(-4)):''};S.log.unshift(e);if(S.log.length>4000)S.log.length=4000;
+  if(S.sync&&SYNC_URL){S.sync.out.push({id:'L'+e.id,ts:new Date().toISOString(),eq:S.sync.eq,s:'L|'+e.id,v:e});programarSync(2000);}}
+/* ---------- Memoria compartida entre equipos ----------
+   Cada cambio (mesa, firmas, despachos, notas, correcciones, ajustes,
+   bitácora) se guarda al instante en este equipo y queda en una lista de
+   pendientes. Cuando hay señal, la lista se envía al registro central
+   (libro TABLERO_MENSUALES) y se descargan los cambios de los otros equipos.
+   Cada cambio lleva un ID único y la hora en que se hizo: reenviarlo nunca
+   lo duplica, y si dos equipos cambian lo mismo, gana el cambio más reciente.
+   Sin SYNC_URL el tablero funciona solo con la memoria de este equipo. */
+const SYNC_URL='https://script.google.com/macros/s/AKfycbziSCvXEWU4xbtgCqCy6darLs9GawkysO8-0dEv5CNeut0s06CCoiX2IAEsQmZ5cNWB/exec';
+const SYNC={estado:SYNC_URL?'off':'na',enCurso:false,timer:null,fallas:0,ult:null};
+const CFG_SYNC=c=>JSON.stringify({wip:c.wip,plazo:c.plazo,ventana:c.ventana,repite:c.repite,auto:c.auto,supPin:c.supPin||'',supNombre:c.supNombre||''});
+const CFG_DEF=CFG_SYNC({wip:4,plazo:5,ventana:30,repite:7,auto:true}), PER_DEF=JSON.stringify(PERSONAL_BASE);
+function slotsActuales(){const o={};
+  Object.entries(S.mesa).forEach(([k,v])=>o['m|'+k]=JSON.stringify({fm:v.fm||null,fp:v.fp||null}));
+  Object.entries(S.desp).forEach(([k,v])=>o['d|'+k]=JSON.stringify(v));
+  Object.entries(S.firmas).forEach(([k,v])=>o['f|'+k]=JSON.stringify({por:v.por,ts:v.ts,key:v.key,g:v.g}));
+  Object.entries(S.asig).forEach(([k,v])=>o['a|'+k]=JSON.stringify(v));
+  Object.entries(S.notas).forEach(([k,v])=>o['n|'+k]=JSON.stringify(v));
+  S.manual.forEach(m=>o['x|'+m.key]=JSON.stringify(m));
+  o['c']=CFG_SYNC(S.cfg); o['p']=JSON.stringify(S.personal);
+  return o;}
+function idNuevo(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8)+(S.sync?S.sync.eq.slice(-3):'');}
+function iniciarSync(nueva){
+  if(S.sync)return;
+  S.sync={eq:'E'+Math.random().toString(36).slice(2,10),nombre:'',base:{},lw:{},out:[],seq:0};
+  const cur=slotsActuales();
+  if(nueva)S.sync.base=cur;                              // equipo nuevo: no anuncia valores por defecto
+  else{ if(cur.c===CFG_DEF)S.sync.base.c=cur.c; if(cur.p===PER_DEF)S.sync.base.p=cur.p;   // migración: sube lo que ya tenía
+    S.log.slice(0,500).forEach(l=>{if(!l.id){l.id=idNuevo();S.sync.out.push({id:'L'+l.id,ts:new Date().toISOString(),eq:S.sync.eq,s:'L|'+l.id,v:l});}}); }
+}
+/* Compara la memoria con lo último sincronizado y encola los cambios */
+function detectar(){
+  if(!S.sync||!SYNC_URL)return 0;
+  const cur=slotsActuales(),b=S.sync.base,ts=new Date().toISOString();let n=0;
+  const put=(s,v)=>{S.sync.out.push({id:idNuevo(),ts,eq:S.sync.eq,s,v});S.sync.lw[s]=ts;n++;};
+  Object.keys(cur).forEach(s=>{if(cur[s]!==b[s]){put(s,JSON.parse(cur[s]));b[s]=cur[s];}});
+  Object.keys(b).forEach(s=>{if(!(s in cur)){put(s,null);delete b[s];}});
+  if(n)programarSync(2000);
+  return n;
+}
+/* Aplica un cambio que viene de otro equipo (gana el más reciente) */
+function aplicarRemoto(e){
+  const s=e.s;
+  if(s.startsWith('L|')){const v=e.v;if(v&&!S.log.some(l=>l.id===v.id)){S.log.push(v);return 'log';}return null;}
+  if(e.eq===S.sync.eq&&S.sync.lw[s]&&S.sync.lw[s]>=e.ts)return null;
+  if(S.sync.lw[s]&&S.sync.lw[s]>=e.ts)return null;
+  S.sync.lw[s]=e.ts;const v=e.v,[t,k]=[s.split('|')[0],s.slice(2)];
+  if(t==='m'){if(v)S.mesa[k]=Object.assign(S.mesa[k]||{},v);else delete S.mesa[k];}
+  else if(t==='d'){if(v)S.desp[k]=v;else delete S.desp[k];}
+  else if(t==='f'){if(v)S.firmas[k]=v;else delete S.firmas[k];}
+  else if(t==='a'){if(v)S.asig[k]=v;else delete S.asig[k];}
+  else if(t==='n'){if(v)S.notas[k]=v;else delete S.notas[k];}
+  else if(t==='x'){S.manual=S.manual.filter(m=>m.key!==k);if(v)S.manual.push(v);}
+  else if(s==='c'){if(v)Object.assign(S.cfg,v);}
+  else if(s==='p'){if(Array.isArray(v))S.personal=v;}
+  else return null;
+  const cur=slotsActuales();if(s in cur)S.sync.base[s]=cur[s];else delete S.sync.base[s];
+  return 'dato';
+}
+function jsonp(url,ms){return new Promise((ok,no)=>{const cb='__tm'+Date.now().toString(36)+Math.floor(Math.random()*1e6);
+  const sc=document.createElement('script');const t=setTimeout(()=>{fin(true);no(new Error('lento'));},ms);
+  function fin(tarde){clearTimeout(t);window[cb]=tarde?function(){}:undefined;sc.remove();}
+  window[cb]=d=>{fin(false);ok(d);};sc.onerror=()=>{fin(true);no(new Error('red'));};
+  sc.src=url+(url.indexOf('?')>=0?'&':'?')+'callback='+cb+'&_='+Date.now();document.head.appendChild(sc);});}
+let RENDER_PEND=false;
+async function sincronizar(){
+  if(!SYNC_URL||!S.sync||SYNC.enCurso)return;
+  SYNC.enCurso=true;let cambios=false,ok=true;
+  try{
+    // 1. enviar pendientes, en lotes pequeños (la dirección web tiene límite de largo)
+    while(S.sync.out.length){
+      const lote=[];let largo=0;
+      for(const ev of S.sync.out){const l=encodeURIComponent(JSON.stringify(ev)).length;if(lote.length&&largo+l>5500)break;lote.push(ev);largo+=l;}
+      const r=await jsonp(SYNC_URL+'?accion=enviar&ev='+encodeURIComponent(JSON.stringify(lote)),25000);
+      if(!r||!r.ok)throw new Error(r&&r.error||'envío');
+      const acep=new Set(r.aceptados||[]);S.sync.out=S.sync.out.filter(ev=>!acep.has(ev.id));Mem.guardarCrudo(S);
+      if(!acep.size)break;
+    }
+    // 2. descargar lo de los demás
+    let mas=true;
+    while(mas){
+      const r=await jsonp(SYNC_URL+'?accion=leer&desde='+S.sync.seq,25000);
+      if(!r||!r.ok)throw new Error(r&&r.error||'lectura');
+      let log=false;(r.ev||[]).forEach(e=>{const a=aplicarRemoto(e);if(a)cambios=true;if(a==='log')log=true;});
+      if(log)S.log.sort((a,b)=>String(b.ts).localeCompare(String(a.ts)));
+      if(S.log.length>4000)S.log.length=4000;
+      S.sync.seq=r.ultimo||S.sync.seq;mas=!!r.mas;Mem.guardarCrudo(S);
+    }
+    SYNC.estado='ok';SYNC.fallas=0;SYNC.ult=ahoraTs();
+  }catch(err){ok=false;SYNC.estado='off';SYNC.fallas++;}
+  SYNC.enCurso=false;
+  if(cambios){if(document.getElementById('ov'))RENDER_PEND=true;else render();}
+  pintarRed();
+  programarSync(ok?(S.sync.out.length?5000:60000):Math.min(300000,15000*Math.pow(2,SYNC.fallas-1)));
+}
+function programarSync(ms){if(!SYNC_URL)return;clearTimeout(SYNC.timer);SYNC.timer=setTimeout(()=>{if(document.hidden&&!S.sync.out.length)return programarSync(60000);sincronizar();},ms);}
+window.addEventListener('online',()=>{SYNC.fallas=0;programarSync(500);});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)programarSync(500);});
+
+iniciarSync(MEM_NUEVA);
 
 /* ---------- Fuente: el Kanban ----------
    Del archivo del Kanban solo se guardan las Formas 8 tipo MEN de los
@@ -347,10 +449,12 @@ async function actualizarInternet(silencioso){
   return false;
 }
 function pintarRed(){const el=document.getElementById('red');if(!el)return;
+  const pend=S.sync&&SYNC_URL?S.sync.out.length:0, pTxt=pend?` · ${pend} cambio${pend>1?'s':''} por enviar`:'';
+  if(SYNC_URL&&SYNC.estado==='off'&&RED.estado==='ok'){el.className='red off';el.innerHTML='<i></i>Sin conexión con los otros equipos'+pTxt;el.title='Los cambios se guardan en este equipo y se envían solos cuando haya señal.';return;}
   if(RED.estado==='sync'){el.className='red sync';el.innerHTML='<i></i>Actualizando…';el.title='Descargando datos del Kanban';return;}
-  if(RED.estado==='ok'){el.className='red ok';el.innerHTML='<i></i>En línea';el.title='Última consulta al Kanban: '+(RED.ultimoOk||'');return;}
+  if(RED.estado==='ok'){el.className='red ok';el.innerHTML='<i></i>En línea'+pTxt;el.title='Última consulta al Kanban: '+(RED.ultimoOk||'');return;}
   const m=RED.proximo?Math.max(1,Math.round((RED.proximo-Date.now())/60000)):0;
-  el.className='red off';el.innerHTML=`<i></i>Sin conexión${m?' · reintento en '+m+' min':''}`;el.title='Se trabaja con los datos guardados en la pantalla. Las firmas se guardan igual. El tablero reintenta solo.';}
+  el.className='red off';el.innerHTML=`<i></i>Sin conexión${pTxt}${m&&!pend?' · reintento en '+m+' min':''}`;el.title='Se trabaja con los datos guardados en la pantalla. Las firmas se guardan igual. El tablero reintenta solo.';}
 window.addEventListener('online',()=>{RED.intentos=0;actualizarInternet(true);});
 window.addEventListener('offline',()=>{RED.estado='off';pintarRed();});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&RED.estado!=='ok')actualizarInternet(true);});
@@ -585,8 +689,8 @@ function filasInc(){return Object.entries(S.inc).filter(([k,x])=>!UE_SEL||x.ue==
   const resp=pend.map(g=>'G'+g+': '+(S.personal.filter(p=>p.g.includes(g)).map(p=>p.n).join(', ')||'sin personal')).join(' | ');
   return [x.ue,lunes(x.fm),x.fm,x.lim,m?diasMesa(m):habiles(x.fm,(S.hist[k]||{}).fp||hoyISO()),m?ESTADOS[m.estado].n:'Despachado',pend.length?pend.map(g=>'G'+g).join(', '):'Ninguno (ya terminó)',resp||'—'];});}
 function pintarInc(){tabla(document.getElementById('tInc'),'inc',[{t:'Unidad Ejecutora'},{t:'Semana (lunes)',f:dmy,n:1},{t:'Entró a mesa',f:dmy,n:1},{t:'Límite',f:dmy,n:1},{t:'Días hábiles en mesa',a:'r',n:1},{t:'Estado actual'},{t:'Grupos pendientes'},{t:'Personal del grupo'}],filasInc(),{i:2,d:-1});}
-function filasLog(){return S.log.filter(l=>!UE_SEL||l.ue===UE_SEL).map(l=>[l.ts,l.tipo,l.ue,l.det,l.por]);}
-function pintarLog(){tabla(document.getElementById('tLog'),'log',[{t:'Fecha y hora (Panamá)',n:1},{t:'Movimiento'},{t:'Unidad Ejecutora'},{t:'Detalle'},{t:'Registrado por'}],filasLog(),{i:0,d:-1});}
+function filasLog(){return S.log.filter(l=>!UE_SEL||l.ue===UE_SEL).map(l=>[l.ts,l.tipo,l.ue,l.det,l.por,l.eq||'']);}
+function pintarLog(){tabla(document.getElementById('tLog'),'log',[{t:'Fecha y hora (Panamá)',n:1},{t:'Movimiento'},{t:'Unidad Ejecutora'},{t:'Detalle'},{t:'Registrado por'},{t:'Equipo'}],filasLog(),{i:0,d:-1});}
 
 /* ---------- Buscador propio ---------- */
 function combo(inp,lst,o){
@@ -617,7 +721,7 @@ combo(document.getElementById('fUe'),document.getElementById('fUeL'),{items:list
 function modal(html,wide){const r=document.getElementById('modalRoot');r.innerHTML=`<div class="ov" id="ov"><div class="mod${wide?' wide':''}" role="dialog" aria-modal="true">${html}</div></div>`;
   const ov=document.getElementById('ov');ov.addEventListener('mousedown',e=>{if(e.target===ov)cerrar();});
   const f=ov.querySelector('[autofocus]');if(f)setTimeout(()=>f.focus(),30);return ov;}
-function cerrar(){document.getElementById('modalRoot').innerHTML='';if(PENDIENTE){const p=PENDIENTE;PENDIENTE=null;setTimeout(()=>aplicarPaquete(p,'internet'),0);}}
+function cerrar(){document.getElementById('modalRoot').innerHTML='';if(RENDER_PEND){RENDER_PEND=false;setTimeout(render,0);}if(PENDIENTE){const p=PENDIENTE;PENDIENTE=null;setTimeout(()=>aplicarPaquete(p,'internet'),0);}}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')cerrar();});
 function confirmar(txt,btn,fn,cls){const ov=modal(`<h3>Confirmar</h3><div class="bd"><p style="margin:0">${esc(txt)}</p></div><div class="ft"><button class="btn" id="cfN">Cancelar</button><button class="btn ${cls||'btn-warn'}" id="cfY" autofocus>${esc(btn)}</button></div>`);
   ov.querySelector('#cfN').onclick=cerrar;ov.querySelector('#cfY').onclick=()=>{cerrar();fn();};ov.querySelector('#cfY').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();cerrar();fn();}};}
@@ -717,6 +821,7 @@ function modalAjustes(){
     <div class="fld"><span class="lab">Almacenistas por grupo · el PIN son los últimos 4 dígitos de la cédula</span>
       <div class="tblbox" style="margin:0"><table><thead><tr><th>Nombre</th><th>Grupos</th><th>PIN</th><th></th></tr></thead><tbody id="aPer"></tbody></table></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap"><input class="inp" id="nN" placeholder="Nombre" style="flex:2;min-width:140px"><input class="inp" id="nG" placeholder="Grupos (ej. 4,5,11)" style="flex:1;min-width:110px"><input class="inp num" id="nC" placeholder="Cédula" style="flex:1;min-width:110px"><button class="btn" id="nAdd">Agregar</button></div></div>
+    <div class="fld"><label for="aEq">Nombre de este equipo (aparece en la bitácora)</label><input class="inp" id="aEq" value="${esc(S.sync?S.sync.nombre:'')}" placeholder="Ej.: PANTALLA ALMACÉN o LAPTOP SUPERVISOR" style="max-width:360px"></div>
     <div class="fld"><label for="aN">Nombre del supervisor (aparece cuando firma un grupo)</label><input class="inp" id="aN" value="${esc(S.cfg.supNombre||'')}" placeholder="Ej.: JUAN PÉREZ" style="max-width:360px"></div>
     <div class="fld"><label for="aS">Cambiar PIN de supervisor</label><input class="inp num" id="aS" maxlength="4" inputmode="numeric" placeholder="Dejar vacío para no cambiar" style="max-width:240px"></div>
     </div><div class="ft"><button class="btn btn-warn" id="aBorrar">Borrar la memoria de esta pantalla</button><span class="grow"></span><button class="btn" id="aC">Cancelar</button><button class="btn btn-pri" id="aOk">Guardar ajustes</button></div>`,true);
@@ -726,10 +831,10 @@ function modalAjustes(){
   ov.querySelector('#nAdd').onclick=()=>{const n=ov.querySelector('#nN').value.trim().toUpperCase(),g=ov.querySelector('#nG').value.split(/[,\s]+/).map(Number).filter(x=>GRUPOS[x]),c=pin4(ov.querySelector('#nC').value);
     if(!n||!g.length||c.length!==4)return toast('Complete nombre, grupos válidos y cédula',true);per.push({n,g,p:c});['nN','nG','nC'].forEach(i=>ov.querySelector('#'+i).value='');pintar();};
   ov.querySelector('#aC').onclick=cerrar;
-  ov.querySelector('#aBorrar').onclick=()=>confirmar('Se borrarán las firmas, la mesa, las correcciones y la bitácora de esta pantalla. Guarde las firmas en USB antes si quiere conservarlas.','Borrar memoria',()=>{const pin=S.cfg.supPin,per0=S.personal;S=memNueva();S.cfg.supPin=pin;S.personal=per0;log('SISTEMA','','Memoria de la pantalla reiniciada','Supervisor');guardar();});
+  ov.querySelector('#aBorrar').onclick=()=>confirmar('Se borrarán las firmas, la mesa, las correcciones y la bitácora de esta pantalla. Guarde las firmas en USB antes si quiere conservarlas.','Borrar memoria',()=>{const pin=S.cfg.supPin,per0=S.personal;const eqV=S.sync;S=memNueva();if(eqV){S.sync={eq:eqV.eq,nombre:eqV.nombre,base:slotsActuales(),lw:{},out:[],seq:0};}S.cfg.supPin=pin;S.personal=per0;log('SISTEMA','','Memoria de la pantalla reiniciada','Supervisor');guardar();});
   ov.querySelector('#aOk').onclick=()=>{const sp=ov.querySelector('#aS').value;if(sp&&!/^\d{4}$/.test(sp))return toast('El PIN de supervisor debe tener 4 dígitos',true);
     Object.assign(S.cfg,{wip:+ov.querySelector('#aW').value,plazo:+ov.querySelector('#aP').value,ventana:+ov.querySelector('#aV').value,repite:+ov.querySelector('#aR').value,auto:ov.querySelector('#aA').checked});
-    S.personal=per;if(sp)S.cfg.supPin=sp;S.cfg.supNombre=ov.querySelector('#aN').value.trim().toUpperCase();log('AJUSTE','',`Mesa ${S.cfg.wip} · plazo ${S.cfg.plazo} d hábiles · ventana ${S.cfg.ventana} d · repetición ${S.cfg.repite} d`,'Supervisor');cerrar();guardar();toast('Ajustes guardados');};
+    S.personal=per;if(sp)S.cfg.supPin=sp;S.cfg.supNombre=ov.querySelector('#aN').value.trim().toUpperCase();if(S.sync)S.sync.nombre=ov.querySelector('#aEq').value.trim().toUpperCase();log('AJUSTE','',`Mesa ${S.cfg.wip} · plazo ${S.cfg.plazo} d hábiles · ventana ${S.cfg.ventana} d · repetición ${S.cfg.repite} d`,'Supervisor');cerrar();guardar();toast('Ajustes guardados');};
 }
 function modalHelp(){
   modal(`<h3>Cómo funciona</h3><div class="bd help">
@@ -807,7 +912,7 @@ async function excel(soloVista){
   hoja('Fuera de plazo','Mensuales fuera de plazo',[['Unidad Ejecutora',44],['Semana (lunes)',13],['Entró a mesa',12],['Límite',12],['Días hábiles en mesa',12],['Estado actual',13],['Grupos pendientes',18],['Personal del grupo',60]],filasInc().map(r=>[r[0],dmy(r[1]),dmy(r[2]),dmy(r[3]),r[4],r[5],r[6],r[7]]));
   hoja('Despachados','Mensuales despachados',[['Unidad Ejecutora',44],['Recibido',12],['Entró a mesa',12],['Preparado',12],['Despachado',12],['Días en mesa',10],['Recepción → despacho',12],['Grupos',20],['F8',8],['Registró',14],['Salió de plazo',10]],
     filasHist().map(r=>[r[0],dmy(r[1]),dmy(r[2]),dmy(r[3]),dmy(r[4]),r[5],r[6],r[7],r[8],r[9],r[10]]));
-  if(!soloVista)hoja('Bitácora','Bitácora de movimientos',[['Fecha y hora',17],['Movimiento',16],['Unidad Ejecutora',40],['Detalle',70],['Registrado por',24]],S.log.map(l=>[l.ts,l.tipo,l.ue,l.det,l.por]));
+  if(!soloVista)hoja('Bitácora','Bitácora de movimientos',[['Fecha y hora',17],['Movimiento',16],['Unidad Ejecutora',40],['Detalle',70],['Registrado por',24],['Equipo',18]],S.log.map(l=>[l.ts,l.tipo,l.ue,l.det,l.por,l.eq||'']));
   const buf=await wb.xlsx.writeBuffer();bajar(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),`Tablero_Mensuales_${soloVista?'vista':'completo'}_${hoyISO()}.xlsx`);toast('Excel descargado');
 }
 
@@ -861,6 +966,7 @@ setInterval(render,5*60*1000);
 let tema='light';try{tema=localStorage.getItem('tm_tema')||'light';}catch(e){}aplicarTema(tema);
 render();
 actualizarInternet(true);   // si hay internet, se pone al día solo; si no, sigue con la memoria
+programarSync(300);         // memoria compartida con los otros equipos
 /* La página queda guardada en la pantalla: abre aunque no haya internet */
 if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw-mensuales.js',{scope:'./tablero_mensuales.html'}).catch(()=>{});
 </script>
