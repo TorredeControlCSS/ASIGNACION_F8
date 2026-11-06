@@ -9,13 +9,13 @@
  *   una descarga incompleta.
  * Al publicar una versión nueva del tablero, subir CACHE_VER.
  * =========================================================================== */
-const CACHE_VER = 'mensuales-v5';
+const CACHE_VER = 'mensuales-v6';
 const PAGINA = './tablero_mensuales.html';
 const EXCEL = 'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js';
 
 self.addEventListener('install', ev => {
   self.skipWaiting();
-  ev.waitUntil(caches.open(CACHE_VER).then(c => c.addAll([PAGINA, './favicon.ico']).then(() => c.add(new Request(EXCEL, { mode: 'no-cors' })).catch(() => {}))).catch(() => {}));
+  ev.waitUntil(caches.open(CACHE_VER).then(c => c.addAll([new Request(PAGINA, { cache: 'reload' }), './favicon.ico']).then(() => c.add(new Request(EXCEL, { mode: 'no-cors' })).catch(() => {}))).catch(() => {}));
 });
 self.addEventListener('activate', ev => {
   ev.waitUntil(caches.keys()
@@ -28,7 +28,7 @@ self.addEventListener('fetch', ev => {
   const url = new URL(req.url);
   if (url.pathname.indexOf('/kanban/') >= 0 || url.hostname.indexOf('script.google') >= 0) return; // datos: directo a la red
   if (req.mode === 'navigate' || url.pathname.endsWith('/tablero_mensuales.html')) {
-    ev.respondWith(conEspera(fetch(req), 8000).then(res => {
+    ev.respondWith(conEspera(fetch(new Request(PAGINA, { cache: 'no-cache' })), 8000).then(res => {
       if (res && res.status === 200) { const c = res.clone(); caches.open(CACHE_VER).then(x => x.put(PAGINA, c)); }
       return res;
     }).catch(() => caches.match(PAGINA)));
