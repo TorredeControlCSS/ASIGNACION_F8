@@ -341,6 +341,22 @@ body.m .tab.m-tab-lista.active{background:#1f5fb4;color:#fff}
 [data-theme="dark"] .m-lt-bar input,[data-theme="dark"] .m-lt-bar select,[data-theme="dark"] .m-lt-in,[data-theme="dark"] .m-lt-cant{background:#0b1324;color:#e2e8f0;border-color:#334155}
 .m-lt-bar .m-f-chk{flex-direction:column;align-items:flex-start;gap:3px;flex:0 0 auto;min-width:0}
 
+.m-lt-paneles{display:grid;grid-template-columns:1.2fr 1fr 1.3fr;gap:10px;margin-bottom:10px}
+@media (max-width:1100px){.m-lt-paneles{grid-template-columns:1fr}}
+.m-lt-card{border:1px solid #e1e6ee;border-radius:10px;padding:9px 12px;background:#f8fafc;display:flex;flex-direction:column;gap:6px}
+.m-lt-card-t{font-weight:700;font-size:13px;color:#0b1f3a}
+.m-lt-card-s{font-size:12.5px;color:#3d4a5a;flex:1}
+.m-lt-card-b{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:12.5px}
+.dropzone{display:flex;align-items:center;justify-content:center;gap:11px;border:2px dashed #c9a227;border-radius:8px;padding:10px 12px;background:rgba(255,221,87,.18);cursor:pointer;transition:.15s}
+.dropzone:hover,.dropzone.drag{background:rgba(255,210,40,.32);border-color:#a9851a}
+.dropzone .ico{font-size:22px;color:#8a6a00;line-height:1}
+.dropzone .t{font-weight:600;color:#6b5400;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.dropzone .dz-txt{min-width:0;flex:1}.dropzone .s{font-size:11px;color:#8a7320;margin-top:1px}
+.dropzone.listo{border-color:#2e8b57;background:#e3f4ea}.dropzone.listo .ico,.dropzone.listo .t{color:#1f6f43}
+.dropzone.hecho{border-color:#b5d4a8;background:#f2f8ef}.dropzone.hecho .ico,.dropzone.hecho .t{color:#1f6f43}
+.m-btn-cargar{background:#0b1f3a;color:#fff;width:100%}.m-btn-cargar:disabled{opacity:.45;cursor:not-allowed}
+[data-theme="dark"] .m-lt-card{background:#0f1729;border-color:#24324d}[data-theme="dark"] .m-lt-card-t{color:#e2e8f0}[data-theme="dark"] .m-lt-card-s{color:#cbd5e1}
+
   </style>
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
@@ -456,7 +472,7 @@ body.m .tab.m-tab-lista.active{background:#1f5fb4;color:#fff}
         <div class="m-lt-bar">
           <div class="m-f m-f-dias"><label title="Fecha de la Forma 8">Período</label>
             <select id="ltDias"><option value="7">Últimos 7 días</option><option value="15">Últimos 15 días</option><option value="30" selected>Últimos 30 días</option><option value="45">Últimos 45 días</option><option value="60">Últimos 60 días</option><option value="90">Últimos 90 días</option></select></div>
-          <div class="m-f m-f-btn"><button id="ltTraer" class="m-btn m-btn-pri" type="button">Traer pendientes</button></div>
+          <div class="m-f m-f-btn"><button id="ltTraer" class="m-btn m-btn-pri" type="button">Cargar pendientes</button></div>
           <div class="m-f"><label>Unidad</label><select id="ltUE"><option value="">Todas las unidades</option></select></div>
           <div class="m-f"><label>CEDIS que la suple</label><select id="ltCedis"><option value="">Todos los CEDIS</option></select></div>
           <div class="m-f"><label>Categoría</label><select id="ltCat"><option value="">Todas las categorías</option></select></div>
@@ -465,25 +481,43 @@ body.m .tab.m-tab-lista.active{background:#1f5fb4;color:#fff}
           <div class="m-f m-f-chk"><label class="m-chk"><input type="checkbox" id="ltOcultarAsig" checked> Ocultar ya asignadas</label>
             <label class="m-chk"><input type="checkbox" id="ltSoloSel"> Solo seleccionadas</label></div>
         </div>
-        <div id="ltEstado" class="m-lt-estado">Traiga los pendientes para armar la lista. Nada se escribe en F8_DETALLE hasta que usted lo envíe.</div>
+        <div id="ltEstado" class="m-lt-estado">Cargue los pendientes para armar la lista. Nada se escribe en F8_DETALLE hasta que usted lo envíe.</div>
         <div class="m-lt-acc">
           <span id="ltResumen" class="m-lt-res"></span>
           <span class="m-lt-acc-b">
             <button id="ltSelTodo" class="m-btn m-btn-out" type="button">Seleccionar lo filtrado</button>
             <button id="ltSelNada" class="m-btn m-btn-out" type="button">Quitar lo filtrado</button>
             <button id="ltLimpiar" class="m-btn m-btn-link" type="button">Limpiar selección</button>
-            <button id="ltExcel" class="m-btn m-btn-out" type="button">Descargar a Excel</button>
-            <button id="ltSubirBtn" class="m-btn m-btn-out" type="button">Subir Excel</button><input type="file" id="ltSubir" accept=".xlsx,.xls,.csv" hidden>
             <button id="ltEnviar" class="m-btn m-btn-hoja" type="button" disabled>Enviar a la lista de trabajo</button>
           </span>
         </div>
-        <div id="ltActual" class="m-lt-actual"></div>
+        <div class="m-lt-paneles">
+          <div class="m-lt-card">
+            <div class="m-lt-card-t">Lista de trabajo actual</div>
+            <div id="ltActualTxt" class="m-lt-card-s">Cargue los pendientes para verla.</div><div id="ltActual" hidden></div>
+            <div class="m-lt-card-b">
+              <button id="ltDeshacer" class="m-btn m-btn-out" type="button" title="Vuelve a poner en F8_DETALLE la lista que había antes del último envío">Deshacer el último envío</button>
+              <span id="ltDeshacerConf" hidden>¿Restaurar la lista anterior? <button id="ltDeshSi" class="m-btn m-btn-pri" type="button">Sí, restaurar</button> <button id="ltDeshNo" class="m-btn m-btn-out" type="button">No</button></span>
+            </div>
+          </div>
+          <div class="m-lt-card">
+            <div class="m-lt-card-t">1 · Descargar a Excel</div>
+            <div class="m-lt-card-s">Lo filtrado, en el formato de F8_DETALLE, con columna INCLUIR (SI/NO) y datos de apoyo.</div>
+            <div class="m-lt-card-b"><button id="ltExcel" class="m-btn m-btn-out" type="button">Descargar pendientes</button></div>
+          </div>
+          <div class="m-lt-card m-lt-card-x">
+            <div class="m-lt-card-t">2 · Subir su Excel trabajado</div>
+            <div class="dropzone" id="ltDZ"><div class="ico">&#8681;</div><div class="dz-txt"><div class="t" id="ltDZt">Seleccionar archivo</div><div class="s">o arrástrelo aquí · XLSX XLS CSV</div></div></div>
+            <input type="file" id="ltSubir" accept=".xlsx,.xls,.csv" style="display:none">
+            <button id="ltCargarXls" class="m-btn m-btn-cargar" type="button" disabled>Cargar archivo</button>
+          </div>
+        </div>
         <div class="scroll m-scroll">
           <table id="ltTabla" class="m-tbl m-lt-tbl">
             <thead><tr><th></th><th>F8</th><th>Fecha</th><th>Tipo</th><th>Unidad</th><th>Categoría</th><th>Código</th><th>Suministro</th><th>Grupo</th>
               <th class="right">Solicitado</th><th class="right">A enviar</th><th class="right" title="Existencia física en el CEDIS">Existencia</th>
               <th class="right" title="Existencia con vencimiento de 60 días o más">Utilizable</th><th class="right">Reservado</th><th class="right">Empaque</th><th>Estado</th></tr></thead>
-            <tbody><tr><td colspan="16" class="m-vacio">Presione "Traer pendientes".</td></tr></tbody>
+            <tbody><tr><td colspan="16" class="m-vacio">Presione "Cargar pendientes".</td></tr></tbody>
           </table>
         </div>
         <div id="ltNota" class="m-nota"></div>
@@ -3513,37 +3547,55 @@ document.addEventListener('keydown', e => {
     } catch (e) { console.warn('historial.json no disponible:', e); return new Map(); }
   }
 
+  // Los pendientes los publica el Motor en pendientes.json (90 días) cada vez que entra dato nuevo:
+  // la página no llama al servidor para leerlos. El período se filtra aquí, al instante.
+  let LT_TODAS = [];
+  function ltAplicarPeriodo() {
+    const dias = +ltEl('ltDias').value || 30;
+    const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - dias);
+    const lim = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    LT.filas = LT_TODAS.filter(f => f.fecha >= lim);
+    ltLlenarFiltros(); ltPintar();
+    if (LT.cargado) ltEstado(fmt(LT.filas.length) + ' líneas de los últimos ' + dias + ' días · datos publicados ' + LT.pub, 'ok');
+  }
+  function ltMarcarEnLista() {
+    const enL = new Set((LT.actual || []).map(x => ltKey(x[0], x[3])));
+    LT_TODAS.forEach(f => { f.enLista = enL.has(f.k); });
+  }
   async function ltTraer() {
     if (LT.ocupado) return;
-    const s = window.__mSesion && window.__mSesion();
-    if (!s) { ltEstado('Ingrese su PIN para traer los pendientes.', 'bad'); return; }
     LT.ocupado = true; ltEl('ltTraer').disabled = true;
-    const dias = +ltEl('ltDias').value || 30, t0 = Date.now();
-    ltEstado('Leyendo las Formas 8 de los últimos ' + dias + ' días… (unos 30 segundos)');
-    const tick = setInterval(() => ltEstado('Leyendo las Formas 8 de los últimos ' + dias + ' días… ' + Math.round((Date.now() - t0) / 1000) + ' s'), 1000);
+    const t0 = Date.now();
+    ltEstado('Cargando los pendientes publicados…');
     try {
-      const [r, asig, act] = await Promise.all([
-        window.__mPost('motorPendientes', { dias }),
-        ltHistorialAsignadas(),
-        window.__mPost('motorDetalleActual', {})
+      const [p, asig] = await Promise.all([
+        fetch('pendientes.json?t=' + Date.now(), { cache: 'no-store' }).then(r => { if (!r.ok) throw new Error('Todavía no hay pendientes publicados (pendientes.json). El Motor los publica en los próximos minutos.'); return r.json(); }),
+        ltHistorialAsignadas()
       ]);
-      if (!r.success) throw new Error(r.error || 'No se pudieron leer los pendientes');
-      const c = r.cols, ix = n => c.indexOf(n);
-      // Las transferencias son movimientos entre unidades: el Motor no las asigna, aquí tampoco se muestran.
+      const c = p.cols, ix = n => c.indexOf(n), D = p.dic || {}, dv = (t, i) => (D[t] || [])[i] || '';
       const esTransf = t => /TRA(N)?SFERENCIA/i.test(String(t || ''));
-      LT.filas = r.filas.filter(a => !esTransf(a[ix('TIPO')])).map(a => {
-        const k = ltKey(a[ix('F8_ID')], a[ix('SKU')]);
-        return { k, f8: a[ix('F8_ID')], fecha: a[ix('FECHA_F8')], tipo: a[ix('TIPO')], punto: a[ix('UNIDAD_SALMI')], ue: a[ix('UNIDAD')] || a[ix('UNIDAD_SALMI')],
-          cat: a[ix('CATEG')], cedis: a[ix('CEDIS')], sku: a[ix('SKU')], sum: a[ix('SUMINISTRO')], sol: +a[ix('SOLICITADO')] || 0,
-          asig: asig.get(k) || '', enLista: !!a[ix('EN_LISTA')] };
-      });
-      LT.skus = r.skus || {};
-      LT.actual = act && act.success ? act.filas : [];
+      LT_TODAS = p.filas.map(a => {
+        const k = ltKey(a[ix('F8_ID')], a[ix('SKU')]), punto = dv('punto', a[ix('UNIDAD_SALMI')]);
+        return { k, f8: a[ix('F8_ID')], fecha: a[ix('FECHA_F8')], tipo: dv('tipo', a[ix('TIPO')]), punto, ue: dv('ue', a[ix('UNIDAD')]) || punto,
+          cat: dv('cat', a[ix('CATEG')]), cedis: dv('cedis', a[ix('CEDIS')]), sku: a[ix('SKU')], sum: (p.nombres || {})[a[ix('SKU')]] || '',
+          sol: +a[ix('SOLICITADO')] || 0, asig: asig.get(k) || '', enLista: false };
+      }).filter(f => !esTransf(f.tipo));   // las transferencias son entre unidades: el Motor no las asigna
+      LT.skus = p.skus || {};
+      LT.actual = p.actual || [];
+      LT.pub = new Date(p.generado).toLocaleString('es-PA', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
       LT.cargado = true;
-      ltLlenarFiltros(); ltPintar(); ltPintarActual();
-      ltEstado(fmt(LT.filas.length) + ' líneas de los últimos ' + dias + ' días · leído en ' + Math.round((Date.now() - t0) / 1000) + ' s', 'ok');
+      ltMarcarEnLista(); ltAplicarPeriodo(); ltPintarActual();
+      // La lista actual se confirma en segundo plano (puede haber cambiado en el Excel); no detiene la pantalla.
+      ltRefrescarActual();
     } catch (e) { ltEstado(e.message || String(e), 'bad'); }
-    finally { clearInterval(tick); LT.ocupado = false; ltEl('ltTraer').disabled = false; }
+    finally { LT.ocupado = false; ltEl('ltTraer').disabled = false; }
+  }
+  async function ltRefrescarActual() {
+    if (!(window.__mSesion && window.__mSesion())) return;
+    try {
+      const act = await window.__mPost('motorDetalleActual', {});
+      if (act && act.success) { LT.actual = act.filas; ltMarcarEnLista(); ltPintarActual(); ltPintar(); }
+    } catch (e) { console.warn('lista actual:', e); }
   }
 
   function ltOpc(id, vals, todos) {
@@ -3599,7 +3651,7 @@ document.addEventListener('keydown', e => {
           <td class="m-cel ${cls}">${est}</td></tr>`;
       });
     });
-    tb.innerHTML = h || `<tr><td colspan="16" class="m-vacio">${LT.filas.length ? 'No hay líneas con estos filtros.' : 'Presione "Traer pendientes".'}</td></tr>`;
+    tb.innerHTML = h || `<tr><td colspan="16" class="m-vacio">${LT.filas.length ? 'No hay líneas con estos filtros.' : 'Presione "Cargar pendientes".'}</td></tr>`;
     tb.querySelectorAll('input[data-medio]').forEach(c => { c.indeterminate = true; });
     ltEl('ltNota').textContent = rows.length > LIM ? `Se muestran ${fmt(LIM)} de ${fmt(rows.length)} líneas. Filtre por unidad o CEDIS para ver el resto.` : (rows.length ? fmt(rows.length) + ' líneas con estos filtros.' : '');
     ltResumen();
@@ -3614,8 +3666,9 @@ document.addEventListener('keydown', e => {
   function ltPintarActual() {
     const a = LT.actual || [], f8 = new Set(a.map(x => x[0])), ue = [...new Set(a.map(x => x[1]))];
     ltEl('ltActual').innerHTML = a.length
-      ? `Lista de trabajo actual (F8_DETALLE): <b>${fmt(a.length)}</b> líneas · <b>${fmt(f8.size)}</b> F8 · ${mEsc(ue.slice(0, 4).join(', '))}${ue.length > 4 ? ' y ' + (ue.length - 4) + ' más' : ''} <button type="button" class="m-btn-link" id="ltVerActual">Ver / descargar</button>`
-      : 'Lista de trabajo actual (F8_DETALLE): <b>vacía</b>';
+      ? `F8_DETALLE tiene <b>${fmt(a.length)}</b> líneas · <b>${fmt(f8.size)}</b> F8 · ${mEsc(ue.slice(0, 4).join(', '))}${ue.length > 4 ? ' y ' + (ue.length - 4) + ' más' : ''} <button type="button" class="m-btn-link" id="ltVerActual">Descargar</button>`
+      : 'F8_DETALLE está <b>vacía</b>';
+    ltEl('ltActualTxt').innerHTML = ltEl('ltActual').innerHTML; ltEl('ltActual').innerHTML = '';
     const b = ltEl('ltVerActual'); if (b) b.onclick = ltDescargarActual;
   }
 
@@ -3705,9 +3758,30 @@ document.addEventListener('keydown', e => {
     } catch (e) { ltEl('ltEnvioMsg').innerHTML = '<span class="m-neg">' + mEsc(e.message || String(e)) + '</span>'; b.disabled = false; b.textContent = 'Reintentar'; }
   }
 
+  // ---------- Deshacer el último envío (restaura la copia de F8_DETALLE_RESPALDO) ----------
+  function ltDeshacerPedir() {
+    if (!(window.__mSesion && window.__mSesion())) return;
+    ltEl('ltDeshacer').hidden = true; ltEl('ltDeshacerConf').hidden = false;
+  }
+  async function ltDeshacer(si) {
+    ltEl('ltDeshacerConf').hidden = true; ltEl('ltDeshacer').hidden = false;
+    if (!si) return;
+    ltEstado('Restaurando la lista anterior…');
+    try {
+      const r = await window.__mPost('motorDeshacer', {});
+      if (!r.success) throw new Error(r.error || 'No se pudo deshacer');
+      ltEstado('Listo: se restauró la lista del ' + r.copiaDe + ' (' + fmt(r.restauradas) + ' líneas, guardada por ' + r.copiaPor + '). Lo que había quedó también en la copia.', 'ok');
+      await ltRefrescarActual();
+    } catch (e) { ltEstado(e.message || String(e), 'bad'); }
+  }
+
   (function () {
     const v = ltEl('view_lista'); if (!v) return;
     ltEl('ltTraer').addEventListener('click', ltTraer);
+    ltEl('ltDias').addEventListener('change', () => { if (LT.cargado) ltAplicarPeriodo(); });
+    ltEl('ltDeshacer').addEventListener('click', ltDeshacerPedir);
+    ltEl('ltDeshSi').addEventListener('click', () => ltDeshacer(true));
+    ltEl('ltDeshNo').addEventListener('click', () => ltDeshacer(false));
     ['ltUE', 'ltCedis', 'ltCat', 'ltTipo', 'ltOcultarAsig', 'ltSoloSel'].forEach(id => ltEl(id).addEventListener('change', ltPintar));
     let tq; ltEl('ltQ').addEventListener('input', () => { clearTimeout(tq); tq = setTimeout(ltPintar, 250); });
     ltEl('ltTabla').addEventListener('change', ev => {
@@ -3720,8 +3794,19 @@ document.addEventListener('keydown', e => {
     ltEl('ltSelNada').addEventListener('click', () => { ltFiltradas().forEach(f => ltSel(f, false)); ltPintar(); });
     ltEl('ltLimpiar').addEventListener('click', () => { LT.sel.clear(); LT.extras = []; ltEl('ltSoloSel').checked = false; ltPintar(); });
     ltEl('ltExcel').addEventListener('click', ltDescargar);
-    ltEl('ltSubirBtn').addEventListener('click', () => ltEl('ltSubir').click());
-    ltEl('ltSubir').addEventListener('change', e => { if (e.target.files[0]) ltSubir(e.target.files[0]); e.target.value = ''; });
+    let ltArchivo = null;
+    const dz = ltEl('ltDZ'), elegir = f => { if (!f) return; ltArchivo = f; dz.classList.add('listo'); ltEl('ltDZt').textContent = f.name; ltEl('ltCargarXls').disabled = false; };
+    dz.addEventListener('click', () => ltEl('ltSubir').click());
+    dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag'); });
+    dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+    dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag'); elegir(e.dataTransfer.files[0]); });
+    ltEl('ltSubir').addEventListener('change', e => { elegir(e.target.files[0]); e.target.value = ''; });
+    ltEl('ltCargarXls').addEventListener('click', () => {
+      if (!ltArchivo) return;
+      if (!LT.cargado) { ltEstado('Primero cargue los pendientes; luego suba su Excel.', 'warn'); return; }
+      ltSubir(ltArchivo); ltArchivo = null; ltEl('ltCargarXls').disabled = true;
+      dz.classList.remove('listo'); dz.classList.add('hecho'); ltEl('ltDZt').textContent = 'Archivo cargado · puede subir otro';
+    });
     ltEl('ltEnviar').addEventListener('click', ltAbrirEnvio);
     ltEl('ltEnvioOk').addEventListener('click', ltEnviar);
     ltEl('ltEnvioNo').addEventListener('click', () => { ltEl('ltEnvio').style.display = 'none'; });
