@@ -3528,7 +3528,7 @@ document.addEventListener('keydown', e => {
 
   // ===================== ETAPA 3 · Preparar la lista de trabajo (F8_DETALLE) =====================
   // Pendientes = líneas de REQUISICIONES_F8 de los últimos N días (servidor, con PIN).
-  // "Ya asignada" se marca aquí con historial.json (publicado), sin leer el histórico en el servidor.
+  // "Ya asignada" llega marcada en pendientes.json (el Motor la calcula al publicar); no se descarga el historial.
   // Nada se escribe en F8_DETALLE hasta que el analista confirma "Enviar a la lista de trabajo".
   const LT = { filas: [], skus: {}, sel: new Map(), extras: [], actual: null, cargado: false, ocupado: false };
   const ltKey = (f8, sku) => String(f8).trim() + '|' + String(sku).trim().replace(/^0+/, '');
@@ -3568,17 +3568,17 @@ document.addEventListener('keydown', e => {
     const t0 = Date.now();
     ltEstado('Cargando los pendientes publicados…');
     try {
-      const [p, asig] = await Promise.all([
-        fetch('pendientes.json?t=' + Date.now(), { cache: 'no-store' }).then(r => { if (!r.ok) throw new Error('Todavía no hay pendientes publicados (pendientes.json). El Motor los publica en los próximos minutos.'); return r.json(); }),
-        ltHistorialAsignadas()
-      ]);
+      const p = await fetch('pendientes.json?t=' + Date.now(), { cache: 'no-store' }).then(r => { if (!r.ok) throw new Error('Todavía no hay pendientes publicados (pendientes.json). El Motor los publica en los próximos minutos.'); return r.json(); });
       const c = p.cols, ix = n => c.indexOf(n), D = p.dic || {}, dv = (t, i) => (D[t] || [])[i] || '';
+      // "Ya asignada" viene dentro de pendientes.json (columna ASIG). Solo si el archivo es de la versión
+      // anterior se recurre a historial.json (20 MB); deja de pasar en cuanto el Motor republica.
+      const iA = ix('ASIG'), asig = iA >= 0 ? null : await ltHistorialAsignadas();
       const esTransf = t => /TRA(N)?SFERENCIA/i.test(String(t || ''));
       LT_TODAS = p.filas.map(a => {
         const k = ltKey(a[ix('F8_ID')], a[ix('SKU')]), punto = dv('punto', a[ix('UNIDAD_SALMI')]);
         return { k, f8: a[ix('F8_ID')], fecha: a[ix('FECHA_F8')], tipo: dv('tipo', a[ix('TIPO')]), punto, ue: dv('ue', a[ix('UNIDAD')]) || punto,
           cat: dv('cat', a[ix('CATEG')]), cedis: dv('cedis', a[ix('CEDIS')]), sku: a[ix('SKU')], sum: (p.nombres || {})[a[ix('SKU')]] || '',
-          sol: +a[ix('SOLICITADO')] || 0, asig: asig.get(k) || '', enLista: false };
+          sol: +a[ix('SOLICITADO')] || 0, asig: (iA >= 0 ? a[iA] : asig.get(k)) || '', enLista: false };
       }).filter(f => !esTransf(f.tipo));   // las transferencias son entre unidades: el Motor no las asigna
       LT.skus = p.skus || {};
       LT.actual = p.actual || [];
