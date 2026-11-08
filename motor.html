@@ -283,6 +283,23 @@ body.m tbody tr:hover td{background:#f7faff}
 [data-theme="dark"] .m-modo-hist{background:#2a1d45;color:#e4d6fb;border-bottom-color:#3d2b63}
 [data-theme="dark"] .m-bienv{background:#123323;color:#cdebd9;border-bottom-color:#1f4d35}
 
+.m-chips-tabs{margin:0 0 0 auto;flex-wrap:wrap;justify-content:flex-end}
+.m-chips-tabs + .m-tabs-r{margin-left:10px}
+.m-tbl td.m-cel{font-weight:700;text-align:center;white-space:nowrap}
+.m-cel-ok{background:#dff3e6!important;color:#1f6f43}
+.m-cel-warn{background:#fff0cc!important;color:#7a5200}
+.m-cel-bad{background:#fde0e0!important;color:#9b1c1c}
+.m-cel-info{background:#e1ecfb!important;color:#1e4f9a}
+.m-cel-vio{background:#efe3fb!important;color:#5b2d99}
+.m-tbl td.m-cel .m-est-d{font-weight:500;color:inherit;opacity:.8;white-space:normal}
+.m-tbl td.m-cel .m-tag{background:transparent;color:inherit;padding:0 2px;font-size:10px}
+.m-tbl td.m-cel .m-tag-bad{background:transparent;color:inherit}
+[data-theme="dark"] .m-cel-ok{background:#123323!important;color:#9fe0b8}
+[data-theme="dark"] .m-cel-warn{background:#3a2c0c!important;color:#f3d38a}
+[data-theme="dark"] .m-cel-bad{background:#3d1616!important;color:#f5aaaa}
+[data-theme="dark"] .m-cel-info{background:#14274a!important;color:#a9c7f5}
+[data-theme="dark"] .m-cel-vio{background:#2a1d45!important;color:#d2b8f5}
+
   </style>
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
@@ -358,7 +375,6 @@ body.m tbody tr:hover td{background:#f7faff}
       <div class="m-kpi"><div class="m-kpi-l">Prioridad clínica</div><div class="m-kpi-v m-kpi-v-sm" id="k_importancia">—</div></div>
       <div class="m-kpi m-kpi-alert"><div class="m-kpi-l">Unidad en cero sin stock</div><div class="m-kpi-v" id="mK_cero">—</div><div class="m-kpi-s" title="La unidad no tiene existencias y el CEDIS tampoco">UE y CEDIS sin existencias</div></div>
     </section>
-    <div class="m-chips" id="mChips"></div>
 
     <!-- ACCIONES -->
     <section class="m-acc">
@@ -387,6 +403,7 @@ body.m tbody tr:hover td{background:#f7faff}
         <div class="tab" data-tab="ue_sin">Unidades sin cobertura</div>
         <div class="tab" data-tab="invalidos">Pedidos con error</div>
         <div class="tab" data-tab="fill_cat">Por categoría</div>
+        <div class="m-chips m-chips-tabs" id="mChips"></div>
         <div class="m-tabs-r">
           <div class="m-colsel"><button id="mColBtn" class="m-btn m-btn-out" type="button">Columnas</button><div id="mColPanel" class="m-colpanel" hidden></div></div>
         </div>
@@ -3062,6 +3079,15 @@ document.addEventListener('keydown', e => {
     if (r.Pack_Missing) out.push('<span class="m-tag" title="Sin empaque en el maestro">Sin empaque</span>');
     return out.join(' ');
   }
+  // Color de la celda Alerta: rojo si hay tope de cuota, agotado o UE en cero; ámbar si bajo mínimo.
+  function mAlertaNivel(r) {
+    const st = String(r.Estado || '').toUpperCase();
+    if (r.Acaparamiento || st.includes('MAX CUOTA')) return 'vio';
+    if (r.En_Cero === true || coverage(r) === 'SIN') return 'bad';
+    if (st.includes('MINIMO')) return 'warn';
+    if (r.Frio || r.Narcotico) return 'info';
+    return '';
+  }
   const M_COLS = [
     { k: 'ver', t: 'Ver', c: 'center', fijo: true, f: (r, i) => `<button class="m-lnk" onclick="openAudit(${i})" title="Cómo se asignó">Ver</button>` },
     { k: 'fecha', t: 'Fecha F8', c: 'm-col-fecha', f: r => mEsc(r.Fecha) },
@@ -3087,8 +3113,8 @@ document.addEventListener('keydown', e => {
     { k: 'ult', t: 'Últ. Desp', c: 'm-col-fecha', f: r => mEsc(r.Ultimo_Despacho || '-') },
     { k: 'qty', t: 'Qty', c: 'right', f: r => dashSi(r.Qty_Ultimo) },
     { k: 'prom', t: 'Prom', c: 'right', f: r => dashSi(r.Promedio_Hist) },
-    { k: 'estado', t: 'Estado', f: r => { const e = mEstado(r); return `<span class="m-est m-est-${e.c}" title="Motor: ${mEsc(r.Estado)}">${e.t}</span>${e.d ? `<div class="m-est-d">${e.d}</div>` : ''}`; } },
-    { k: 'alerta', t: 'Alerta', f: r => mAlerta(r) },
+    { k: 'estado', t: 'Estado', cls: r => 'm-cel m-cel-' + mEstado(r).c, f: r => { const e = mEstado(r); return `<span title="Motor: ${mEsc(r.Estado)}">${e.t}</span>${e.d ? `<div class="m-est-d">${e.d}</div>` : ''}`; } },
+    { k: 'alerta', t: 'Alerta', cls: r => { const a = mAlertaNivel(r); return a ? 'm-cel m-cel-' + a : ''; }, f: r => mAlerta(r) },
     { k: 'riesgo', t: 'Riesgo', c: 'center', tit: 'Factor de riesgo (tendencia de abastecimiento 90 días)', f: r => r.Factor_Riesgo ? mEsc(r.Factor_Riesgo) + 'x' : '-' },
     { k: 'cuota', t: 'Cuota', c: 'right', f: r => fmt(r.Cuota_Max) },
     { k: 'previo', t: 'Previo', c: 'right', f: r => fmt(r.Ejecucion_Previa) },
@@ -3117,7 +3143,7 @@ document.addEventListener('keydown', e => {
     const cols = mVisibles();
     const LIM = 3000;
     tb.innerHTML = rows.slice(0, LIM).map((r, i) =>
-      `<tr class="m-tr-${mEstado(r).c}">${cols.map(c => `<td${c.c ? ` class="${c.c}"` : ''}>${c.f(r, i)}</td>`).join('')}</tr>`
+      `<tr>${cols.map(c => { const k = [c.c || '', c.cls ? c.cls(r) : ''].join(' ').trim(); return `<td${k ? ` class="${k}"` : ''}>${c.f(r, i)}</td>`; }).join('')}</tr>`
     ).join('') || `<tr><td colspan="${cols.length}" class="m-vacio">No hay renglones con estos filtros.</td></tr>`;
     document.getElementById('mTblNota').textContent = rows.length > LIM
       ? `Se muestran ${fmt(LIM)} de ${fmt(rows.length)} renglones. Use los filtros o descargue el Detalle en Excel para verlos todos.` : '';
