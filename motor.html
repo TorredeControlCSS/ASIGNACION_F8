@@ -300,6 +300,10 @@ body.m tbody tr:hover td{background:#f7faff}
 [data-theme="dark"] .m-cel-info{background:#14274a!important;color:#a9c7f5}
 [data-theme="dark"] .m-cel-vio{background:#2a1d45!important;color:#d2b8f5}
 
+.m-pc-sep{color:#9aa6b4;font-size:11px}
+.m-ven{display:inline-block;min-width:16px;text-align:center;font-size:10px;font-weight:800;border-radius:4px;padding:1px 3px;margin-right:3px}
+.m-ven-v{background:#fde0e0;color:#9b1c1c}.m-ven-e{background:#e1ecfb;color:#1e4f9a}
+
   </style>
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
@@ -372,7 +376,7 @@ body.m tbody tr:hover td{background:#f7faff}
       <div class="m-kpi"><div class="m-kpi-l">Solicitado (red.)</div><div class="m-kpi-v" id="k_req_r">—</div><div class="m-kpi-s">Ajustado a empaque y cuota</div></div>
       <div class="m-kpi"><div class="m-kpi-l">Asignado</div><div class="m-kpi-v" id="k_assigned">—</div><div class="m-kpi-s" id="mK_asg_s"></div></div>
       <div class="m-kpi m-kpi-main"><div class="m-kpi-l" title="Asignado ÷ solicitado original">Fill rate</div><div class="m-kpi-v" id="k_fill">—</div><div class="m-bar"><i id="mK_bar"></i></div><div class="m-kpi-s" id="mK_fill_s"></div></div>
-      <div class="m-kpi"><div class="m-kpi-l">Prioridad clínica</div><div class="m-kpi-v m-kpi-v-sm" id="k_importancia">—</div></div>
+      <div class="m-kpi"><div class="m-kpi-l">Prioridad clínica · VEN</div><div class="m-kpi-v m-kpi-v-sm" id="k_importancia">—</div></div>
       <div class="m-kpi m-kpi-alert"><div class="m-kpi-l">Unidad en cero sin stock</div><div class="m-kpi-v" id="mK_cero">—</div><div class="m-kpi-s" title="La unidad no tiene existencias y el CEDIS tampoco">UE y CEDIS sin existencias</div></div>
     </section>
 
@@ -1226,15 +1230,15 @@ body.m tbody tr:hover td{background:#f7faff}
       let rowStyle = "";
       let icons = [];
       
-      if (r.Frio) { rowStyle = "background-color: #e3f2fd;"; icons.push("Frío"); }
-      if (r.Narcotico) icons.push("Controlado");
+      if (r.Frio) { rowStyle = "background-color: #e3f2fd;"; icons.push("❄️"); }
+      if (r.Narcotico) icons.push("💊");
       
       if (r.Importancia === "VITAL") {
         rowStyle = "background-color: #ffebee;";
-        icons.push("<span style='font-size:10px;' title='VITAL'></span>");
+        icons.push("<span style='font-size:10px;' title='VITAL'>💓</span>");
       } else if (r.Importancia === "ESENCIAL") {
         if (!r.Frio) rowStyle = "background-color: #e8f5e9;";
-        icons.push("<span style='font-size:10px;' title='ESENCIAL'></span>");
+        icons.push("<span style='font-size:10px;' title='ESENCIAL'>✅</span>");
       }
       
       if (r.Frio && r.Importancia === "VITAL") {
@@ -1262,7 +1266,7 @@ body.m tbody tr:hover td{background:#f7faff}
         </td>
         <td style="font-size:8px;">${esc(r.Grupo || "-")}</td>
         <td class="num">${fmt0(r.Solicitado)}</td>
-        <td class="num" style="${r.Acaparamiento ? 'color:#bf360c;font-weight:bold;text-decoration:underline;' : ''}">${fmt0(r.Solicitado_redondeado)}${r.Acaparamiento ? ' ' : ''}</td>
+        <td class="num" style="${r.Acaparamiento ? 'color:#bf360c;font-weight:bold;text-decoration:underline;' : ''}">${fmt0(r.Solicitado_redondeado)}${r.Acaparamiento ? ' ⚠️' : ''}</td>
         <td class="num" style="background:rgba(255,255,255,0.5); font-weight:bold;">${fmt0(r.Asignado)}</td>
         <td class="num" style="color:blue;">${transito}</td>
         <td class="num" style="color:purple;">${r.Reservado > 0 ? fmt0(r.Reservado) : "-"}</td>
@@ -1288,16 +1292,16 @@ body.m tbody tr:hover td{background:#f7faff}
       const escasezDetectada = g.totalRed > g.totalAsig;
       const fillRate = g.totalSol > 0 ? ((g.totalAsig / g.totalSol) * 100).toFixed(1) + "%" : "0%";
       
-      let escasezLabel = escasezDetectada ? " SÍ (Fair Share aplicado)" : " NO (Stock suficiente)";
+      let escasezLabel = escasezDetectada ? "⚠️ SÍ (Fair Share aplicado)" : "✅ NO (Stock suficiente)";
       let escasezClass = escasezDetectada ? "color:#b00020;" : "color:#0a7a2f;";
       
       if (g.items.some(i => i.Pack_Missing)) escasezLabel += ` <span style="color:#b00020; font-size:10px; margin-left:8px;">(Nota: No existe empaque definido)</span>`;
       
       let fechaMostrar = g.fechaAsig;
       const tieneFrio = g.items.some(i => i.Frio);
-      const stampFrio = tieneFrio ? `<span style="border:1px solid #0277bd; background:#e1f5fe; color:#0277bd; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:10px; margin-left:8px;">REFRIGERADO</span>` : "";
+      const stampFrio = tieneFrio ? `<span style="border:1px solid #0277bd; background:#e1f5fe; color:#0277bd; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:10px; margin-left:8px;">❄️ REFRIGERADO</span>` : "";
       const diasEntregaRaw = g.items[0].Dias_Entrega || "";
-      const stampDias = diasEntregaRaw ? `<div style="margin-top:4px; background:#fff; border:1px dashed #333; padding:3px 8px; font-size:11px; font-weight:bold; color:#333; display:inline-block; border-radius:4px;"> ENTREGA: ${esc(diasEntregaRaw)}</div>` : "";
+      const stampDias = diasEntregaRaw ? `<div style="margin-top:4px; background:#fff; border:1px dashed #333; padding:3px 8px; font-size:11px; font-weight:bold; color:#333; display:inline-block; border-radius:4px;">🚚 ENTREGA: ${esc(diasEntregaRaw)}</div>` : "";
 
       return `
         <div class="section">
@@ -1508,7 +1512,7 @@ body.m tbody tr:hover td{background:#f7faff}
     </tr>`).join("");
 
     const htmlSkuSin = skuSinList.map(s => {
-      const icon = s.imp === "VITAL" ? "" : (s.imp === "ESENCIAL" ? "" : "");
+      const icon = s.imp === "VITAL" ? "💓" : (s.imp === "ESENCIAL" ? "✅" : "");
       const bg = s.imp === "VITAL" ? "#ffebee" : (s.imp === "ESENCIAL" ? "#e8f5e9" : "");
       return `<tr style="background:${bg}">
         <td>${s.code}</td>
@@ -1589,7 +1593,7 @@ body.m tbody tr:hover td{background:#f7faff}
             <div class="kpi"><div class="kpi-n">${fmt(totalRenglones)}</div><div class="kpi-l">Total Renglones</div></div>
             <div class="kpi"><div class="kpi-n">${fmt(totalSol)}</div><div class="kpi-l">Unidades Solicitadas</div></div>
             <div class="kpi"><div class="kpi-n">${fmt(totalAsg)}</div><div class="kpi-l">Unidades Asignadas</div></div>
-            <div class="kpi"><div class="kpi-n"> ${vitales} |  ${esenciales}</div><div class="kpi-l">Renglones Vitales / Esenciales</div></div>
+            <div class="kpi"><div class="kpi-n">💓 ${vitales} | ✅ ${esenciales}</div><div class="kpi-l">Renglones Vitales / Esenciales</div></div>
         </div>
 
         <h2>1. UNIDADES EJECUTORAS SIN COBERTURA (0% ASIGNACIÓN)</h2>
@@ -2057,11 +2061,11 @@ body.m tbody tr:hover td{background:#f7faff}
     // 1. VENTANA EMERGENTE
     const w = window.open("", "_blank");
     if (!w) {
-        alert(" Permita los pop-ups para ver el reporte.");
+        alert("⚠️ Permita los pop-ups para ver el reporte.");
         btn.textContent = oldText;
         return;
     }
-    w.document.write('<div style="font-family:sans-serif; padding:20px;"> Generando reporte...</div>');
+    w.document.write('<div style="font-family:sans-serif; padding:20px;">⏳ Generando reporte...</div>');
 
     try {
         const rawData = await window.__mJsonReporte('cuotas.json', 'filas', () => loadJsonp(`${WEBAPP_BASE}?file=cuotas`));
@@ -2422,7 +2426,7 @@ function _waBuildUrl(g) {
   // Detectar acaparamiento: items con Reservado > 0 en el corte actual
   const itemsAcap = g.items.filter(it => it.Reservado > 0);
   const notaAcap  = itemsAcap.length
-    ? `\n *Nota:* ${itemsAcap.length} suministro${itemsAcap.length!==1?'s':''} con reserva activa sin despachar. Ver detalle en el enlace.`
+    ? `\n⚠️ *Nota:* ${itemsAcap.length} suministro${itemsAcap.length!==1?'s':''} con reserva activa sin despachar. Ver detalle en el enlace.`
     : '';
 
   const msg = [
@@ -2544,7 +2548,7 @@ async function exportarReservasExcel() {
     return;
   }
   const btn = document.getElementById('btnExportReservas');
-  btn.textContent = 'Preparando...';
+  btn.textContent = '⏳ Consultando GAS...';
   btn.disabled = true;
   try {
     const lista = window.__mReservasDias(await window.__mJsonReporte('reservas.json', 'lista', () => loadJsonp(`${WEBAPP_BASE}?file=reservas_detalle`)));
@@ -2552,7 +2556,7 @@ async function exportarReservasExcel() {
       alert('No hay reservas activas que superen el umbral configurado.');
       return;
     }
-    btn.textContent = ' Generando Excel...';
+    btn.textContent = '⏳ Generando Excel...';
     const wb = new ExcelJS.Workbook();
     wb.creator = 'Torre de Control CEDIS'; wb.created = new Date();
     const thin  = { style:'thin', color:{ argb:'FFE5E7EB' } };
@@ -2776,7 +2780,7 @@ async function exportarReservasExcel() {
   } catch(e) {
     alert('Error generando Excel: ' + e.message);
   } finally {
-    btn.textContent = ' Reservas Excel';
+    btn.textContent = '📊 Reservas Excel';
     btn.disabled    = false;
   }
 }
@@ -3050,8 +3054,12 @@ document.addEventListener('keydown', e => {
     if (v) partes.push(`<span class="m-pc m-pc-warn">${fmt(v)} vital</span>`);
     if (c0) partes.push(`<span class="m-pc m-pc-warn">${fmt(c0)} en cero</span>`);
     if (e) partes.push(`<span class="m-pc m-pc-info">${fmt(e)} esencial</span>`);
-    if (vit || ese) partes.push(`<span class="m-pc">V ${fmt(vit)} · E ${fmt(ese)}</span>`);
-    document.getElementById('k_importancia').innerHTML = partes.join(' ') || '<span class="m-dim">sin prioridad especial</span>';
+    const sinVen = rows.length - vit - ese;
+    document.getElementById('k_importancia').innerHTML =
+      `<span class="m-pc m-pc-bad" title="Vitales (clasificación VEN del maestro de empaque)">V ${fmt(vit)}</span>` +
+      `<span class="m-pc m-pc-info" title="Esenciales">E ${fmt(ese)}</span>` +
+      `<span class="m-pc" title="Sin clasificación VEN en el maestro (por lo general material médico-quirúrgico)">Sin VEN ${fmt(sinVen)}</span>` +
+      (partes.length ? '<span class="m-pc-sep">·</span>' + partes.join(' ') : '');
 
     const base = window.__mBase || rows;   // conteos sin el filtro de estado, para poder cambiar entre chips
     const cnt = { COMPLETO: 0, PARCIAL: 0, SIN: 0 };
@@ -3098,7 +3106,7 @@ document.addEventListener('keydown', e => {
     { k: 'cod', t: 'Código', c: 'm-nw m-mono', f: r => mEsc(r.Codigo) },
     { k: 'sum', t: 'Suministro', c: 'm-sum', f: r => mEsc(r.Suministro) },
     { k: 'grp', t: 'Grp', f: r => mEsc(r.Grupo || '-') },
-    { k: 'prio', t: 'Prioridad', f: r => badgePrioridad(r) },
+    { k: 'prio', t: 'Prioridad', f: r => (r.Importancia === 'VITAL' ? '<span class="m-ven m-ven-v" title="Vital">V</span>' : r.Importancia === 'ESENCIAL' ? '<span class="m-ven m-ven-e" title="Esencial">E</span>' : '') + badgePrioridad(r) },
     { k: 'stock', t: 'Stock', c: 'right m-col-stock', tit: 'Existencia física en el CEDIS', f: r => fmt(r.Stock_Fisico) },
     { k: 'invue', t: 'Inv. UE', c: 'right m-col-inv', tit: 'Saldo en el estante de la unidad (Calculadora)', f: r => (r.Inventario_UE === null || r.Inventario_UE === '' || r.Inventario_UE === undefined) ? '<span class="m-dim">sin dato</span>' : fmt(r.Inventario_UE) },
     { k: 'sol', t: 'Solic.', c: 'right', f: r => fmt(r.Solicitado) },
