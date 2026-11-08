@@ -98,7 +98,8 @@
 /* ===== MOTOR · capa visual nueva ===== */
 body.m{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:#f4f6f9;color:#1d2733;margin:0}
 body.m button{font-family:inherit}
-.m-top{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:12px;padding:10px 18px;background:#0b1f3a;color:#fff;box-shadow:0 1px 6px rgba(0,0,0,.18)}
+.m-head{position:sticky;top:0;z-index:50}
+.m-top{display:flex;align-items:center;gap:12px;padding:10px 18px;background:#0b1f3a;color:#fff;box-shadow:0 1px 6px rgba(0,0,0,.18)}
 .m-iso{width:36px;height:36px;object-fit:contain;flex:0 0 auto}
 .m-tit{flex:1 1 auto;min-width:0}
 .m-tit1{font-size:16px;font-weight:700;letter-spacing:.2px}
@@ -110,7 +111,7 @@ body.m button{font-family:inherit}
 .m-fuente-hist{background:#5b4b8a;color:#fff}
 .m-fuente-bad{background:#9b1c1c;color:#fff}
 .m-aviso{background:#fff4d6;color:#6b4a00;border-bottom:1px solid #f0d58c;padding:8px 18px;font-size:13px}
-.m-page{padding:14px 18px 40px;max-width:1600px;margin:0 auto;box-sizing:border-box}
+.m-page{padding:12px 14px 40px;box-sizing:border-box}
 .m-card{background:#fff;border:1px solid #e1e6ee;border-radius:12px;padding:12px 14px}
 .m-btn{border:1px solid transparent;border-radius:8px;padding:8px 12px;font-size:12.5px;font-weight:600;cursor:pointer;background:#fff;color:#1d2733;line-height:1.1}
 .m-btn-pri{background:#0b1f3a;color:#fff}
@@ -270,16 +271,29 @@ body.m tbody tr:hover td{background:#f7faff}
 .m-gate-c .m-btn{width:100%;padding:11px;font-size:14px}
 .m-gate-n{font-size:11.5px;color:#6b7785;margin-top:10px}
 
+.m-modo{margin:0;padding:8px 14px;display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;border-bottom:1px solid #d7e3f4}
+.m-modo-diario{background:#e8f1fc;color:#0b1f3a}
+.m-modo-hist{background:#efe7fb;color:#4a2380;border-bottom-color:#d9c8f2}
+.m-modo-t{font-size:16px;font-weight:800}
+.m-modo-s{font-size:12.5px}
+.m-bienv{background:#e3f4ea;color:#1f5a3a;padding:8px 14px;font-size:13px;border-bottom:1px solid #b9e0c9}
+.m-btn-hoja{background:#1f5fb4;color:#fff;border-color:#1f5fb4;box-shadow:0 1px 4px rgba(31,95,180,.35)}
+.m-btn-hoja:hover{background:#174d93}
+[data-theme="dark"] .m-modo-diario{background:#12233d;color:#dbe7f7;border-bottom-color:#24324d}
+[data-theme="dark"] .m-modo-hist{background:#2a1d45;color:#e4d6fb;border-bottom-color:#3d2b63}
+[data-theme="dark"] .m-bienv{background:#123323;color:#cdebd9;border-bottom-color:#1f4d35}
+
   </style>
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
 </head>
 <body class="m">
+  <div class="m-head">
   <header class="m-top">
     <img class="m-iso" src="icons/icon-192.png" alt="" width="36" height="36" onerror="this.style.visibility='hidden'">
     <div class="m-tit">
-      <div class="m-tit1">Motor de Asignación F8 <span class="m-tit-ced">CEDIS Panamá</span></div>
-      <div class="m-tit2"><span id="mainHeader">Asignación F8 (Corte diario)</span> · Corte: <span id="cutDate">—</span> · <span id="currentDateTime"></span></div>
+      <div class="m-tit1">Motor de Asignación de Requisiciones F8 <span class="m-tit-ced">CEDIS Panamá</span></div>
+      <div class="m-tit2">C1 Corte diario · v9.2 · Inteligencia de demanda + prioridad clínica + desabastecimiento en la UE · <span id="currentDateTime"></span></div>
     </div>
     <div class="m-top-r">
       <span id="mFuente" class="m-fuente">Cargando…</span>
@@ -295,6 +309,12 @@ body.m tbody tr:hover td{background:#f7faff}
     </div>
   </header>
   <div id="mAviso" class="m-aviso" hidden></div>
+  <div id="mBienvenida" class="m-bienv" hidden></div>
+  <section id="mModo" class="m-modo m-modo-diario">
+    <div class="m-modo-t" id="mainHeader">Asignación F8 — Corte diario</div>
+    <div class="m-modo-s">Corte: <b id="cutDate">—</b> · Lotes elegibles: vencimiento ≥ 60 días · Prioridad UE: Hospital › Policlínica › ULAPS › CAPPS › CEDIS</div>
+  </section>
+  </div>
 
   <main class="m-page">
     <!-- FILTROS -->
@@ -349,7 +369,7 @@ body.m tbody tr:hover td{background:#f7faff}
       </div>
       <div class="m-acc-g">
         <span class="m-acc-t">Descargar</span>
-        <button id="btnExportPdf" class="m-btn m-btn-out">Hoja de asignación (PDF)</button>
+        <button id="btnExportPdf" class="m-btn m-btn-hoja">Hoja de asignación (PDF)</button>
         <button id="btnExportXlsx" class="m-btn m-btn-out">Detalle filtrado (Excel)</button>
         <button id="mXlsxTodo" class="m-btn m-btn-out" type="button">Detalle completo (Excel)</button>
         <button id="btnExportReservas" class="m-btn m-btn-out" onclick="exportarReservasExcel()">Reservas (Excel)</button>
@@ -443,8 +463,8 @@ body.m tbody tr:hover td{background:#f7faff}
         DATA = a.filas;
         PARAMS = { cut_date: fechaLocal(gen), generated_at: a.generado, fuente: 'publicado' };
         window._MODO_ACTUAL = 'live';
-        document.getElementById('mainHeader').textContent = 'Corte diario';
-        document.getElementById('cutDate').textContent = fechaLocal(gen);
+        window.__mModo && window.__mModo('diario');
+        document.getElementById('cutDate').textContent = fechaLocal(gen).split('-').reverse().join('/');
         populateFilters();
         const urlUE = new URLSearchParams(location.search).get('ue');
         if (urlUE) {
@@ -491,8 +511,15 @@ body.m tbody tr:hover td{background:#f7faff}
     };
     function pintarUsuario(){
       const el=document.getElementById('mUsuario'); if(!el) return;
-      el.innerHTML = ses ? (esc(ses.nombre.split(' ')[0])+' · <button type="button" id="mSalir" class="m-btn-link m-salir">Salir</button>') : '';
+      el.innerHTML = ses ? (esc(titulo(ses.nombre))+' · <button type="button" id="mSalir" class="m-btn-link m-salir">Salir</button>') : '';
       const b=document.getElementById('mSalir'); if(b) b.onclick=salir;
+    }
+    function titulo(n){ return String(n||'').toLowerCase().replace(/(^|\s)\S/g, c=>c.toUpperCase()); }
+    function bienvenida(){
+      const b=document.getElementById('mBienvenida'); if(!b||!ses) return;
+      b.innerHTML='<b>Hola, '+esc(titulo(ses.nombre))+'.</b> Te damos la bienvenida al Motor de Asignación. <button type="button" class="m-btn-link" id="mBienvX">Cerrar</button>';
+      b.hidden=false; document.getElementById('mBienvX').onclick=()=>{ b.hidden=true; };
+      clearTimeout(window.__mBT); window.__mBT=setTimeout(()=>{ b.hidden=true; }, 8000);
     }
     function esc(v){ return String(v==null?'':v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
     function salir(){ ses=null; try{ localStorage.removeItem(KEY); }catch(e){} pintarUsuario(); mostrarGate(); }
@@ -519,13 +546,19 @@ body.m tbody tr:hover td{background:#f7faff}
           if(!r.success){ ses=null; err.textContent=r.error||'PIN incorrecto.'; inp.value=''; inp.focus(); return; }
           ses={pin:pin, nombre:r.nombre, rol:r.rol, exp:Date.now()+TTL};
           try{ localStorage.setItem(KEY, JSON.stringify(ses)); }catch(e){}
-          ov.remove(); pintarUsuario();
+          ov.remove(); pintarUsuario(); bienvenida();
         }catch(e){ ses=null; err.textContent='Sin conexión con el Motor. Intente de nuevo.'; }
         finally{ btn.disabled=false; btn.textContent='Entrar'; }
       });
     }
-    document.addEventListener('DOMContentLoaded', ()=>{ pintarUsuario(); if(!ses) mostrarGate(); });
+    document.addEventListener('DOMContentLoaded', ()=>{ pintarUsuario(); if(!ses) mostrarGate(); else bienvenida(); });
   })();
+
+  window.__mModo = function(m){
+    const el=document.getElementById('mModo'); if(!el) return;
+    el.className='m-modo m-modo-'+(m==='hist'?'hist':'diario');
+    document.getElementById('mainHeader').textContent = m==='hist' ? 'Histórico acumulado — no es el corte del día' : 'Asignación F8 — Corte diario';
+  };
 
   </script>
   <script>
@@ -3178,6 +3211,8 @@ document.addEventListener('keydown', e => {
     const t0 = Date.now();
     await _mFetch(type);
     const s = ((Date.now() - t0) / 1000).toFixed(0);
+    window.__mModo(type === 'history' ? 'hist' : 'diario');
+    { const c = document.getElementById('cutDate'); if (/^\d{4}-\d{2}-\d{2}$/.test(c.textContent)) c.textContent = c.textContent.split('-').reverse().join('/'); }
     if (DATA && DATA.length) {
       if (type === 'history') window.__mFuente('Histórico · ' + fmt(DATA.length) + ' renglones', 'hist');
       else { window.__mFuente('En vivo del Motor · ' + fmt(DATA.length) + ' renglones (' + s + ' s)', 'ok'); window.__mAviso(''); }
@@ -3299,7 +3334,7 @@ document.addEventListener('keydown', e => {
       <button onclick="cerrarPanelWA()"
               style="background:rgba(255,255,255,.15);border:none;color:#fff;
                      border-radius:50%;width:30px;height:30px;font-size:16px;
-                     cursor:pointer;line-height:1;"></button>
+                     cursor:pointer;line-height:1;">✕</button>
     </div>
 
     <!-- Barra de progreso (se muestra al enviar) -->
@@ -3376,7 +3411,7 @@ document.addEventListener('keydown', e => {
       </div>
       <button onclick="cerrarPanelCorreo()"
               style="background:rgba(255,255,255,.15);border:none;color:#fff;
-                     border-radius:50%;width:30px;height:30px;font-size:16px;cursor:pointer;line-height:1;"></button>
+                     border-radius:50%;width:30px;height:30px;font-size:16px;cursor:pointer;line-height:1;">✕</button>
     </div>
 
     <div id="corBarra" style="display:none;padding:10px 20px;background:#e3f2fd;border-bottom:1px solid #bbdefb;">
