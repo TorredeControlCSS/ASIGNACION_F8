@@ -560,6 +560,34 @@ body.m tbody tr:hover td{background:#f7faff}
     document.getElementById('mainHeader').textContent = m==='hist' ? 'Histórico acumulado — no es el corte del día' : 'Asignación F8 — Corte diario';
   };
 
+  // ===== Reportes publicados (cuotas.json, reservas.json): sin llamar al GAS =====
+  // Si el archivo falta o falla, se usa la llamada de siempre (fallback).
+  window.__mJsonReporte = async function(archivo, campo, fallback){
+    try {
+      const r = await fetch(archivo + '?t=' + Date.now(), { cache:'no-store' });
+      if (!r.ok) throw new Error(archivo + ' HTTP ' + r.status);
+      const j = await r.json();
+      if (!j || !Array.isArray(j[campo])) throw new Error(archivo + ' sin datos');
+      console.log(archivo + ': ' + j[campo].length + ' filas, publicado ' + j.generado);
+      return j[campo];
+    } catch (e) { console.warn('Usando el Motor en vivo para ' + archivo + ':', e.message); return fallback(); }
+  };
+  // Los días de cada reserva se recalculan hoy (el archivo puede tener horas).
+  window.__mReservasDias = function(lista){
+    if (!Array.isArray(lista)) return lista;
+    const hoy = new Date(); hoy.setHours(0,0,0,0);
+    lista.forEach(s => {
+      let mx = 0;
+      (s.subs || []).forEach(sub => {
+        const m = String(sub.fechaAsig || '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+        if (m) sub.dias = Math.floor((hoy - new Date(+m[3], +m[2]-1, +m[1])) / 86400000);
+        if (sub.dias > mx) mx = sub.dias;
+      });
+      s.diasMax = mx;
+    });
+    return lista.sort((a,b) => b.f8s.length - a.f8s.length || b.diasMax - a.diasMax);
+  };
+
   </script>
   <script>
 
@@ -2019,7 +2047,7 @@ body.m tbody tr:hover td{background:#f7faff}
     w.document.write('<div style="font-family:sans-serif; padding:20px;"> Generando reporte...</div>');
 
     try {
-        const rawData = await loadJsonp(`${WEBAPP_BASE}?file=cuotas`);
+        const rawData = await window.__mJsonReporte('cuotas.json', 'filas', () => loadJsonp(`${WEBAPP_BASE}?file=cuotas`));
         if(!rawData || rawData.length === 0) { w.close(); alert("No hay datos."); return; }
 
         // FILTROS DASHBOARD
@@ -2499,10 +2527,10 @@ async function exportarReservasExcel() {
     return;
   }
   const btn = document.getElementById('btnExportReservas');
-  btn.textContent = ' Consultando GAS...';
+  btn.textContent = 'Preparando...';
   btn.disabled = true;
   try {
-    const lista = await loadJsonp(`${WEBAPP_BASE}?file=reservas_detalle`);
+    const lista = window.__mReservasDias(await window.__mJsonReporte('reservas.json', 'lista', () => loadJsonp(`${WEBAPP_BASE}?file=reservas_detalle`)));
     if (!lista || !lista.length) {
       alert('No hay reservas activas que superen el umbral configurado.');
       return;
