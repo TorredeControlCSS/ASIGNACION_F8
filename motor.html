@@ -304,6 +304,14 @@ body.m tbody tr:hover td{background:#f7faff}
 .m-ven{display:inline-block;min-width:16px;text-align:center;font-size:10px;font-weight:800;border-radius:4px;padding:1px 3px;margin-right:3px}
 .m-ven-v{background:#fde0e0;color:#9b1c1c}.m-ven-e{background:#e1ecfb;color:#1e4f9a}
 
+.m-icos{display:inline-flex;gap:3px;vertical-align:-3px;margin-right:4px}
+.m-ico{display:inline-flex;width:16px;height:16px;border-radius:4px;align-items:center;justify-content:center}
+.m-ico svg{width:12px;height:12px}
+.m-ico-v{background:#fde0e0;color:#b42323}.m-ico-e{background:#e1ecfb;color:#1e4f9a}
+.m-ico-f{background:#dff1fb;color:#0b7bb5}.m-ico-c{background:#efe3fb;color:#5b2d99}
+.m-leyenda{display:inline-flex;gap:10px;align-items:center;font-size:11.5px;color:#5a6878;margin-left:12px}
+.m-leyenda span{display:inline-flex;align-items:center;gap:4px}
+
   </style>
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
@@ -412,7 +420,7 @@ body.m tbody tr:hover td{background:#f7faff}
           <div class="m-colsel"><button id="mColBtn" class="m-btn m-btn-out" type="button">Columnas</button><div id="mColPanel" class="m-colpanel" hidden></div></div>
         </div>
       </div>
-      <div id="viewTitle" class="m-viewtitle"></div>
+      <div class="m-viewtitle"><span id="viewTitle"></span><span class="m-leyenda" id="mLeyenda"></span></div>
 
       <div id="view_asignacion" class="view">
         <div class="scroll m-scroll">
@@ -3096,6 +3104,21 @@ document.addEventListener('keydown', e => {
     if (r.Frio || r.Narcotico) return 'info';
     return '';
   }
+  // Iconos de línea (SVG, no emojis): VEN, cadena de frío y controlado, delante del suministro.
+  const M_SVG = {
+    vital: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z"/><path d="M3.5 12h4l2-3 3 6 2-3h6"/></svg>',
+    esencial: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>',
+    frio: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M4.9 6.5l14.2 11M19.1 6.5L4.9 17.5"/><path d="M9.5 3.5L12 6l2.5-2.5M9.5 20.5L12 18l2.5 2.5"/></svg>',
+    ctrl: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="8" width="19" height="8" rx="4" transform="rotate(-35 12 12)"/><path d="M9.2 8.1l5.6 7.8"/></svg>'
+  };
+  function mIconos(r) {
+    const o = [];
+    if (r.Importancia === 'VITAL') o.push(`<span class="m-ico m-ico-v" title="Vital (VEN)">${M_SVG.vital}</span>`);
+    else if (r.Importancia === 'ESENCIAL') o.push(`<span class="m-ico m-ico-e" title="Esencial (VEN)">${M_SVG.esencial}</span>`);
+    if (r.Frio) o.push(`<span class="m-ico m-ico-f" title="Cadena de frío">${M_SVG.frio}</span>`);
+    if (r.Narcotico) o.push(`<span class="m-ico m-ico-c" title="Controlado">${M_SVG.ctrl}</span>`);
+    return o.length ? `<span class="m-icos">${o.join('')}</span>` : '';
+  }
   const M_COLS = [
     { k: 'ver', t: 'Ver', c: 'center', fijo: true, f: (r, i) => `<button class="m-lnk" onclick="openAudit(${i})" title="Cómo se asignó">Ver</button>` },
     { k: 'fecha', t: 'Fecha F8', c: 'm-col-fecha', f: r => mEsc(r.Fecha) },
@@ -3104,9 +3127,9 @@ document.addEventListener('keydown', e => {
     { k: 'ue', t: 'UE', c: 'm-ue', f: r => mEsc(r.Punto) },
     { k: 'cat', t: 'Categoría', f: r => mEsc(r.Categoria) },
     { k: 'cod', t: 'Código', c: 'm-nw m-mono', f: r => mEsc(r.Codigo) },
-    { k: 'sum', t: 'Suministro', c: 'm-sum', f: r => mEsc(r.Suministro) },
+    { k: 'sum', t: 'Suministro', c: 'm-sum', f: r => mIconos(r) + mEsc(r.Suministro) },
     { k: 'grp', t: 'Grp', f: r => mEsc(r.Grupo || '-') },
-    { k: 'prio', t: 'Prioridad', f: r => (r.Importancia === 'VITAL' ? '<span class="m-ven m-ven-v" title="Vital">V</span>' : r.Importancia === 'ESENCIAL' ? '<span class="m-ven m-ven-e" title="Esencial">E</span>' : '') + badgePrioridad(r) },
+    { k: 'prio', t: 'Prioridad', f: r => badgePrioridad(r) },
     { k: 'stock', t: 'Stock', c: 'right m-col-stock', tit: 'Existencia física en el CEDIS', f: r => fmt(r.Stock_Fisico) },
     { k: 'invue', t: 'Inv. UE', c: 'right m-col-inv', tit: 'Saldo en el estante de la unidad (Calculadora)', f: r => (r.Inventario_UE === null || r.Inventario_UE === '' || r.Inventario_UE === undefined) ? '<span class="m-dim">sin dato</span>' : fmt(r.Inventario_UE) },
     { k: 'sol', t: 'Solic.', c: 'right', f: r => fmt(r.Solicitado) },
@@ -3291,6 +3314,9 @@ document.addEventListener('keydown', e => {
       document.getElementById('mMasFiltros').textContent = p.hidden ? 'Más filtros' : 'Menos filtros';
     });
     mPintarThead();
+    document.getElementById('mLeyenda').innerHTML =
+      `<span><span class="m-ico m-ico-v">${M_SVG.vital}</span>Vital</span><span><span class="m-ico m-ico-e">${M_SVG.esencial}</span>Esencial</span>` +
+      `<span><span class="m-ico m-ico-f">${M_SVG.frio}</span>Cadena de frío</span><span><span class="m-ico m-ico-c">${M_SVG.ctrl}</span>Controlado</span>`;
     document.getElementById('mColBtn').addEventListener('click', ev => {
       ev.stopPropagation(); const p = document.getElementById('mColPanel');
       if (p.hidden) mPintarColPanel(); p.hidden = !p.hidden;
