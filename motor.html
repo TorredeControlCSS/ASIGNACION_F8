@@ -312,6 +312,34 @@ body.m tbody tr:hover td{background:#f7faff}
 .m-leyenda{display:inline-flex;gap:10px;align-items:center;font-size:11.5px;color:#5a6878;margin-left:12px}
 .m-leyenda span{display:inline-flex;align-items:center;gap:4px}
 
+/* Etapa 3 · preparar lista */
+body.m .tab.m-tab-lista{border-color:#1f5fb4;color:#1f5fb4;font-weight:700}
+body.m .tab.m-tab-lista.active{background:#1f5fb4;color:#fff}
+.m-lt-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:8px}
+.m-lt-bar label{display:block;font-size:11.5px;color:#5a6878;margin:0 0 4px;font-weight:600}
+.m-lt-bar input,.m-lt-bar select{padding:7px 9px;border:1px solid #cdd6e2;border-radius:8px;font-size:13px;background:#fff}
+.m-lt-bar .m-f-btn{display:block}.m-lt-bar .m-f-btn select{margin-right:6px}
+.m-lt-estado{font-size:12.5px;color:#5a6878;margin:4px 0 8px}
+.m-lt-estado-ok{color:#1f6f43}.m-lt-estado-bad{color:#a61b1b;font-weight:600}.m-lt-estado-warn{color:#7a5200}
+.m-lt-acc{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+.m-lt-acc-b{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.m-lt-res{font-size:13px}
+.m-lt-actual{font-size:12.5px;background:#f6f8fb;border:1px solid #e1e6ee;border-radius:8px;padding:6px 10px;margin-bottom:8px}
+.m-lt-tbl tr.m-lt-g td{background:#eef3fa;font-size:12px;border-top:2px solid #d3dfee}
+.m-lt-tbl tr.m-lt-on td{background:#f3f9f5}
+.m-lt-cant{width:84px;text-align:right;padding:3px 5px;border:1px solid #cdd6e2;border-radius:6px;font-size:12px}
+.m-lt-cant:disabled{background:transparent;border-color:transparent;color:#9aa6b4}
+.m-lt-modo{display:flex;flex-direction:column;gap:6px;margin:12px 0}
+.m-lt-modo .m-chk{white-space:normal!important}
+.m-lt-l{display:block;font-size:12px;font-weight:600;color:#5a6878;margin:6px 0 4px}
+.m-lt-in{width:100%;box-sizing:border-box;padding:8px;border:1px solid #cdd6e2;border-radius:8px}
+.m-lt-msg{margin-top:10px;font-size:13px}.m-ok{color:#1f6f43;font-weight:600}
+[data-theme="dark"] .m-lt-actual{background:#0f1729;border-color:#24324d}
+[data-theme="dark"] .m-lt-tbl tr.m-lt-g td{background:#16223b;border-top-color:#24324d}
+[data-theme="dark"] .m-lt-tbl tr.m-lt-on td{background:#10261b}
+[data-theme="dark"] .m-lt-bar input,[data-theme="dark"] .m-lt-bar select,[data-theme="dark"] .m-lt-in,[data-theme="dark"] .m-lt-cant{background:#0b1324;color:#e2e8f0;border-color:#334155}
+.m-lt-bar .m-f-chk{flex-direction:column;align-items:flex-start;gap:3px;flex:0 0 auto;min-width:0}
+
   </style>
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
@@ -409,6 +437,7 @@ body.m tbody tr:hover td{background:#f7faff}
     <!-- PESTAÑAS -->
     <section class="m-card m-datos">
       <div class="tabs m-tabs" role="tablist">
+        <div class="tab m-tab-lista" data-tab="lista">Preparar lista de trabajo</div>
         <div class="tab active" data-tab="asignacion">Renglones</div>
         <div class="tab" data-tab="fill_ue">Por unidad</div>
         <div class="tab" data-tab="sku_sin">Sin stock</div>
@@ -422,6 +451,42 @@ body.m tbody tr:hover td{background:#f7faff}
       </div>
       <div class="m-viewtitle"><span id="viewTitle"></span><span class="m-leyenda" id="mLeyenda"></span></div>
 
+      <div id="view_lista" class="view" style="display:none">
+        <div class="m-lt-bar">
+          <div class="m-f m-f-btn"><label>Formas 8 de los últimos</label>
+            <select id="ltDias"><option value="7">7 días</option><option value="15">15 días</option><option value="30" selected>30 días</option><option value="45">45 días</option><option value="60">60 días</option><option value="90">90 días</option></select>
+            <button id="ltTraer" class="m-btn m-btn-pri" type="button">Traer pendientes</button></div>
+          <div class="m-f"><label>Unidad</label><select id="ltUE"><option value="">Todas las unidades</option></select></div>
+          <div class="m-f"><label>CEDIS que la suple</label><select id="ltCedis"><option value="">Todos los CEDIS</option></select></div>
+          <div class="m-f"><label>Categoría</label><select id="ltCat"><option value="">Todas las categorías</option></select></div>
+          <div class="m-f"><label>Tipo</label><select id="ltTipo"><option value="">Todos los tipos</option></select></div>
+          <div class="m-f m-f-q"><label>Buscar</label><input id="ltQ" placeholder="F8, código o descripción"></div>
+          <div class="m-f m-f-chk"><label class="m-chk"><input type="checkbox" id="ltOcultarAsig" checked> Ocultar ya asignadas</label>
+            <label class="m-chk"><input type="checkbox" id="ltSoloSel"> Solo seleccionadas</label></div>
+        </div>
+        <div id="ltEstado" class="m-lt-estado">Traiga los pendientes para armar la lista. Nada se escribe en F8_DETALLE hasta que usted lo envíe.</div>
+        <div class="m-lt-acc">
+          <span id="ltResumen" class="m-lt-res"></span>
+          <span class="m-lt-acc-b">
+            <button id="ltSelTodo" class="m-btn m-btn-out" type="button">Seleccionar lo filtrado</button>
+            <button id="ltSelNada" class="m-btn m-btn-out" type="button">Quitar lo filtrado</button>
+            <button id="ltLimpiar" class="m-btn m-btn-link" type="button">Limpiar selección</button>
+            <button id="ltExcel" class="m-btn m-btn-out" type="button">Descargar a Excel</button>
+            <button id="ltSubirBtn" class="m-btn m-btn-out" type="button">Subir Excel</button><input type="file" id="ltSubir" accept=".xlsx,.xls,.csv" hidden>
+            <button id="ltEnviar" class="m-btn m-btn-hoja" type="button" disabled>Enviar a la lista de trabajo</button>
+          </span>
+        </div>
+        <div id="ltActual" class="m-lt-actual"></div>
+        <div class="scroll m-scroll">
+          <table id="ltTabla" class="m-tbl m-lt-tbl">
+            <thead><tr><th></th><th>F8</th><th>Fecha</th><th>Tipo</th><th>Unidad</th><th>Categoría</th><th>Código</th><th>Suministro</th><th>Grupo</th>
+              <th class="right">Solicitado</th><th class="right">A enviar</th><th class="right" title="Existencia física en el CEDIS">Existencia</th>
+              <th class="right" title="Existencia con vencimiento de 60 días o más">Utilizable</th><th class="right">Reservado</th><th class="right">Empaque</th><th>Estado</th></tr></thead>
+            <tbody><tr><td colspan="16" class="m-vacio">Presione "Traer pendientes".</td></tr></tbody>
+          </table>
+        </div>
+        <div id="ltNota" class="m-nota"></div>
+      </div>
       <div id="view_asignacion" class="view">
         <div class="scroll m-scroll">
           <table id="tbl_asignacion" class="m-tbl">
@@ -440,6 +505,24 @@ body.m tbody tr:hover td{background:#f7faff}
         
     </section>
   </main>
+
+  <!-- MODAL: ENVIAR A F8_DETALLE -->
+  <div id="ltEnvio" class="modal">
+    <div class="modal-content m-modal">
+      <div class="modal-header m-modal-h"><span>Enviar a la lista de trabajo (F8_DETALLE)</span><span class="close-btn" onclick="document.getElementById('ltEnvio').style.display='none'">&times;</span></div>
+      <div class="modal-body">
+        <div id="ltEnvioRes"></div>
+        <div class="m-lt-modo">
+          <label class="m-chk"><input type="radio" name="ltModo" value="reemplazar" checked> <b>Reemplazar</b> la lista actual por esta selección</label>
+          <label class="m-chk"><input type="radio" name="ltModo" value="agregar"> <b>Agregar</b> debajo de lo que ya hay (sin repetir F8 + código)</label>
+        </div>
+        <label class="m-lt-l">Nota para la bitácora (opcional)</label>
+        <input id="ltNotaEnvio" class="m-lt-in" placeholder="Ej.: CEDIS Chiriquí en bahía, prioridad Complejo">
+        <div id="ltEnvioMsg" class="m-lt-msg"></div>
+      </div>
+      <div class="m-modal-f"><button id="ltEnvioNo" class="m-btn m-btn-out" type="button">Cerrar</button> <button id="ltEnvioOk" class="m-btn m-btn-hoja" type="button">Enviar a la lista de trabajo</button></div>
+    </div>
+  </div>
 
   <!-- MODAL: CÓMO SE ASIGNÓ -->
   <div id="auditModal" class="modal">
@@ -3003,7 +3086,8 @@ document.addEventListener('keydown', e => {
     sku_sin: 'Renglones que el CEDIS no pudo asignar (sin existencia)',
     ue_sin: 'Unidades con renglones al 0 %',
     invalidos: 'Pedidos con error (empaque o cantidad inválida)',
-    fill_cat: 'Cobertura por categoría de unidad'
+    fill_cat: 'Cobertura por categoría de unidad',
+    lista: 'Preparar la lista de trabajo del Motor (F8_DETALLE): elija qué Formas 8 y renglones se asignan'
   };
 
   // Estado en palabras del almacén. Corrige "PARCIAL (STOCK)" con 0 asignado:
@@ -3289,6 +3373,8 @@ document.addEventListener('keydown', e => {
     _mShowTab(tab);
     document.getElementById('viewTitle').textContent = M_TITULOS[tab] || '';
     document.getElementById('mColBtn').closest('.m-tabs-r').style.visibility = tab === 'asignacion' ? 'visible' : 'hidden';
+    const enLista = tab === 'lista';
+    ['.m-filtros', '#mKpis', '.m-acc', '#mChips', '#mLeyenda'].forEach(sel => { const el = document.querySelector(sel); if (el) el.style.display = enLista ? 'none' : ''; });
   };
 
   // ---------- Fuente del dato (publicado / en vivo / histórico) ----------
@@ -3404,6 +3490,239 @@ document.addEventListener('keydown', e => {
     if (e.key === 'ArrowRight' && document.getElementById('tSig')) document.getElementById('tSig').click();
     if (e.key === 'ArrowLeft' && document.getElementById('tAnt')) document.getElementById('tAnt').click();
   });
+
+  // ===================== ETAPA 3 · Preparar la lista de trabajo (F8_DETALLE) =====================
+  // Pendientes = líneas de REQUISICIONES_F8 de los últimos N días (servidor, con PIN).
+  // "Ya asignada" se marca aquí con historial.json (publicado), sin leer el histórico en el servidor.
+  // Nada se escribe en F8_DETALLE hasta que el analista confirma "Enviar a la lista de trabajo".
+  const LT = { filas: [], skus: {}, sel: new Map(), extras: [], actual: null, cargado: false, ocupado: false };
+  const ltKey = (f8, sku) => String(f8).trim() + '|' + String(sku).trim().replace(/^0+/, '');
+  const ltFmtF = iso => { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[3] + '/' + m[2] + '/' + m[1] : String(iso || ''); };
+  const ltEl = id => document.getElementById(id);
+
+  function ltEstado(txt, tipo) { const e = ltEl('ltEstado'); e.textContent = txt || ''; e.className = 'm-lt-estado' + (tipo ? ' m-lt-estado-' + tipo : ''); }
+
+  async function ltHistorialAsignadas() {
+    try {
+      const h = await fetch('historial.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json());
+      const c = h.cols, iD = c.indexOf('N_Doc'), iC = c.indexOf('Codigo'), iF = c.indexOf('FECHA_ASIGNACION');
+      const m = new Map();
+      (h.rows || []).forEach(r => { const k = ltKey(r[iD], r[iC]); if (!m.has(k)) m.set(k, String(r[iF] || 'sí').slice(0, 10)); });
+      return m;
+    } catch (e) { console.warn('historial.json no disponible:', e); return new Map(); }
+  }
+
+  async function ltTraer() {
+    if (LT.ocupado) return;
+    const s = window.__mSesion && window.__mSesion();
+    if (!s) { ltEstado('Ingrese su PIN para traer los pendientes.', 'bad'); return; }
+    LT.ocupado = true; ltEl('ltTraer').disabled = true;
+    const dias = +ltEl('ltDias').value || 30, t0 = Date.now();
+    ltEstado('Leyendo las Formas 8 de los últimos ' + dias + ' días… (unos 30 segundos)');
+    const tick = setInterval(() => ltEstado('Leyendo las Formas 8 de los últimos ' + dias + ' días… ' + Math.round((Date.now() - t0) / 1000) + ' s'), 1000);
+    try {
+      const [r, asig, act] = await Promise.all([
+        window.__mPost('motorPendientes', { dias }),
+        ltHistorialAsignadas(),
+        window.__mPost('motorDetalleActual', {})
+      ]);
+      if (!r.success) throw new Error(r.error || 'No se pudieron leer los pendientes');
+      const c = r.cols, ix = n => c.indexOf(n);
+      LT.filas = r.filas.map(a => {
+        const k = ltKey(a[ix('F8_ID')], a[ix('SKU')]);
+        return { k, f8: a[ix('F8_ID')], fecha: a[ix('FECHA_F8')], tipo: a[ix('TIPO')], punto: a[ix('UNIDAD_SALMI')], ue: a[ix('UNIDAD')] || a[ix('UNIDAD_SALMI')],
+          cat: a[ix('CATEG')], cedis: a[ix('CEDIS')], sku: a[ix('SKU')], sum: a[ix('SUMINISTRO')], sol: +a[ix('SOLICITADO')] || 0,
+          asig: asig.get(k) || '', enLista: !!a[ix('EN_LISTA')] };
+      });
+      LT.skus = r.skus || {};
+      LT.actual = act && act.success ? act.filas : [];
+      LT.cargado = true;
+      ltLlenarFiltros(); ltPintar(); ltPintarActual();
+      ltEstado(fmt(LT.filas.length) + ' líneas de los últimos ' + dias + ' días · leído en ' + Math.round((Date.now() - t0) / 1000) + ' s', 'ok');
+    } catch (e) { ltEstado(e.message || String(e), 'bad'); }
+    finally { clearInterval(tick); LT.ocupado = false; ltEl('ltTraer').disabled = false; }
+  }
+
+  function ltOpc(id, vals, todos) {
+    const sel = ltEl(id), prev = sel.value;
+    sel.innerHTML = `<option value="">${todos}</option>` + [...new Set(vals.filter(Boolean))].sort().map(v => `<option>${mEsc(v)}</option>`).join('');
+    if ([...sel.options].some(o => o.value === prev)) sel.value = prev;
+  }
+  function ltLlenarFiltros() {
+    ltOpc('ltUE', LT.filas.map(f => f.ue), 'Todas las unidades');
+    ltOpc('ltCedis', LT.filas.map(f => f.cedis), 'Todos los CEDIS');
+    ltOpc('ltCat', LT.filas.map(f => f.cat), 'Todas las categorías');
+    ltOpc('ltTipo', LT.filas.map(f => f.tipo), 'Todos los tipos');
+  }
+  function ltFiltradas() {
+    const ue = ltEl('ltUE').value, ce = ltEl('ltCedis').value, ca = ltEl('ltCat').value, ti = ltEl('ltTipo').value;
+    const q = ltEl('ltQ').value.trim().toLowerCase(), oc = ltEl('ltOcultarAsig').checked, soloSel = ltEl('ltSoloSel').checked;
+    return LT.filas.filter(f => (!ue || f.ue === ue) && (!ce || f.cedis === ce) && (!ca || f.cat === ca) && (!ti || f.tipo === ti)
+      && (!oc || !f.asig || LT.sel.has(f.k)) && (!soloSel || LT.sel.has(f.k))
+      && (!q || String(f.f8).toLowerCase().includes(q) || String(f.sku).includes(q) || String(f.sum).toLowerCase().includes(q)));
+  }
+  function ltIconos(sk) {
+    if (!sk) return '';
+    return mIconos({ Importancia: sk[6], Frio: !!sk[4], Narcotico: !!sk[5] });
+  }
+
+  function ltPintar() {
+    if (!LT.cargado) return;
+    const rows = ltFiltradas(), LIM = 2500, tb = ltEl('ltTabla').querySelector('tbody');
+    const porF8 = new Map();
+    rows.slice(0, LIM).forEach(f => { if (!porF8.has(f.f8)) porF8.set(f.f8, []); porF8.get(f.f8).push(f); });
+    let h = '';
+    porF8.forEach((ls, f8) => {
+      const a = ls[0], nSel = ls.filter(x => LT.sel.has(x.k)).length;
+      h += `<tr class="m-lt-g"><td><input type="checkbox" data-f8="${mEsc(f8)}" ${nSel === ls.length ? 'checked' : ''} ${nSel && nSel < ls.length ? 'data-medio="1"' : ''}></td>
+        <td colspan="15"><b>${mEsc(f8)}</b> · ${ltFmtF(a.fecha)} · ${mEsc(a.tipo)} · <b>${mEsc(a.ue)}</b>${a.cat ? ' · ' + mEsc(a.cat) : ''}${a.cedis ? ' · suple ' + mEsc(a.cedis) : ''}
+        <span class="m-dim"> · ${ls.length} líneas${nSel ? ' · ' + nSel + ' seleccionadas' : ''}</span></td></tr>`;
+      ls.forEach(f => {
+        const sk = LT.skus[f.sku], s = LT.sel.get(f.k), net = sk ? sk[0] : null, util = sk ? sk[1] : null;
+        const cls = f.asig ? 'm-cel-info' : f.enLista ? 'm-cel-warn' : '';
+        const est = f.asig ? 'Ya asignada ' + mEsc(f.asig) : f.enLista ? 'En la lista actual' : 'Nueva';
+        const alcanza = util == null ? '' : util >= (s ? s.cant : f.sol) ? 'm-cel-ok' : util > 0 ? 'm-cel-warn' : 'm-cel-bad';
+        h += `<tr data-k="${mEsc(f.k)}"${s ? ' class="m-lt-on"' : ''}>
+          <td><input type="checkbox" data-k="${mEsc(f.k)}" ${s ? 'checked' : ''}></td>
+          <td class="m-col-doc">${mEsc(f.f8).replace(/-/g, '-<wbr>')}</td><td class="m-col-fecha">${ltFmtF(f.fecha)}</td><td>${mEsc(f.tipo)}</td>
+          <td class="m-ue">${mEsc(f.ue)}</td><td>${mEsc(f.cat)}</td><td class="m-mono m-nw">${mEsc(f.sku)}</td>
+          <td class="m-sum">${ltIconos(sk)}${mEsc(f.sum)}</td><td>${mEsc(sk ? sk[7] : '')}</td>
+          <td class="right">${fmt(f.sol)}</td>
+          <td class="right"><input class="m-lt-cant" type="number" min="0" step="1" data-k="${mEsc(f.k)}" value="${s ? s.cant : f.sol}" ${s ? '' : 'disabled'}></td>
+          <td class="right m-col-stock">${net == null ? '<span class="m-dim">—</span>' : fmt(net)}</td>
+          <td class="right m-cel ${alcanza}" title="Existencia con vencimiento de 60 días o más">${util == null ? '—' : fmt(util)}</td>
+          <td class="right">${sk && sk[2] ? fmt(sk[2]) : '<span class="m-dim">-</span>'}</td>
+          <td class="right">${sk ? fmt(sk[3]) : ''}</td>
+          <td class="m-cel ${cls}">${est}</td></tr>`;
+      });
+    });
+    tb.innerHTML = h || `<tr><td colspan="16" class="m-vacio">${LT.filas.length ? 'No hay líneas con estos filtros.' : 'Presione "Traer pendientes".'}</td></tr>`;
+    tb.querySelectorAll('input[data-medio]').forEach(c => { c.indeterminate = true; });
+    ltEl('ltNota').textContent = rows.length > LIM ? `Se muestran ${fmt(LIM)} de ${fmt(rows.length)} líneas. Filtre por unidad o CEDIS para ver el resto.` : (rows.length ? fmt(rows.length) + ' líneas con estos filtros.' : '');
+    ltResumen();
+  }
+
+  function ltResumen() {
+    const sel = [...LT.sel.values()], f8 = new Set(sel.map(s => s.f8)), ue = new Set(sel.map(s => s.punto));
+    ltEl('ltResumen').innerHTML = `<b>${fmt(sel.length)}</b> ${sel.length === 1 ? 'línea seleccionada' : 'líneas seleccionadas'} · <b>${fmt(f8.size)}</b> ${f8.size === 1 ? 'Forma 8' : 'Formas 8'} · <b>${fmt(ue.size)}</b> ${ue.size === 1 ? 'unidad' : 'unidades'}` +
+      (LT.extras.length ? ` <span class="m-dim">(incluye ${fmt(LT.extras.length)} del Excel que no están en los pendientes)</span>` : '');
+    ltEl('ltEnviar').disabled = !sel.length;
+  }
+  function ltPintarActual() {
+    const a = LT.actual || [], f8 = new Set(a.map(x => x[0])), ue = [...new Set(a.map(x => x[1]))];
+    ltEl('ltActual').innerHTML = a.length
+      ? `Lista de trabajo actual (F8_DETALLE): <b>${fmt(a.length)}</b> líneas · <b>${fmt(f8.size)}</b> F8 · ${mEsc(ue.slice(0, 4).join(', '))}${ue.length > 4 ? ' y ' + (ue.length - 4) + ' más' : ''} <button type="button" class="m-btn-link" id="ltVerActual">Ver / descargar</button>`
+      : 'Lista de trabajo actual (F8_DETALLE): <b>vacía</b>';
+    const b = ltEl('ltVerActual'); if (b) b.onclick = ltDescargarActual;
+  }
+
+  function ltSel(f, on) {
+    if (on) LT.sel.set(f.k, { k: f.k, f8: f.f8, punto: f.punto, fecha: f.fecha, sku: f.sku, cant: (LT.sel.get(f.k) || {}).cant || f.sol, tipo: f.tipo });
+    else LT.sel.delete(f.k);
+  }
+  const ltPorK = () => { const m = new Map(); LT.filas.forEach(f => m.set(f.k, f)); return m; };
+
+  // ---------- Excel: descargar y subir (formato F8_DETALLE + columnas de apoyo) ----------
+  function ltLibro(nombre, filas) {
+    const ws = XLSX.utils.aoa_to_sheet(filas);
+    ws['!cols'] = filas[0].map((h, i) => ({ wch: i === 9 ? 50 : Math.max(10, String(h).length + 2) }));
+    ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: filas.length - 1, c: filas[0].length - 1 } }) };
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'F8_DETALLE');
+    XLSX.writeFile(wb, nombre);
+  }
+  function ltDescargar() {
+    if (!LT.cargado) return alert('Primero traiga los pendientes.');
+    const rows = ltFiltradas();
+    const H = ['INCLUIR', 'F8_ID', 'UNIDAD_SALMI', 'FECHA_F8', 'SKU', 'CANT_SOLICITADA', 'TIPO', 'UNIDAD', 'CATEGORIA', 'SUMINISTRO', 'SOLICITADO_ORIG', 'EXISTENCIA_CEDIS', 'UTILIZABLE_60D', 'RESERVADO', 'EMPAQUE', 'VEN', 'CEDIS_QUE_SUPLE', 'ESTADO'];
+    const out = [H];
+    rows.forEach(f => { const s = LT.sel.get(f.k), sk = LT.skus[f.sku] || [];
+      out.push([s ? 'SI' : 'NO', f.f8, f.punto, ltFmtF(f.fecha), f.sku, s ? s.cant : f.sol, f.tipo, f.ue, f.cat, f.sum, f.sol, sk[0] ?? '', sk[1] ?? '', sk[2] ?? '', sk[3] ?? '', sk[6] || '', f.cedis, f.asig ? 'Ya asignada ' + f.asig : f.enLista ? 'En la lista actual' : 'Nueva']); });
+    ltLibro('Pendientes_F8_' + new Date().toISOString().slice(0, 10) + '.xlsx', out);
+  }
+  function ltDescargarActual() {
+    const a = LT.actual || [];
+    ltLibro('Lista_de_trabajo_actual_' + new Date().toISOString().slice(0, 10) + '.xlsx',
+      [['F8_ID', 'UNIDAD_SALMI', 'FECHA_F8', 'SKU', 'CANT_SOLICITADA', 'TIPO']].concat(a.map(x => [x[0], x[1], ltFmtF(x[2]), x[3], x[4], x[5]])));
+  }
+  function ltFechaISO(v) {
+    if (v instanceof Date && !isNaN(v)) return v.getFullYear() + '-' + String(v.getMonth() + 1).padStart(2, '0') + '-' + String(v.getDate()).padStart(2, '0');
+    if (typeof v === 'number') { const d = XLSX.SSF.parse_date_code(v); return d ? d.y + '-' + String(d.m).padStart(2, '0') + '-' + String(d.d).padStart(2, '0') : ''; }
+    const s = String(v || '').trim(); let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return m[0];
+    m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); return m ? m[3] + '-' + m[2].padStart(2, '0') + '-' + m[1].padStart(2, '0') : '';
+  }
+  function ltSubir(file) {
+    const rd = new FileReader();
+    rd.onload = ev => {
+      try {
+        const wb = XLSX.read(ev.target.result, { type: 'array', cellDates: true });
+        const ws = wb.Sheets[wb.SheetNames.includes('F8_DETALLE') ? 'F8_DETALLE' : wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+        const H = k => Object.keys(rows[0] || {}).find(x => String(x).trim().toUpperCase() === k);
+        const cI = H('INCLUIR'), c = { f8: H('F8_ID'), pu: H('UNIDAD_SALMI'), fe: H('FECHA_F8'), sku: H('SKU'), q: H('CANT_SOLICITADA'), ti: H('TIPO') };
+        if (Object.values(c).some(x => !x)) throw new Error('El Excel debe tener las columnas F8_ID, UNIDAD_SALMI, FECHA_F8, SKU, CANT_SOLICITADA y TIPO (como F8_DETALLE).');
+        const porK = ltPorK(); LT.sel.clear(); LT.extras = []; let malas = 0;
+        rows.forEach(r => {
+          if (cI && String(r[cI]).trim().toUpperCase() === 'NO') return;
+          const f8 = String(r[c.f8]).trim(), sku = String(r[c.sku]).trim(), q = Number(String(r[c.q]).replace(/,/g, '')), fe = ltFechaISO(r[c.fe]);
+          if (!f8 || !sku) return;
+          if (!(q > 0) || !fe || !String(r[c.pu]).trim() || !String(r[c.ti]).trim()) { malas++; return; }
+          const k = ltKey(f8, sku), f = porK.get(k);
+          LT.sel.set(k, { k, f8, punto: String(r[c.pu]).trim(), fecha: fe, sku, cant: q, tipo: String(r[c.ti]).trim() });
+          if (!f) LT.extras.push(k);
+        });
+        ltEl('ltSoloSel').checked = true; ltPintar();
+        ltEstado('Excel cargado: ' + fmt(LT.sel.size) + ' líneas seleccionadas' + (malas ? ' · ' + malas + ' líneas incompletas no se tomaron' : '') + '. Revise y envíe a la lista de trabajo.', malas ? 'warn' : 'ok');
+      } catch (e) { ltEstado(e.message || String(e), 'bad'); }
+    };
+    rd.readAsArrayBuffer(file);
+  }
+
+  // ---------- Enviar a F8_DETALLE ----------
+  function ltAbrirEnvio() {
+    const sel = [...LT.sel.values()]; if (!sel.length) return;
+    const f8 = new Set(sel.map(s => s.f8)), ue = [...new Set(sel.map(s => s.punto))];
+    const act = LT.actual || [];
+    ltEl('ltEnvioRes').innerHTML = `Va a enviar <b>${fmt(sel.length)}</b> líneas de <b>${fmt(f8.size)}</b> Formas 8 (${mEsc(ue.slice(0, 6).join(', '))}${ue.length > 6 ? ' y ' + (ue.length - 6) + ' más' : ''}).<br>
+      Hoy F8_DETALLE tiene <b>${fmt(act.length)}</b> líneas. Antes de escribir se guarda una copia en F8_DETALLE_RESPALDO.`;
+    ltEl('ltEnvioOk').disabled = false; ltEl('ltEnvioOk').textContent = 'Enviar a la lista de trabajo';
+    ltEl('ltEnvioMsg').textContent = ''; ltEl('ltEnvio').style.display = 'block';
+  }
+  async function ltEnviar() {
+    const sel = [...LT.sel.values()], modo = document.querySelector('input[name=ltModo]:checked').value;
+    const b = ltEl('ltEnvioOk'); b.disabled = true; b.textContent = 'Enviando…'; ltEl('ltEnvioMsg').textContent = '';
+    try {
+      const r = await window.__mPost('motorCargarDetalle', { modo, nota: ltEl('ltNotaEnvio').value.trim(),
+        filas: sel.map(s => [s.f8, s.punto, s.fecha, s.sku, s.cant, s.tipo]) });
+      if (!r.success) throw new Error(r.error || 'No se pudo escribir');
+      ltEl('ltEnvioMsg').innerHTML = `<span class="m-ok">Listo: ${fmt(r.escritas)} líneas ${modo === 'agregar' ? 'agregadas' : 'escritas'}${r.omitidas ? ' (' + r.omitidas + ' ya estaban)' : ''}. La lista tiene ahora ${fmt(r.total)} líneas. Copia previa: ${fmt(r.respaldadas)} líneas.</span><br>El siguiente paso es ejecutar la asignación en el Motor.`;
+      b.textContent = 'Enviado';
+      const act = await window.__mPost('motorDetalleActual', {}); LT.actual = act.success ? act.filas : LT.actual;
+      const enL = new Set((LT.actual || []).map(x => ltKey(x[0], x[3]))); LT.filas.forEach(f => { f.enLista = enL.has(f.k); });
+      ltPintarActual(); ltPintar();
+    } catch (e) { ltEl('ltEnvioMsg').innerHTML = '<span class="m-neg">' + mEsc(e.message || String(e)) + '</span>'; b.disabled = false; b.textContent = 'Reintentar'; }
+  }
+
+  (function () {
+    const v = ltEl('view_lista'); if (!v) return;
+    ltEl('ltTraer').addEventListener('click', ltTraer);
+    ['ltUE', 'ltCedis', 'ltCat', 'ltTipo', 'ltOcultarAsig', 'ltSoloSel'].forEach(id => ltEl(id).addEventListener('change', ltPintar));
+    let tq; ltEl('ltQ').addEventListener('input', () => { clearTimeout(tq); tq = setTimeout(ltPintar, 250); });
+    ltEl('ltTabla').addEventListener('change', ev => {
+      const t = ev.target, porK = ltPorK();
+      if (t.dataset.f8 !== undefined && t.type === 'checkbox') { ltFiltradas().filter(f => f.f8 === t.dataset.f8).forEach(f => ltSel(f, t.checked)); ltPintar(); return; }
+      if (t.type === 'checkbox' && t.dataset.k) { const f = porK.get(t.dataset.k); if (f) ltSel(f, t.checked); ltPintar(); return; }
+      if (t.classList.contains('m-lt-cant')) { const s = LT.sel.get(t.dataset.k); const q = Math.max(0, Math.round(+t.value || 0)); if (s) { if (q > 0) s.cant = q; else LT.sel.delete(t.dataset.k); } ltPintar(); }
+    });
+    ltEl('ltSelTodo').addEventListener('click', () => { ltFiltradas().forEach(f => ltSel(f, true)); ltPintar(); });
+    ltEl('ltSelNada').addEventListener('click', () => { ltFiltradas().forEach(f => ltSel(f, false)); ltPintar(); });
+    ltEl('ltLimpiar').addEventListener('click', () => { LT.sel.clear(); LT.extras = []; ltEl('ltSoloSel').checked = false; ltPintar(); });
+    ltEl('ltExcel').addEventListener('click', ltDescargar);
+    ltEl('ltSubirBtn').addEventListener('click', () => ltEl('ltSubir').click());
+    ltEl('ltSubir').addEventListener('change', e => { if (e.target.files[0]) ltSubir(e.target.files[0]); e.target.value = ''; });
+    ltEl('ltEnviar').addEventListener('click', ltAbrirEnvio);
+    ltEl('ltEnvioOk').addEventListener('click', ltEnviar);
+    ltEl('ltEnvioNo').addEventListener('click', () => { ltEl('ltEnvio').style.display = 'none'; });
+  })();
 
   </script>
 <div class="tour-bg" id="tour"><div class="tour-hl" id="tourHl"></div><div class="tour-box" id="tourBox"></div></div>
