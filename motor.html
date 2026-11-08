@@ -318,7 +318,8 @@ body.m .tab.m-tab-lista.active{background:#1f5fb4;color:#fff}
 .m-lt-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:8px}
 .m-lt-bar label{display:block;font-size:11.5px;color:#5a6878;margin:0 0 4px;font-weight:600}
 .m-lt-bar input,.m-lt-bar select{padding:7px 9px;border:1px solid #cdd6e2;border-radius:8px;font-size:13px;background:#fff}
-.m-lt-bar .m-f-btn{display:block}.m-lt-bar .m-f-btn select{margin-right:6px}
+.m-lt-bar .m-f-dias{flex:0 0 160px;min-width:150px}.m-lt-bar .m-f-btn{flex:0 0 auto}.m-lt-bar .m-f-btn .m-btn{padding:9px 14px}
+.m-lt-bar select,.m-lt-bar input{width:100%;box-sizing:border-box}
 .m-lt-estado{font-size:12.5px;color:#5a6878;margin:4px 0 8px}
 .m-lt-estado-ok{color:#1f6f43}.m-lt-estado-bad{color:#a61b1b;font-weight:600}.m-lt-estado-warn{color:#7a5200}
 .m-lt-acc{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
@@ -453,9 +454,9 @@ body.m .tab.m-tab-lista.active{background:#1f5fb4;color:#fff}
 
       <div id="view_lista" class="view" style="display:none">
         <div class="m-lt-bar">
-          <div class="m-f m-f-btn"><label>Formas 8 de los últimos</label>
-            <select id="ltDias"><option value="7">7 días</option><option value="15">15 días</option><option value="30" selected>30 días</option><option value="45">45 días</option><option value="60">60 días</option><option value="90">90 días</option></select>
-            <button id="ltTraer" class="m-btn m-btn-pri" type="button">Traer pendientes</button></div>
+          <div class="m-f m-f-dias"><label title="Fecha de la Forma 8">Período</label>
+            <select id="ltDias"><option value="7">Últimos 7 días</option><option value="15">Últimos 15 días</option><option value="30" selected>Últimos 30 días</option><option value="45">Últimos 45 días</option><option value="60">Últimos 60 días</option><option value="90">Últimos 90 días</option></select></div>
+          <div class="m-f m-f-btn"><button id="ltTraer" class="m-btn m-btn-pri" type="button">Traer pendientes</button></div>
           <div class="m-f"><label>Unidad</label><select id="ltUE"><option value="">Todas las unidades</option></select></div>
           <div class="m-f"><label>CEDIS que la suple</label><select id="ltCedis"><option value="">Todos los CEDIS</option></select></div>
           <div class="m-f"><label>Categoría</label><select id="ltCat"><option value="">Todas las categorías</option></select></div>
@@ -3528,7 +3529,9 @@ document.addEventListener('keydown', e => {
       ]);
       if (!r.success) throw new Error(r.error || 'No se pudieron leer los pendientes');
       const c = r.cols, ix = n => c.indexOf(n);
-      LT.filas = r.filas.map(a => {
+      // Las transferencias son movimientos entre unidades: el Motor no las asigna, aquí tampoco se muestran.
+      const esTransf = t => /TRA(N)?SFERENCIA/i.test(String(t || ''));
+      LT.filas = r.filas.filter(a => !esTransf(a[ix('TIPO')])).map(a => {
         const k = ltKey(a[ix('F8_ID')], a[ix('SKU')]);
         return { k, f8: a[ix('F8_ID')], fecha: a[ix('FECHA_F8')], tipo: a[ix('TIPO')], punto: a[ix('UNIDAD_SALMI')], ue: a[ix('UNIDAD')] || a[ix('UNIDAD_SALMI')],
           cat: a[ix('CATEG')], cedis: a[ix('CEDIS')], sku: a[ix('SKU')], sum: a[ix('SUMINISTRO')], sol: +a[ix('SOLICITADO')] || 0,
