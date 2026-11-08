@@ -167,17 +167,17 @@ body.m .tab.active{background:#0b1f3a;border-color:#0b1f3a;color:#fff;font-weigh
 .m-tabs-r{margin-left:auto}
 .m-viewtitle{font-size:12.5px;color:#5a6878;margin:10px 0 8px}
 body.m .scroll{max-height:64vh;border:1px solid #e1e6ee;border-radius:10px;background:#fff}
-body.m table{font-size:12px}
-body.m th,body.m td{border:none;border-bottom:1px solid #edf0f5;padding:6px 8px}
-body.m th{background:#f6f8fb;color:#3d4a5a;font-weight:600;font-size:11.5px;text-align:left;white-space:nowrap}
+body.m table{font-size:11px}
+body.m th,body.m td{border:none;border-bottom:1px solid #edf0f5;padding:4px 5px}
+body.m th{background:#f6f8fb;color:#3d4a5a;font-weight:600;font-size:10.5px;text-align:left;white-space:normal;line-height:1.15}
 body.m th.right{text-align:right}
 body.m tbody tr:hover td{background:#f7faff}
 .m-tbl .mx{display:none}
 .m-tbl.m-full .mx{display:table-cell}
 .m-nw{white-space:nowrap}
 .m-mono{font-family:ui-monospace,Consolas,monospace;font-size:11.5px}
-.m-sum{min-width:240px;max-width:420px}
-.m-ue{min-width:120px;max-width:200px}
+.m-sum{min-width:150px;max-width:220px;line-height:1.2}
+.m-ue{min-width:80px;max-width:110px;line-height:1.2}
 .m-b{font-weight:700}
 .m-dim{color:#9aa6b4}
 .m-est{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap}
@@ -254,6 +254,22 @@ body.m tbody tr:hover td{background:#f7faff}
 [data-theme="dark"] .modal-body{color:#e2e8f0}
 [data-theme="dark"] .m-btn-pri{background:#2b4a7e;color:#fff}
 
+.m-col-fecha{white-space:normal;max-width:62px;line-height:1.15}
+.m-col-doc{max-width:92px;line-height:1.15}
+.m-tbl .m-lnk{padding:2px 6px;font-size:11px}
+.m-tbl .m-est{font-size:10.5px;padding:1px 6px}.m-tbl .m-tag{font-size:9.5px;padding:1px 4px}
+.m-usuario{font-size:12px;color:#e6edf6;white-space:nowrap}
+.m-salir{color:#9fc2ff!important;padding:0!important;font-size:12px}
+.m-gate{position:fixed;inset:0;z-index:30000;background:#0b1f3a;display:flex;align-items:center;justify-content:center;padding:16px}
+.m-gate-c{background:#fff;color:#1d2733;border-radius:14px;padding:26px 30px;width:100%;max-width:340px;box-shadow:0 10px 40px rgba(0,0,0,.35);text-align:center}
+.m-gate-iso{width:56px;height:56px;object-fit:contain}
+.m-gate-t{font-size:18px;font-weight:700;color:#0b1f3a;margin-top:6px}.m-gate-s{font-size:12.5px;color:#5a6878;margin:2px 0 16px}
+.m-gate-c label{display:block;text-align:left;font-size:12px;font-weight:600;color:#0b1f3a;margin-bottom:5px}
+.m-gate-c input{width:100%;box-sizing:border-box;padding:10px;font-size:22px;letter-spacing:8px;text-align:center;border:1.5px solid #cdd6e2;border-radius:10px}
+.m-gate-e{min-height:18px;font-size:12.5px;color:#a61b1b;margin:8px 0 6px}
+.m-gate-c .m-btn{width:100%;padding:11px;font-size:14px}
+.m-gate-n{font-size:11.5px;color:#6b7785;margin-top:10px}
+
   </style>
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
@@ -267,6 +283,7 @@ body.m tbody tr:hover td{background:#f7faff}
     </div>
     <div class="m-top-r">
       <span id="mFuente" class="m-fuente">Cargando…</span>
+      <span id="mUsuario" class="m-usuario"></span>
       <button id="btnLoadDaily" class="m-btn m-btn-ghost">Corte diario</button>
       <button id="btnLoadHistory" class="m-btn m-btn-ghost">Histórico</button>
       <button id="mAyuda" class="m-btn m-btn-ghost" type="button">Recorrido guiado</button>
@@ -446,6 +463,68 @@ body.m tbody tr:hover td{background:#f7faff}
       }
       cargando=false;
     };
+  })();
+
+  // ===== Acceso con PIN (MOTOR_ACCESO.gs en una implementación aparte) =====
+  // El servidor valida el PIN en cada acción; aquí solo se recuerda 8 horas.
+  window.MOTOR_API = 'https://script.google.com/macros/s/AKfycbzEjZwgX8yiA3tewhG-uoM-Ldkg9y2hs4dhlxD9X8Kgnlnv8XMNya_MG8MvGqI-G5mb/exec';
+  (function(){
+    const KEY='motor_sesion_v1', TTL=8*3600e3;
+    let ses=null;
+    try { const s=JSON.parse(localStorage.getItem(KEY)||'null'); if (s && s.exp>Date.now() && s.pin) ses=s; } catch(e){}
+    window.__mSesion = () => ses;
+    async function post(action, datos){
+      const r = await fetch(window.MOTOR_API, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body: JSON.stringify(Object.assign({ action: action, pin: ses && ses.pin }, datos||{})) });
+      if (!r.ok) throw new Error('El Motor respondió '+r.status);
+      return r.json();
+    }
+    window.__mPost = async function(action, datos){
+      const r = await post(action, datos);
+      if (r && r.sesion) { salir(); throw new Error(r.error || 'Sesión no válida'); }
+      return r;
+    };
+    window.__mNotificarPost = async function(p){
+      const r = await window.__mPost('motorNotificar', p);
+      if (!r.success) throw new Error(r.error || 'No se pudo notificar');
+      return r.data;
+    };
+    function pintarUsuario(){
+      const el=document.getElementById('mUsuario'); if(!el) return;
+      el.innerHTML = ses ? (esc(ses.nombre.split(' ')[0])+' · <button type="button" id="mSalir" class="m-btn-link m-salir">Salir</button>') : '';
+      const b=document.getElementById('mSalir'); if(b) b.onclick=salir;
+    }
+    function esc(v){ return String(v==null?'':v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+    function salir(){ ses=null; try{ localStorage.removeItem(KEY); }catch(e){} pintarUsuario(); mostrarGate(); }
+    function mostrarGate(){
+      if (document.getElementById('mGate')) return;
+      const ov=document.createElement('div'); ov.id='mGate'; ov.className='m-gate';
+      ov.innerHTML='<form class="m-gate-c" id="mGateF" autocomplete="off">'+
+        '<img src="icons/icon-192.png" alt="" class="m-gate-iso">'+
+        '<div class="m-gate-t">Motor de Asignación F8</div><div class="m-gate-s">CEDIS Panamá · Acceso restringido</div>'+
+        '<label for="mGatePin">Ingrese su PIN</label>'+
+        '<input id="mGatePin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" data-lpignore="true">'+
+        '<div class="m-gate-e" id="mGateE" role="alert"></div>'+
+        '<button class="m-btn m-btn-pri" type="submit" id="mGateB">Entrar</button>'+
+        '<div class="m-gate-n">El mismo PIN del Kanban. La sesión dura 8 horas en este equipo.</div></form>';
+      document.body.appendChild(ov);
+      const inp=document.getElementById('mGatePin'), err=document.getElementById('mGateE'), btn=document.getElementById('mGateB');
+      setTimeout(()=>inp.focus(),50);
+      document.getElementById('mGateF').addEventListener('submit', async ev=>{
+        ev.preventDefault(); const pin=inp.value.trim();
+        if(!/^\d{4,6}$/.test(pin)){ err.textContent='El PIN tiene 4 a 6 dígitos.'; return; }
+        btn.disabled=true; btn.textContent='Verificando…'; err.textContent='';
+        try{
+          ses={pin:pin}; const r=await post('motorLogin',{});
+          if(!r.success){ ses=null; err.textContent=r.error||'PIN incorrecto.'; inp.value=''; inp.focus(); return; }
+          ses={pin:pin, nombre:r.nombre, rol:r.rol, exp:Date.now()+TTL};
+          try{ localStorage.setItem(KEY, JSON.stringify(ses)); }catch(e){}
+          ov.remove(); pintarUsuario();
+        }catch(e){ ses=null; err.textContent='Sin conexión con el Motor. Intente de nuevo.'; }
+        finally{ btn.disabled=false; btn.textContent='Entrar'; }
+      });
+    }
+    document.addEventListener('DOMContentLoaded', ()=>{ pintarUsuario(); if(!ses) mostrarGate(); });
   })();
 
   </script>
@@ -2780,7 +2859,7 @@ async function _ejecutarEnvioCorreo(ues) {
     }
 
     try {
-      const res = await loadJsonp(url, 120000); // timeout 2 min por parte
+      const res = await window.__mNotificarPost({ modo: modo, ues: t.ue, f8s: t.f8s.join(','), parte: t.parte, total: t.total });
       totalEnviados += (res && res.enviados) || 0;
       totalSinC     += (res && res.sinContacto) || 0;
       totalErr      += (res && res.errores) || 0;
@@ -2922,8 +3001,8 @@ document.addEventListener('keydown', e => {
   }
   const M_COLS = [
     { k: 'ver', t: 'Ver', c: 'center', fijo: true, f: (r, i) => `<button class="m-lnk" onclick="openAudit(${i})" title="Cómo se asignó">Ver</button>` },
-    { k: 'fecha', t: 'Fecha F8', c: 'm-nw', f: r => mEsc(r.Fecha) },
-    { k: 'doc', t: 'Doc', c: 'm-nw', f: r => mEsc(r.N_Doc) },
+    { k: 'fecha', t: 'Fecha F8', c: 'm-col-fecha', f: r => mEsc(r.Fecha) },
+    { k: 'doc', t: 'Doc', c: 'm-col-doc', f: r => mEsc(r.N_Doc).replace(/-/g, '-<wbr>') },
     { k: 'tipo', t: 'Tipo', f: r => mEsc(r.Tipo) },
     { k: 'ue', t: 'UE', c: 'm-ue', f: r => mEsc(r.Punto) },
     { k: 'cat', t: 'Categoría', f: r => mEsc(r.Categoria) },
@@ -2942,7 +3021,7 @@ document.addEventListener('keydown', e => {
     { k: 'pend', t: 'Pend.', c: 'right', f: r => fmt(r.Pendiente) },
     { k: 'bultos', t: 'Bultos', c: 'center m-nw', tit: 'Terciario / secundario / primario', f: r => fmtBultosTriple(r.Bultos_Ter || 0, r.Bultos_Sec || 0, r.Bultos_Prim || 0) },
     { k: 'lotes', t: 'Lotes / Info', c: 'm-small', f: r => mEsc(r.Lotes_Usados) + (r.Transito_Info ? `${r.Lotes_Usados ? ' | ' : ''}<b class="m-col-tr">${mEsc(r.Transito_Info)}</b>` : '') },
-    { k: 'ult', t: 'Últ. Desp', c: 'm-nw', f: r => mEsc(r.Ultimo_Despacho || '-') },
+    { k: 'ult', t: 'Últ. Desp', c: 'm-col-fecha', f: r => mEsc(r.Ultimo_Despacho || '-') },
     { k: 'qty', t: 'Qty', c: 'right', f: r => dashSi(r.Qty_Ultimo) },
     { k: 'prom', t: 'Prom', c: 'right', f: r => dashSi(r.Promedio_Hist) },
     { k: 'estado', t: 'Estado', f: r => { const e = mEstado(r); return `<span class="m-est m-est-${e.c}" title="Motor: ${mEsc(r.Estado)}">${e.t}</span>${e.d ? `<div class="m-est-d">${e.d}</div>` : ''}`; } },
