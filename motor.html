@@ -1,0 +1,3188 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <link rel="icon" href="./favicon.ico?v=1"/>
+  <title>Motor de Asignación F8 | CEDIS Panamá</title>
+  <style>
+
+    body{font-family:Arial, sans-serif; margin:0; background:#fff;}
+    .topbar{
+      background: linear-gradient(90deg,#0b1f3a,#133a74);
+      color:#fff; padding:12px 14px; display:flex; align-items:center; gap:12px;
+      box-shadow:0 2px 10px rgba(0,0,0,.2);
+      position:sticky; top:0; z-index:9999; width:100%; box-sizing:border-box;
+    }
+    .topbar img{width:40px;height:40px;object-fit:contain;flex-shrink:0;background:transparent;}
+    .topbar .title{flex:1 1 auto;min-width:200px;display:flex;flex-direction:column;line-height:1.2;}
+    .topbar .title-main{font-size:16px;font-weight:700;letter-spacing:.3px;color:#fff;}
+    .topbar .title-sub{font-size:12px;font-weight:400;color:#cbd5e1;margin-top:2px;}
+    .topbar .top-actions{display:flex;gap:8px;align-items:center;flex:0 0 auto;}
+    .topbar .theme-select{padding:6px 8px;border:1px solid rgba(255,255,255,.25);border-radius:10px;background:transparent;color:#fff;min-width:110px;}
+    .topbar .theme-select option{background:#0b1f3a;color:#fff;}
+    @media (max-width:720px){
+      .topbar{flex-direction:column;align-items:center;text-align:center;position:static;}
+      .topbar .top-actions{width:100%;justify-content:center;margin-top:8px;}
+      .topbar .theme-select{width:100%;max-width:220px;}
+    }
+    .page { padding: 10px; max-width: 100vw; overflow-x: hidden; }
+    .grid { display: block; } /* Ya no es grid lateral */
+    .card-filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; align-items: end; padding-bottom: 10px; margin-bottom: 15px; border-bottom: 1px solid #eee; }
+    .full-width-btn { grid-column: 1 / -1; display:flex; gap:10px; justify-content:flex-end; margin-top:10px; }
+    .card{border:1px solid #ddd;border-radius:10px;padding:12px;box-shadow:0 1px 2px rgba(0,0,0,.04);background:#fff;}
+    h1{font-size:18px;margin:0 0 8px 0;}
+    h2{font-size:14px;margin:0 0 8px 0;}
+    label{display:block;font-size:12px;margin-top:6px;}
+    select,input{width:100%;padding:8px;border:1px solid #ccc;border-radius:8px;box-sizing:border-box;}
+    button{padding:9px 12px;border:1px solid #333;border-radius:10px;background:#fff;cursor:pointer;}
+    button:disabled{opacity:.5;cursor:not-allowed;}
+       /* CAMBIO: Usamos grid-template-columns: repeat(auto-fit, minmax(...)) para que quepan todos */
+    .kpi {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr); /* Fuerza 6 columnas iguales */
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+    
+    /* Ajuste para pantallas pequeñas */
+    @media (max-width: 1200px) {
+        .kpi { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    .kpi .box {
+        border: 1px solid #e5e5e5;
+        border-radius: 8px;
+        padding: 6px 10px; /* Reducimos padding para ahorrar más espacio */
+        background: #fdfdfd;
+        min-width: 0; /* Evita desbordes en grid */
+    }
+    .kpi .value{font-size:16px;font-weight:700;margin-top:6px;}
+    .muted{color:#666;font-size:12px;}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+    .tab{border:1px solid #ddd;border-radius:999px;padding:7px 10px;font-size:12px;cursor:pointer;user-select:none;background:#fff;}
+    .tab.active{border-color:#333;font-weight:700;}
+    table { border-collapse: collapse; width: 100%; font-size: 10px; table-layout: auto; }
+    th, td { border: 1px solid #ddd; padding: 3px 4px; vertical-align: middle; }
+    th{background:#f7f7f7;position:sticky;top:0;z-index:1;}
+    .scroll{max-height:62vh;overflow:auto;border:1px solid #ddd;border-radius:10px;}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+    .row > *{flex:1 1 auto;}
+    .pill{display:inline-block;border:1px solid #ddd;border-radius:999px;padding:2px 8px;font-size:12px;}
+    .right{text-align:right;}
+    .center{text-align:center;}
+    .danger{color:#b00020;}
+    .ok{color:#0a7a2f;}
+    
+    /* Botones especiales */
+    .btn-main { background: #0b1f3a; color: white; border: none; font-weight:700;}
+    .btn-daily { background: #0a7a2f; color: white; border: none; }
+    .btn-history { background: #444; color: white; border: none; }
+    .btn-secondary { background: #f0f0f0; color: #333; border: 1px solid #ccc; }
+        /* --- ESTILOS MODAL AUDITORIA --- */
+    .modal { display: none; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(2px); }
+    .modal-content { background-color: #fefefe; margin: 5% auto; padding: 0; border: 1px solid #888; width: 600px; max-width: 90%; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); animation: slideIn 0.3s; }
+    .modal-header { padding: 15px 20px; background: #0b1f3a; color: white; border-top-left-radius: 12px; border-top-right-radius: 12px; display:flex; justify-content:space-between; align-items:center; }
+    .modal-body { padding: 20px; font-size: 14px; line-height: 1.5; color: #333; max-height: 70vh; overflow-y: auto; }
+    .close-btn { color: #aaa; font-size: 28px; font-weight: bold; cursor: pointer; }
+    .close-btn:hover { color: #fff; }
+    @keyframes slideIn { from {transform: translateY(-50px); opacity: 0;} to {transform: translateY(0); opacity: 1;} }
+    .audit-step { margin-bottom: 15px; padding-left: 15px; border-left: 3px solid #ddd; }
+    .audit-step.ok { border-left-color: #2e7d32; }
+    .audit-step.warn { border-left-color: #f57f17; }
+    .audit-step.danger { border-left-color: #c62828; }
+    .audit-title { font-weight: bold; display: block; margin-bottom: 4px; font-size: 13px; text-transform: uppercase; color: #555; }
+    .audit-val { font-family: monospace; font-weight: bold; background: #eee; padding: 2px 6px; border-radius: 4px; }
+  
+[hidden]{display:none!important}
+/* ===== MOTOR · capa visual nueva ===== */
+body.m{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:#f4f6f9;color:#1d2733;margin:0}
+body.m button{font-family:inherit}
+.m-top{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:12px;padding:10px 18px;background:#0b1f3a;color:#fff;box-shadow:0 1px 6px rgba(0,0,0,.18)}
+.m-iso{width:36px;height:36px;object-fit:contain;flex:0 0 auto}
+.m-tit{flex:1 1 auto;min-width:0}
+.m-tit1{font-size:16px;font-weight:700;letter-spacing:.2px}
+.m-tit-ced{font-weight:400;color:#9fb3cf;margin-left:6px;font-size:13px}
+.m-tit2{font-size:12px;color:#c3d0e2;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m-top-r{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.m-fuente{font-size:11.5px;padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.12);color:#e6edf6;white-space:nowrap}
+.m-fuente-ok{background:#1f6f43;color:#fff}
+.m-fuente-hist{background:#5b4b8a;color:#fff}
+.m-fuente-bad{background:#9b1c1c;color:#fff}
+.m-aviso{background:#fff4d6;color:#6b4a00;border-bottom:1px solid #f0d58c;padding:8px 18px;font-size:13px}
+.m-page{padding:14px 18px 40px;max-width:1600px;margin:0 auto;box-sizing:border-box}
+.m-card{background:#fff;border:1px solid #e1e6ee;border-radius:12px;padding:12px 14px}
+.m-btn{border:1px solid transparent;border-radius:8px;padding:8px 12px;font-size:12.5px;font-weight:600;cursor:pointer;background:#fff;color:#1d2733;line-height:1.1}
+.m-btn-pri{background:#0b1f3a;color:#fff}
+.m-btn-pri:hover{background:#163a6b}
+.m-btn-ghost{background:transparent;border-color:#c9d3e0;color:inherit}
+.m-top .m-btn-ghost{border-color:rgba(255,255,255,.35);color:#fff}
+.m-top .m-btn-ghost:hover{background:rgba(255,255,255,.1)}
+.m-btn-out{background:#fff;border-color:#c9d3e0;color:#1d2733}
+.m-btn-out:hover{border-color:#0b1f3a}
+.m-btn-wa{background:#1b8a4b;color:#fff}
+.m-btn-wa:hover{background:#156e3c}
+.m-btn-link{background:none;border:none;color:#1f5fb4;padding:8px 4px;text-decoration:underline}
+/* filtros */
+.m-filtros label{display:block;font-size:11.5px;color:#5a6878;margin:0 0 4px;font-weight:600}
+.m-filtros input,.m-filtros select{padding:7px 9px;border:1px solid #cdd6e2;border-radius:8px;font-size:13px;background:#fff}
+.m-f-row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.m-f{flex:1 1 140px;min-width:120px}
+.m-f-q{flex:2 1 220px}
+.m-f-ue{flex:2 1 200px}
+.m-f-btn{flex:0 0 auto;display:flex;gap:6px;align-items:center}
+.m-f-row2{margin-top:10px;padding-top:10px;border-top:1px dashed #dde3ec}
+.m-f-chk{display:flex;align-items:flex-end}
+.m-chk{display:flex!important;align-items:center;gap:6px;font-size:12.5px!important;color:#1d2733!important;font-weight:500!important;cursor:pointer;white-space:nowrap;margin:0!important}
+.m-chk input{width:auto!important;margin:0}
+/* KPIs */
+.m-kpis{display:grid;grid-template-columns:1fr 1.6fr 1fr 1fr;gap:10px;margin-top:12px}
+.m-kpi{background:#fff;border:1px solid #e1e6ee;border-radius:12px;padding:10px 14px;min-width:0}
+.m-kpi-l{font-size:11.5px;color:#5a6878;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+.m-kpi-v{font-size:24px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums}
+.m-kpi-s{font-size:12px;color:#5a6878;margin-top:4px}
+.m-kpi-main .m-kpi-v{color:#0b1f3a}
+.m-kpi-alert .m-kpi-v{color:#a61b1b}
+.m-bar{height:6px;background:#e7ecf3;border-radius:6px;margin-top:6px;overflow:hidden}
+.m-bar i{display:block;height:100%;width:0;background:#1f6f43;border-radius:6px;transition:width .3s}
+@media (max-width:900px){.m-kpis{grid-template-columns:1fr 1fr}}
+.m-chips{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 0}
+.m-chip{border:1px solid #d3dbe6;background:#fff;border-radius:999px;padding:5px 11px;font-size:12.5px;cursor:pointer;color:#1d2733}
+.m-chip b{font-variant-numeric:tabular-nums}
+.m-chip.on{outline:2px solid #0b1f3a;outline-offset:0}
+.m-chip-ok{border-color:#a9d8bd;background:#eef8f2}
+.m-chip-warn{border-color:#f0d08a;background:#fff8e6}
+.m-chip-bad{border-color:#f1b2b2;background:#fdeeee}
+.m-chip-cero{border-style:dashed}
+.m-chip-txt{cursor:default;border-color:#e7b3b3;color:#8a1c1c;background:#fff}
+/* acciones */
+.m-acc{display:flex;gap:18px;flex-wrap:wrap;align-items:center;margin:12px 0}
+.m-acc-g{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.m-acc-t{font-size:11.5px;color:#5a6878;font-weight:700;text-transform:uppercase;letter-spacing:.3px;margin-right:2px}
+/* pestañas */
+.m-tabs{align-items:center;margin-top:0!important;border-bottom:1px solid #e1e6ee;padding-bottom:10px}
+body.m .tab{border:1px solid #d3dbe6;border-radius:999px;padding:6px 12px;font-size:12.5px;background:#fff}
+body.m .tab.active{background:#0b1f3a;border-color:#0b1f3a;color:#fff;font-weight:600}
+.m-tabs-r{margin-left:auto}
+.m-viewtitle{font-size:12.5px;color:#5a6878;margin:10px 0 8px}
+body.m .scroll{max-height:64vh;border:1px solid #e1e6ee;border-radius:10px;background:#fff}
+body.m table{font-size:12px}
+body.m th,body.m td{border:none;border-bottom:1px solid #edf0f5;padding:6px 8px}
+body.m th{background:#f6f8fb;color:#3d4a5a;font-weight:600;font-size:11.5px;text-align:left;white-space:nowrap}
+body.m th.right{text-align:right}
+body.m tbody tr:hover td{background:#f7faff}
+.m-tbl .mx{display:none}
+.m-tbl.m-full .mx{display:table-cell}
+.m-nw{white-space:nowrap}
+.m-mono{font-family:ui-monospace,Consolas,monospace;font-size:11.5px}
+.m-sum{min-width:240px;max-width:420px}
+.m-ue{min-width:120px;max-width:200px}
+.m-b{font-weight:700}
+.m-dim{color:#9aa6b4}
+.m-tr-bad td:first-child{box-shadow:inset 3px 0 0 #d14343}
+.m-tr-warn td:first-child{box-shadow:inset 3px 0 0 #e0a21b}
+.m-tr-ok td:first-child{box-shadow:inset 3px 0 0 #2e8b57}
+.m-tr-info td:first-child{box-shadow:inset 3px 0 0 #2f6fd0}
+.m-est{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap}
+.m-est-ok{background:#e3f4ea;color:#1f6f43}
+.m-est-warn{background:#fff1d1;color:#7a5200}
+.m-est-bad{background:#fde4e4;color:#9b1c1c}
+.m-est-info{background:#e3edfb;color:#1e4f9a}
+.m-est-d{font-size:11px;color:#6b7785;margin-top:2px}
+.m-tags{margin-top:3px;display:flex;gap:4px;flex-wrap:wrap}
+.m-tag{font-size:10.5px;padding:1px 6px;border-radius:4px;background:#eef1f5;color:#3d4a5a;font-weight:600}
+.m-tag-bad{background:#9b1c1c;color:#fff}
+.m-tag-info{background:#e3edfb;color:#1e4f9a}
+.m-tag-vio{background:#efe7fb;color:#5b2d99}
+.m-tag-warn{background:#fff1d1;color:#7a5200}
+.m-lnk{background:none;border:1px solid #c9d6ea;color:#1f5fb4;border-radius:6px;padding:4px 8px;font-size:11.5px;cursor:pointer;white-space:nowrap}
+.m-lnk:hover{background:#eef4fd}
+.m-vacio{text-align:center;color:#6b7785;padding:30px!important}
+.m-nota{font-size:11.5px;color:#6b7785;margin-top:6px}
+/* modal flujo */
+.m-modal{width:640px!important;border:none!important}
+.m-modal-h{background:#0b1f3a!important;font-weight:700;font-size:15px}
+.m-modal-f{padding:12px 20px;text-align:right;border-top:1px solid #edf0f5}
+.m-au-h{margin-bottom:14px}
+.m-au-sum{font-size:16px;font-weight:700;color:#0b1f3a}
+.m-au-meta{font-size:12px;color:#5a6878;margin-top:3px}
+.m-flujo{position:relative}
+.m-paso{display:flex;gap:12px;position:relative;padding-bottom:14px}
+.m-paso:not(:last-child)::before{content:"";position:absolute;left:14px;top:30px;bottom:0;width:2px;background:#dde3ec}
+.m-paso-n{flex:0 0 30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;background:#eef1f5;color:#3d4a5a;border:2px solid #cfd8e3;box-sizing:border-box;position:relative;z-index:1}
+.m-paso-ok .m-paso-n{background:#e3f4ea;border-color:#2e8b57;color:#1f6f43}
+.m-paso-warn .m-paso-n{background:#fff1d1;border-color:#e0a21b;color:#7a5200}
+.m-paso-bad .m-paso-n{background:#fde4e4;border-color:#d14343;color:#9b1c1c}
+.m-paso-c{flex:1;min-width:0;background:#f8fafc;border:1px solid #e6ebf2;border-radius:10px;padding:9px 12px}
+.m-paso-t{font-weight:700;font-size:13px;display:flex;justify-content:space-between;gap:8px;color:#1d2733}
+.m-paso-r{font-weight:600;font-size:12px;color:#5a6878;white-space:nowrap}
+.m-paso-b{font-size:13px;line-height:1.55;margin-top:4px;color:#2b3644}
+.m-v{font-family:ui-monospace,Consolas,monospace;font-weight:700;background:#eef1f5;padding:1px 5px;border-radius:4px}
+.m-lotes{margin-top:6px;display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.m-lote{font-size:11.5px;border:1px solid #cfd8e3;border-radius:6px;padding:2px 7px;background:#fff;font-family:ui-monospace,Consolas,monospace}
+@media (max-width:720px){.m-top{flex-wrap:wrap}.m-tit2{white-space:normal}.m-page{padding:10px}}
+
+  </style>
+  <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+</head>
+<body class="m">
+  <header class="m-top">
+    <img class="m-iso" src="icons/icon-192.png" alt="" width="36" height="36" onerror="this.style.visibility='hidden'">
+    <div class="m-tit">
+      <div class="m-tit1">Motor de Asignación F8 <span class="m-tit-ced">CEDIS Panamá</span></div>
+      <div class="m-tit2"><span id="mainHeader">Asignación F8 (Corte diario)</span> · Corte: <span id="cutDate">—</span> · <span id="currentDateTime"></span></div>
+    </div>
+    <div class="m-top-r">
+      <span id="mFuente" class="m-fuente">Cargando…</span>
+      <button id="btnLoadDaily" class="m-btn m-btn-ghost">Corte diario</button>
+      <button id="btnLoadHistory" class="m-btn m-btn-ghost">Histórico</button>
+      <select id="themeMode" hidden><option value="auto">auto</option></select>
+    </div>
+  </header>
+  <div id="mAviso" class="m-aviso" hidden></div>
+
+  <main class="m-page">
+    <!-- FILTROS -->
+    <section class="m-card m-filtros">
+      <div class="m-f-row">
+        <div class="m-f m-f-q"><label>Buscar renglón</label><input id="q" placeholder="Código o descripción"/></div>
+        <div class="m-f"><label>Forma 8</label><input id="doc" placeholder="N.º de documento" list="docList"/><datalist id="docList"></datalist></div>
+        <div class="m-f m-f-ue"><label>Unidad ejecutora</label><select id="ue"></select></div>
+        <div class="m-f"><label>Categoría</label><select id="cat"></select></div>
+        <div class="m-f"><label>Estado</label>
+          <select id="estado">
+            <option value="ALL">Todos</option>
+            <option value="COMPLETO">Completo</option>
+            <option value="PARCIAL">Parcial</option>
+            <option value="SIN">Sin stock</option>
+          </select>
+        </div>
+        <div class="m-f m-f-btn">
+          <button id="btnApply" class="m-btn m-btn-pri">Aplicar</button>
+          <button id="btnReset" class="m-btn m-btn-ghost" title="Limpiar filtros">Limpiar</button>
+          <button id="mMasFiltros" class="m-btn m-btn-link" type="button">Más filtros</button>
+        </div>
+      </div>
+      <div id="mFiltros2" class="m-f-row m-f-row2" hidden>
+        <div class="m-f"><label>Fecha F8 desde</label><input id="dateFrom" type="date"/></div>
+        <div class="m-f"><label>Fecha F8 hasta</label><input id="dateTo" type="date"/></div>
+        <div class="m-f"><label>Tipo</label><select id="tipo"></select></div>
+        <div class="m-f"><label>Fecha de proceso desde</label><input id="allocDateFrom" type="date"/></div>
+        <div class="m-f"><label>Fecha de proceso hasta</label><input id="allocDateTo" type="date"/></div>
+        <div class="m-f m-f-chk"><label class="m-chk"><input type="checkbox" id="soloCero"> Solo renglones con la UE en cero</label></div>
+      </div>
+    </section>
+
+    <!-- INDICADORES -->
+    <section class="m-kpis">
+      <div class="m-kpi"><div class="m-kpi-l">Renglones</div><div class="m-kpi-v" id="k_lines">—</div><div class="m-kpi-s" id="mK_lines_s"></div></div>
+      <div class="m-kpi m-kpi-main"><div class="m-kpi-l">Cubierto por la asignación</div><div class="m-kpi-v" id="k_fill">—</div>
+        <div class="m-bar"><i id="mK_bar"></i></div>
+        <div class="m-kpi-s">Asignado <b id="k_assigned">—</b> de <b id="k_req_r">—</b> pedidas (ajustado a empaque)</div></div>
+      <div class="m-kpi"><div class="m-kpi-l">Solicitado original</div><div class="m-kpi-v" id="k_req">—</div><div class="m-kpi-s">Lo que escribió la unidad en la F8</div></div>
+      <div class="m-kpi m-kpi-alert"><div class="m-kpi-l">Unidad en cero sin stock</div><div class="m-kpi-v" id="mK_cero">—</div><div class="m-kpi-s">Renglones que la unidad no tiene y el CEDIS tampoco</div></div>
+      <div id="k_importancia" hidden></div>
+    </section>
+    <div class="m-chips" id="mChips"></div>
+
+    <!-- ACCIONES -->
+    <section class="m-acc">
+      <div class="m-acc-g">
+        <span class="m-acc-t">Notificar</span>
+        <button id="btnWaNotif" class="m-btn m-btn-wa" onclick="abrirPanelWA()">WhatsApp a las unidades</button>
+        <button id="btnEmailNotif" class="m-btn m-btn-out" onclick="abrirPanelCorreo()">Correo (constancia)</button>
+      </div>
+      <div class="m-acc-g">
+        <span class="m-acc-t">Descargar</span>
+        <button id="btnExportPdf" class="m-btn m-btn-out">Hoja de asignación (PDF)</button>
+        <button id="btnExportXlsx" class="m-btn m-btn-out">Detalle (Excel)</button>
+        <button id="btnExportReservas" class="m-btn m-btn-out" onclick="exportarReservasExcel()">Reservas (Excel)</button>
+        <button id="btnExportCuotas" class="m-btn m-btn-out">Llenado por cuota</button>
+        <button id="btnExportPdfManager" hidden>Informe gerencial</button>
+      </div>
+    </section>
+
+    <!-- PESTAÑAS -->
+    <section class="m-card m-datos">
+      <div class="tabs m-tabs" role="tablist">
+        <div class="tab active" data-tab="asignacion">Renglones</div>
+        <div class="tab" data-tab="fill_ue">Por unidad</div>
+        <div class="tab" data-tab="sku_sin">Sin stock</div>
+        <div class="tab" data-tab="ue_sin">Unidades sin cobertura</div>
+        <div class="tab" data-tab="invalidos">Pedidos con error</div>
+        <div class="tab" data-tab="fill_cat">Por categoría</div>
+        <div class="m-tabs-r">
+          <label class="m-chk m-chk-sm"><input type="checkbox" id="mMasCols"> Más columnas</label>
+        </div>
+      </div>
+      <div id="viewTitle" class="m-viewtitle"></div>
+
+      <div id="view_asignacion" class="view">
+        <div class="scroll m-scroll">
+          <table id="tbl_asignacion" class="m-tbl">
+            <thead><tr>
+              <th>Fecha</th><th>Forma 8</th><th>Unidad</th><th>Código</th><th class="m-th-sum">Suministro</th>
+              <th>Prioridad</th>
+              <th class="right">Pedido</th><th class="right">Asignado</th><th class="right">Pendiente</th>
+              <th>Estado</th>
+              <th class="right" title="Existencia física en el CEDIS">Stock CEDIS</th>
+              <th class="right" title="Saldo en el estante de la unidad (Calculadora)">Inv. unidad</th>
+              <th class="mx right">Tránsito</th><th class="mx right">Reserva</th><th class="mx">Doc. reserva</th>
+              <th class="mx center">Bultos T/S/P</th><th class="mx">Lotes</th><th class="mx">Últ. despacho</th>
+              <th class="mx right">Cuota</th><th class="mx right">Previo</th><th class="mx right">Saldo cuota</th>
+              <th class="center">Detalle</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div id="mTblNota" class="m-nota"></div>
+      </div>
+<div id="view_ue_sin" class="view" style="display:none;"><div class="scroll"><table id="tbl_ue_sin"><thead><tr><th>UE</th><th>Categoría</th><th class="right">Líneas 0%</th><th class="right">Solic. Orig</th><th class="right">Solic. Red</th><th>Pendiente Total</th></tr></thead><tbody></tbody></table></div></div>
+        <div id="view_sku_sin" class="view" style="display:none;"><div class="scroll"><table id="tbl_sku_sin"><thead><tr><th>Código</th><th>Suministro</th><th class="right">Solic. Orig</th><th class="right">Solic. Red</th><th class="right"># UEs</th><th>Detalle UEs</th><th>Último Despacho</th></tr></thead><tbody></tbody></table></div></div>
+        <div id="view_invalidos" class="view" style="display:none;"><div class="scroll"><table id="tbl_invalidos"><thead><tr><th>Fecha</th><th>UE</th><th>Categoría</th><th>Código</th><th>Suministro</th><th class="right">Solic.</th><th class="right">Empaque</th><th class="right">Redond.</th><th>Motivo</th></tr></thead><tbody></tbody></table></div></div>
+        <div id="view_fill_cat" class="view" style="display:none;"><div class="scroll"><table id="tbl_fill_cat"><thead><tr><th>Categoría</th><th class="right">Líneas</th><th class="right">Solic.</th><th class="right">Redond.</th><th class="right">Asignado</th><th class="right">Fill rate</th></tr></thead><tbody></tbody></table></div></div>
+        <div id="view_fill_ue" class="view" style="display:none;"><div class="scroll"><table id="tbl_fill_ue"><thead><tr><th>UE</th><th>Categoría</th><th class="right">Líneas</th><th class="right">Solicitado</th><th class="right">Asignado</th><th class="right">Fill Rate</th></tr></thead><tbody></tbody></table></div></div>
+
+        
+    </section>
+  </main>
+
+  <!-- MODAL: CÓMO SE ASIGNÓ -->
+  <div id="auditModal" class="modal">
+    <div class="modal-content m-modal">
+      <div class="modal-header m-modal-h">
+        <span>Cómo se asignó</span>
+        <span class="close-btn" onclick="closeAudit()">&times;</span>
+      </div>
+      <div class="modal-body" id="auditBody"></div>
+      <div class="m-modal-f"><button class="m-btn m-btn-pri" onclick="closeAudit()">Cerrar</button></div>
+    </div>
+  </div>
+
+  <script>
+  // ===== Carga del corte: primero el JSON publicado, en vivo solo si hace falta =====
+  // allocation.json lo publica el Motor (trigger de 10 min) cuando el corte cambia.
+  // allocation_estado.json marca cuándo cambió el corte; si es más nuevo que la
+  // publicación, se lee en vivo del Motor para no mostrar datos viejos.
+  (function(){
+    function hhmm(ms){ try { return new Date(ms).toLocaleTimeString('es-PA',{hour:'2-digit',minute:'2-digit'}); } catch(e){ return ''; } }
+    function fechaLocal(ms){ const d=new Date(ms); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+    window.__mFuente = function(txt, tipo){
+      const el=document.getElementById('mFuente'); if(!el) return;
+      el.textContent=txt; el.className='m-fuente'+(tipo?(' m-fuente-'+tipo):'');
+    };
+    window.__mAviso = function(txt){
+      const el=document.getElementById('mAviso'); if(!el) return;
+      if(!txt){ el.hidden=true; el.textContent=''; return; }
+      el.hidden=false; el.textContent=txt;
+    };
+    let cargando=false;
+    window.__motorCargar = async function(){
+      if (cargando) return; cargando=true;
+      const t=Date.now();
+      window.__mFuente('Cargando corte publicado…');
+      window.__mAviso('');
+      try {
+        const [a, e] = await Promise.all([
+          fetch('allocation.json?t='+t, {cache:'no-store'}).then(r => { if(!r.ok) throw new Error('allocation.json HTTP '+r.status); return r.json(); }),
+          fetch('allocation_estado.json?t='+t, {cache:'no-store'}).then(r => r.ok ? r.json() : {}).catch(() => ({}))
+        ]);
+        const gen = Date.parse(a && a.generado || '');
+        const inv = Date.parse(e && e.invalidado || '') || 0;
+        if (!a || !Array.isArray(a.filas) || !isFinite(gen)) throw new Error('allocation.json sin filas');
+        if (inv > gen) {
+          cargando=false;
+          window.__mAviso('El corte cambió a las '+hhmm(inv)+' y la copia publicada aún no se actualiza (tarda hasta 10 min). Leyendo directamente del Motor; puede tardar.');
+          return fetchAndLoad('allocation');
+        }
+        DATA = a.filas;
+        PARAMS = { cut_date: fechaLocal(gen), generated_at: a.generado, fuente: 'publicado' };
+        window._MODO_ACTUAL = 'live';
+        document.getElementById('mainHeader').textContent = 'Corte diario';
+        document.getElementById('cutDate').textContent = fechaLocal(gen);
+        populateFilters();
+        const urlUE = new URLSearchParams(location.search).get('ue');
+        if (urlUE) {
+          const sel=document.getElementById('ue');
+          const opt = Array.from(sel.options).find(o => o.value === urlUE) ||
+                      Array.from(sel.options).find(o => o.value.toLowerCase().includes(urlUE.toLowerCase()));
+          if (opt) sel.value = opt.value;
+        }
+        applyFilters();
+        window.__mFuente('Corte publicado '+hhmm(gen)+' · '+a.filas.length+' renglones', 'ok');
+      } catch (err) {
+        console.warn('Corte publicado no disponible:', err);
+        cargando=false;
+        window.__mAviso('No se pudo leer la copia publicada del corte ('+(err && err.message || err)+'). Leyendo directamente del Motor; puede tardar.');
+        return fetchAndLoad('allocation');
+      }
+      cargando=false;
+    };
+  })();
+
+  </script>
+  <script>
+
+  // --- UTILS ---
+  function uniq(arr) {
+    return [...new Set(arr)].filter(x => x !== null && x !== undefined);
+  }
+
+  function parseISODate(s) {
+    if (!s) return null;
+    const m = String(s).match(/(\d{4})-(\d{2})-(\d{2})/);
+    if (!m) return null;
+    return new Date(`${m[1]}-${m[2]}-${m[3]}T00:00:00`);
+  }
+
+  function fmtBultosPart(n) {
+    const x = Number(n);
+    if (!Number.isFinite(x)) return "0";
+    return Math.abs(x - Math.round(x)) < 1e-9 ? String(Math.round(x)) : String(parseFloat(x.toFixed(3)));
+  }
+
+  function fmtBultosTriple(t, s, p) {
+    return `${fmtBultosPart(t)}/${fmtBultosPart(s)}/${fmtBultosPart(p)}`;
+  }
+
+  const fmt = (n) => {
+    if (n === null || n === undefined || isNaN(n)) return "-";
+    return new Intl.NumberFormat('es-PA', { maximumFractionDigits: 0 }).format(n);
+  };
+
+  function tickDateTime() {
+    const el = document.getElementById('currentDateTime');
+    if (el) el.textContent = new Date().toLocaleString('es-PA', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+  }
+
+  // --- VARIABLES ---
+  let DATA = [];
+  let PARAMS = {};
+  let UE_ALIAS = [];
+  let ACTIVE_TAB = "asignacion";
+  let LAST_FILTERED = [];
+
+  function coverage(r) {
+    const req = Number(r.Solicitado_redondeado || 0);
+    const asg = Number(r.Asignado || 0);
+    const trans = Number(r.Asignado_Transito || 0); // NUEVO LOGICA
+
+    if (asg <= 0 && trans <= 0) return "SIN";
+    if (asg >= req && req > 0) return "COMPLETO";
+    return "PARCIAL";
+  }
+
+  function populateFilters() {
+    const catSel = document.getElementById('cat');
+    const ueSel = document.getElementById('ue');
+    const tipoSel = document.getElementById('tipo');
+    const docList = document.getElementById('docList');
+    
+    const cats = ["ALL", ...uniq(DATA.map(r => r.Categoria)).sort()];
+    catSel.innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join("");
+    
+    const ues = ["ALL", ...uniq(DATA.map(r => r.Punto)).sort()];
+    ueSel.innerHTML = ues.map(u => `<option value="${u}">${u}</option>`).join("");
+    
+    const tipos = ["ALL", ...uniq(DATA.map(r => r.Tipo)).sort()];
+    tipoSel.innerHTML = tipos.map(t => `<option value="${t}">${t}</option>`).join("");
+    
+    if (docList) {
+      const docs = uniq(DATA.map(r => r.N_Doc)).sort();
+      docList.innerHTML = docs.map(d => `<option value="${d}"></option>`).join("");
+    }
+  }
+
+  function applyFilters() {
+    const q = (document.getElementById('q').value || "").trim().toLowerCase();
+    const cat = document.getElementById('cat').value;
+    const ue = document.getElementById('ue').value;
+    const tipo = document.getElementById('tipo').value;
+    const estado = document.getElementById('estado').value;
+
+    const dateFrom = document.getElementById('dateFrom').value;
+    const dateTo = document.getElementById('dateTo').value;
+    const allocFrom = document.getElementById('allocDateFrom').value;
+    const allocTo = document.getElementById('allocDateTo').value;
+
+    let rows = DATA;
+    const docQ = (document.getElementById('doc')?.value || '').trim().toLowerCase();
+
+    if (docQ) rows = rows.filter(r => String(r.N_Doc || '').toLowerCase().includes(docQ));
+    if (dateFrom) rows = rows.filter(r => String(r.Fecha || '') >= dateFrom);
+    if (dateTo) rows = rows.filter(r => String(r.Fecha || '') <= dateTo);
+
+    if (allocFrom || allocTo) {
+      rows = rows.filter(r => {
+        let fechaAlloc = r.Fecha_Asignacion || r.FECHA_ASIGNACION || r.Fecha_Proceso || "";
+        if (!fechaAlloc && r.Fecha_Asignacion) fechaAlloc = r.Fecha_Asignacion;
+        if (!fechaAlloc) return true;
+        
+        const dStr = String(fechaAlloc).split("T")[0];
+        let pass = true;
+        if (allocFrom && dStr < allocFrom) pass = false;
+        if (allocTo && dStr > allocTo) pass = false;
+        return pass;
+      });
+    }
+
+    if (q) rows = rows.filter(r => String(r.Codigo).includes(q) || String(r.Suministro || "").toLowerCase().includes(q));
+    if (cat !== "ALL") rows = rows.filter(r => r.Categoria === cat);
+    if (ue !== "ALL") rows = rows.filter(r => r.Punto === ue);
+    if (tipo !== "ALL") rows = rows.filter(r => r.Tipo === tipo);
+    if (estado !== "ALL") rows = rows.filter(r => coverage(r) === estado);
+
+    // Filtro: solo renglones donde la UE destino está en cero (saldo en línea)
+    const soloCero = document.getElementById('soloCero');
+    if (soloCero && soloCero.checked) rows = rows.filter(r => r.En_Cero === true);
+
+    LAST_FILTERED = rows;
+    renderKPIs(rows);
+    renderActiveTab(rows);
+  }
+
+  function renderKPIs(rows) {
+    const req = rows.reduce((a, r) => a + Number(r.Solicitado || 0), 0);
+    const reqR = rows.reduce((a, r) => a + Number(r.Solicitado_redondeado || 0), 0);
+    const asg = rows.reduce((a, r) => a + Number(r.Asignado || 0), 0);
+    const fill = req > 0 ? (asg / req) * 100 : 0;
+
+    document.getElementById('k_lines').textContent = fmt(rows.length);
+    document.getElementById('k_req').textContent = fmt(req);
+    document.getElementById('k_req_r').textContent = fmt(reqR);
+    document.getElementById('k_assigned').textContent = fmt(asg);
+    document.getElementById('k_fill').textContent = `${fill.toFixed(1)}%`;
+
+    const vitales = rows.filter(r => r.Importancia === "VITAL").length;
+    const esenciales = rows.filter(r => r.Importancia === "ESENCIAL").length;
+
+    document.getElementById('k_importancia').innerHTML =
+      `<span style="color:#d32f2f; font-weight:bold;"> V: ${fmt(vitales)}</span> | <span style="color:#2e7d32; font-weight:bold;"> E: ${fmt(esenciales)}</span>`;
+  }
+
+  function showTab(tab) {
+    ACTIVE_TAB = tab;
+    document.querySelectorAll('.tab').forEach(el => el.classList.toggle('active', el.dataset.tab === tab));
+    document.querySelectorAll('.view').forEach(v => v.style.display = "none");
+    document.getElementById(`view_${tab}`).style.display = "block";
+    renderActiveTab(LAST_FILTERED.length ? LAST_FILTERED : DATA);
+  }
+
+  // V9: badge de prioridad clínica. Global para que la tabla y el modal lo usen.
+  function badgePrioridad(r){
+    const et = String(r.Rank_Etiqueta || "").toUpperCase();
+    let bg="", fg="", txt=et;
+    if (et === "COLA CERO")            { bg="#F8D7DA"; fg="#7D2229"; txt="vital en cero"; }   // 21-sep: el Motor guarda COLA CERO; se muestra en palabras del almacén
+    else if (et === "ESENCIAL EN CERO"){ bg="#FDECC8"; fg="#7A5400"; txt="esencial 0"; }
+    else if (et === "VITAL")           { bg="#FDECC8"; fg="#7A5400"; txt="vital"; }
+    else if (et === "EN CERO")         { bg="#FDECC8"; fg="#7A5400"; txt="en cero"; }
+    else if (et === "ESENCIAL")        { bg="#E6F1FB"; fg="#0C447C"; txt="esencial"; }
+    else return '<span style="color:#aaa;">-</span>';
+    return '<span style="background:'+bg+'; color:'+fg+'; padding:2px 6px; border-radius:4px; font-weight:bold; white-space:nowrap;">'+txt+'</span>';
+  }
+
+  function renderAsignacion(rows) {
+    const tb = document.querySelector("#tbl_asignacion tbody");
+    window.__currentData = rows; 
+
+    tb.innerHTML = rows.slice(0, 10000).map((r, index) => {
+      const b = fmtBultosTriple(r.Bultos_Ter || 0, r.Bultos_Sec || 0, r.Bultos_Prim || 0);
+      
+      let infoExtra = r.Lotes_Usados || "";
+      if(r.Transito_Info) infoExtra += (infoExtra ? " | " : "") + `<span style="color:blue;font-weight:bold;">${r.Transito_Info}</span>`;
+
+      let iconos = "";
+      if(r.Frio) iconos += " ";
+      if(r.Narcotico) iconos += " "; 
+      // Badge de saldo en línea de la UE destino (reemplaza el conteo manual de ceros)
+      if(r.En_Cero === true) {
+        iconos += `<span style="background:#b71c1c; color:#fff; font-size:8px; font-weight:bold; padding:1px 4px; border-radius:3px; white-space:nowrap;" title="La UE destino tiene saldo 0 de este renglón (saldo en línea)"> UE EN CERO</span> `;
+      }
+
+      // --- NUEVA LÓGICA VISUAL UNIFICADA ---
+            // --- NUEVA LÓGICA VISUAL UNIFICADA (CORREGIDA) ---
+      let stBg = "transparent"; 
+      let stColor = "#333"; 
+      let stIcon = "";     // <--- ESTA ERA LA VARIABLE QUE FALTABA
+      let alertaMsg = "";
+      
+      const st = (r.Estado || "").toUpperCase();
+      
+      // 1. Asignar Colores e Iconos
+      if (st.includes("COMPLETO")) { 
+          stBg="#e8f5e9"; stColor="#2e7d32"; stIcon=""; 
+      }       
+      else if (st.includes("SIN STOCK")) { 
+          stBg="#ffebee"; stColor="#b71c1c"; stIcon=""; 
+      } 
+      else if (st.includes("PARCIAL")) { 
+          stBg="#fff3e0"; stColor="#ef6c00"; stIcon=""; 
+      }   
+      else if (st.includes("MAX CUOTA")) { 
+          stBg="#f3e5f5"; stColor="#7b1fa2"; stIcon=""; 
+      } 
+      else if (st.includes("AJUSTE") || st.includes("EMPAQUE")) { 
+          stBg="#fff8e1"; stColor="#fbc02d"; stIcon=""; 
+      } 
+      else if (st.includes("MINIMO")) { 
+          stBg="#f5f5f5"; stColor="#757575"; stIcon=""; 
+      }
+
+      // 2. Lógica de Alerta
+      if (r.Acaparamiento || st.includes("MAX CUOTA")) {
+          alertaMsg = `<span style="color:#b71c1c; font-weight:bold; font-size:9px;"> TOPE CUOTA</span>`;
+      } else if (st.includes("MINIMO")) {
+          alertaMsg = `<span style="color:#555; font-size:9px;"> BAJO MIN.</span>`;
+      } else if (st.includes("SIN STOCK")) {
+          alertaMsg = `<span style="color:#b71c1c; font-size:9px; font-weight:bold;">AGOTADO</span>`;
+      }
+
+      // 3. Estilo Tachado si es necesario
+      let estiloSol = "";
+      if (r.Acaparamiento) {
+          estiloSol = "color:#d32f2f; font-weight:bold; text-decoration:underline;";
+      }
+
+      return `<tr>
+        <td class="center">
+            <button onclick="openAudit(${index})" style="background:#e3f2fd; color:#0d47a1; border:1px solid #90caf9; padding:2px 6px; border-radius:4px; cursor:pointer;" title="Ver explicación"></button>
+        </td>
+        <td>${r.Fecha || ""}</td>
+        <td>${r.N_Doc || ""}</td>
+        <td>${r.Tipo || ""}</td>
+        <td>${r.Punto || ""}</td>
+        <td>${r.Categoria || ""}</td>
+        <td>${r.Codigo || ""}</td>
+        <td style="max-width:220px; white-space:normal; word-wrap:break-word; overflow-wrap:break-word; font-size:10px; line-height:1.1;">${iconos} ${r.Suministro || ""}</td>
+        <td style="font-size:10px;">${r.Grupo || "-"}</td> 
+
+        <td style="font-size:9px; text-align:center;">${badgePrioridad(r)}</td>
+
+        <!-- NUEVA COLUMNA STOCK (SOLO WEB) -->
+        <td class="right" style="background:#e3f2fd; color:#0d47a1; font-weight:bold;">${fmt(r.Stock_Fisico)}</td>
+        ${celdaInvUE(r)}
+
+        <td class="right">${fmt(r.Solicitado)}</td>
+        <td class="right" style="${estiloSol}" title="${r.Acaparamiento ? 'Recortado por Anti-Acaparamiento' : ''}">${fmt(r.Solicitado_redondeado)}</td>
+        
+        <td class="right" style="font-weight:bold;">${fmt(r.Asignado)}</td>
+        <td class="right" style="color:blue; font-weight:bold;">${r.Asignado_Transito > 0 ? fmt(r.Asignado_Transito) : "-"}</td> 
+
+        <td class="right" style="color:purple; font-weight:bold;">${r.Reservado > 0 ? fmt(r.Reservado) : "-"}</td>
+        <td style="font-size:9px; color:#555;">${r.Reservado_Doc || ""}</td>
+        <td class="right">${fmt(r.Pendiente)}</td>
+        
+        <td class="center">${b}</td>
+        <td style="font-size:10px;">${infoExtra}</td>
+        
+        <td>${r.Ultimo_Despacho || "-"}</td>
+        <td class="right">${r.Qty_Ultimo ? fmt(r.Qty_Ultimo) : "-"}</td>
+        <td class="right" style="background:#f0f8ff;">${r.Promedio_Hist ? fmt(r.Promedio_Hist) : "-"}</td>
+        
+        <!-- COLUMNA 1: ESTADO CON COLOR -->
+        <td class="center" style="background:${stBg}; color:${stColor}; font-weight:bold; font-size:9px; border-radius:4px;">
+          ${stIcon} ${r.Estado}
+        </td>
+
+        <!-- COLUMNA 2: ALERTA / MOTIVO -->
+        <td class="center">
+            ${alertaMsg}
+        </td>
+        <td class="center" style="font-size:10px; font-weight:bold;">${r.Factor_Riesgo ? r.Factor_Riesgo + 'x' : "-"}</td>
+        <td class="right" style="font-size:10px;">${fmt(r.Cuota_Max)}</td>
+        <td class="right" style="font-size:10px;">${fmt(r.Ejecucion_Previa)}</td>
+        <td class="right" style="font-size:10px; font-weight:bold; color:${r.Saldo_Disponible < 0 ? 'red' : 'black'}">${fmt(r.Saldo_Disponible)}</td>
+      </tr>`;
+    }).join("");
+    
+    window.__exportRows = rows;
+    window.__exportName = "asignacion";
+  }
+
+  function renderUESin(rows) {
+    const filtered = rows.filter(r => Number(r.Asignado || 0) === 0 && Number(r.Solicitado_redondeado || 0) > 0);
+    const map = new Map();
+    
+    for (const r of filtered) {
+      const key = `${r.Punto || ""}||${r.Categoria || ""}`;
+      if (!map.has(key)) {
+        map.set(key, { UE: r.Punto || "", Categoria: r.Categoria || "", lineas: 0, sol: 0, solr: 0, pendiente: 0 });
+      }
+      const o = map.get(key);
+      o.lineas += 1;
+      o.sol += Number(r.Solicitado || 0);
+      o.solr += Number(r.Solicitado_redondeado || 0);
+      o.pendiente += Number(r.Pendiente || 0);
+    }
+    
+    const out = [...map.values()].map(o => ({
+      UE: o.UE,
+      Categoria: o.Categoria,
+      Lineas_sin_cobertura: o.lineas,
+      Solicitado_original: o.sol,
+      Solicitado_redondeado: o.solr,
+      Total_Pendiente: o.pendiente
+    })).sort((a, b) => b.Total_Pendiente - a.Total_Pendiente).slice(0, 20);
+
+    const thRef = document.querySelector("#tbl_ue_sin thead tr th:last-child");
+    if (thRef) thRef.textContent = "Unidades Pendientes (Déficit)";
+
+    const tb = document.querySelector("#tbl_ue_sin tbody");
+    tb.innerHTML = out.map(r => `<tr>
+      <td>${r.UE}</td>
+      <td>${r.Categoria}</td>
+      <td class="right" style="font-weight:bold; color:#b71c1c;">${fmt(r.Lineas_sin_cobertura)}</td>
+      <td class="right">${fmt(r.Solicitado_original)}</td>
+      <td class="right">${fmt(r.Solicitado_redondeado)}</td>
+      <td class="right" style="background:#fff3e0; font-weight:bold;">${fmt(r.Total_Pendiente)}</td>
+    </tr>`).join("");
+
+    window.__exportRows = out;
+    window.__exportName = "ue_sin_cobertura_top20";
+  }
+
+  function renderSKUSin(rows) {
+    const filtered = rows.filter(r => Number(r.Asignado || 0) === 0 && Number(r.Solicitado_redondeado || 0) > 0);
+    const map = new Map();
+    
+    for (const r of filtered) {
+      const code = String(r.Codigo || "");
+      const key = `${code}||${String(r.Suministro || "")}`;
+      if (!map.has(key)) {
+        map.set(key, { Codigo: code, Suministro: String(r.Suministro || ""), sol: 0, solr: 0, ues_names: new Set(), last: null });
+      }
+      const o = map.get(key);
+      o.sol += Number(r.Solicitado || 0);
+      o.solr += Number(r.Solicitado_redondeado || 0);
+      o.ues_names.add(String(r.Punto || ""));
+      
+      const fechaRow = r.Ultimo_Despacho;
+      if (fechaRow && fechaRow !== "-") {
+        const d = parseISODate(fechaRow);
+        if (d && (!o.last || d > o.last)) o.last = d;
+      }
+    }
+    
+    const out = [...map.values()].map(o => ({
+      Codigo: o.Codigo,
+      Suministro: o.Suministro,
+      Solicitado_original: o.sol,
+      Solicitado_redondeado: o.solr,
+      Num_UEs: o.ues_names.size,
+      UEs_Lista: [...o.ues_names].sort().join(", "),
+      Ultimo_despacho_real: o.last ? o.last.toISOString().slice(0, 10) : ""
+    })).sort((a, b) => (b.Solicitado_redondeado - a.Solicitado_redondeado) || (b.Num_UEs - a.Num_UEs)).slice(0, 20);
+
+    const thRef = document.querySelector("#tbl_sku_sin thead tr th:nth-child(6)");
+    if (thRef) thRef.textContent = "UEs Afectadas (Detalle)";
+
+    const tb = document.querySelector("#tbl_sku_sin tbody");
+    tb.innerHTML = out.map(r => `<tr>
+      <td>${r.Codigo}</td>
+      <td>${r.Suministro}</td>
+      <td class="right">${fmt(r.Solicitado_original)}</td>
+      <td class="right">${fmt(r.Solicitado_redondeado)}</td>
+      <td class="right">${fmt(r.Num_UEs)}</td>
+      <td style="font-size:9px;">${r.UEs_Lista}</td>
+      <td>${r.Ultimo_despacho_real || "-"}</td>
+    </tr>`).join("");
+
+    window.__exportRows = out;
+    window.__exportName = "skus_criticos_sin_stock_top20";
+  }
+
+  function renderInvalidos(rows) {
+    const filtered = rows.filter(r => Number(r.Solicitado || 0) > 0 && Number(r.Solicitado_redondeado || 0) === 0);
+    const out = filtered.slice().sort((a, b) => {
+      const da = parseISODate(a.Fecha);
+      const db = parseISODate(b.Fecha);
+      return (db - da);
+    }).slice(0, 2000).map(r => {
+      const sol = Number(r.Solicitado || 0);
+      const empT = r.Empaque_Ter ? Number(r.Empaque_Ter) : null;
+      let motivo = "Solicitado redondeado = 0";
+      
+      if (empT && sol < empT) motivo = "Solicitado menor a empaque terciario";
+      else if (empT && (sol % empT) !== 0) motivo = "Solicitado no es múltiplo";
+      else if (!empT) motivo = "Sin empaque definido";
+      
+      return {
+        Fecha: r.Fecha || "",
+        UE: r.Punto || "",
+        Categoria: r.Categoria || "",
+        Codigo: r.Codigo || "",
+        Suministro: r.Suministro || "",
+        Solicitado_original: sol,
+        Empaque_terciario: empT,
+        Solicitado_redondeado: Number(r.Solicitado_redondeado || 0),
+        Motivo: motivo
+      };
+    });
+
+    const tb = document.querySelector("#tbl_invalidos tbody");
+    tb.innerHTML = out.map(r => `<tr>
+      <td>${r.Fecha}</td><td>${r.UE}</td><td>${r.Categoria}</td><td>${r.Codigo}</td><td>${r.Suministro}</td>
+      <td class="right">${fmt(r.Solicitado_original)}</td>
+      <td class="right">${r.Empaque_terciario === null ? "-" : fmt(r.Empaque_terciario)}</td>
+      <td class="right">${fmt(r.Solicitado_redondeado)}</td>
+      <td class="${r.Motivo.includes("menor") ? "danger" : ""}">${r.Motivo}</td>
+    </tr>`).join("");
+
+    window.__exportRows = out;
+    window.__exportName = "pedidos_invalidos_por_empaque";
+  }
+
+  function renderFillCat(rows) {
+    const map = new Map();
+    for (const r of rows) {
+      const cat = String(r.Categoria || "");
+      if (!map.has(cat)) map.set(cat, { Categoria: cat, lineas: 0, sol: 0, solr: 0, asg: 0 });
+      const o = map.get(cat);
+      o.lineas += 1;
+      o.sol += Number(r.Solicitado || 0);
+      o.solr += Number(r.Solicitado_redondeado || 0);
+      o.asg += Number(r.Asignado || 0);
+    }
+    
+    const out = [...map.values()].map(o => ({
+      Categoria: o.Categoria,
+      Lineas: o.lineas,
+      Solicitado_original: o.sol,
+      Solicitado_redondeado: o.solr,
+      Asignado: o.asg,
+      Fill_rate: o.sol > 0 ? (o.asg / o.sol) : 0
+    })).sort((a, b) => (a.Categoria || "").localeCompare(b.Categoria || ""));
+
+    const tb = document.querySelector("#tbl_fill_cat tbody");
+    tb.innerHTML = out.map(r => `<tr>
+      <td>${r.Categoria}</td>
+      <td class="right">${fmt(r.Lineas)}</td>
+      <td class="right">${fmt(r.Solicitado_original)}</td>
+      <td class="right">${fmt(r.Solicitado_redondeado)}</td>
+      <td class="right">${fmt(r.Asignado)}</td>
+      <td class="right">${(r.Fill_rate * 100).toFixed(1)}%</td>
+    </tr>`).join("");
+
+    window.__exportRows = out;
+    window.__exportName = "fill_rate_por_categoria";
+  }
+
+  function renderFillUE(rows) {
+    const map = new Map();
+    for (const r of rows) {
+      const ue = String(r.Punto || "");
+      if (!map.has(ue)) map.set(ue, { UE: ue, Cat: r.Categoria || "", lineas: 0, sol: 0, asg: 0 });
+      const o = map.get(ue);
+      o.lineas++;
+      o.sol += Number(r.Solicitado || 0);
+      o.asg += Number(r.Asignado || 0);
+    }
+    
+    const out = [...map.values()].map(o => ({
+      UE: o.UE,
+      Categoria: o.Cat,
+      Lineas: o.lineas,
+      Solicitado: o.sol,
+      Asignado: o.asg,
+      Fill_rate: o.sol > 0 ? (o.asg / o.sol) : 0
+    })).sort((a, b) => a.Fill_rate - b.Fill_rate);
+
+    const tb = document.querySelector("#tbl_fill_ue tbody");
+    tb.innerHTML = out.map(r => {
+      const color = r.Fill_rate < 0.8 ? '#ffebee' : (r.Fill_rate < 0.95 ? '#fff3e0' : '#e8f5e9');
+      return `<tr style="background:${color}">
+        <td>${r.UE}</td>
+        <td>${r.Categoria}</td>
+        <td class="right">${fmt(r.Lineas)}</td>
+        <td class="right">${fmt(r.Solicitado)}</td>
+        <td class="right">${fmt(r.Asignado)}</td>
+        <td class="right" style="font-weight:bold;">${(r.Fill_rate * 100).toFixed(1)}%</td>
+      </tr>`;
+    }).join("");
+
+    window.__exportRows = out;
+    window.__exportName = "fill_rate_por_ue";
+  }
+
+  function renderActiveTab(rows) {
+    if (ACTIVE_TAB === "asignacion") return renderAsignacion(rows);
+    if (ACTIVE_TAB === "ue_sin") return renderUESin(rows);
+    if (ACTIVE_TAB === "sku_sin") return renderSKUSin(rows);
+    if (ACTIVE_TAB === "invalidos") return renderInvalidos(rows);
+    if (ACTIVE_TAB === "fill_cat") return renderFillCat(rows);
+    if (ACTIVE_TAB === "fill_ue") return renderFillUE(rows);
+  }
+
+  function exportCsv() {
+    const rows = window.__exportRows || [];
+    const cols = Object.keys(rows[0] || {});
+    if (!cols.length) return;
+    
+    const esc = (v) => {
+      const s = (v === null || v === undefined) ? "" : String(v);
+      if (s.includes('"') || s.includes(",") || s.includes("\n")) return '"' + s.replaceAll('"', '""') + '"';
+      return s;
+    };
+    
+    const csv = [cols.join(",")].concat(rows.map(r => cols.map(c => esc(r[c])).join(","))).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${window.__exportName || "export"}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function _pickingRows() {
+    return LAST_FILTERED || [];
+  }
+
+  function getDynamicFilename(prefix) {
+    const ue = document.getElementById('ue').value;
+    const cat = document.getElementById('cat').value;
+    const tipo = document.getElementById('tipo').value;
+    let parts = [prefix];
+    
+    if (ue && ue !== "ALL") parts.push(ue.replace(/[^a-zA-Z0-9\-_]/g, ""));
+    if (cat && cat !== "ALL") parts.push(cat.replace(/[^a-zA-Z0-9\-_]/g, ""));
+    if (tipo && tipo !== "ALL") parts.push(tipo.replace(/[^a-zA-Z0-9\-_]/g, ""));
+    
+    if (parts.length === 1) {
+      const today = new Date();
+      parts.push(`${today.getDate()}_${today.getMonth() + 1}`);
+    }
+    
+    let name = parts.join("_");
+    if (name.length > 50) name = name.substring(0, 50);
+    return name;
+  }
+
+  // ==============================================================
+  // EXPORTAR PDF (F8) - V8.5 (CORREGIDO: ERROR FILENAME + VISUAL)
+  // ==============================================================
+  function exportPdfAsignacion() {
+    const rows = _pickingRows();
+    if (!rows.length) { alert("No hay datos visibles para exportar."); return; }
+
+    const fechaGen = new Date().toLocaleString("en-US");
+    const groups = new Map();
+    const uesInReport = new Set(); // Para detectar nombre de UE
+
+    // 1. AGRUPAMIENTO Y DATOS
+    for (const r of rows) {
+      const ue = r.Punto || "SIN_UE";
+      uesInReport.add(ue); // Guardamos la UE
+      
+      const doc = r.N_Doc || "SIN_DOC";
+      const key = ue + "||" + doc;
+      const pr = Number.isFinite(+r.Prioridad) ? +r.Prioridad : 999;
+      const f8 = (r.Fecha || "");
+      
+      let fechaRaw = r.FECHA_ASIGNACION;
+      if (!fechaRaw || fechaRaw === "---" || fechaRaw === "") {
+        const hoy = new Date();
+        fechaRaw = `${hoy.getMonth() + 1}/${hoy.getDate()}/${hoy.getFullYear()}`;
+      } else {
+        fechaRaw = String(fechaRaw).split("T")[0];
+      }
+
+      if (!groups.has(key)) {
+        groups.set(key, {
+          ue, doc, tipo: r.Tipo || "", prioridad: pr, maxFecha: f8, items: [],
+          fechaAsig: fechaRaw, totalSol: 0, totalRed: 0, totalAsig: 0, totalPend: 0
+        });
+      }
+      
+      const g = groups.get(key);
+      g.items.push(r);
+      g.totalSol += Number(r.Solicitado || 0);
+      g.totalRed += Number(r.Solicitado_redondeado || 0);
+      g.totalAsig += Number(r.Asignado || 0);
+      g.totalPend += Number(r.Pendiente || 0);
+      
+      if (String(f8) > String(g.maxFecha)) g.maxFecha = f8;
+      if ((!g.fechaAsig || g.fechaAsig.length < 6) && fechaRaw.length > 5) g.fechaAsig = fechaRaw;
+      if (pr < g.prioridad) g.prioridad = pr;
+    }
+
+    // 2. GENERAR NOMBRE INTELIGENTE DEL ARCHIVO
+    // Si hay una sola UE, usamos su nombre. Si son varias, "Consolidado".
+    const fechaCorta = new Date().toISOString().split('T')[0];
+    let nombreArchivo = `Asignacion_F8_Consolidado_${fechaCorta}`;
+    
+    if (uesInReport.size === 1) {
+        // Limpiamos el nombre de caracteres raros
+        const uniqueUE = [...uesInReport][0].replace(/[^a-zA-Z0-9]/g, '_');
+        nombreArchivo = `Asignacion_F8_${uniqueUE}_${fechaCorta}`;
+    }
+
+    const groupsArr = Array.from(groups.values()).sort((a, b) => {
+      if (a.prioridad !== b.prioridad) return a.prioridad - b.prioridad;
+      return String(a.doc).localeCompare(String(b.doc));
+    });
+
+    const esc = (s) => (s === null || s === undefined) ? "" : String(s).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+    const fmt0 = (n) => {
+      const x = Number(n);
+      if (!Number.isFinite(x)) return "";
+      return x.toLocaleString("en-US", { maximumFractionDigits: 0 });
+    };
+
+    // 3. GENERADOR DE FILAS (TU LÓGICA VISUAL)
+    const makeRow = (r) => {
+      const b = fmtBultosTriple(r.Bultos_Ter || 0, r.Bultos_Sec || 0, r.Bultos_Prim || 0);
+      const lotes = r.Lotes_Usados ? String(r.Lotes_Usados) : "";
+      
+      let rowStyle = "";
+      let icons = [];
+      
+      if (r.Frio) { rowStyle = "background-color: #e3f2fd;"; icons.push("Frío"); }
+      if (r.Narcotico) icons.push("Controlado");
+      
+      if (r.Importancia === "VITAL") {
+        rowStyle = "background-color: #ffebee;";
+        icons.push("<span style='font-size:10px;' title='VITAL'></span>");
+      } else if (r.Importancia === "ESENCIAL") {
+        if (!r.Frio) rowStyle = "background-color: #e8f5e9;";
+        icons.push("<span style='font-size:10px;' title='ESENCIAL'></span>");
+      }
+      
+      if (r.Frio && r.Importancia === "VITAL") {
+        rowStyle = "background-color: #e1f5fe; border-left: 4px solid #d32f2f;";
+      }
+
+      const iconHtml = icons.length ? `<div style="margin-top:1px;">${icons.join(" ")}</div>` : "";
+      /* 21-sep · La unidad en cero, en el PDF, igual que la columna Prioridad de la
+         pantalla (misma etiqueta RANK del Motor, mismos colores). Va dentro de la
+         celda del código: no agrega columnas ni mueve los encabezados. Lleva borde
+         para que se lea aunque la impresora no imprima los fondos. */
+      const _etq = String(r.Rank_Etiqueta || "").toUpperCase();
+      const _cero = _etq === "COLA CERO"        ? ["vital en cero", "#F8D7DA", "#7D2229"]
+                  : _etq === "ESENCIAL EN CERO" ? ["esencial 0", "#FDECC8", "#7A5400"]
+                  : _etq === "EN CERO"          ? ["en cero",    "#FDECC8", "#7A5400"] : null;
+      const ceroHtml = _cero ? `<div style="margin-top:1px;"><span style="display:inline-block; background:${_cero[1]}; color:${_cero[2]}; border:1px solid ${_cero[2]}; padding:0 4px; border-radius:3px; font-size:7px; font-weight:bold; white-space:nowrap; -webkit-print-color-adjust:exact; print-color-adjust:exact;">${_cero[0]}</span></div>` : "";
+      const transito = r.Asignado_Transito > 0 ? `<div style="color:blue;font-weight:bold;">T:${fmt0(r.Asignado_Transito)}</div>` : "";
+
+      return `
+      <tr style="${rowStyle}">
+        <td>${esc(r.Codigo)} ${iconHtml}${ceroHtml}</td>
+        <td>
+            ${esc(r.Suministro || "")}
+            ${r.Importancia ? `<div style="font-size:7px; font-weight:bold; color:#555; margin-top:2px;">[${r.Importancia}]</div>` : ""}
+        </td>
+        <td style="font-size:8px;">${esc(r.Grupo || "-")}</td>
+        <td class="num">${fmt0(r.Solicitado)}</td>
+        <td class="num" style="${r.Acaparamiento ? 'color:#bf360c;font-weight:bold;text-decoration:underline;' : ''}">${fmt0(r.Solicitado_redondeado)}${r.Acaparamiento ? ' ' : ''}</td>
+        <td class="num" style="background:rgba(255,255,255,0.5); font-weight:bold;">${fmt0(r.Asignado)}</td>
+        <td class="num" style="color:blue;">${transito}</td>
+        <td class="num" style="color:purple;">${r.Reservado > 0 ? fmt0(r.Reservado) : "-"}</td>
+        <td style="font-size:8px; color:#444; text-align:center;">${esc(r.Reservado_Doc || "")}</td>
+        <td class="num">${fmt0(r.Pendiente)}</td>
+        <td style="font-size:7px; text-align:center;">${esc(r.Estado || "")}</td>
+        <td class="center">${esc(b)}</td>
+        <td style="font-size:9px;">${esc(lotes)} ${r.Transito_Info ? '<br><span style="color:blue">' + esc(r.Transito_Info) + '</span>' : ''}</td>
+        <td>${esc(r.Ultimo_Despacho || "-")}</td>
+        <td class="num">${r.Qty_Ultimo ? fmt0(r.Qty_Ultimo) : ""}</td>
+        <td class="num">${r.Promedio_Hist ? fmt0(r.Promedio_Hist) : ""}</td>
+        <td class="center" style="font-size:7px;">${r.Factor_Riesgo || "-"}</td>
+        <td class="num" style="font-size:7px;">${fmt0(r.Cuota_Max)}</td>
+        <td class="num" style="font-size:7px;">${fmt0(r.Ejecucion_Previa)}</td>
+        <td class="num" style="font-size:7px; font-weight:bold;">${fmt0(r.Saldo_Disponible)}</td>
+      </tr>`;
+    };
+
+    const sections = groupsArr.map((g, idx) => {
+      g.items.sort((a, b) => String(a.Codigo || "").localeCompare(String(b.Codigo || "")));
+      const rowsHtml = g.items.map(makeRow).join("");
+      const totalItems = g.items.length;
+      const escasezDetectada = g.totalRed > g.totalAsig;
+      const fillRate = g.totalSol > 0 ? ((g.totalAsig / g.totalSol) * 100).toFixed(1) + "%" : "0%";
+      
+      let escasezLabel = escasezDetectada ? " SÍ (Fair Share aplicado)" : " NO (Stock suficiente)";
+      let escasezClass = escasezDetectada ? "color:#b00020;" : "color:#0a7a2f;";
+      
+      if (g.items.some(i => i.Pack_Missing)) escasezLabel += ` <span style="color:#b00020; font-size:10px; margin-left:8px;">(Nota: No existe empaque definido)</span>`;
+      
+      let fechaMostrar = g.fechaAsig;
+      const tieneFrio = g.items.some(i => i.Frio);
+      const stampFrio = tieneFrio ? `<span style="border:1px solid #0277bd; background:#e1f5fe; color:#0277bd; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:10px; margin-left:8px;">REFRIGERADO</span>` : "";
+      const diasEntregaRaw = g.items[0].Dias_Entrega || "";
+      const stampDias = diasEntregaRaw ? `<div style="margin-top:4px; background:#fff; border:1px dashed #333; padding:3px 8px; font-size:11px; font-weight:bold; color:#333; display:inline-block; border-radius:4px;"> ENTREGA: ${esc(diasEntregaRaw)}</div>` : "";
+
+      return `
+        <div class="section">
+          <table>
+            <thead>
+              <tr>
+                <td colspan="20" style="background:#fff; border-bottom:2px solid #0b1f3a; padding: 10px 0;">
+                  <div style="display:flex; gap:15px; align-items:center;">
+                    <img src="./icons/icon-512.png" style="width:50px; height:50px; object-fit:contain;" alt="logo"/>
+                    <div style="flex:1;">
+                      <div style="font-size:18px; font-weight:700; color:#0b1f3a;">HOJA DE ASIGNACIÓN F8 — CORTE DIARIO</div>
+                      <div style="font-size:11px; color:#444; margin-top:4px;">Generado: ${esc(fechaGen)}</div>
+                      <div style="font-size:10px; color:#666; margin-top:2px; font-style:italic;">
+                         Reglas de Asignación: <b>Prioridad Clinica + UE en Cero + Reparto Proporcional en Escasez(si aplica)</b>, FEFO, Vto ≥ 60 días.
+                         <br>Prioridad por Tipo de Unidad Ejecutora: <b> HOSPITAL > POLICLINICA > ULAPS > CAPPS > CEDIS </b>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              <tr class="meta-row">
+                <th colspan="20" style="background:#f4f6f8; color:#0b1f3a; padding:10px; border-bottom:2px solid #0b1f3a; border-top:none;">
+                  <div style="display:flex; justify-content:space-between; align-items:start;">
+                    <div><div style="font-size:14px; font-weight:900;">${esc(g.ue)} ${stampFrio}</div>${stampDias}</div>
+                    <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:2px;">
+                      <div style="font-size:11px;">Líneas: <b>${totalItems}</b></div>
+                      <img src="https://api.qrserver.com/v1/create-qr-code/?size=90x90&margin=0&data=${encodeURIComponent('https://torrecontrolcss.org/ASIGNACION_F8/kanban_reporte.html?doc='+g.doc)}" style="width:70px; height:70px;" alt="QR Kanban"/>
+                      <div style="font-size:7px; color:#666;">Escanea para reportar etapa</div>
+                    </div>
+                  </div>
+                  <div style="margin-top:4px; font-size:11px; display:flex; gap:15px; color:#444;">
+                    <span>Doc: <b>${esc(g.doc)}</b></span>
+                    <span>Tipo: <b>${esc(g.tipo)}</b></span>
+                    <span>Fecha F8: <b>${esc(g.maxFecha || "")}</b></span>
+                    <span style="background:#fff; border:1px solid #ccc; padding:0 4px; border-radius:3px;">Fecha Asignación: <b>${esc(fechaMostrar)}</b></span>
+                  </div>
+                  <div style="margin-top:6px; padding-top:6px; border-top:1px solid #ccc; font-size:10px; display:flex; justify-content:space-between; align-items:center;">
+                    <div style="font-weight:bold; ${escasezClass}">Escasez: ${escasezLabel}</div>
+                    <div style="display:flex; gap:12px; background:#fff; padding:3px 8px; border-radius:4px; border:1px solid #ddd;">
+                       <span>Solic.: <b>${fmt0(g.totalSol)}</b></span>
+                       <span>Red.: <b>${fmt0(g.totalRed)}</b></span>
+                       <span style="color:#0052cc;">Asig.: <b>${fmt0(g.totalAsig)}</b></span>
+                       <span>Pend.: <b>${fmt0(g.totalPend)}</b></span>
+                       <span>Fill Rate: <b>${fillRate}</b></span>
+                    </div>
+                  </div>
+                </th>
+              </tr>
+              <tr class="col-header">
+                <th style="width:50px;">Código</th> 
+                <th>Suministro</th> 
+                <th style="width:25px;">Grp</th>
+                <th style="width:35px;" class="num">Solic.</th> 
+                <th style="width:35px;" class="num">Red.</th>
+                <th style="width:35px;" class="num">Asig.</th> 
+                <th style="width:35px;" class="num">Trans.</th>
+                <th style="width:30px; color:purple;" class="num">Resv.</th> 
+                <th style="width:35px; color:purple; font-size:8px;">Doc.R</th> 
+                <th style="width:30px;" class="num">Pend.</th> 
+                <th style="width:40px; font-size:8px;">Estado</th> 
+                <th style="width:40px;" class="center">Bultos</th> 
+                <th style="width:70px;">Lotes/Info</th> 
+                <th style="width:45px;">Últ.desp</th> 
+                <th style="width:25px;" class="num">Qty</th> 
+                <th style="width:25px;" class="num">Prom</th>
+                <th style="width:25px;" class="center">Riesgo</th>
+                <th style="width:30px;" class="num">Cuota</th>
+                <th style="width:30px;" class="num">Previo</th>
+                <th style="width:30px;" class="num">Saldo</th>
+              </tr>
+            </thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+          <div class="sign">
+            <div style="text-align:center;">
+              <img src="./icons/Firma_Ildemaro.png" alt="Firma" style="height:90px; object-fit:contain; display:block; margin:0 auto 0;"/>
+              <div style="border-top:1px solid #333; padding-top:3px; min-width:200px;">Lic. Ildemaro Vásquez<br><span style="font-size:9px; color:#555;">Jefe de Torre de Control · Sub Unidad del Almacén</span></div>
+            </div>
+            <div style="text-align:center; align-self:flex-end;">
+              <div style="border-top:1px solid #333; padding-top:3px; min-width:160px;">Recibido por</div>
+            </div>
+            <div style="text-align:center; align-self:flex-end;">
+              <div style="border-top:1px solid #333; padding-top:3px; min-width:120px;">Fecha</div>
+            </div>
+          </div>
+          <div style="text-align:center; font-size:9px; color:#999; margin-top:5px; border-top:1px dashed #ccc; padding-top:2px;">Fin del Documento ${esc(g.doc)}</div>
+        </div>`;
+    }).join("");
+
+    const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"/>
+    <!-- TÍTULO DINÁMICO PARA GUARDAR PDF -->
+    <title>${nombreArchivo}</title>
+    <style>
+      body{font-family:'Segoe UI', Arial, sans-serif; color:#111; margin:0;}
+      table { width: 100%; border-collapse: collapse; margin-bottom: 0; } thead { display: table-header-group; } tr { page-break-inside: auto; } 
+      th, td { border: 1px solid #ccc; padding: 2px 3px; font-size: 9px; vertical-align: middle; } thead tr:first-child td { border: none; }
+      .col-header th { background: #f3f5f8; font-weight: bold; color: #333; text-transform: uppercase; }
+      .num { text-align: right; } .center { text-align: center; } .section { margin-bottom: 20px; page-break-after: always; } .section:last-child { page-break-after: auto; }
+      .sign { display: flex; justify-content: space-between; gap: 20px; margin-top: 30px; font-size: 11px; page-break-inside: avoid; }
+      @media print { body { margin: 10mm; } }
+    </style></head><body>${sections}</body></html>`;
+    
+    const w = window.open("", "_blank");
+    if (w) {
+      w.document.open();
+      w.document.write(html);
+      w.document.close();
+      // Ya no necesitamos w.document.title = ... porque el HTML ya tiene <title>
+      setTimeout(() => { w.focus(); w.print(); }, 500);
+    }
+  }
+
+  // --- INFORME GERENCIAL (EXPANDIDO) ---
+  function exportPdfGerencial() {
+    const rows = _pickingRows();
+    if (!rows.length) {
+      alert("No hay datos para generar el informe.");
+      return;
+    }
+    
+    let fechaMostrar = "---";
+    const fechasUnicas = [...new Set(rows.map(r => {
+      let f = r.Fecha_Asignacion || r.FECHA_ASIGNACION || r.Fecha_Proceso || r.DIA_PROCESO;
+      if (!f) return null;
+      return String(f).split("T")[0];
+    }).filter(f => f))].sort();
+
+    if (fechasUnicas.length === 1) {
+      const parts = fechasUnicas[0].split("-");
+      if (parts.length === 3) fechaMostrar = `${parts[1]}/${parts[2]}/${parts[0]}`;
+      else fechaMostrar = fechasUnicas[0];
+    } else if (fechasUnicas.length > 1) {
+      fechaMostrar = `Rango: ${fechasUnicas[0]} al ${fechasUnicas[fechasUnicas.length - 1]}`;
+    } else {
+      fechaMostrar = (PARAMS && PARAMS.cut_date) ? PARAMS.cut_date : new Date().toLocaleDateString("es-PA");
+    }
+
+    const fechaGen = new Date().toLocaleString("es-PA");
+    const fileName = `Informe_Gerencial_${fechaMostrar.replace(/[^a-zA-Z0-9]/g, "-")}`;
+    const fmtP = (n) => (n * 100).toFixed(1) + "%";
+
+    const totalRenglones = rows.length;
+    const totalSol = rows.reduce((a, r) => a + Number(r.Solicitado || 0), 0);
+    const totalAsg = rows.reduce((a, r) => a + Number(r.Asignado || 0), 0);
+    const globalFill = totalSol > 0 ? (totalAsg / totalSol) : 0;
+    const vitales = rows.filter(r => r.Importancia === "VITAL").length;
+    const esenciales = rows.filter(r => r.Importancia === "ESENCIAL").length;
+
+    const uesSinData = rows.filter(r => Number(r.Asignado || 0) === 0 && Number(r.Solicitado_redondeado || 0) > 0);
+    const ueSinMap = new Map();
+    uesSinData.forEach(r => {
+      const k = r.Punto + "|" + r.Categoria;
+      if (!ueSinMap.has(k)) ueSinMap.set(k, { ue: r.Punto, cat: r.Categoria, lines: 0, solOrig: 0, solRed: 0 });
+      const o = ueSinMap.get(k);
+      o.lines++;
+      o.solOrig += Number(r.Solicitado || 0);
+      o.solRed += Number(r.Solicitado_redondeado || 0);
+    });
+    const ueSinList = [...ueSinMap.values()].sort((a, b) => b.solRed - a.solRed);
+
+    const skuSinData = rows.filter(r => Number(r.Asignado || 0) === 0 && Number(r.Solicitado_redondeado || 0) > 0);
+    const skuSinMap = new Map();
+    skuSinData.forEach(r => {
+      const k = r.Codigo;
+      if (!skuSinMap.has(k)) skuSinMap.set(k, { code: r.Codigo, name: r.Suministro, imp: r.Importancia, sol: 0, ues_names: new Set() });
+      const o = skuSinMap.get(k);
+      o.sol += Number(r.Solicitado || 0);
+      o.ues_names.add(r.Punto);
+    });
+    
+    const skuSinList = [...skuSinMap.values()].map(x => ({
+      ...x,
+      count: x.ues_names.size,
+      listaUEs: [...x.ues_names].sort().join(", ")
+    })).sort((a, b) => {
+      const impOrder = { "VITAL": 3, "ESENCIAL": 2, "": 1 };
+      return (impOrder[b.imp || ""] || 0) - (impOrder[a.imp || ""] || 0) || b.sol - a.sol;
+    });
+
+    const fillUeMap = new Map();
+    rows.forEach(r => {
+      const k = r.Punto || "SIN UE";
+      if (!fillUeMap.has(k)) fillUeMap.set(k, { ue: k, cat: r.Categoria, sol: 0, asg: 0 });
+      const o = fillUeMap.get(k);
+      o.sol += Number(r.Solicitado || 0);
+      o.asg += Number(r.Asignado || 0);
+    });
+    const fillUeList = [...fillUeMap.values()].map(x => ({ ...x, rate: x.sol > 0 ? x.asg / x.sol : 0 })).sort((a, b) => a.rate - b.rate);
+
+    const catMap = new Map();
+    rows.forEach(r => {
+      const c = r.Categoria || "SIN CATEGORIA";
+      if (!catMap.has(c)) catMap.set(c, { cat: c, sol: 0, asg: 0 });
+      const o = catMap.get(c);
+      o.sol += Number(r.Solicitado || 0);
+      o.asg += Number(r.Asignado || 0);
+    });
+    const catList = [...catMap.values()].map(x => ({ ...x, rate: x.sol > 0 ? x.asg / x.sol : 0 })).sort((a, b) => a.cat.localeCompare(b.cat));
+
+    const colorGlobal = globalFill >= 0.9 ? "#2e7d32" : (globalFill >= 0.7 ? "#f9a825" : "#c62828");
+    
+    const htmlUeSin = ueSinList.map(u => `<tr>
+      <td>${u.ue}</td>
+      <td>${u.cat}</td>
+      <td class="center" style="font-weight:bold;color:#b71c1c;">${u.lines}</td>
+      <td class="right">${fmt(u.solOrig)}</td>
+      <td class="right">${fmt(u.solRed)}</td>
+    </tr>`).join("");
+
+    const htmlSkuSin = skuSinList.map(s => {
+      const icon = s.imp === "VITAL" ? "" : (s.imp === "ESENCIAL" ? "" : "");
+      const bg = s.imp === "VITAL" ? "#ffebee" : (s.imp === "ESENCIAL" ? "#e8f5e9" : "");
+      return `<tr style="background:${bg}">
+        <td>${s.code}</td>
+        <td>${icon} ${s.name}</td>
+        <td class="center"><span style="font-size:8px;font-weight:bold;">${s.imp || "-"}</span></td>
+        <td class="right">${fmt(s.sol)}</td>
+        <td class="center">${s.count}</td>
+        <td style="font-size:7px; color:#444;">${s.listaUEs}</td>
+      </tr>`;
+    }).join("");
+
+    const htmlFillUe = fillUeList.map(u => {
+      const color = u.rate < 0.8 ? "#ffebee" : "";
+      return `<tr style="background:${color}">
+        <td>${u.ue}</td>
+        <td style="font-size:8px;">${u.cat}</td>
+        <td class="right">${fmt(u.sol)}</td>
+        <td class="right">${fmt(u.asg)}</td>
+        <td class="right"><b>${fmtP(u.rate)}</b></td>
+      </tr>`;
+    }).join("");
+
+    const htmlChartCat = catList.map(c => {
+      const w = (c.rate * 100).toFixed(0);
+      const col = c.rate < 0.8 ? "#c62828" : (c.rate < 0.95 ? "#f9a825" : "#2e7d32");
+      return `<div style="display:flex; align-items:center; margin-bottom:6px;">
+        <div style="width:180px; font-size:9px; text-align:right; padding-right:10px;">${c.cat}</div>
+        <div style="flex:1; background:#eee; height:12px; border-radius:3px;">
+          <div style="width:${w}%; background:${col}; height:100%; border-radius:3px; min-width:2px;"></div>
+        </div>
+        <div style="width:40px; font-size:9px; font-weight:bold; padding-left:10px;">${fmtP(c.rate)}</div>
+      </div>`;
+    }).join("");
+
+    const htmlChartUE = fillUeList.map(u => {
+      const w = (u.rate * 100).toFixed(0);
+      const col = u.rate < 0.8 ? "#c62828" : (u.rate < 0.95 ? "#f9a825" : "#2e7d32");
+      return `<div style="display:flex; align-items:center; margin-bottom:4px;">
+        <div style="width:180px; font-size:8px; text-align:right; padding-right:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${u.ue}</div>
+        <div style="flex:1; background:#eee; height:10px; border-radius:3px;">
+          <div style="width:${w}%; background:${col}; height:100%; border-radius:3px; min-width:2px;"></div>
+        </div>
+        <div style="width:40px; font-size:8px; font-weight:bold; padding-left:10px;">${fmtP(u.rate)}</div>
+      </div>`;
+    }).join("");
+
+    const html = `<!doctype html><html><head><title>${fileName}</title><style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 10mm; color: #333; font-size: 10px; }
+        h1 { font-size: 18px; margin: 0; color: #0b1f3a; text-transform:uppercase; } 
+        h2 { font-size: 12px; margin: 20px 0 8px 0; color: #0b1f3a; border-bottom: 2px solid #ccc; padding-bottom: 3px; }
+        .header { display: flex; justify-content: space-between; border-bottom: 3px solid #0b1f3a; padding-bottom: 10px; margin-bottom: 15px; }
+        .kpi-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 15px; }
+        .kpi { border: 1px solid #ddd; padding: 8px; border-radius: 4px; text-align: center; background: #fff; }
+        .kpi-n { font-size: 16px; font-weight: bold; color: #0b1f3a; }
+        .kpi-l { font-size: 9px; color: #666; text-transform: uppercase; margin-top: 2px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 10px; page-break-inside: auto; }
+        tr { page-break-inside: avoid; page-break-after: auto; }
+        th { background: #0b1f3a; color: white; text-align: left; padding: 5px; font-size: 9px; }
+        td { border-bottom: 1px solid #eee; padding: 4px; }
+        .right { text-align: right; } .center { text-align: center; }
+        .page-break { page-break-before: always; }
+        .chart-box { border:1px solid #ddd; padding:15px; background:#fafafa; border-radius:8px; margin-top:10px; }
+    </style></head><body>
+        <div class="header">
+            <div>
+                <h1>INFORME GERENCIAL DE ASIGNACIONES DEL ALMACEN CEDIS PANAMA</h1>
+                <div style="margin-top:5px; font-size:12px;"><b>Fecha de Asignación: ${fechaMostrar}</b></div>
+                <div style="margin-top:4px; font-size:9px; color:#555; font-style:italic; line-height:1.3;">
+                    Reglas de Asignación: Prioridad Clinica + UE en Cero + Reparto Proporcional en Escasez(si aplica), FEFO, Vto ≥ 60 días.<br>
+                    Prioridad por Tipo de Unidad Ejecutora: <b> HOSPITAL > POLICLINICA > ULAPS > CAPPS > CEDIS </b>
+                </div>
+            </div>
+            <div style="text-align:right;">Generado: ${fechaGen}<br>Torre de Control v7.0</div>
+        </div>
+
+        <div class="kpi-row">
+            <div class="kpi" style="border-top:3px solid ${colorGlobal}"><div class="kpi-n" style="color:${colorGlobal}">${fmtP(globalFill)}</div><div class="kpi-l">Fill Rate Global</div></div>
+            <div class="kpi"><div class="kpi-n">${fmt(totalRenglones)}</div><div class="kpi-l">Total Renglones</div></div>
+            <div class="kpi"><div class="kpi-n">${fmt(totalSol)}</div><div class="kpi-l">Unidades Solicitadas</div></div>
+            <div class="kpi"><div class="kpi-n">${fmt(totalAsg)}</div><div class="kpi-l">Unidades Asignadas</div></div>
+            <div class="kpi"><div class="kpi-n"> ${vitales} |  ${esenciales}</div><div class="kpi-l">Renglones Vitales / Esenciales</div></div>
+        </div>
+
+        <h2>1. UNIDADES EJECUTORAS SIN COBERTURA (0% ASIGNACIÓN)</h2>
+        <div style="font-size:9px; color:#666; margin-bottom:5px;">Unidades que solicitaron producto pero no recibiran nada por escasez de inventario.</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Unidad Ejecutora</th>
+                    <th>Categoría</th>
+                    <th class="center">Renglones en 0</th>
+                    <th class="right">Cant. Original</th>
+                    <th class="right">Ajuste Empaque</th>
+                </tr>
+            </thead>
+            <tbody>${htmlUeSin || "<tr><td colspan='5' class='center'>Excelente. No hay unidades con 0% de cobertura.</td></tr>"}</tbody>
+        </table>
+
+        <h2>2. RENGLONES CRÍTICOS SIN STOCK (TODOS)</h2>
+        <div style="font-size:9px; color:#666; margin-bottom:5px;">Medicamentos e insumos solicitados con inventario agotado.</div>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:10%;">Código</th>
+                    <th style="width:30%;">Suministro</th>
+                    <th style="width:5%;" class="center">Imp</th>
+                    <th style="width:10%;" class="right">Cant. Sol.</th>
+                    <th style="width:5%;" class="center"># UEs</th>
+                    <th style="width:40%;">UEs Afectadas (Detalle)</th>
+                </tr>
+            </thead>
+            <tbody>${htmlSkuSin}</tbody>
+        </table>
+
+        <div class="page-break"></div>
+
+        <h2>3. DETALLE DE CUMPLIMIENTO POR UNIDAD EJECUTORA</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Unidad Ejecutora</th>
+                    <th>Categoría</th>
+                    <th class="right">Solicitado</th>
+                    <th class="right">Asignado</th>
+                    <th class="right">Fill Rate</th>
+                </tr>
+            </thead>
+            <tbody>${htmlFillUe}</tbody>
+        </table>
+
+        <div class="page-break"></div>
+
+        <h2>4. RESUMEN GRÁFICO DE FILL RATE ESPERADO POR UNIDAD EJECUTORA</h2>
+        <div class="chart-box">${htmlChartUE}</div>
+        
+        <h2>5. RESUMEN GRÁFICO DE FILL RATE ESPERADO POR CATEGORÍA DE UNIDAD EJECUTORA</h2>
+        <div class="chart-box">${htmlChartCat}</div>
+
+        <div style="text-align:center; color:#999; margin-top:20px; font-size:9px;">Fin del Informe Gerencial</div>
+    </body></html>`;
+
+    const w = window.open("", "_blank");
+    if (w) {
+      w.document.open();
+      w.document.write(html);
+      w.document.close();
+      w.document.title = fileName;
+      setTimeout(() => { w.print(); }, 500);
+    }
+  }
+
+  // --- EXCEL CON NUEVAS COLUMNAS (EXPANDIDO) ---
+  function exportXlsxAsignacion() {
+    const rows = _pickingRows();
+    if (!rows.length) {
+      alert("No hay datos visibles para exportar.");
+      return;
+    }
+    if (typeof XLSX === "undefined") {
+      alert("No se pudo cargar XLSX.");
+      return;
+    }
+
+    const fileName = getDynamicFilename("Asignacion_F8") + ".xlsx";
+    const groups = new Map();
+    
+    for (const r of rows) {
+      const ue = r.Punto || "SIN_UE";
+      const doc = r.N_Doc || "SIN_DOC";
+      const key = ue + "||" + doc;
+      if (!groups.has(key)) groups.set(key, { ue, doc, tipo: r.Tipo || "", items: [] });
+      groups.get(key).items.push(r);
+    }
+
+    const corte = (PARAMS && PARAMS.corte) ? PARAMS.corte : "";
+    const now = new Date().toLocaleString("es-PA");
+    const aoa = [];
+    aoa.push(["HOJA DE ASIGNACIÓN F8 — CORTE DIARIO"]);
+    aoa.push([`Generado: ${now}`, `Corte: ${corte}`, "Reglas: Fair Share | Prioridad: Mensual > Fecha > UE"]);
+    aoa.push([]);
+    
+    // ENCABEZADOS EXCEL
+    const header = ["UE", "Documento", "Tipo", "Código", "Suministro", "Grupo", "Solicitado", "Solic. red.", "Asignado", "Transito", "Pendiente", "Bultos T/S/P", "Lotes usados", "Info Transito", "Último despacho (real)", "Qty último", "Promedio Hist.", "Frio", "Narcotico", "Importancia", "Acaparamiento"];
+    aoa.push(header);
+
+    for (const g of Array.from(groups.values()).sort((a, b) => (a.ue + a.doc).localeCompare(b.ue + b.doc))) {
+      g.items.sort((a, b) => String(a.Codigo || "").localeCompare(String(b.Codigo || "")));
+      for (const r of g.items) {
+        const bults = `${fmtBultosPart(r.Bultos_Ter || 0)}/${fmtBultosPart(r.Bultos_Sec || 0)}/${fmtBultosPart(r.Bultos_Prim || 0)}`;
+        aoa.push([
+          g.ue, g.doc, g.tipo, r.Codigo || "", r.Suministro || "", r.Grupo || "",
+          Number(r.Solicitado || 0), Number(r.Solicitado_redondeado || 0), Number(r.Asignado || 0), Number(r.Asignado_Transito || 0),
+          Number(r.Pendiente || 0), bults, r.Lotes_Usados || "", r.Transito_Info || "",
+          r.Ultimo_Despacho || "", r.Qty_Ultimo ? Number(r.Qty_Ultimo) : "", r.Promedio_Hist ? Number(r.Promedio_Hist) : "",
+          r.Frio ? "SI" : "", r.Narcotico ? "SI" : "", r.Importancia || "", r.Acaparamiento ? "SI" : ""
+        ]);
+      }
+      aoa.push([]);
+    }
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws["!cols"] = [
+      { wch: 22 }, { wch: 18 }, { wch: 12 }, { wch: 12 }, { wch: 60 }, { wch: 15 },
+      { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 14 },
+      { wch: 40 }, { wch: 20 }, { wch: 18 }, { wch: 12 }, { wch: 12 }, { wch: 8 },
+      { wch: 8 }, { wch: 12 }, { wch: 12 }
+    ];
+    ws["!freeze"] = { xSplit: 0, ySplit: 4 };
+    
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Asignacion_F8");
+    XLSX.writeFile(wb, fileName);
+  }
+
+  // --- LÓGICA DE CARGA ---
+  const WEBAPP_BASE = "https://script.google.com/macros/s/AKfycbyVHDQ8IuVHibz259AiEvZ-jUfVC7fxvSSqC-wfaiiq1_13C9_TK4dVtPK0SMW4sZoJ/exec";
+
+  // ==========================================================================
+  // LLAMADA AL BACKEND — fetch, no JSONP
+  // --------------------------------------------------------------------------
+  // JSONP carga un <script> y arrastra las cookies de Google: con varias
+  // cuentas iniciadas el navegador termina en una pagina de Drive en vez del
+  // JSON, y el <script> revienta con un onerror mudo. fetch hace una peticion
+  // limpia y deja leer el status HTTP real. Probado en celular multi-cuenta el
+  // 19-jul-2026. Se conserva el nombre loadJsonp(url, timeoutMs).
+  // ==========================================================================
+  /* 21-sep · INVENTARIO_UE en la tabla principal.
+     null  = la Calculadora no tiene dato para esa unidad y renglón (no es cero).
+     0     = la unidad está en cero en su estante: se marca en rojo.
+     El tooltip suma lo distribuido en el mes, que viaja en el mismo registro. */
+  function celdaInvUE(r){
+    const v = r.Inventario_UE, dist = (r.Distrib_Mes != null) ? fmt(r.Distrib_Mes) : '—';
+    if (v === null || v === undefined || v === '')
+      return `<td class="right" style="background:#fff8ef; color:#999;" title="Sin dato en la Calculadora para esta unidad y renglón · Distribuido este mes: ${dist}">—</td>`;
+    const cero = Number(v) === 0;
+    return `<td class="right" style="background:#fff8ef; font-weight:bold; color:${cero ? '#b71c1c' : '#8a4b00'};" `+
+           `title="Saldo en el estante de la UE: ${fmt(v)} · Distribuido este mes: ${dist}">${fmt(v)}</td>`;
+  }
+  function loadJsonp(url, timeoutMs) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs || 90000);
+    const sep = url.indexOf('?') < 0 ? '?' : '&';
+    return fetch(url + sep + '_ts=' + Date.now(), { signal: ctrl.signal })
+      .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+      .then(txt => {
+        // Acepta JSON puro o envuelto en callback, por si alguna ruta responde JSONP.
+        try { return JSON.parse(txt); }
+        catch (e) {
+          const m = txt.match(/^[^(]*\((.*)\)[\s;]*$/s);
+          if (m) { try { return JSON.parse(m[1]); } catch (e2) {} }
+          throw new Error('Respuesta no reconocida');
+        }
+      })
+      .finally(() => clearTimeout(timer));
+  }
+
+  // CACHE DEL HISTORICO + GUARDA DE CONCURRENCIA
+  // Antes: cada clic en "Ver Histórico" descargaba 21 MB con cache:'no-cache'.
+  // Si el usuario volvía a hacer clic mientras cargaba, se disparaba una segunda
+  // descarga en paralelo; la que terminara última pisaba a la otra y el panel
+  // quedaba en estado inconsistente (filtros vacíos, datos a medias).
+  // Ahora: una sola descarga por sesión, y los clics repetidos reusan la misma
+  // promesa en vez de abrir otra conexión.
+  let HIST_CACHE = null, HIST_LOAD = null, CARGANDO = false;
+
+  function cargarHistorialJSON(onProgreso) {
+    if (HIST_CACHE) return Promise.resolve(HIST_CACHE);
+    if (HIST_LOAD) return HIST_LOAD;
+    HIST_LOAD = fetch('historial.json')
+      .then(async r => {
+        if (!r.ok) throw new Error('No se pudo leer historial.json. Publícalo desde el menú TORRE CONTROL → Publicar Histórico.');
+        // Progreso real: el archivo pesa ~21 MB y sin esto la espera es muda.
+        const total = +(r.headers.get('content-length') || 0);
+        if (!r.body || !total) return r.json();
+        const reader = r.body.getReader();
+        const trozos = []; let leido = 0;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          trozos.push(value); leido += value.length;
+          if (onProgreso) onProgreso(Math.round(100 * leido / total));
+        }
+        const buf = new Uint8Array(leido); let off = 0;
+        for (const t of trozos) { buf.set(t, off); off += t.length; }
+        return JSON.parse(new TextDecoder('utf-8').decode(buf));
+      })
+      .then(d => { HIST_CACHE = d; HIST_LOAD = null; return d; })
+      .catch(err => { HIST_LOAD = null; throw err; });
+    return HIST_LOAD;
+  }
+
+  async function fetchAndLoad(type) {
+    if (CARGANDO) return;               // ignora clics mientras ya está cargando
+    CARGANDO = true;
+    const isHistory = type === 'history';
+    const btn = isHistory ? document.getElementById('btnLoadHistory') : document.getElementById('btnLoadDaily');
+    const originalText = btn.textContent;
+    btn.textContent = "Cargando...";
+    btn.disabled = true;
+    const otro = isHistory ? document.getElementById('btnLoadDaily') : document.getElementById('btnLoadHistory');
+    if (otro) otro.disabled = true;
+    document.body.style.cursor = 'wait';
+
+    try {
+      let newData;
+      if (type === 'allocation') {
+        const [alloc, params] = await Promise.all([
+          loadJsonp(`${WEBAPP_BASE}?file=allocation`),
+          loadJsonp(`${WEBAPP_BASE}?file=params`)
+        ]);
+        newData = alloc;
+        PARAMS = params;
+        document.getElementById('mainHeader').textContent = "Asignación F8 (Corte diario)";
+        document.getElementById('cutDate').textContent = PARAMS.cut_date || "Hoy";
+      } else {
+        // El histórico se lee de un JSON ESTÁTICO publicado en GitHub Pages.
+        // Se cachea en memoria: el segundo clic es instantáneo.
+        const _hist = await cargarHistorialJSON(p => { btn.textContent = 'Cargando ' + p + '%'; });
+        // Formato columnar: cols[] + rows[[...]] -> se reconstruyen los objetos.
+        if (_hist.cols && Array.isArray(_hist.rows) && Array.isArray(_hist.rows[0])) {
+          const _c = _hist.cols;
+          newData = _hist.rows.map(r => { const o = {}; for (let i=0;i<_c.length;i++) o[_c[i]] = r[i]; return o; });
+        } else {
+          newData = _hist.rows || [];   // compatibilidad con el formato anterior
+        }
+        document.getElementById('mainHeader').textContent = "HISTORIAL ACUMULADO";
+        document.getElementById('cutDate').textContent = "Histórico completo · " +
+          (_hist.total || newData.length).toLocaleString() + " líneas · datos al " +
+          (_hist.generado ? String(_hist.generado).slice(0,10) : '—');
+      }
+
+      if (!newData || newData.length === 0) alert("No se encontraron datos.");
+      else {
+        DATA = newData;
+        window._MODO_ACTUAL = (type === 'history') ? 'history' : 'live';
+        populateFilters();
+        // Auto-filtrar por UE si viene en la URL (?ue=NOMBRE)
+        const urlUE = new URLSearchParams(window.location.search).get('ue');
+        if (urlUE) {
+          const sel = document.getElementById('ue');
+          if (sel) {
+            // Buscar opción que coincida exactamente o parcialmente
+            const opt = Array.from(sel.options).find(o => o.value === urlUE) ||
+                        Array.from(sel.options).find(o => o.value.toLowerCase().includes(urlUE.toLowerCase()));
+            if (opt) { sel.value = opt.value; }
+          }
+        }
+        applyFilters();
+        // Scroll a la tabla si se aplicó filtro automático
+        if (urlUE) {
+          setTimeout(() => {
+            document.querySelector('.scroll')?.scrollIntoView({behavior:'smooth', block:'start'});
+          }, 300);
+        }
+      }
+    } catch (e) {
+      console.error(e);
+      // Antes decía siempre "Error de conexión", ocultando la causa real
+      // (JSON no publicado, GitHub 503, JSON corrupto). Ahora se ve el motivo.
+      alert(e && e.message ? e.message : 'Error de conexión.');
+    } finally {
+      CARGANDO = false;
+      btn.textContent = originalText;
+      btn.disabled = false;
+      if (otro) otro.disabled = false;
+      document.body.style.cursor = 'default';
+    }
+  }
+
+    // --- LÓGICA DEL MODAL DE AUDITORÍA ---
+  function openAudit(index) {
+    const r = window.__currentData[index];
+    if(!r) return;
+
+    const sol = Number(r.Solicitado || 0);
+    const solAj = Number(r.Solicitado_redondeado || 0);
+    const asig = Number(r.Asignado || 0);
+    const cuota = Number(r.Cuota_Max || 0);
+    const saldo = Number(r.Saldo_Disponible || 0);
+    const despPrev = Number(r.Ejecucion_Previa || 0); 
+    const consumo = Number(r.Consumo_Base || 0);
+    const factor = Number(r.Factor_Riesgo || 1.1);
+
+    let html = `<div style="margin-bottom:15px; border-bottom:1px solid #eee; padding-bottom:10px;">
+      <div style="font-size:18px; font-weight:bold; color:#0b1f3a;">${r.Suministro}</div>
+      <div style="font-size:12px; color:#666;">SKU: ${r.Codigo} | UE: ${r.Punto}</div>
+    </div>`;
+
+    // 0. PRIORIDAD CLÍNICA (V9 — inteligencia de demanda)
+    const etq = String(r.Rank_Etiqueta || "").toUpperCase();
+    const esCero = (r.Inventario_UE === 0);
+    const pisoTxt = {
+      "CONSUMO_REAL":"consumo reportado por la UE",
+      "CONSUMO_SUPRIMIDO":"consumo deprimido por desabasto (protegido, no se recorta)",
+      "HIBRIDO_DIST":"histórico de lo despachado (la UE no reporta consumo)",
+      "HIBRIDO_REQ":"lo que la UE pide (sin historial)",
+      "SIN_PISO":"sin dato de demanda"
+    }[String(r.Piso_Origen||"").toUpperCase()] || (r.Piso_Origen || "—");
+    let clsP = esCero ? 'danger' : 'ok';
+    html += `<div class="audit-step ${clsP}"><span class="audit-title">0. PRIORIDAD CLÍNICA</span>
+      <div style="margin-top:4px;">Clasificación: ${badgePrioridad(r)}</div>
+      <div style="margin-top:6px;">Saldo en el estante de la UE: <span class="audit-val" style="${esCero?'color:#b71c1c;font-weight:bold;':''}">${r.Inventario_UE===null?'sin dato':fmt(r.Inventario_UE)}</span>${esCero?' — la UE no tiene existencias':''}</div>
+      <div style="margin-top:4px;">Distribuido este mes: <span class="audit-val">${fmt(r.Distrib_Mes||0)}</span></div>
+      <div style="margin-top:4px;">Piso de demanda: <span class="audit-val">${pisoTxt}</span></div>`;
+    if (r.Brecha_Req !== null && r.Brecha_Req > 1.05)
+      html += `<div style="margin-top:4px;">Brecha pide/consume: <span class="audit-val" style="color:#c0392b;">${r.Brecha_Req.toFixed(1)}x</span> — efecto presión (pide más de lo que consume)</div>`;
+    if (r.Protegido)
+      html += `<div style="margin-top:5px; color:#0C447C; font-weight:bold;"> PROTEGIDO: nunca se recorta (vital, consumo suprimido o sin piso firme).</div>`;
+    html += `</div>`;
+
+    // 1. CUOTA
+    html += `<div class="audit-step ${r.Acaparamiento ? 'danger' : 'ok'}">
+      <span class="audit-title">1. ANÁLISIS DE CUOTA (TECHO MENSUAL)</span>`;
+      
+    if (consumo === 0) {
+        html += `<div> <b>Sin historial de consumo:</b> El sistema no tiene datos históricos para este SKU en esta UE.
+        <br>Regla aplicada: <i>"Si consumo=0, la Cuota es igual a lo Solicitado"</i>.
+        <br>Cuota Asignada: <span class="audit-val">${fmt(sol)}</span>.</div>`;
+    } else {
+        html += `<div>Consumo Promedio: <span class="audit-val">${fmt(consumo)}</span> x Factor Riesgo <span class="audit-val">${factor}x</span> = Cuota Máx <span class="audit-val">${fmt(cuota)}</span>.</div>
+        <div style="margin-top:4px;">Despachado previo: <span class="audit-val">${fmt(despPrev)}</span>. Saldo disp: <span class="audit-val">${fmt(saldo)}</span>.</div>`;
+    }
+
+    if (r.Acaparamiento) html += `<div style="margin-top:5px; color:#d32f2f; font-weight:bold;"> RECORTADO: Pidió ${fmt(sol)} pero supera su saldo (${fmt(saldo)}).</div>`;
+    else html += `<div style="margin-top:5px; color:#2e7d32; font-weight:bold;"> OK: Pedido dentro del límite permitido.</div>`;
+    
+    html += `</div>`;
+
+    // 2. EMPAQUE
+    html += `<div class="audit-step ok"><span class="audit-title">2. AJUSTE EMPAQUE</span>
+      <div>Empaque Terciario: <span class="audit-val">${r.Empaque_Ter||1}</span>. Solicitud ajustada final: <span class="audit-val">${fmt(solAj)}</span>.</div></div>`;
+
+    // 3. STOCK
+    let stClass = (asig < solAj && solAj > 0) ? 'warn' : 'ok';
+    if(asig===0 && solAj > 0) stClass = 'danger';
+    
+    html += `<div class="audit-step ${stClass}"><span class="audit-title">3. ASIGNACIÓN (REALIDAD CEDIS)</span>`;
+    if(asig === solAj && solAj > 0) html += `<div style="color:#2e7d32; font-weight:bold;"> STOCK COMPLETO: Se asignaron ${fmt(asig)}.</div>`;
+    else if(asig === 0 && solAj > 0) html += `<div style="color:#b71c1c; font-weight:bold;"> SIN STOCK: Inventario agotado.</div>`;
+    else html += `<div style="color:#f57f17; font-weight:bold;"> STOCK PARCIAL (FAIR SHARE): Se asignaron ${fmt(asig)} de ${fmt(solAj)}.</div>`;
+    html += `</div>`;
+
+    document.getElementById('auditBody').innerHTML = html;
+    document.getElementById('auditModal').style.display = "block";
+  }
+  function closeAudit() { document.getElementById('auditModal').style.display = "none"; }
+  window.onclick = function(event) { if (event.target == document.getElementById('auditModal')) closeAudit(); }
+  
+  async function init() {
+    tickDateTime();
+    setInterval(tickDateTime, 60000);
+    (window.__motorCargar ? window.__motorCargar() : fetchAndLoad('allocation'));
+
+    document.getElementById('btnLoadDaily').addEventListener('click', () => (window.__motorCargar ? window.__motorCargar() : fetchAndLoad('allocation')));
+    document.getElementById('btnLoadHistory').addEventListener('click', () => fetchAndLoad('history'));
+
+    document.getElementById('btnApply').addEventListener('click', applyFilters);
+    document.getElementById('btnReset').addEventListener('click', () => {
+      document.getElementById('q').value = "";
+      document.getElementById('doc').value = "";
+      document.getElementById('dateFrom').value = "";
+      document.getElementById('dateTo').value = "";
+      document.getElementById('cat').value = "ALL";
+      document.getElementById('ue').value = "ALL";
+      document.getElementById('tipo').value = "ALL";
+      document.getElementById('estado').value = "ALL";
+      document.getElementById('allocDateFrom').value = "";
+      document.getElementById('allocDateTo').value = "";
+      var _sc = document.getElementById('soloCero'); if (_sc) _sc.checked = false;
+      applyFilters();
+    });
+
+    var _soloCeroChk = document.getElementById('soloCero');
+    if (_soloCeroChk) _soloCeroChk.addEventListener('change', applyFilters);
+
+    document.getElementById('btnExportPdf').addEventListener('click', exportPdfAsignacion);
+    document.getElementById('btnExportPdfManager').addEventListener('click', exportPdfGerencial);
+        // NUEVO BOTÓN
+    document.getElementById('btnExportCuotas').addEventListener('click', exportPdfCuotas);
+      // ==============================================================
+  // EXPORTACIÓN EXCEL V8.1 (RESUMEN + DETALLE + QUIEBRES)
+  // ==============================================================
+  document.getElementById('btnExportXlsx').addEventListener('click', exportXlsxFull);
+
+  function exportXlsxFull() {
+    const rows = _pickingRows(); 
+    if (!rows.length) { alert("No hay datos."); return; }
+
+    const wb = XLSX.utils.book_new();
+    const fechaHoy = new Date().toLocaleString("es-PA");
+    
+    // HOJA 1: RESUMEN
+    const totalSol = rows.reduce((a, r) => a + Number(r.Solicitado || 0), 0);
+    const totalAsig = rows.reduce((a, r) => a + Number(r.Asignado || 0), 0);
+    const fillRate = totalSol > 0 ? (totalAsig / totalSol) : 0;
+    
+    const resumenData = [
+      ["REPORTE TORRE DE CONTROL V8.1"], ["Generado:", fechaHoy], [""],
+      ["METRICAS", "VALOR"],
+      ["Total Solicitado", totalSol], ["Total Asignado", totalAsig], ["Fill Rate", (fillRate * 100).toFixed(2) + "%"]
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(resumenData), "Resumen");
+
+    // HOJA 2: DETALLE COMPLETO
+    const detalle = rows.map(r => ({
+      "Fecha F8": r.Fecha, "Doc": r.N_Doc, "UE": r.Punto, "Categoria": r.Categoria,
+      "Codigo": r.Codigo, "Suministro": r.Suministro, "Grupo": r.Grupo,
+      "Solicitado": Number(r.Solicitado), "Ajustado (Cuota)": Number(r.Solicitado_redondeado),
+      "Asignado": Number(r.Asignado), "Pendiente": Number(r.Pendiente),
+      "ACAPARAMIENTO": r.Acaparamiento ? "SI" : "NO",
+      "% SATURACION": r.Acaparamiento ? "100% (Recorte)" : "OK",
+      "Ultimo Despacho": r.Ultimo_Despacho, "Promedio Hist": Number(r.Promedio_Hist||0),
+      "Estado": r.Estado, "Lotes": r.Lotes_Usados,
+      // CAMPOS NUEVOS
+      "Factor Riesgo": r.Factor_Riesgo,
+      "Consumo Base": Number(r.Consumo_Base || 0),
+      "Cuota Maxima": Number(r.Cuota_Max || 0),
+      "Ejecutado Antes de Hoy": Number(r.Ejecucion_Previa || 0),
+      "Saldo Disponible (Inicio dia)": Number(r.Saldo_Disponible || 0)
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(detalle), "Detalle Asignacion");
+
+    // HOJA 3: QUIEBRES
+    const quiebres = rows.filter(r => Number(r.Pendiente) > 0).map(r => ({
+       "UE": r.Punto, "Codigo": r.Codigo, "Suministro": r.Suministro, 
+       "Solicitado": Number(r.Solicitado_redondeado), "No Entregado": Number(r.Pendiente),
+       "Motivo": Number(r.Asignado)===0 ? "SIN STOCK" : "STOCK INSUFICIENTE"
+    }));
+    if(quiebres.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(quiebres), "Faltantes");
+
+    XLSX.writeFile(wb, `Reporte_V8_${fechaHoy.replace(/[^a-zA-Z0-9]/g,"_")}.xlsx`);
+  }
+
+    document.querySelectorAll('.tab').forEach(el => el.addEventListener('click', () => showTab(el.dataset.tab)));
+  }
+
+  // [Removido] Botón "Cargar Local" (carga de JSON manual / debug) — retirado por limpieza de UI.
+
+   // --- REPORTE TABLERO DE LLENADO (FINAL VERIFICADO) ---
+  // --- REPORTE TABLERO DE LLENADO (FINAL: LOGO + NOMBRE ARCHIVO DINÁMICO) ---
+  async function exportPdfCuotas() {
+    const btn = document.getElementById('btnExportCuotas');
+    const oldText = btn.textContent;
+    btn.textContent = "Generando...";
+    
+    // 1. VENTANA EMERGENTE
+    const w = window.open("", "_blank");
+    if (!w) {
+        alert(" Permita los pop-ups para ver el reporte.");
+        btn.textContent = oldText;
+        return;
+    }
+    w.document.write('<div style="font-family:sans-serif; padding:20px;"> Generando reporte...</div>');
+
+    try {
+        const rawData = await loadJsonp(`${WEBAPP_BASE}?file=cuotas`);
+        if(!rawData || rawData.length === 0) { w.close(); alert("No hay datos."); return; }
+
+        // FILTROS DASHBOARD
+        const fUE = document.getElementById('ue').value;
+        const fQ = document.getElementById('q').value.toLowerCase();
+
+        const filteredData = rawData.filter(r => {
+            if (fUE !== 'ALL' && r.UE !== fUE) return false;
+            if (fQ && !String(r.Codigo).includes(fQ) && !r.Suministro.toLowerCase().includes(fQ)) return false;
+            return true;
+        });
+
+        if (filteredData.length === 0) {
+             w.close(); alert("No hay datos con los filtros actuales."); return; 
+        }
+
+        const groups = {};
+        filteredData.forEach(r => {
+            if(!groups[r.UE]) groups[r.UE] = [];
+            groups[r.UE].push(r);
+        });
+
+        const fechaHoy = new Date().toLocaleString("es-PA");
+        
+        // --- NUEVO: CREAR NOMBRE DE ARCHIVO DINÁMICO ---
+        const fechaNombre = new Date().toISOString().split('T')[0]; 
+        const nombreArchivo = `Tablero_Llenado_${fUE === 'ALL' ? 'General' : fUE.replace(/[^a-zA-Z0-9]/g, '_')}_${fechaNombre}`;
+
+        // Helper Riesgo
+        const getRiskText = (n) => {
+            if(n >= 2) return `<span style="color:red; font-weight:bold;">ALTO (${n})</span>`;
+            if(n >= 1.5) return `<span style="color:#e65100;">MEDIO (${n})</span>`;
+            return `BAJO (${n})`;
+        };
+
+        let htmlContent = "";
+
+        Object.keys(groups).sort().forEach(ue => {
+            const items = groups[ue].sort((a,b) => b.Saturacion - a.Saturacion);
+            
+            let rows = items.map(i => {
+                const satVal = i.Saturacion;
+                const pctTexto = (satVal * 100).toFixed(1) + "%";
+                
+                // LOGICA DE COLORES
+                let barColor = '#fbc02d'; // Amarillo
+                if (satVal > 1.0) barColor = '#7b1fa2'; // Purpura
+                else if (satVal >= 0.9) barColor = '#2e7d32'; // Verde
+                else if (satVal < 0.2) barColor = '#d32f2f'; // Rojo
+
+                const barWidth = Math.min(satVal * 100, 100);
+
+                return `
+                <tr>
+                    <td style="font-weight:bold;">${i.Codigo}</td>
+                    <td style="font-size:9px;">${i.Suministro}</td>
+                    <td class="center" style="font-size:9px;">${getRiskText(i.FactorRiesgo)}</td>
+                    <td class="right">${fmt(i.ConsumoBase)}</td>
+                    <td class="right" style="font-weight:bold;">${fmt(i.CuotaMax)}</td>
+                    <td class="right">${fmt(i.Ejecucion)}</td>
+                    <td class="right" style="color:${i.SaldoRemanente < 0 ? 'red' : 'black'}">${fmt(i.SaldoRemanente)}</td>
+                    <td style="width:130px; padding:2px 4px;">
+                        <div style="display:flex; align-items:center; gap:5px;">
+                            <div style="flex:1; height:12px; background:#e0e0e0; border:1px solid #999;">
+                                <div style="height:100%; width:${barWidth}%; background:${barColor};"></div>
+                            </div>
+                            <div style="font-size:9px; font-weight:bold; width:38px; text-align:right;">${pctTexto}</div>
+                        </div>
+                    </td>
+                </tr>`;
+            }).join("");
+
+            htmlContent += `
+            <div class="ue-block">
+                <div class="ue-header">
+                    <span style="font-size:12px; font-weight:bold;">${ue}</span>
+                    <span style="font-size:10px;"> (${items.length} Renglones)</span>
+                </div>
+                <table>
+                    <thead>
+                        <tr style="background:#f0f2f5; color:#333;">
+                            <th style="width:50px;">CODIGO</th>
+                            <th>DESCRIPCION</th>
+                            <th style="width:50px;">FACTOR_RIESGO</th>
+                            <th style="width:45px;" class="right">CONSUMO_BASE</th>
+                            <th style="width:45px;" class="right">CUOTA_MAX_MES</th>
+                            <th style="width:45px;" class="right">EJECUCION</th>
+                            <th style="width:45px;" class="right">SALDO_REMANENTE</th>
+                            <th style="width:130px;">%_SATURACION</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>`;
+        });
+
+        // Aseguramos que cargue la imagen relativa usando BASE HREF
+        const baseHref = window.location.origin + window.location.pathname;
+
+        const finalHtml = `
+        <!doctype html><html><head>
+        <base href="${baseHref}">
+        <title>${nombreArchivo}</title> <!-- AQUI SE INSERTA EL NOMBRE -->
+        <style>
+            body { font-family: 'Segoe UI', Arial, sans-serif; font-size:10px; margin: 10mm; color: #111; }
+            
+            .header-table { width:100%; border-bottom: 2px solid #0b1f3a; margin-bottom:15px; padding-bottom:10px; }
+            .header-logo img { width: 50px; height: 50px; object-fit: contain; }
+            
+            .header-title { font-size:16px; font-weight:700; color:#0b1f3a; text-transform:uppercase; margin-bottom:5px; }
+            .header-meta { font-size:11px; color:#444; }
+
+            .ue-block { margin-bottom:20px; display:block; }
+            .ue-header { background:#0b1f3a; color:white; padding:5px; font-weight:bold; }
+            
+            table { width:100%; border-collapse:collapse; font-size:9px; }
+            thead { display: table-header-group; } 
+            tr { page-break-inside: avoid; }
+            th, td { border:1px solid #ccc; padding:3px; vertical-align:middle; }
+            .right { text-align:right; } .center { text-align:center; }
+            
+            .legend { text-align:center; font-size:9px; margin-bottom:10px; padding:5px; background:#f9f9f9; border-radius:4px; }
+            .dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:2px; }
+        </style>
+        </head><body>
+            
+            <table class="header-table" style="border:none;">
+                <tr>
+                    <td style="border:none; width:60px; vertical-align:top;" class="header-logo">
+                        <img src="./icons/icon-512.png" alt="logo">
+                    </td>
+                    <td style="border:none; padding-left:15px; vertical-align:top;">
+                        <div class="header-title">TABLERO DE LLENADO DE RENGLONES SERVIDOS POR EL CEDIS PANAMA A UNIDADES EJECUTORAS</div>
+                        <div class="header-meta">Generado: <b>${fechaHoy}</b></div>
+                        <div class="header-meta">Filtro aplicado: <b>${fUE === 'ALL' ? 'TODAS LAS UNIDADES' : fUE}</b></div>
+                    </td>
+                </tr>
+            </table>
+
+            <div class="legend">
+                <span style="margin-right:15px;"><span class="dot" style="background:#7b1fa2;"></span>>100% (Excedido)</span>
+                <span style="margin-right:15px;"><span class="dot" style="background:#2e7d32;"></span>90-100% (Completo)</span>
+                <span style="margin-right:15px;"><span class="dot" style="background:#fbc02d;"></span>< 90% (En Progreso)</span>
+                <span><span class="dot" style="background:#d32f2f;"></span>< 20% (Bajo)</span>
+            </div>
+
+            ${htmlContent}
+        </body></html>`;
+
+        w.document.open();
+        w.document.write(finalHtml);
+        w.document.close();
+        
+        setTimeout(() => { w.focus(); w.print(); }, 1000);
+
+    } catch (e) {
+        console.error(e);
+        w.close();
+        alert("Error: " + e.message);
+    } finally {
+        btn.textContent = oldText;
+    }
+  }
+  
+  init();
+
+// ── Estado del panel WhatsApp ────────────────────────────────────────────────
+let _waDirectorio  = null;   // datos de DIRECTORIO_UE cargados desde GAS
+let _waUEs         = [];     // lista de UEs procesadas para el panel
+let _waEnviando    = false;
+let _waStopFlag    = false;
+
+// ── Abrir panel ──────────────────────────────────────────────────────────────
+async function abrirPanelWA() {
+  document.getElementById('modalWA').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+  document.getElementById('waLista').innerHTML =
+    '<div style="text-align:center;padding:30px;color:#888;"> Cargando directorio de UEs...</div>';
+  document.getElementById('waSubtitulo').textContent = 'Cargando directorio...';
+  document.getElementById('waBarra').style.display = 'none';
+
+  // Cargar directorio si no está en caché
+  if (!_waDirectorio) {
+    try {
+      _waDirectorio = await loadJsonp(`${WEBAPP_BASE}?file=directorio_ue`);
+    } catch(e) {
+      document.getElementById('waLista').innerHTML =
+        `<div style="padding:20px;color:#b00020;"> Error cargando directorio: ${e.message}</div>`;
+      return;
+    }
+  }
+
+  _construirListaWA();
+}
+
+// ── Construir lista de UEs desde DATA actual ─────────────────────────────────
+function _construirListaWA() {
+  if (!DATA || !DATA.length) {
+    document.getElementById('waLista').innerHTML =
+      '<div style="padding:20px;color:#888;">No hay datos de asignación cargados. Carga el Corte Diario primero.</div>';
+    return;
+  }
+
+  // Mapear directorio por UE normalizada
+  const dirMap = new Map();
+  (_waDirectorio || []).forEach(d => {
+    const key = _waNorm(d.ue_std);
+    dirMap.set(key, d);
+  });
+
+  // Agrupar DATA por UE — una entrada por UE, todos sus F8s consolidados
+  const grupos = new Map();
+  DATA.forEach(r => {
+    const ue = r.Punto || '';
+    const f8 = r.N_Doc || '';
+    if (!ue || !f8) return;
+    if (!grupos.has(ue)) {
+      grupos.set(ue, {
+        ue,
+        f8s      : [],       // todos los docs de esta UE
+        totalSol : 0, totalAsig: 0,
+        itemsPorF8: new Map(), // f8 → [{nombre, codigo, sol, asig, estado}]
+        contacto : dirMap.get(_waNorm(ue)) || null
+      });
+    }
+    const g = grupos.get(ue);
+    const asigR = Number(r.Asignado || 0);
+    const solR  = Number(r.Solicitado_redondeado || 0);
+    g.totalSol  += solR;
+    g.totalAsig += asigR;
+    if (!g.f8s.includes(f8)) g.f8s.push(f8);
+    if (!g.itemsPorF8.has(f8)) g.itemsPorF8.set(f8, []);
+    g.itemsPorF8.get(f8).push({
+      nombre : String(r.Suministro || r.Codigo || '').trim(),
+      codigo : String(r.Codigo || '').trim(),
+      sol    : solR,
+      asig   : asigR,
+      estado : String(r.Estado || '').trim()
+    });
+  });
+
+  _waUEs = Array.from(grupos.values()).map(g => ({
+    ...g,
+    items: Array.from(g.itemsPorF8.values()).flat() // array plano de todos los items
+  }));
+
+  // Separar: con teléfono / sin teléfono
+  const conWA  = _waUEs.filter(g => g.contacto?.wa);
+  const sinWA  = _waUEs.filter(g => !g.contacto?.wa);
+  const total  = _waUEs.length;
+  const listos = conWA.length;
+
+  document.getElementById('waSubtitulo').textContent =
+    `${total} pedido(s) en esta asignación — ${listos} con WhatsApp registrado`;
+
+  // Renderizar lista
+  const conHtml = conWA.map((g, i) => _waFilaHTML(g, i, true)).join('');
+  const sinHtml = sinWA.length
+    ? `<div style="margin-top:12px;padding:8px 12px;background:#f5f5f5;
+                   border-radius:6px;font-size:11px;color:#888;font-weight:600;">
+         Sin número de WhatsApp registrado (${sinWA.length})
+       </div>
+       ${sinWA.map((g, i) => _waFilaHTML(g, conWA.length + i, false)).join('')}`
+    : '';
+
+  document.getElementById('waLista').innerHTML =
+    conHtml + sinHtml ||
+    '<div style="padding:20px;color:#888;">No hay UEs para notificar.</div>';
+}
+
+function _waNorm(v) {
+  return String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[().\-_\/]/g,' ').toUpperCase().replace(/\s+/g,' ').trim();
+}
+
+function _waFilaHTML(g, idx, tieneWA) {
+  const fill    = g.totalSol > 0 ? ((g.totalAsig / g.totalSol) * 100).toFixed(0) : '0';
+  const fillCol = fill >= 90 ? '#1b5e20' : fill >= 50 ? '#e65100' : '#b71c1c';
+  const fillBg  = fill >= 90 ? '#e8f5e9' : fill >= 50 ? '#fff3e0' : '#ffebee';
+  const numMostrar = tieneWA
+    ? `<span style="color:#075e54;font-weight:600;">${g.contacto.wa}</span>`
+    : `<span style="color:#aaa;">Sin número</span>`;
+  const nomContacto = g.contacto?.nombre
+    ? `<div style="font-size:10px;color:#555;margin-top:1px;">${g.contacto.nombre}${g.contacto.puesto ? ' · ' + g.contacto.puesto : ''}</div>`
+    : '';
+  const docsStr = g.f8s.join(', ');
+  const nAcap = (g.items || []).filter(it => Number(it.Reservado||0) > 0).length;
+  const acapBadge = nAcap > 0
+    ? `<div style="margin-top:2px;"><span style="background:#fef3c7;border:1px solid #f59e0b;
+        color:#92400e;font-size:9px;padding:1px 5px;border-radius:3px;font-weight:700;">
+        &#9888;&#65039; ${nAcap} suministro${nAcap!==1?'s':''} con reserva activa sin despachar</span></div>`
+    : '';
+
+  return `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;
+                border-bottom:1px solid #f0f0f0;opacity:${tieneWA?'1':'.5'};">
+      <input type="checkbox" ${tieneWA?'checked':''} ${tieneWA?'':'disabled'}
+             id="waChk_${idx}" data-idx="${idx}"
+             style="width:16px;height:16px;flex-shrink:0;cursor:${tieneWA?'pointer':'not-allowed'};">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12px;font-weight:700;color:#0b1f3a;
+                    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+          ${g.ue}
+        </div>
+        ${nomContacto}
+        <div style="font-size:10px;color:#777;margin-top:2px;">
+          ${g.f8s.length} doc${g.f8s.length!==1?'s':''}: <b>${docsStr.length > 50 ? docsStr.slice(0,48)+'...' : docsStr}</b>
+        </div>
+        <div style="font-size:10px;color:#777;">
+          ${g.items.length} renglón${g.items.length!==1?'es':''} · ${numMostrar}
+        </div>
+        ${acapBadge}
+      </div>
+      <div style="text-align:right;flex-shrink:0;">
+        <div style="background:${fillBg};color:${fillCol};border:1px solid ${fillCol};
+                    padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;">
+          ${fill}%
+        </div>
+        <div style="font-size:9px;color:#aaa;margin-top:2px;">Fill Rate</div>
+      </div>
+      ${tieneWA ? `
+      <button onclick="_waCopiarLink(${idx})"
+              style="font-size:10px;padding:4px 8px;border:1px solid #ddd;
+                     border-radius:6px;background:#fff;cursor:pointer;flex-shrink:0;"
+              title="Copiar link">&#128279;</button>` : ''}
+    </div>`;
+}
+
+// ── Seleccionar / deseleccionar todas ────────────────────────────────────────
+function waSelAll(val) {
+  document.querySelectorAll('[id^="waChk_"]:not(:disabled)').forEach(c => c.checked = val);
+}
+
+// ── Copiar link individual ───────────────────────────────────────────────────
+function _waCopiarLink(idx) {
+  const g = _waUEs[idx];
+  if (!g?.contacto?.wa) return;
+  const url = _waBuildUrl(g);
+  navigator.clipboard.writeText(url).then(() => {
+    alert(' Link copiado:\n' + url);
+  }).catch(() => prompt('Copia este link:', url));
+}
+
+// ── Construir URL de WhatsApp ─────────────────────────────────────────────────
+function _waBuildUrl(g) {
+  const fill    = g.totalSol > 0 ? ((g.totalAsig / g.totalSol) * 100).toFixed(1) : '0.0';
+  const saludo  = g.contacto?.nombre ? `Estimado(a) *${g.contacto.nombre}*,\n` : '';
+  const docs    = g.f8s.join(', ');
+  const nDocs   = g.f8s.length;
+
+  // Link a la página standalone de la UE (no al motor interno)
+  const baseUrl = window.location.origin + window.location.pathname.replace(/[^\/]*$/, '');
+  const linkUE  = `${baseUrl}asignacion_ue.html?ue=${encodeURIComponent(g.ue)}`;
+
+  // Detectar acaparamiento: items con Reservado > 0 en el corte actual
+  const itemsAcap = g.items.filter(it => it.Reservado > 0);
+  const notaAcap  = itemsAcap.length
+    ? `\n *Nota:* ${itemsAcap.length} suministro${itemsAcap.length!==1?'s':''} con reserva activa sin despachar. Ver detalle en el enlace.`
+    : '';
+
+  const msg = [
+    `*[ F8 PROCESADA - TORRE CONTROL CEDIS ]*`,
+    ``,
+    `${saludo}`,
+    `Su${nDocs > 1 ? 's' : ''} Forma${nDocs > 1 ? 's' : ''} 8 ha${nDocs > 1 ? 'n' : ''} sido recibida${nDocs > 1 ? 's' : ''} y procesada${nDocs > 1 ? 's' : ''} en el sistema.`,
+    `El almacen continuara con el proceso de atencion.`,
+    ``,
+    `*Unidad:* ${g.ue}`,
+    `*Doc${nDocs > 1 ? 's' : ''}:* ${docs}`,
+    `*Renglones:* ${g.items.length}`,
+    `*Fill Rate:* ${fill}%`,
+    ``,
+    `Ver detalle completo de su asignacion:`,
+    linkUE,
+    notaAcap,
+    ``,
+    `_Para consultas contactar Torre de Control CEDIS._`
+  ].join('\n');
+
+  // web.whatsapp.com/send/ va directo a la sesión activa sin página intermedia
+  // (wa.me pasa por api.whatsapp.com que muestra el diálogo "Open WhatsApp?" y puede ser bloqueado por firewall)
+  const num = g.contacto.wa.replace(/^\+/, '');
+  return `https://web.whatsapp.com/send/?phone=${num}&text=${encodeURIComponent(msg)}`;
+}
+
+// ── Iniciar envío — flujo paso a paso (evita bloqueo de popups del browser) ──
+let _waCola = [];     // cola de UEs pendientes
+let _waActual = 0;    // índice actual en la cola
+
+function iniciarEnvioWA() {
+  // Fix índices: usar mismo orden que el render [conWA..., sinWA...]
+  const conWA = _waUEs.filter(g => g.contacto?.wa);
+  const ordenado = [...conWA, ..._waUEs.filter(g => !g.contacto?.wa)];
+
+  const seleccionadas = ordenado.filter((g, i) => {
+    const chk = document.getElementById(`waChk_${i}`);
+    return chk && chk.checked && g.contacto?.wa;
+  });
+
+  if (!seleccionadas.length) {
+    alert('No hay UEs seleccionadas con número de WhatsApp.');
+    return;
+  }
+
+  // Guardar cola y arrancar desde la primera
+  _waCola   = seleccionadas;
+  _waActual = 0;
+  _abrirSiguienteWA();
+}
+
+function _abrirSiguienteWA() {
+  const barra   = document.getElementById('waBarra');
+  const progTxt = document.getElementById('waProgTxt');
+  const progBar = document.getElementById('waProgBar');
+  const btnEnv  = document.getElementById('waBtnEnviar');
+
+  if (_waActual >= _waCola.length) {
+    // Terminamos
+    barra.style.display = 'block';
+    progBar.style.width      = '100%';
+    progBar.style.background = '#25D366';
+    progTxt.innerHTML = ` Listo — ${_waCola.length} conversación(es) abiertas.`;
+    btnEnv.textContent      = ' Notificar seleccionadas';
+    btnEnv.style.background = '#25D366';
+    btnEnv.onclick          = iniciarEnvioWA;
+    return;
+  }
+
+  const g    = _waCola[_waActual];
+  const total = _waCola.length;
+  const pct  = Math.round((_waActual / total) * 100);
+
+  barra.style.display      = 'block';
+  progBar.style.width      = pct + '%';
+  progBar.style.background = '#25D366';
+
+  const siguiente = _waActual + 1 < total ? _waCola[_waActual + 1].ue : null;
+
+  progTxt.innerHTML = `
+    <b>${_waActual + 1} de ${total}:</b> ${g.ue}<br>
+    <span style="font-size:11px;color:#555;">
+      Envía el mensaje en WhatsApp y luego haz clic en
+      <b style="color:#0b1f3a;">→ Siguiente</b> para continuar.
+    </span>`;
+
+  // Abrir WhatsApp — funciona porque es gesto directo del usuario
+  window.open(_waBuildUrl(g), '_blank');
+
+  // Cambiar botón a "Siguiente" para el próximo
+  if (siguiente) {
+    btnEnv.textContent      = `→ Siguiente: ${siguiente.slice(0, 28)}${siguiente.length > 28 ? '…' : ''}`;
+    btnEnv.style.background = '#0b1f3a';
+    btnEnv.onclick          = () => { _waActual++; _abrirSiguienteWA(); };
+  } else {
+    btnEnv.textContent      = ' Finalizar';
+    btnEnv.style.background = '#25D366';
+    btnEnv.onclick          = () => { _waActual++; _abrirSiguienteWA(); };
+  }
+}
+
+// ── Cerrar panel ─────────────────────────────────────────────────────────────
+function cerrarPanelWA() {
+  if (_waEnviando) _waStopFlag = true;
+  document.getElementById('modalWA').style.display = 'none';
+  document.body.style.overflow = '';
+  _waEnviando = false;
+}
+
+// Cerrar con Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') cerrarPanelWA();
+});
+// ── Exportar Reservas a Excel con formato completo (ExcelJS) ─────────────────
+async function exportarReservasExcel() {
+  if (typeof ExcelJS === 'undefined') {
+    alert('La librería ExcelJS no cargó. Verifica tu conexión e intenta de nuevo.');
+    return;
+  }
+  const btn = document.getElementById('btnExportReservas');
+  btn.textContent = ' Consultando GAS...';
+  btn.disabled = true;
+  try {
+    const lista = await loadJsonp(`${WEBAPP_BASE}?file=reservas_detalle`);
+    if (!lista || !lista.length) {
+      alert('No hay reservas activas que superen el umbral configurado.');
+      return;
+    }
+    btn.textContent = ' Generando Excel...';
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'Torre de Control CEDIS'; wb.created = new Date();
+    const thin  = { style:'thin', color:{ argb:'FFE5E7EB' } };
+    const arial = (sz,bold,argb) => ({name:'Arial',size:sz||9,bold:!!bold,color:{argb:argb||'FF111827'}});
+    const fill  = a => ({type:'pattern',pattern:'solid',fgColor:{argb:a}});
+    const applyHdr = row => {
+      row.height = 22;
+      row.eachCell(c => {
+        c.fill=fill('FF0B1F3A'); c.font=arial(10,true,'FFFFFFFF');
+        c.alignment={horizontal:'center',vertical:'middle'};
+        c.border={bottom:{style:'medium',color:{argb:'FF133A74'}}};
+      });
+    };
+
+    // HOJA 1: Detalle
+    const ws1 = wb.addWorksheet('Reservas por Renglón',{views:[{state:'frozen',ySplit:1}]});
+    ws1.columns = [
+      {key:'sku',width:14},{key:'nom',width:40},{key:'total',width:13},{key:'nf8s',width:7},
+      {key:'patron',width:20},{key:'ue',width:34},{key:'tipo',width:11},{key:'f8',width:20},
+      {key:'cant',width:12},{key:'fechaAsig',width:13},{key:'dias',width:10},{key:'nivel',width:10},
+    ];
+    applyHdr(ws1.addRow(['Código','Renglón','Total Resv.','# F8s',
+      'Patrón','Unidad Ejecutora','Tipo','Forma 8','Cant. Resv.','Fecha Asig.','Días','Nivel']));
+    lista.forEach((s,si) => {
+      const bw=s.f8s.length>=4, obs=s.f8s.length>=2&&!bw;
+      const patron=bw?'Efecto Bullwhip':obs?'Observar':'';
+      const skuBg=bw?'FFEDE9FE':si%2===0?'FFFAFAFA':'FFFFFFFF';
+      (s.subs||[]).forEach((sub,j) => {
+        const ec=sub.dias>7, ea=sub.dias>3;
+        const nivel=ec?'CRITICO':ea?'ALERTA':'AVISO';
+        const rBg=ec?'FFFEE2E2':ea?'FFFEF3C7':'FFDCFCE7';
+        const txD=ec?'FF991B1B':ea?'FF92400E':'FF166534';
+        const row=ws1.addRow([
+          j===0?s.sku:'',j===0?s.nombre:'',j===0?s.cantTotal:'',j===0?s.f8s.length:'',
+          j===0?patron:'',sub.ue,sub.tipo||'',sub.f8,sub.cant,sub.fechaAsig,sub.dias,nivel
+        ]);
+        row.height=17;
+        row.eachCell({includeEmpty:true},(c,col)=>{
+          if(col<=5){c.fill=fill(skuBg);c.font=arial(9,col===1&&j===0,bw&&col===5?'FF5B21B6':'FF111827');}
+          else{c.fill=fill(rBg);c.font=arial(9,col===12,col>=11?txD:'FF111827');}
+          c.alignment={vertical:'middle',horizontal:col>=3&&col!==6?'center':'left'};
+          c.border=j===0?{top:{style:bw?'medium':'thin',color:{argb:bw?'FF7C3AED':'FF6B7280'}},bottom:thin}:{bottom:thin};
+        });
+      });
+    });
+
+    // HOJA 2: Resumen
+    const ws2 = wb.addWorksheet('Resumen',{views:[{state:'frozen',ySplit:1}]});
+    ws2.columns=[
+      {key:'sku',width:14},{key:'nom',width:43},{key:'total',width:15},{key:'nf8s',width:7},
+      {key:'nues',width:7},{key:'dias',width:11},{key:'patron',width:20},
+    ];
+    applyHdr(ws2.addRow(['Código','Renglón','Total Reservado','# F8s','# UEs','Max Días','Patrón']));
+    lista.forEach(s => {
+      const bw=s.f8s.length>=4,obs=s.f8s.length>=2&&!bw;
+      const label=bw?'Efecto Bullwhip':obs?'Observar':'Normal';
+      const ec=s.diasMax>7,ea=s.diasMax>3;
+      const rBg=bw?'FFEDE9FE':ec?'FFFEE2E2':ea?'FFFEF3C7':'FFDCFCE7';
+      const txD=ec?'FF991B1B':ea?'FF92400E':'FF166534';
+      const nUEs=new Set((s.subs||[]).map(x=>x.ue)).size;
+      const row=ws2.addRow([s.sku,s.nombre,s.cantTotal,s.f8s.length,nUEs,s.diasMax,label]);
+      row.height=17;
+      row.eachCell({includeEmpty:true},(c,col)=>{
+        c.fill=fill(rBg);
+        c.font=arial(9,col===1||col===7,col===7?(bw?'FF5B21B6':'FF374151'):col===6?txD:'FF111827');
+        c.alignment={vertical:'middle',horizontal:col>=3?'center':'left'};
+        c.border={bottom:thin};
+      });
+    });
+
+    // HOJA 3: DASHBOARD
+    const ws3 = wb.addWorksheet('Dashboard');
+    ws3.views=[{showGridLines:false}];
+
+    // Calcular métricas
+    let totUnid=0; const allF8s=new Set(),allUEs=new Set();
+    let nCrit=0,nAlert=0,nAviso=0;
+    const ueMap=new Map(),tipoMap=new Map();
+    const rangos=[0,0,0,0,0];
+    let totalSubs=0;
+    lista.forEach(s => {
+      totUnid+=s.cantTotal;
+      (s.subs||[]).forEach(sub => {
+        allF8s.add(sub.f8); allUEs.add(sub.ue); totalSubs++;
+        if(sub.dias>7)nCrit++; else if(sub.dias>3)nAlert++; else nAviso++;
+        const d=sub.dias;
+        if(d<=7)rangos[0]++; else if(d<=30)rangos[1]++; else if(d<=60)rangos[2]++; else if(d<=90)rangos[3]++; else rangos[4]++;
+        if(!ueMap.has(sub.ue))ueMap.set(sub.ue,{f8s:new Set(),sums:new Set(),diasMax:0,cantTotal:0});
+        const um=ueMap.get(sub.ue);
+        um.f8s.add(sub.f8);um.sums.add(s.sku);if(sub.dias>um.diasMax)um.diasMax=sub.dias;um.cantTotal+=sub.cant;
+        const t=sub.tipo||'SIN TIPO';
+        if(!tipoMap.has(t))tipoMap.set(t,{f8s:new Set(),sums:new Set(),cant:0});
+        const tm=tipoMap.get(t);tm.f8s.add(sub.f8);tm.sums.add(s.sku);tm.cant+=sub.cant;
+      });
+    });
+    const topUEs=Array.from(ueMap.entries()).sort((a,b)=>b[1].f8s.size-a[1].f8s.size).slice(0,10);
+    const topSums=lista.slice(0,10);
+
+    // Helper dashboard
+    const dc=(row,col,val,bg,fg,bold,sz,center,border)=>{
+      const c=ws3.getCell(row,col);
+      c.value=val;
+      if(bg)c.fill=fill(bg);
+      c.font=arial(sz||10,!!bold,fg||'FF111827');
+      c.alignment={vertical:'middle',horizontal:center?'center':'left',wrapText:true};
+      if(border)c.border={top:thin,bottom:thin,left:thin,right:thin};
+      return c;
+    };
+    const mg=(r1,c1,r2,c2)=>{try{ws3.mergeCells(r1,c1,r2,c2);}catch(e){}};
+
+    // Título
+    ws3.getRow(1).height=34; mg(1,1,1,12);
+    dc(1,1,'DASHBOARD — Reservas F8 Activas · Torre de Control CEDIS','FF0B1F3A','FFFFFFFF',true,13,true);
+    ws3.getRow(2).height=14; mg(2,1,2,12);
+    dc(2,1,`Generado: ${new Date().toLocaleString('es-PA')} · Umbral mínimo: 3 días`,'FF1E3A5F','FF94A3B8',false,9,true);
+
+    // KPIs
+    ws3.getRow(3).height=8; ws3.getRow(4).height=14; mg(4,1,4,12);
+    dc(4,1,'INDICADORES GENERALES','FFE2E8F0','FF0B1F3A',true,10);
+    const kpis=[
+      ['Total F8s en Reserva',allF8s.size,'FFFEE2E2','FF991B1B'],
+      ['Renglones Afectados',lista.length,'FFFEF3C7','FF92400E'],
+      ['UEs Involucradas',allUEs.size,'FFDBEAFE','FF1D4ED8'],
+      ['Unidades Comprometidas',totUnid.toLocaleString('en-US'),'FFEDE9FE','FF5B21B6'],
+      ['% Renglones CRITICO',totalSubs>0?((nCrit/totalSubs)*100).toFixed(1)+'%':'0%','FFFEE2E2','FF991B1B'],
+      ['Efecto Bullwhip',lista.filter(s=>s.f8s.length>=4).length,'FFEDE9FE','FF5B21B6'],
+    ];
+    ws3.getRow(5).height=20; ws3.getRow(6).height=30;
+    kpis.forEach((k,i)=>{
+      const c=i*2+1;
+      mg(5,c,5,c+1);dc(5,c,k[0],k[2],k[3],true,9,true,true);
+      mg(6,c,6,c+1);dc(6,c,k[1],k[2],k[3],true,16,true,true);
+    });
+
+    // Semáforo + Rangos
+    ws3.getRow(7).height=8; ws3.getRow(8).height=14;
+    mg(8,1,8,6);dc(8,1,'RENGLONES POR NIVEL DE URGENCIA','FFE2E8F0','FF0B1F3A',true,10);
+    mg(8,7,8,12);dc(8,7,'RENGLONES POR RANGO DE DÍAS','FFE2E8F0','FF0B1F3A',true,10);
+    const sem=[['CRITICO (>7 días)',nCrit,'FFFEE2E2','FF991B1B'],['ALERTA (4-7 días)',nAlert,'FFFEF3C7','FF92400E'],['AVISO (3 días)',nAviso,'FFDCFCE7','FF166534']];
+    const rng=[['3-7 días',rangos[0],'FFDCFCE7'],['8-30 días',rangos[1],'FFFEF3C7'],['31-60 días',rangos[2],'FFFEE2E2'],['61-90 días',rangos[3],'FFFFE4E6'],['>90 días',rangos[4],'FFFFE4E6']];
+    const tot3=nCrit+nAlert+nAviso||1, totR=rangos.reduce((a,b)=>a+b,0)||1;
+    sem.forEach((s,i)=>{const r=9+i;ws3.getRow(r).height=18;mg(r,1,r,3);dc(r,1,s[0],s[2],s[3],true,9,false,true);mg(r,4,r,5);dc(r,4,s[1],s[2],s[3],true,11,true,true);mg(r,6,r,6);dc(r,6,((s[1]/tot3)*100).toFixed(1)+'%','FFFFFFFF',s[3],false,9,true,true);});
+    rng.forEach((r,i)=>{const row=9+i;ws3.getRow(row).height=18;mg(row,7,row,9);dc(row,7,r[0],r[2],'FF374151',false,9,false,true);mg(row,10,row,11);dc(row,10,r[1],r[2],'FF374151',true,11,true,true);mg(row,12,row,12);dc(row,12,((r[1]/totR)*100).toFixed(1)+'%','FFFFFFFF',r[2]==='FFDCFCE7'?'FF166534':'FF991B1B',false,9,true,true);});
+
+    // Por Tipo
+    let tr=15; ws3.getRow(tr).height=8; tr++; ws3.getRow(tr).height=14;
+    mg(tr,1,tr,12);dc(tr,1,'DISTRIBUCIÓN POR TIPO DE PEDIDO','FFE2E8F0','FF0B1F3A',true,10); tr++;
+    ws3.getRow(tr).height=18;
+    mg(tr,1,tr,3);dc(tr,1,'Tipo','FF0B1F3A','FFFFFFFF',true,9,true,true);
+    mg(tr,4,tr,6);dc(tr,4,'# F8s','FF0B1F3A','FFFFFFFF',true,9,true,true);
+    mg(tr,7,tr,9);dc(tr,7,'# Renglones','FF0B1F3A','FFFFFFFF',true,9,true,true);
+    mg(tr,10,tr,12);dc(tr,10,'Unidades Reservadas','FF0B1F3A','FFFFFFFF',true,9,true,true); tr++;
+    Array.from(tipoMap.entries()).sort((a,b)=>b[1].f8s.size-a[1].f8s.size).forEach(([tipo,td])=>{
+      ws3.getRow(tr).height=17;
+      mg(tr,1,tr,3);dc(tr,1,tipo,'FFF8FAFC','FF111827',true,9,false,true);
+      mg(tr,4,tr,6);dc(tr,4,td.f8s.size,'FFF8FAFC','FF374151',false,9,true,true);
+      mg(tr,7,tr,9);dc(tr,7,td.sums.size,'FFF8FAFC','FF374151',false,9,true,true);
+      mg(tr,10,tr,12);dc(tr,10,td.cant.toLocaleString('en-US'),'FFF8FAFC','FF374151',false,9,true,true); tr++;
+    });
+
+    // Top UEs
+    tr++; ws3.getRow(tr).height=14; mg(tr,1,tr,12);
+    dc(tr,1,'TOP 10 UNIDADES EJECUTORAS CON MÁS RESERVAS','FFE2E8F0','FF0B1F3A',true,10); tr++;
+    ws3.getRow(tr).height=18;
+    mg(tr,1,tr,5);dc(tr,1,'Unidad Ejecutora','FF0B1F3A','FFFFFFFF',true,9,false,true);
+    mg(tr,6,tr,7);dc(tr,6,'# F8s','FF0B1F3A','FFFFFFFF',true,9,true,true);
+    mg(tr,8,tr,9);dc(tr,8,'# Renglones','FF0B1F3A','FFFFFFFF',true,9,true,true);
+    mg(tr,10,tr,11);dc(tr,10,'Unidades Resv.','FF0B1F3A','FFFFFFFF',true,9,true,true);
+    dc(tr,12,'Máx. Días','FF0B1F3A','FFFFFFFF',true,9,true,true); tr++;
+    topUEs.forEach(([ue,ud],i)=>{
+      ws3.getRow(tr).height=17;
+      const bg=i%2===0?'FFFAFAFA':'FFFFFFFF';
+      const ec=ud.diasMax>7,ea=ud.diasMax>3;
+      const dBg=ec?'FFFEE2E2':ea?'FFFEF3C7':'FFDCFCE7';
+      mg(tr,1,tr,5);dc(tr,1,ue,bg,'FF111827',false,9,false,true);
+      mg(tr,6,tr,7);dc(tr,6,ud.f8s.size,bg,ec?'FF991B1B':'FF374151',true,9,true,true);
+      mg(tr,8,tr,9);dc(tr,8,ud.sums.size,bg,'FF374151',false,9,true,true);
+      mg(tr,10,tr,11);dc(tr,10,ud.cantTotal.toLocaleString('en-US'),bg,'FF374151',false,9,true,true);
+      dc(tr,12,ud.diasMax+'d',dBg,ec?'FF991B1B':ea?'FF92400E':'FF166534',true,9,true,true); tr++;
+    });
+
+    // Top Suministros
+    tr++; ws3.getRow(tr).height=14; mg(tr,1,tr,12);
+    dc(tr,1,'TOP 10 SUMINISTROS CON MÁS FORMAS 8 EN RESERVA','FFE2E8F0','FF0B1F3A',true,10); tr++;
+    ws3.getRow(tr).height=18;
+    dc(tr,1,'Código','FF0B1F3A','FFFFFFFF',true,9,true,true);
+    mg(tr,2,tr,6);dc(tr,2,'Suministro','FF0B1F3A','FFFFFFFF',true,9,false,true);
+    mg(tr,7,tr,8);dc(tr,7,'Total Resv.','FF0B1F3A','FFFFFFFF',true,9,true,true);
+    dc(tr,9,'# F8s','FF0B1F3A','FFFFFFFF',true,9,true,true);
+    dc(tr,10,'# UEs','FF0B1F3A','FFFFFFFF',true,9,true,true);
+    dc(tr,11,'Máx. Días','FF0B1F3A','FFFFFFFF',true,9,true,true);
+    dc(tr,12,'Patrón','FF0B1F3A','FFFFFFFF',true,9,true,true); tr++;
+    topSums.forEach((s,i)=>{
+      ws3.getRow(tr).height=17;
+      const bw=s.f8s.length>=4,obs=s.f8s.length>=2&&!bw;
+      const bg=bw?'FFEDE9FE':i%2===0?'FFFAFAFA':'FFFFFFFF';
+      const nUEs=new Set((s.subs||[]).map(x=>x.ue)).size;
+      dc(tr,1,s.sku,bg,'FF374151',false,8,true,true);
+      mg(tr,2,tr,6);dc(tr,2,s.nombre.slice(0,55),bg,'FF111827',bw,9,false,true);
+      mg(tr,7,tr,8);dc(tr,7,s.cantTotal.toLocaleString('en-US'),bg,'FF374151',false,9,true,true);
+      dc(tr,9,s.f8s.length,bg,bw?'FF5B21B6':'FF374151',true,9,true,true);
+      dc(tr,10,nUEs,bg,'FF374151',false,9,true,true);
+      dc(tr,11,s.diasMax+'d',bg,s.diasMax>7?'FF991B1B':s.diasMax>3?'FF92400E':'FF166534',true,9,true,true);
+      dc(tr,12,bw?'Bullwhip':obs?'Observar':'Normal',bw?'FFEDE9FE':obs?'FFFEF3C7':bg,bw?'FF5B21B6':obs?'FF92400E':'FF374151',bw,9,true,true);
+      tr++;
+    });
+
+    // Ancho columnas dashboard
+    [14,4,4,4,4,4,14,4,4,4,4,4].forEach((w,i)=>{ws3.getColumn(i+1).width=w;});
+
+    // Descargar
+    const buffer=await wb.xlsx.writeBuffer();
+    const blob=new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url; a.download=`CEDIS_Reservas_${new Date().toISOString().slice(0,10)}.xlsx`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch(e) {
+    alert('Error generando Excel: ' + e.message);
+  } finally {
+    btn.textContent = ' Reservas Excel';
+    btn.disabled    = false;
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// NOTIFICACIÓN POR CORREO (constancia F8: PDF + link perdurable + QR)
+// ════════════════════════════════════════════════════════════════════════════
+function _emNorm(v) {
+  return String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[().\-_\/]/g,' ').toUpperCase().replace(/\s+/g,' ').trim();
+}
+
+async function abrirPanelCorreo() {
+  if (!DATA || !DATA.length) {
+    alert('No hay datos cargados. Carga el Corte Diario o el Histórico primero.');
+    return;
+  }
+
+  // Respetar SIEMPRE lo que el usuario tiene filtrado en pantalla (UE/fecha/documento).
+  // _pickingRows() devuelve LAST_FILTERED (las filas visibles tras aplicar filtros).
+  const filas = _pickingRows();
+  if (!filas || !filas.length) {
+    alert('No hay renglones en la vista actual. Ajusta los filtros y aplica antes de notificar.');
+    return;
+  }
+
+  const ueSel = document.getElementById('ue');
+  const ueFiltrada = ueSel && ueSel.value && ueSel.value !== 'ALL' ? ueSel.value : null;
+
+  // Agrupar por UE, tomando solo los F8 efectivamente visibles/filtrados
+  const setUE = new Map(); // ueNorm -> { ue, f8s:Set }
+  filas.forEach(r => {
+    const ue = r.Punto || '';
+    const f8 = r.N_Doc || '';
+    if (!ue || !f8) return;
+    const k = _emNorm(ue);
+    if (!setUE.has(k)) setUE.set(k, { ue, f8s: new Set() });
+    setUE.get(k).f8s.add(f8);
+  });
+
+  const ues = Array.from(setUE.values()).map(g => ({ ue: g.ue, f8s: Array.from(g.f8s) }));
+
+  if (!ues.length) {
+    alert('No hay UEs con documentos en la vista filtrada actual.');
+    return;
+  }
+
+  if (ueFiltrada && ues.length === 1) {
+    const g = ues[0];
+    const ok = confirm(
+      `¿Enviar constancia por correo a:\n\n${g.ue}\nDoc(s): ${g.f8s.join(', ')}?\n\n` +
+      `El correo incluye PDF adjunto, enlace de seguimiento y QR.`
+    );
+    if (ok) _ejecutarEnvioCorreo([g]);
+    return;
+  }
+
+  _mostrarPanelCorreo(ues);
+}
+
+function _mostrarPanelCorreo(ues) {
+  const modal = document.getElementById('modalCorreo');
+  const lista = document.getElementById('corLista');
+  const sub   = document.getElementById('corSubtitulo');
+  const modo  = window._MODO_ACTUAL === 'history' ? 'Histórico' : 'Corte actual';
+
+  sub.textContent = `${ues.length} unidad(es) en ${modo} — selecciona a quién notificar`;
+
+  lista.innerHTML = ues.map((g, i) => `
+    <label style="display:flex;align-items:center;gap:10px;padding:9px 0;
+                  border-bottom:1px solid #f0f0f0;cursor:pointer;">
+      <input type="checkbox" checked id="corChk_${i}" data-idx="${i}"
+             style="width:16px;height:16px;flex-shrink:0;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12px;font-weight:700;color:#0b1f3a;
+                    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${g.ue}</div>
+        <div style="font-size:10px;color:#777;margin-top:2px;">
+          ${g.f8s.length} doc${g.f8s.length!==1?'s':''}: <b>${g.f8s.join(', ')}</b>
+        </div>
+      </div>
+    </label>`).join('');
+
+  window._corUEs = ues;
+  modal.style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+
+function corSelAll(val) {
+  document.querySelectorAll('[id^="corChk_"]').forEach(c => c.checked = val);
+}
+
+function cerrarPanelCorreo() {
+  document.getElementById('modalCorreo').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function confirmarEnvioCorreo() {
+  const ues = window._corUEs || [];
+  const sel = ues.filter((g, i) => {
+    const chk = document.getElementById(`corChk_${i}`);
+    return chk && chk.checked;
+  });
+  if (!sel.length) { alert('No hay unidades seleccionadas.'); return; }
+  _ejecutarEnvioCorreo(sel);
+}
+
+async function _ejecutarEnvioCorreo(ues) {
+  const modo = window._MODO_ACTUAL === 'history' ? 'history' : 'live';
+  const barra = document.getElementById('corBarra');
+  const txt   = document.getElementById('corProgTxt');
+  const btn   = document.getElementById('corBtnEnviar');
+
+  if (barra) { barra.style.display = 'block'; }
+  if (btn)   { btn.disabled = true; btn.textContent = 'Enviando...'; }
+
+  // Tamaño de lote: máximo de DOCUMENTOS (Forma 8) completos por correo.
+  // NUNCA parte un F8 a la mitad: el corte es entre documentos, no entre renglones.
+  // Cada F8 (máx ~20 renglones) viaja entero. 10 docs × 20 = 200 renglones máx por
+  // PDF, muy por debajo del límite de 6 min de Apps Script.
+  const LOTE_DOCS = 10;
+
+  // Expandir UEs en "tareas": cada UE con muchos docs se parte en varios lotes.
+  const tareas = [];
+  ues.forEach(g => {
+    const f8s = g.f8s || [];
+    if (f8s.length <= LOTE_DOCS) {
+      tareas.push({ ue: g.ue, f8s: f8s, parte: 1, total: 1 });
+    } else {
+      const totalPartes = Math.ceil(f8s.length / LOTE_DOCS);
+      for (let p = 0; p < totalPartes; p++) {
+        tareas.push({
+          ue: g.ue,
+          f8s: f8s.slice(p * LOTE_DOCS, (p + 1) * LOTE_DOCS),
+          parte: p + 1,
+          total: totalPartes
+        });
+      }
+    }
+  });
+
+  let totalEnviados = 0, totalSinC = 0, totalErr = 0;
+  const fallidas = [];
+
+  for (let i = 0; i < tareas.length; i++) {
+    const t = tareas[i];
+    const etiqueta = t.total > 1 ? `${t.ue} (parte ${t.parte}/${t.total})` : t.ue;
+    if (txt) txt.textContent = `Enviando ${i+1} de ${tareas.length}: ${etiqueta}...`;
+
+    const url = `${WEBAPP_BASE}?file=notificar` +
+      `&modo=${encodeURIComponent(modo)}` +
+      `&ues=${encodeURIComponent(t.ue)}` +
+      `&f8s=${encodeURIComponent(t.f8s.join(','))}` +
+      `&parte=${t.parte}&total=${t.total}`;
+
+    // Salvaguarda de longitud de URL (15 docs nunca debería acercarse, pero por si acaso)
+    if (url.length > 7500) {
+      totalErr++;
+      fallidas.push(etiqueta + ' (lote demasiado grande; reduce LOTE_DOCS)');
+      continue;
+    }
+
+    try {
+      const res = await loadJsonp(url, 120000); // timeout 2 min por parte
+      totalEnviados += (res && res.enviados) || 0;
+      totalSinC     += (res && res.sinContacto) || 0;
+      totalErr      += (res && res.errores) || 0;
+      if (res && res.sinContacto && !res.enviados) fallidas.push(etiqueta + ' (sin correo en DIRECTORIO_UE)');
+      if (res && res.errores) fallidas.push(etiqueta + ' (' + ((res.detalle && res.detalle[0] && res.detalle[0].msg) || 'error en backend') + ')');
+    } catch (e) {
+      totalErr++;
+      fallidas.push(etiqueta + ' (' + (e.message || 'error de conexión') + ')');
+    }
+
+    // Pausa entre peticiones: evita saturar el navegador (ERR_NETWORK_IO_SUSPENDED)
+    // y respeta los límites de Google Apps Script.
+    await new Promise(r => setTimeout(r, 400));
+  }
+
+  let msg = ` Enviados: ${totalEnviados}`;
+  if (totalSinC) msg += `\n Sin correo registrado: ${totalSinC}`;
+  if (totalErr)  msg += `\n Con error: ${totalErr}`;
+  if (fallidas.length) msg += `\n\nPendientes:\n• ` + fallidas.slice(0, 12).join('\n• ');
+
+  if (txt) txt.textContent = `Listo — Enviados: ${totalEnviados} · Sin correo: ${totalSinC} · Errores: ${totalErr}`;
+  if (btn) { btn.disabled = false; btn.textContent = ' Notificar seleccionadas'; }
+
+  alert(msg);
+
+  const modal = document.getElementById('modalCorreo');
+  if (modal && modal.style.display === 'block') setTimeout(cerrarPanelCorreo, 800);
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    const m = document.getElementById('modalCorreo');
+    if (m && m.style.display === 'block') cerrarPanelCorreo();
+  }
+});
+
+
+  </script>
+  <script>
+  // ===================== MOTOR · vista nueva (sobre la lógica existente) =====================
+  // Esta capa solo reemplaza la presentación: KPIs, tabla de renglones y el modal
+  // "Cómo se asignó". Filtros, exportes, WhatsApp y correo son las funciones de siempre.
+
+  const mEsc = v => String(v == null ? '' : v).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const mNum = v => Number(v || 0);
+  const M_TITULOS = {
+    asignacion: 'Renglones del corte — cada fila es una línea de una Forma 8',
+    fill_ue: 'Cobertura por unidad ejecutora',
+    sku_sin: 'Renglones que el CEDIS no pudo asignar (sin existencia)',
+    ue_sin: 'Unidades con renglones al 0 %',
+    invalidos: 'Pedidos con error (empaque o cantidad inválida)',
+    fill_cat: 'Cobertura por categoría de unidad'
+  };
+
+  // Estado en palabras del almacén. Corrige "PARCIAL (STOCK)" con 0 asignado:
+  // hay algo de existencia pero menos de un empaque, así que no se pudo despachar nada.
+  function mEstado(r) {
+    const red = mNum(r.Solicitado_redondeado), asg = mNum(r.Asignado), tr = mNum(r.Asignado_Transito);
+    const est = String(r.Estado || '').toUpperCase();
+    if (asg >= red && red > 0) return est.includes('EMPAQUE')
+      ? { k: 'COMPLETO', t: 'Completo', d: 'ajustado a empaque', c: 'ok' }
+      : { k: 'COMPLETO', t: 'Completo', d: '', c: 'ok' };
+    if (asg <= 0 && tr > 0) return { k: 'PARCIAL', t: 'En tránsito', d: mEsc(r.Transito_Info || ''), c: 'info' };
+    if (asg <= 0) {
+      if (est.includes('PARCIAL') || mNum(r.Stock_Fisico) > 0)
+        return { k: 'SIN', t: 'Sin stock', d: 'menos de un empaque', c: 'bad' };
+      return { k: 'SIN', t: 'Sin stock', d: '', c: 'bad' };
+    }
+    return { k: 'PARCIAL', t: 'Parcial', d: Math.round(asg / red * 100) + ' %' + (tr > 0 ? ' · + tránsito' : ''), c: 'warn' };
+  }
+  function mTags(r) {
+    const t = [];
+    if (r.En_Cero === true) t.push('<span class="m-tag m-tag-bad" title="La unidad tiene saldo 0 de este renglón">Unidad en cero</span>');
+    if (r.Frio) t.push('<span class="m-tag m-tag-info">Frío</span>');
+    if (r.Narcotico) t.push('<span class="m-tag m-tag-vio">Controlado</span>');
+    if (r.Acaparamiento) t.push('<span class="m-tag m-tag-warn" title="Pidió más que su tope del mes">Sobre su tope</span>');
+    if (r.Pack_Missing) t.push('<span class="m-tag" title="El renglón no tiene empaque en el maestro">Sin empaque</span>');
+    return t.join(' ');
+  }
+
+  function renderKPIs(rows) {
+    if (window.__mSilent) return;
+    const req = rows.reduce((a, r) => a + mNum(r.Solicitado), 0);
+    const reqR = rows.reduce((a, r) => a + mNum(r.Solicitado_redondeado), 0);
+    const asg = rows.reduce((a, r) => a + mNum(r.Asignado), 0);
+    const pct = reqR > 0 ? asg / reqR * 100 : 0;
+    const docs = new Set(rows.map(r => r.N_Doc)).size, ues = new Set(rows.map(r => r.Punto)).size;
+    document.getElementById('k_lines').textContent = fmt(rows.length);
+    document.getElementById('mK_lines_s').textContent = fmt(docs) + (docs === 1 ? ' Forma 8 · ' : ' Formas 8 · ') + fmt(ues) + (ues === 1 ? ' unidad' : ' unidades');
+    document.getElementById('k_req').textContent = fmt(req);
+    document.getElementById('k_req_r').textContent = fmt(reqR);
+    document.getElementById('k_assigned').textContent = fmt(asg);
+    document.getElementById('k_fill').textContent = pct.toFixed(1) + ' %';
+    document.getElementById('mK_bar').style.width = Math.min(100, pct) + '%';
+    const cero = rows.filter(r => r.En_Cero === true && mNum(r.Asignado) <= 0 && mNum(r.Asignado_Transito) <= 0).length;
+    document.getElementById('mK_cero').textContent = fmt(cero);
+
+    const base = window.__mBase || rows;   // conteos sin el filtro de estado, para poder cambiar entre chips
+    const cnt = { COMPLETO: 0, PARCIAL: 0, SIN: 0 };
+    base.forEach(r => cnt[coverage(r)]++);
+    const vitCero = base.filter(r => String(r.Rank_Etiqueta || '').toUpperCase() === 'COLA CERO' && coverage(r) === 'SIN').length;
+    const estSel = document.getElementById('estado').value;
+    const chip = (k, txt, n, cls) => `<button class="m-chip m-chip-${cls}${estSel === k ? ' on' : ''}" data-est="${k}"><b>${fmt(n)}</b> ${txt}</button>`;
+    document.getElementById('mChips').innerHTML =
+      chip('ALL', 'todos', base.length, 'all') +
+      chip('COMPLETO', 'completos', cnt.COMPLETO, 'ok') +
+      chip('PARCIAL', 'parciales', cnt.PARCIAL, 'warn') +
+      chip('SIN', 'sin stock', cnt.SIN, 'bad') +
+      (vitCero ? `<span class="m-chip m-chip-txt"><b>${fmt(vitCero)}</b> vitales en cero sin stock</span>` : '') +
+      `<button class="m-chip m-chip-cero${document.getElementById('soloCero').checked ? ' on' : ''}" data-cero="1">Solo unidad en cero</button>`;
+    document.getElementById('k_importancia').textContent = '';
+  }
+
+  function renderAsignacion(rows) {
+    const tb = document.querySelector('#tbl_asignacion tbody');
+    window.__currentData = rows;
+    const LIM = 3000;
+    const vis = rows.slice(0, LIM);
+    tb.innerHTML = vis.map((r, i) => {
+      const e = mEstado(r);
+      const red = mNum(r.Solicitado_redondeado), asg = mNum(r.Asignado);
+      const pend = Math.max(0, red - asg);
+      const pedTit = mNum(r.Solicitado) !== red ? ` title="Escribió ${fmt(r.Solicitado)}; se ajustó al empaque"` : '';
+      const lotes = String(r.Lotes_Usados || '');
+      return `<tr class="m-tr-${e.c}">
+        <td class="m-nw">${mEsc(r.Fecha)}</td>
+        <td class="m-nw">${mEsc(r.N_Doc)}</td>
+        <td class="m-ue">${mEsc(r.Punto)}</td>
+        <td class="m-nw m-mono">${mEsc(r.Codigo)}</td>
+        <td class="m-sum">${mEsc(r.Suministro)}<div class="m-tags">${mTags(r)}</div></td>
+        <td>${badgePrioridad(r)}</td>
+        <td class="right"${pedTit}>${fmt(red)}${mNum(r.Solicitado) !== red ? '<sup>*</sup>' : ''}</td>
+        <td class="right m-b">${fmt(asg)}</td>
+        <td class="right">${pend ? fmt(pend) : '<span class="m-dim">0</span>'}</td>
+        <td><span class="m-est m-est-${e.c}">${e.t}</span>${e.d ? `<div class="m-est-d">${e.d}</div>` : ''}</td>
+        <td class="right">${fmt(r.Stock_Fisico)}</td>
+        <td class="right">${r.Inventario_UE === null || r.Inventario_UE === '' || r.Inventario_UE === undefined ? '<span class="m-dim">sin dato</span>' : fmt(r.Inventario_UE)}</td>
+        <td class="mx right">${mNum(r.Asignado_Transito) ? fmt(r.Asignado_Transito) : ''}${r.Transito_Info ? `<div class="m-est-d">${mEsc(r.Transito_Info)}</div>` : ''}</td>
+        <td class="mx right">${mNum(r.Reservado) ? fmt(r.Reservado) : ''}</td>
+        <td class="mx">${mEsc(r.Reservado_Doc)}</td>
+        <td class="mx center m-nw">${fmtBultosTriple(r.Bultos_Ter || 0, r.Bultos_Sec || 0, r.Bultos_Prim || 0)}</td>
+        <td class="mx m-mono">${mEsc(lotes)}</td>
+        <td class="mx m-nw">${mEsc(r.Ultimo_Despacho)}${mNum(r.Qty_Ultimo) ? ` · ${fmt(r.Qty_Ultimo)}` : ''}</td>
+        <td class="mx right">${fmt(r.Cuota_Max)}</td>
+        <td class="mx right">${fmt(r.Ejecucion_Previa)}</td>
+        <td class="mx right">${fmt(r.Saldo_Disponible)}</td>
+        <td class="center"><button class="m-lnk" onclick="openAudit(${i})">Cómo se asignó</button></td>
+      </tr>`;
+    }).join('') || `<tr><td colspan="22" class="m-vacio">No hay renglones con estos filtros.</td></tr>`;
+    const nota = [];
+    if (rows.length > LIM) nota.push(`Se muestran ${fmt(LIM)} de ${fmt(rows.length)} renglones. Use los filtros o descargue el Detalle en Excel para verlos todos.`);
+    if (rows.some(r => mNum(r.Solicitado) !== mNum(r.Solicitado_redondeado))) nota.push('* Pedido ajustado al empaque terciario; pase el cursor para ver lo que escribió la unidad.');
+    document.getElementById('mTblNota').textContent = nota.join(' ');
+  }
+
+  // ---------- Modal "Cómo se asignó" como flujo ----------
+  function mPaso(n, titulo, cls, cuerpo, resumen) {
+    return `<div class="m-paso m-paso-${cls}">
+      <div class="m-paso-n">${n}</div>
+      <div class="m-paso-c">
+        <div class="m-paso-t">${titulo}${resumen ? `<span class="m-paso-r">${resumen}</span>` : ''}</div>
+        <div class="m-paso-b">${cuerpo}</div>
+      </div>
+    </div>`;
+  }
+  function mLotes(txt) {
+    const out = [];
+    String(txt || '').split(/[,;|]/).forEach(p => {
+      const m = p.trim().match(/^(.+?)\s*\(([\d.,]+)\)$/);
+      if (m) out.push(`<span class="m-lote"><b>${mEsc(m[1])}</b> ${mEsc(m[2])}</span>`);
+      else if (p.trim()) out.push(`<span class="m-lote">${mEsc(p.trim())}</span>`);
+    });
+    return out.join(' ');
+  }
+  function openAudit(index) {
+    const r = (window.__currentData || [])[index];
+    if (!r) return;
+    const sol = mNum(r.Solicitado), red = mNum(r.Solicitado_redondeado), asg = mNum(r.Asignado);
+    const cuota = mNum(r.Cuota_Max), previo = mNum(r.Ejecucion_Previa), saldo = mNum(r.Saldo_Disponible);
+    const consumo = mNum(r.Consumo_Base), factor = Number(r.Factor_Riesgo || 1);
+    const emp = mNum(r.Empaque_Ter) || 1;
+    const e = mEstado(r);
+    const v = x => `<span class="m-v">${x}</span>`;
+
+    let h = `<div class="m-au-h">
+      <div class="m-au-sum">${mEsc(r.Suministro)}</div>
+      <div class="m-au-meta">${mEsc(r.Codigo)} · ${mEsc(r.Punto)} · F8 ${mEsc(r.N_Doc)} del ${mEsc(r.Fecha)}</div>
+      <div class="m-tags">${mTags(r)}</div>
+    </div><div class="m-flujo">`;
+
+    // 1. Pedido
+    h += mPaso(1, 'Pedido de la unidad', 'neu',
+      `La unidad pidió ${v(fmt(sol))} en la Forma 8 (${mEsc(r.Tipo || '')}).`, fmt(sol));
+
+    // 2. Prioridad clínica
+    const piso = {
+      CONSUMO_REAL: 'consumo reportado por la unidad',
+      CONSUMO_SUPRIMIDO: 'consumo deprimido por desabasto (protegido, no se recorta)',
+      HIBRIDO_DIST: 'histórico de lo despachado (la unidad no reporta consumo)',
+      HIBRIDO_REQ: 'lo que pide la unidad (sin historial)',
+      SIN_PISO: 'sin dato de demanda'
+    }[String(r.Piso_Origen || '').toUpperCase()] || (r.Piso_Origen || '—');
+    const invUE = (r.Inventario_UE === null || r.Inventario_UE === '' || r.Inventario_UE === undefined) ? 'sin dato' : fmt(r.Inventario_UE);
+    let b2 = `Clasificación: ${r.Rank_Etiqueta ? badgePrioridad(r) : 'sin prioridad especial'}<br>Saldo en el estante de la unidad: ${v(invUE)}${r.En_Cero === true ? ' — <b>la unidad no tiene existencias</b>' : ''}<br>Distribuido este mes: ${v(fmt(r.Distrib_Mes || 0))} · Base de demanda: ${piso}`;
+    if (r.Brecha_Req && Number(r.Brecha_Req) > 1.05) b2 += `<br>Pide ${v(Number(r.Brecha_Req).toFixed(1) + '×')} lo que consume.`;
+    if (r.Protegido) b2 += `<br><b>Protegido:</b> no se recorta por tope (vital, consumo suprimido o sin base firme).`;
+    h += mPaso(2, 'Prioridad clínica', r.En_Cero === true ? 'bad' : 'ok', b2, String(r.Rank_Etiqueta || '').toUpperCase() === 'COLA CERO' ? 'vital en cero' : '');
+
+    // 3. Tope del mes
+    let b3;
+    if (consumo === 0) b3 = `Sin historial de consumo para este renglón en la unidad: el tope es lo pedido (${v(fmt(sol))}).`;
+    else b3 = `Consumo base ${v(fmt(consumo))} × factor de riesgo ${v(factor)} = tope del mes ${v(fmt(cuota))}.<br>Ya despachado este mes ${v(fmt(previo))} → disponible ${v(fmt(saldo))}.`;
+    if (r.Acaparamiento) b3 += `<br><b>Recortado:</b> pidió ${fmt(sol)} y su disponible del mes es ${fmt(saldo)}.`;
+    else b3 += `<br>El pedido está dentro de su tope.`;
+    h += mPaso(3, 'Tope del mes', r.Acaparamiento ? 'warn' : 'ok', b3, r.Acaparamiento ? 'recortado' : 'dentro');
+
+    // 4. Empaque
+    h += mPaso(4, 'Ajuste al empaque', red !== sol ? 'warn' : 'ok',
+      `Empaque terciario ${v(fmt(emp))}. Cantidad a atender: ${v(fmt(red))}${red !== sol ? ` (de ${fmt(sol)} pedidas)` : ''}.` +
+      (r.Pack_Missing ? '<br><b>El renglón no tiene empaque en el maestro</b>; se trabajó con 1.' : ''), fmt(red));
+
+    // 5. Inventario del CEDIS
+    const lotes = mLotes(r.Lotes_Usados);
+    let b5 = `Existencia física ${v(fmt(r.Stock_Fisico))}. Solo cuentan lotes con vencimiento de 60 días o más.`;
+    if (mNum(r.Reservado)) b5 += `<br>Reservado para otro documento: ${v(fmt(r.Reservado))}${r.Reservado_Doc ? ' (' + mEsc(r.Reservado_Doc) + ')' : ''}.`;
+    if (mNum(r.Asignado_Transito)) b5 += `<br>Asignado de mercancía en tránsito: ${v(fmt(r.Asignado_Transito))}${r.Transito_Info ? ' — ' + mEsc(r.Transito_Info) : ''}.`;
+    if (lotes) b5 += `<div class="m-lotes">Lotes tomados: ${lotes}</div>`;
+    else if (asg <= 0 && mNum(r.Stock_Fisico) > 0) b5 += `<br>Hay existencia, pero no alcanza para un empaque completo o está reservada / con vencimiento corto.`;
+    else if (asg <= 0) b5 += `<br>No hay existencia utilizable.`;
+    h += mPaso(5, 'Inventario del CEDIS', asg > 0 ? 'ok' : 'bad', b5, fmt(r.Stock_Fisico));
+
+    // 6. Resultado
+    const pend = Math.max(0, red - asg);
+    h += mPaso(6, 'Resultado', e.c === 'ok' ? 'ok' : e.c === 'bad' ? 'bad' : 'warn',
+      `Asignado ${v(fmt(asg))} de ${v(fmt(red))}. ${pend ? `Queda pendiente ${v(fmt(pend))}.` : 'No queda pendiente.'}` +
+      `<br>Bultos (terciario / secundario / primario): ${v(fmtBultosTriple(r.Bultos_Ter || 0, r.Bultos_Sec || 0, r.Bultos_Prim || 0))}` +
+      (r.Ultimo_Despacho ? `<br>Último despacho a la unidad: ${mEsc(r.Ultimo_Despacho)}${mNum(r.Qty_Ultimo) ? ' (' + fmt(r.Qty_Ultimo) + ')' : ''}.` : ''),
+      e.t + (e.d ? ' · ' + e.d : ''));
+
+    h += '</div>';
+    document.getElementById('auditBody').innerHTML = h;
+    document.getElementById('auditModal').style.display = 'block';
+  }
+
+  // ---------- Filtros: segunda pasada sin "estado" solo para los conteos de los chips ----------
+  const _mApply = applyFilters;
+  applyFilters = function () {
+    const sel = document.getElementById('estado'), v = sel.value;
+    window.__mBase = null;
+    if (v !== 'ALL') {
+      sel.value = 'ALL'; window.__mSilent = true;
+      try { _mApply(); window.__mBase = LAST_FILTERED; } finally { window.__mSilent = false; sel.value = v; }
+    }
+    _mApply();
+  };
+  const _mRAT = renderActiveTab;
+  renderActiveTab = function (rows) { if (window.__mSilent) return; return _mRAT(rows); };
+
+  // ---------- Pestañas: título de la vista ----------
+  const _mShowTab = showTab;
+  showTab = function (tab) {
+    _mShowTab(tab);
+    document.getElementById('viewTitle').textContent = M_TITULOS[tab] || '';
+    document.getElementById('mMasCols').closest('.m-tabs-r').style.visibility = tab === 'asignacion' ? 'visible' : 'hidden';
+  };
+
+  // ---------- Fuente del dato (publicado / en vivo / histórico) ----------
+  const _mFetch = fetchAndLoad;
+  fetchAndLoad = async function (type) {
+    window.__mFuente(type === 'history' ? 'Cargando histórico…' : 'Leyendo en vivo del Motor…');
+    const t0 = Date.now();
+    await _mFetch(type);
+    const s = ((Date.now() - t0) / 1000).toFixed(0);
+    if (DATA && DATA.length) {
+      if (type === 'history') window.__mFuente('Histórico · ' + fmt(DATA.length) + ' renglones', 'hist');
+      else { window.__mFuente('En vivo del Motor · ' + fmt(DATA.length) + ' renglones (' + s + ' s)', 'ok'); window.__mAviso(''); }
+    } else window.__mFuente('Sin datos', 'bad');
+  };
+
+  // ---------- Controles nuevos ----------
+  (function () {
+    document.getElementById('viewTitle').textContent = M_TITULOS.asignacion;
+    document.getElementById('mMasFiltros').addEventListener('click', () => {
+      const p = document.getElementById('mFiltros2'); p.hidden = !p.hidden;
+      document.getElementById('mMasFiltros').textContent = p.hidden ? 'Más filtros' : 'Menos filtros';
+    });
+    document.getElementById('mMasCols').addEventListener('change', e => {
+      document.getElementById('tbl_asignacion').classList.toggle('m-full', e.target.checked);
+    });
+    document.getElementById('mChips').addEventListener('click', ev => {
+      const b = ev.target.closest('button'); if (!b) return;
+      if (b.dataset.est) document.getElementById('estado').value = b.dataset.est;
+      if (b.dataset.cero) { const c = document.getElementById('soloCero'); c.checked = !c.checked; }
+      applyFilters();
+    });
+    ['q', 'doc'].forEach(id => document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') applyFilters(); }));
+    // los listeners del script original apuntan a la función vieja: se cambian por la nueva
+    document.getElementById('btnApply').removeEventListener('click', _mApply);
+    document.getElementById('btnApply').addEventListener('click', () => applyFilters());
+    document.getElementById('soloCero').removeEventListener('change', _mApply);
+    document.getElementById('soloCero').addEventListener('change', () => applyFilters());
+    ['ue', 'cat', 'estado'].forEach(id => document.getElementById(id).addEventListener('change', () => applyFilters()));
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAudit(); });
+  })();
+
+  </script>
+
+<div id="modalWA" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);
+     z-index:99999;overflow-y:auto;padding:20px;box-sizing:border-box;">
+  <div style="background:#fff;border-radius:14px;max-width:680px;margin:auto;
+              box-shadow:0 8px 40px rgba(0,0,0,.25);overflow:hidden;">
+
+    <!-- Header -->
+    <div style="background:linear-gradient(90deg,#075e54,#128c7e);
+                padding:16px 20px;display:flex;align-items:center;gap:12px;">
+      <div style="font-size:22px;"></div>
+      <div style="flex:1;">
+        <div style="color:#fff;font-size:15px;font-weight:700;">Notificar Unidades Ejecutoras por WhatsApp</div>
+        <div style="color:#b2dfdb;font-size:11px;margin-top:2px;" id="waSubtitulo">Cargando directorio...</div>
+      </div>
+      <button onclick="cerrarPanelWA()"
+              style="background:rgba(255,255,255,.15);border:none;color:#fff;
+                     border-radius:50%;width:30px;height:30px;font-size:16px;
+                     cursor:pointer;line-height:1;"></button>
+    </div>
+
+    <!-- Barra de progreso (se muestra al enviar) -->
+    <div id="waBarra" style="display:none;padding:10px 20px;background:#e8f5e9;
+                             border-bottom:1px solid #c8e6c9;">
+      <div style="font-size:12px;font-weight:700;color:#1b5e20;" id="waProgTxt">Preparando...</div>
+      <div style="background:#c8e6c9;border-radius:4px;height:6px;margin-top:6px;">
+        <div id="waProgBar" style="background:#25D366;height:6px;border-radius:4px;
+                                   width:0%;transition:width .4s;"></div>
+      </div>
+    </div>
+
+    <!-- Controles superiores -->
+    <div style="padding:12px 20px;border-bottom:1px solid #eee;
+                display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <button onclick="waSelAll(true)"
+              style="font-size:11px;padding:4px 10px;border:1px solid #ddd;
+                     border-radius:8px;background:#f9f9f9;cursor:pointer;">
+         Seleccionar todas
+      </button>
+      <button onclick="waSelAll(false)"
+              style="font-size:11px;padding:4px 10px;border:1px solid #ddd;
+                     border-radius:8px;background:#f9f9f9;cursor:pointer;">
+         Deseleccionar
+      </button>
+      <div style="flex:1;"></div>
+      <label style="font-size:11px;color:#555;display:flex;align-items:center;gap:4px;">
+        <input type="checkbox" id="waAutoNext" checked>
+        Abrir automáticamente (4s entre cada una)
+      </label>
+    </div>
+
+    <!-- Lista de UEs -->
+    <div id="waLista" style="padding:12px 20px;max-height:45vh;overflow-y:auto;"></div>
+
+    <!-- Nota informativa -->
+    <div style="padding:8px 20px;background:#f8fffe;border-top:1px solid #e0f2f1;
+                font-size:10px;color:#555;line-height:1.6;">
+       Cada mensaje se abre en una nueva pestaña de WhatsApp Web (o en la app si está configurada como predeterminada).
+      Tendrás que dar <strong>Send / Enviar</strong> en cada conversación.
+      Las UEs sin número de celular registrado aparecen en gris y se omiten.
+    </div>
+
+    <!-- Botones de acción -->
+    <div style="padding:14px 20px;display:flex;gap:10px;justify-content:flex-end;
+                border-top:1px solid #eee;flex-wrap:wrap;">
+      <button onclick="cerrarPanelWA()"
+              style="padding:8px 16px;border:1px solid #ccc;border-radius:10px;
+                     background:#f5f5f5;cursor:pointer;font-size:12px;">
+        Cerrar
+      </button>
+      <button id="waBtnEnviar" onclick="iniciarEnvioWA()"
+              style="padding:8px 20px;border:none;border-radius:10px;
+                     background:#25D366;color:#fff;font-weight:700;
+                     cursor:pointer;font-size:12px;">
+         Notificar seleccionadas
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══ MODAL NOTIFICACIÓN POR CORREO ═══ -->
+<div id="modalCorreo" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);
+     z-index:99999;overflow-y:auto;padding:20px;box-sizing:border-box;">
+  <div style="background:#fff;border-radius:14px;max-width:640px;margin:auto;
+              box-shadow:0 8px 40px rgba(0,0,0,.25);overflow:hidden;">
+    <div style="background:linear-gradient(90deg,#0b1f3a,#133a74);
+                padding:16px 20px;display:flex;align-items:center;gap:12px;">
+      <div style="font-size:22px;"></div>
+      <div style="flex:1;">
+        <div style="color:#fff;font-size:15px;font-weight:700;">Notificar por correo (constancia F8)</div>
+        <div style="color:#cbd5e1;font-size:11px;margin-top:2px;" id="corSubtitulo">Cargando...</div>
+      </div>
+      <button onclick="cerrarPanelCorreo()"
+              style="background:rgba(255,255,255,.15);border:none;color:#fff;
+                     border-radius:50%;width:30px;height:30px;font-size:16px;cursor:pointer;line-height:1;"></button>
+    </div>
+
+    <div id="corBarra" style="display:none;padding:10px 20px;background:#e3f2fd;border-bottom:1px solid #bbdefb;">
+      <div style="font-size:12px;font-weight:700;color:#0d47a1;" id="corProgTxt">Preparando...</div>
+    </div>
+
+    <div style="padding:12px 20px;border-bottom:1px solid #eee;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <button onclick="corSelAll(true)" style="font-size:11px;padding:4px 10px;border:1px solid #ddd;border-radius:8px;background:#f9f9f9;cursor:pointer;"> Todas</button>
+      <button onclick="corSelAll(false)" style="font-size:11px;padding:4px 10px;border:1px solid #ddd;border-radius:8px;background:#f9f9f9;cursor:pointer;"> Ninguna</button>
+    </div>
+
+    <div id="corLista" style="padding:12px 20px;max-height:45vh;overflow-y:auto;"></div>
+
+    <div style="padding:8px 20px;background:#f8fbff;border-top:1px solid #e3f2fd;font-size:10px;color:#555;line-height:1.6;">
+       Cada correo incluye <strong>PDF adjunto</strong>, <strong>enlace de seguimiento</strong> perdurable y <strong>QR</strong>.
+      El enlace funciona aunque se vuelva a correr el motor (lee del corte actual y, si no está, del histórico).
+      Las unidades sin EMAIL_TO en DIRECTORIO_UE se omiten.
+    </div>
+
+    <div style="padding:14px 20px;display:flex;gap:10px;justify-content:flex-end;border-top:1px solid #eee;flex-wrap:wrap;">
+      <button onclick="cerrarPanelCorreo()" style="padding:8px 16px;border:1px solid #ccc;border-radius:10px;background:#f5f5f5;cursor:pointer;font-size:12px;">Cerrar</button>
+      <button id="corBtnEnviar" onclick="confirmarEnvioCorreo()"
+              style="padding:8px 20px;border:none;border-radius:10px;background:#1565c0;color:#fff;font-weight:700;cursor:pointer;font-size:12px;">
+         Notificar seleccionadas
+      </button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
