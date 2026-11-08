@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es">
+<html lang="es" data-theme="light">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -136,10 +136,11 @@ body.m button{font-family:inherit}
 .m-chk{display:flex!important;align-items:center;gap:6px;font-size:12.5px!important;color:#1d2733!important;font-weight:500!important;cursor:pointer;white-space:nowrap;margin:0!important}
 .m-chk input{width:auto!important;margin:0}
 /* KPIs */
-.m-kpis{display:grid;grid-template-columns:1fr 1.6fr 1fr 1fr;gap:10px;margin-top:12px}
-.m-kpi{background:#fff;border:1px solid #e1e6ee;border-radius:12px;padding:10px 14px;min-width:0}
+.m-kpis{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;margin-top:12px}
+@media (max-width:1300px){.m-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.m-kpi{background:#fff;border:1px solid #e1e6ee;border-radius:12px;padding:8px 12px;min-width:0}
 .m-kpi-l{font-size:11.5px;color:#5a6878;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
-.m-kpi-v{font-size:24px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums}
+.m-kpi-v{font-size:20px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums}
 .m-kpi-s{font-size:12px;color:#5a6878;margin-top:4px}
 .m-kpi-main .m-kpi-v{color:#0b1f3a}
 .m-kpi-alert .m-kpi-v{color:#a61b1b}
@@ -179,10 +180,6 @@ body.m tbody tr:hover td{background:#f7faff}
 .m-ue{min-width:120px;max-width:200px}
 .m-b{font-weight:700}
 .m-dim{color:#9aa6b4}
-.m-tr-bad td:first-child{box-shadow:inset 3px 0 0 #d14343}
-.m-tr-warn td:first-child{box-shadow:inset 3px 0 0 #e0a21b}
-.m-tr-ok td:first-child{box-shadow:inset 3px 0 0 #2e8b57}
-.m-tr-info td:first-child{box-shadow:inset 3px 0 0 #2f6fd0}
 .m-est{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap}
 .m-est-ok{background:#e3f4ea;color:#1f6f43}
 .m-est-warn{background:#fff1d1;color:#7a5200}
@@ -222,6 +219,41 @@ body.m tbody tr:hover td{background:#f7faff}
 .m-lote{font-size:11.5px;border:1px solid #cfd8e3;border-radius:6px;padding:2px 7px;background:#fff;font-family:ui-monospace,Consolas,monospace}
 @media (max-width:720px){.m-top{flex-wrap:wrap}.m-tit2{white-space:normal}.m-page{padding:10px}}
 
+.m-kpi-v-sm{font-size:12px!important;display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.m-pc{font-size:11.5px;padding:2px 7px;border-radius:999px;background:#eef1f5;color:#3d4a5a;font-weight:600}
+.m-pc-bad{background:#fde4e4;color:#9b1c1c}.m-pc-warn{background:#fff1d1;color:#7a5200}.m-pc-info{background:#e3edfb;color:#1e4f9a}
+.m-col-stock{background:#eef5fd}.m-col-inv{background:#fff6ea}.m-col-tr{color:#1e4f9a}.m-col-rs{color:#6a2c9c}
+.m-small{font-size:11px}.m-recorte{color:#a61b1b;font-weight:700;text-decoration:underline}.m-neg{color:#a61b1b}
+.m-colsel{position:relative}
+.m-colpanel{position:absolute;right:0;top:calc(100% + 6px);z-index:60;background:#fff;border:1px solid #d3dbe6;border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.15);padding:10px 12px;width:360px;display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;max-height:60vh;overflow:auto}
+.m-colpanel-h{grid-column:1/-1;display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px}
+.m-colpanel .m-btn-link{padding:0;font-size:12px}
+.m-theme{width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.35);border-radius:8px;background:transparent;color:#fff;cursor:pointer;padding:0}
+.m-theme svg{width:18px;height:18px}.m-theme .icon-sun{display:none}
+[data-theme="dark"] .m-theme .icon-sun{display:block}[data-theme="dark"] .m-theme .icon-moon{display:none}
+/* recorrido */
+.tour-bg{position:fixed;inset:0;z-index:20000;display:none}.tour-bg.open{display:block}
+.tour-hl{position:fixed;border:3px solid #f0a020;border-radius:8px;box-shadow:0 0 0 9999px rgba(0,0,0,.45);transition:all .2s;pointer-events:none}
+.tour-box{position:fixed;background:#fff;color:#1d2733;border-radius:10px;padding:12px 14px;width:340px;box-shadow:0 4px 18px rgba(0,0,0,.3);font-size:13px;line-height:1.45}
+.tour-box h4{margin:0 0 4px;color:#0b1f3a;font-size:14px}.tour-box .pie{display:flex;justify-content:space-between;align-items:center;margin-top:10px;gap:6px}
+.tour-box .nota{font-size:11.5px;color:#6b7785}
+/* tema oscuro */
+[data-theme="dark"] body.m{background:#0b1220;color:#e2e8f0}
+[data-theme="dark"] .m-card,[data-theme="dark"] .m-kpi,[data-theme="dark"] body.m .scroll,[data-theme="dark"] .m-colpanel,[data-theme="dark"] .m-modal,[data-theme="dark"] .modal-content{background:#111a2e!important;border-color:#24324d!important;color:#e2e8f0}
+[data-theme="dark"] .m-kpi-l,[data-theme="dark"] .m-kpi-s,[data-theme="dark"] .m-filtros label,[data-theme="dark"] .m-viewtitle,[data-theme="dark"] .m-acc-t,[data-theme="dark"] .m-nota,[data-theme="dark"] .m-est-d{color:#94a3b8}
+[data-theme="dark"] .m-kpi-main .m-kpi-v,[data-theme="dark"] .m-au-sum,[data-theme="dark"] .m-paso-t{color:#e2e8f0}
+[data-theme="dark"] .m-filtros input,[data-theme="dark"] .m-filtros select{background:#0b1324;color:#e2e8f0;border-color:#334155}
+[data-theme="dark"] body.m th{background:#16223b;color:#cbd5e1}
+[data-theme="dark"] body.m td{border-bottom-color:#1e2a44}
+[data-theme="dark"] body.m tbody tr:hover td{background:#16223b}
+[data-theme="dark"] .m-col-stock{background:#12233d}[data-theme="dark"] .m-col-inv{background:#2a2112}
+[data-theme="dark"] .m-btn-out,[data-theme="dark"] body.m .tab,[data-theme="dark"] .m-chip,[data-theme="dark"] .m-lnk{background:#111a2e;color:#e2e8f0;border-color:#334155}
+[data-theme="dark"] body.m .tab.active{background:#2b4a7e;border-color:#2b4a7e}
+[data-theme="dark"] .m-paso-c{background:#0f1729;border-color:#24324d}[data-theme="dark"] .m-paso-b{color:#cbd5e1}
+[data-theme="dark"] .m-v,[data-theme="dark"] .m-tag,[data-theme="dark"] .m-pc{background:#1e2a44;color:#e2e8f0}
+[data-theme="dark"] .modal-body{color:#e2e8f0}
+[data-theme="dark"] .m-btn-pri{background:#2b4a7e;color:#fff}
+
   </style>
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
@@ -237,6 +269,11 @@ body.m tbody tr:hover td{background:#f7faff}
       <span id="mFuente" class="m-fuente">Cargando…</span>
       <button id="btnLoadDaily" class="m-btn m-btn-ghost">Corte diario</button>
       <button id="btnLoadHistory" class="m-btn m-btn-ghost">Histórico</button>
+      <button id="mAyuda" class="m-btn m-btn-ghost" type="button">Recorrido guiado</button>
+      <button type="button" class="m-theme" id="themeToggle" title="Cambiar tema claro/oscuro" aria-label="Cambiar tema">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      </button>
       <select id="themeMode" hidden><option value="auto">auto</option></select>
     </div>
   </header>
@@ -275,14 +312,14 @@ body.m tbody tr:hover td{background:#f7faff}
     </section>
 
     <!-- INDICADORES -->
-    <section class="m-kpis">
-      <div class="m-kpi"><div class="m-kpi-l">Renglones</div><div class="m-kpi-v" id="k_lines">—</div><div class="m-kpi-s" id="mK_lines_s"></div></div>
-      <div class="m-kpi m-kpi-main"><div class="m-kpi-l">Cubierto por la asignación</div><div class="m-kpi-v" id="k_fill">—</div>
-        <div class="m-bar"><i id="mK_bar"></i></div>
-        <div class="m-kpi-s">Asignado <b id="k_assigned">—</b> de <b id="k_req_r">—</b> pedidas (ajustado a empaque)</div></div>
-      <div class="m-kpi"><div class="m-kpi-l">Solicitado original</div><div class="m-kpi-v" id="k_req">—</div><div class="m-kpi-s">Lo que escribió la unidad en la F8</div></div>
-      <div class="m-kpi m-kpi-alert"><div class="m-kpi-l">Unidad en cero sin stock</div><div class="m-kpi-v" id="mK_cero">—</div><div class="m-kpi-s">Renglones que la unidad no tiene y el CEDIS tampoco</div></div>
-      <div id="k_importancia" hidden></div>
+    <section class="m-kpis" id="mKpis">
+      <div class="m-kpi"><div class="m-kpi-l">Líneas</div><div class="m-kpi-v" id="k_lines">—</div><div class="m-kpi-s" id="mK_lines_s"></div></div>
+      <div class="m-kpi"><div class="m-kpi-l">Solicitado (orig.)</div><div class="m-kpi-v" id="k_req">—</div><div class="m-kpi-s">Lo que escribió la unidad</div></div>
+      <div class="m-kpi"><div class="m-kpi-l">Solicitado (red.)</div><div class="m-kpi-v" id="k_req_r">—</div><div class="m-kpi-s">Ajustado a empaque y cuota</div></div>
+      <div class="m-kpi"><div class="m-kpi-l">Asignado</div><div class="m-kpi-v" id="k_assigned">—</div><div class="m-kpi-s" id="mK_asg_s"></div></div>
+      <div class="m-kpi m-kpi-main"><div class="m-kpi-l">Fill rate</div><div class="m-kpi-v" id="k_fill">—</div><div class="m-bar"><i id="mK_bar"></i></div><div class="m-kpi-s" id="mK_fill_s"></div></div>
+      <div class="m-kpi"><div class="m-kpi-l">Prioridad clínica</div><div class="m-kpi-v m-kpi-v-sm" id="k_importancia">—</div></div>
+      <div class="m-kpi m-kpi-alert"><div class="m-kpi-l">Unidad en cero sin stock</div><div class="m-kpi-v" id="mK_cero">—</div><div class="m-kpi-s">La unidad no tiene y el CEDIS tampoco</div></div>
     </section>
     <div class="m-chips" id="mChips"></div>
 
@@ -296,7 +333,8 @@ body.m tbody tr:hover td{background:#f7faff}
       <div class="m-acc-g">
         <span class="m-acc-t">Descargar</span>
         <button id="btnExportPdf" class="m-btn m-btn-out">Hoja de asignación (PDF)</button>
-        <button id="btnExportXlsx" class="m-btn m-btn-out">Detalle (Excel)</button>
+        <button id="btnExportXlsx" class="m-btn m-btn-out">Detalle filtrado (Excel)</button>
+        <button id="mXlsxTodo" class="m-btn m-btn-out" type="button">Detalle completo (Excel)</button>
         <button id="btnExportReservas" class="m-btn m-btn-out" onclick="exportarReservasExcel()">Reservas (Excel)</button>
         <button id="btnExportCuotas" class="m-btn m-btn-out">Llenado por cuota</button>
         <button id="btnExportPdfManager" hidden>Informe gerencial</button>
@@ -313,7 +351,7 @@ body.m tbody tr:hover td{background:#f7faff}
         <div class="tab" data-tab="invalidos">Pedidos con error</div>
         <div class="tab" data-tab="fill_cat">Por categoría</div>
         <div class="m-tabs-r">
-          <label class="m-chk m-chk-sm"><input type="checkbox" id="mMasCols"> Más columnas</label>
+          <div class="m-colsel"><button id="mColBtn" class="m-btn m-btn-out" type="button">Columnas</button><div id="mColPanel" class="m-colpanel" hidden></div></div>
         </div>
       </div>
       <div id="viewTitle" class="m-viewtitle"></div>
@@ -321,18 +359,7 @@ body.m tbody tr:hover td{background:#f7faff}
       <div id="view_asignacion" class="view">
         <div class="scroll m-scroll">
           <table id="tbl_asignacion" class="m-tbl">
-            <thead><tr>
-              <th>Fecha</th><th>Forma 8</th><th>Unidad</th><th>Código</th><th class="m-th-sum">Suministro</th>
-              <th>Prioridad</th>
-              <th class="right">Pedido</th><th class="right">Asignado</th><th class="right">Pendiente</th>
-              <th>Estado</th>
-              <th class="right" title="Existencia física en el CEDIS">Stock CEDIS</th>
-              <th class="right" title="Saldo en el estante de la unidad (Calculadora)">Inv. unidad</th>
-              <th class="mx right">Tránsito</th><th class="mx right">Reserva</th><th class="mx">Doc. reserva</th>
-              <th class="mx center">Bultos T/S/P</th><th class="mx">Lotes</th><th class="mx">Últ. despacho</th>
-              <th class="mx right">Cuota</th><th class="mx right">Previo</th><th class="mx right">Saldo cuota</th>
-              <th class="center">Detalle</th>
-            </tr></thead>
+            <thead><tr id="mThead"></tr></thead>
             <tbody></tbody>
           </table>
         </div>
@@ -2839,22 +2866,37 @@ document.addEventListener('keydown', e => {
     const req = rows.reduce((a, r) => a + mNum(r.Solicitado), 0);
     const reqR = rows.reduce((a, r) => a + mNum(r.Solicitado_redondeado), 0);
     const asg = rows.reduce((a, r) => a + mNum(r.Asignado), 0);
-    const pct = reqR > 0 ? asg / reqR * 100 : 0;
+    const tr = rows.reduce((a, r) => a + mNum(r.Asignado_Transito), 0);
+    const fill = req > 0 ? asg / req * 100 : 0;
+    const fillR = reqR > 0 ? asg / reqR * 100 : 0;
     const docs = new Set(rows.map(r => r.N_Doc)).size, ues = new Set(rows.map(r => r.Punto)).size;
     document.getElementById('k_lines').textContent = fmt(rows.length);
     document.getElementById('mK_lines_s').textContent = fmt(docs) + (docs === 1 ? ' Forma 8 · ' : ' Formas 8 · ') + fmt(ues) + (ues === 1 ? ' unidad' : ' unidades');
     document.getElementById('k_req').textContent = fmt(req);
     document.getElementById('k_req_r').textContent = fmt(reqR);
     document.getElementById('k_assigned').textContent = fmt(asg);
-    document.getElementById('k_fill').textContent = pct.toFixed(1) + ' %';
-    document.getElementById('mK_bar').style.width = Math.min(100, pct) + '%';
+    document.getElementById('mK_asg_s').textContent = tr ? ('+ ' + fmt(tr) + ' de tránsito') : 'Del inventario del CEDIS';
+    document.getElementById('k_fill').textContent = fill.toFixed(1) + ' %';
+    document.getElementById('mK_bar').style.width = Math.min(100, fill) + '%';
+    document.getElementById('mK_fill_s').textContent = 'Asignado ÷ solicitado orig. · sobre lo redondeado: ' + fillR.toFixed(1) + ' %';
     const cero = rows.filter(r => r.En_Cero === true && mNum(r.Asignado) <= 0 && mNum(r.Asignado_Transito) <= 0).length;
     document.getElementById('mK_cero').textContent = fmt(cero);
+    // Prioridad clínica: el Motor la guarda en Rank_Etiqueta (Importancia viene vacía)
+    const et = k => rows.filter(r => String(r.Rank_Etiqueta || '').toUpperCase() === k).length;
+    const vit = rows.filter(r => r.Importancia === 'VITAL').length, ese = rows.filter(r => r.Importancia === 'ESENCIAL').length;
+    const partes = [];
+    const vc = et('COLA CERO'), ec = et('ESENCIAL EN CERO'), v = et('VITAL'), c0 = et('EN CERO'), e = et('ESENCIAL');
+    if (vc) partes.push(`<span class="m-pc m-pc-bad">${fmt(vc)} vital en cero</span>`);
+    if (ec) partes.push(`<span class="m-pc m-pc-warn">${fmt(ec)} esencial en cero</span>`);
+    if (v) partes.push(`<span class="m-pc m-pc-warn">${fmt(v)} vital</span>`);
+    if (c0) partes.push(`<span class="m-pc m-pc-warn">${fmt(c0)} en cero</span>`);
+    if (e) partes.push(`<span class="m-pc m-pc-info">${fmt(e)} esencial</span>`);
+    if (vit || ese) partes.push(`<span class="m-pc">V ${fmt(vit)} · E ${fmt(ese)}</span>`);
+    document.getElementById('k_importancia').innerHTML = partes.join(' ') || '<span class="m-dim">sin prioridad especial</span>';
 
     const base = window.__mBase || rows;   // conteos sin el filtro de estado, para poder cambiar entre chips
     const cnt = { COMPLETO: 0, PARCIAL: 0, SIN: 0 };
     base.forEach(r => cnt[coverage(r)]++);
-    const vitCero = base.filter(r => String(r.Rank_Etiqueta || '').toUpperCase() === 'COLA CERO' && coverage(r) === 'SIN').length;
     const estSel = document.getElementById('estado').value;
     const chip = (k, txt, n, cls) => `<button class="m-chip m-chip-${cls}${estSel === k ? ' on' : ''}" data-est="${k}"><b>${fmt(n)}</b> ${txt}</button>`;
     document.getElementById('mChips').innerHTML =
@@ -2862,51 +2904,81 @@ document.addEventListener('keydown', e => {
       chip('COMPLETO', 'completos', cnt.COMPLETO, 'ok') +
       chip('PARCIAL', 'parciales', cnt.PARCIAL, 'warn') +
       chip('SIN', 'sin stock', cnt.SIN, 'bad') +
-      (vitCero ? `<span class="m-chip m-chip-txt"><b>${fmt(vitCero)}</b> vitales en cero sin stock</span>` : '') +
       `<button class="m-chip m-chip-cero${document.getElementById('soloCero').checked ? ' on' : ''}" data-cero="1">Solo unidad en cero</button>`;
-    document.getElementById('k_importancia').textContent = '';
   }
+
+  // ---------- Tabla de renglones: las 30 columnas de siempre + selector ----------
+  const dashSi = (v, f) => mNum(v) ? (f ? f(v) : fmt(v)) : '<span class="m-dim">-</span>';
+  function mAlerta(r) {
+    const st = String(r.Estado || '').toUpperCase(), out = [];
+    if (r.Acaparamiento || st.includes('MAX CUOTA')) out.push('<span class="m-tag m-tag-bad">Tope cuota</span>');
+    else if (st.includes('MINIMO')) out.push('<span class="m-tag">Bajo mín.</span>');
+    else if (coverage(r) === 'SIN') out.push('<span class="m-tag m-tag-bad">Agotado</span>');
+    if (r.En_Cero === true) out.push('<span class="m-tag m-tag-bad" title="La unidad tiene saldo 0 de este renglón">UE en cero</span>');
+    if (r.Frio) out.push('<span class="m-tag m-tag-info">Frío</span>');
+    if (r.Narcotico) out.push('<span class="m-tag m-tag-vio">Controlado</span>');
+    if (r.Pack_Missing) out.push('<span class="m-tag" title="Sin empaque en el maestro">Sin empaque</span>');
+    return out.join(' ');
+  }
+  const M_COLS = [
+    { k: 'ver', t: 'Ver', c: 'center', fijo: true, f: (r, i) => `<button class="m-lnk" onclick="openAudit(${i})" title="Cómo se asignó">Ver</button>` },
+    { k: 'fecha', t: 'Fecha F8', c: 'm-nw', f: r => mEsc(r.Fecha) },
+    { k: 'doc', t: 'Doc', c: 'm-nw', f: r => mEsc(r.N_Doc) },
+    { k: 'tipo', t: 'Tipo', f: r => mEsc(r.Tipo) },
+    { k: 'ue', t: 'UE', c: 'm-ue', f: r => mEsc(r.Punto) },
+    { k: 'cat', t: 'Categoría', f: r => mEsc(r.Categoria) },
+    { k: 'cod', t: 'Código', c: 'm-nw m-mono', f: r => mEsc(r.Codigo) },
+    { k: 'sum', t: 'Suministro', c: 'm-sum', f: r => mEsc(r.Suministro) },
+    { k: 'grp', t: 'Grp', f: r => mEsc(r.Grupo || '-') },
+    { k: 'prio', t: 'Prioridad', f: r => badgePrioridad(r) },
+    { k: 'stock', t: 'Stock', c: 'right m-col-stock', tit: 'Existencia física en el CEDIS', f: r => fmt(r.Stock_Fisico) },
+    { k: 'invue', t: 'Inv. UE', c: 'right m-col-inv', tit: 'Saldo en el estante de la unidad (Calculadora)', f: r => (r.Inventario_UE === null || r.Inventario_UE === '' || r.Inventario_UE === undefined) ? '<span class="m-dim">sin dato</span>' : fmt(r.Inventario_UE) },
+    { k: 'sol', t: 'Solic.', c: 'right', f: r => fmt(r.Solicitado) },
+    { k: 'red', t: 'Redond.', c: 'right', f: r => r.Acaparamiento ? `<span class="m-recorte" title="Recortado por tope de cuota">${fmt(r.Solicitado_redondeado)}</span>` : fmt(r.Solicitado_redondeado) },
+    { k: 'asg', t: 'Asig.', c: 'right m-b', f: r => fmt(r.Asignado) },
+    { k: 'trans', t: 'Trans.', c: 'right m-col-tr', f: r => dashSi(r.Asignado_Transito) },
+    { k: 'resv', t: 'Resv.', c: 'right m-col-rs', f: r => dashSi(r.Reservado) },
+    { k: 'docr', t: 'Doc.R', c: 'm-small', f: r => mEsc(r.Reservado_Doc) },
+    { k: 'pend', t: 'Pend.', c: 'right', f: r => fmt(r.Pendiente) },
+    { k: 'bultos', t: 'Bultos', c: 'center m-nw', tit: 'Terciario / secundario / primario', f: r => fmtBultosTriple(r.Bultos_Ter || 0, r.Bultos_Sec || 0, r.Bultos_Prim || 0) },
+    { k: 'lotes', t: 'Lotes / Info', c: 'm-small', f: r => mEsc(r.Lotes_Usados) + (r.Transito_Info ? `${r.Lotes_Usados ? ' | ' : ''}<b class="m-col-tr">${mEsc(r.Transito_Info)}</b>` : '') },
+    { k: 'ult', t: 'Últ. Desp', c: 'm-nw', f: r => mEsc(r.Ultimo_Despacho || '-') },
+    { k: 'qty', t: 'Qty', c: 'right', f: r => dashSi(r.Qty_Ultimo) },
+    { k: 'prom', t: 'Prom', c: 'right', f: r => dashSi(r.Promedio_Hist) },
+    { k: 'estado', t: 'Estado', f: r => { const e = mEstado(r); return `<span class="m-est m-est-${e.c}" title="Motor: ${mEsc(r.Estado)}">${e.t}</span>${e.d ? `<div class="m-est-d">${e.d}</div>` : ''}`; } },
+    { k: 'alerta', t: 'Alerta', f: r => mAlerta(r) },
+    { k: 'riesgo', t: 'Riesgo', c: 'center', tit: 'Factor de riesgo (tendencia de abastecimiento 90 días)', f: r => r.Factor_Riesgo ? mEsc(r.Factor_Riesgo) + 'x' : '-' },
+    { k: 'cuota', t: 'Cuota', c: 'right', f: r => fmt(r.Cuota_Max) },
+    { k: 'previo', t: 'Previo', c: 'right', f: r => fmt(r.Ejecucion_Previa) },
+    { k: 'saldo', t: 'Saldo', c: 'right', f: r => mNum(r.Saldo_Disponible) < 0 ? `<b class="m-neg">${fmt(r.Saldo_Disponible)}</b>` : fmt(r.Saldo_Disponible) }
+  ];
+  const M_COLS_KEY = 'motor_columnas_v1';
+  let M_OCULTAS = new Set();
+  try { M_OCULTAS = new Set(JSON.parse(localStorage.getItem(M_COLS_KEY) || '[]')); } catch (e) {}
+  const mVisibles = () => M_COLS.filter(c => c.fijo || !M_OCULTAS.has(c.k));
+  function mPintarThead() {
+    document.getElementById('mThead').innerHTML = mVisibles().map(c =>
+      `<th class="${(c.c || '').includes('right') ? 'right' : (c.c || '').includes('center') ? 'center' : ''}"${c.tit ? ` title="${c.tit}"` : ''}>${c.t}</th>`).join('');
+    document.getElementById('mColBtn').textContent = 'Columnas (' + mVisibles().length + ' de ' + M_COLS.length + ')';
+  }
+  function mPintarColPanel() {
+    const p = document.getElementById('mColPanel');
+    p.innerHTML = '<div class="m-colpanel-h"><b>Columnas visibles</b><span><button type="button" class="m-btn-link" data-cols="todas">Todas</button> · <button type="button" class="m-btn-link" data-cols="basicas">Básicas</button></span></div>' +
+      M_COLS.filter(c => !c.fijo).map(c => `<label class="m-chk"><input type="checkbox" data-col="${c.k}"${M_OCULTAS.has(c.k) ? '' : ' checked'}> ${c.t}</label>`).join('');
+  }
+  function mGuardarCols() { try { localStorage.setItem(M_COLS_KEY, JSON.stringify([...M_OCULTAS])); } catch (e) {} mPintarThead(); renderAsignacion(LAST_FILTERED.length ? LAST_FILTERED : DATA); }
 
   function renderAsignacion(rows) {
     const tb = document.querySelector('#tbl_asignacion tbody');
     window.__currentData = rows;
+    window.__exportRows = rows; window.__exportName = 'asignacion';
+    const cols = mVisibles();
     const LIM = 3000;
-    const vis = rows.slice(0, LIM);
-    tb.innerHTML = vis.map((r, i) => {
-      const e = mEstado(r);
-      const red = mNum(r.Solicitado_redondeado), asg = mNum(r.Asignado);
-      const pend = Math.max(0, red - asg);
-      const pedTit = mNum(r.Solicitado) !== red ? ` title="Escribió ${fmt(r.Solicitado)}; se ajustó al empaque"` : '';
-      const lotes = String(r.Lotes_Usados || '');
-      return `<tr class="m-tr-${e.c}">
-        <td class="m-nw">${mEsc(r.Fecha)}</td>
-        <td class="m-nw">${mEsc(r.N_Doc)}</td>
-        <td class="m-ue">${mEsc(r.Punto)}</td>
-        <td class="m-nw m-mono">${mEsc(r.Codigo)}</td>
-        <td class="m-sum">${mEsc(r.Suministro)}<div class="m-tags">${mTags(r)}</div></td>
-        <td>${badgePrioridad(r)}</td>
-        <td class="right"${pedTit}>${fmt(red)}${mNum(r.Solicitado) !== red ? '<sup>*</sup>' : ''}</td>
-        <td class="right m-b">${fmt(asg)}</td>
-        <td class="right">${pend ? fmt(pend) : '<span class="m-dim">0</span>'}</td>
-        <td><span class="m-est m-est-${e.c}">${e.t}</span>${e.d ? `<div class="m-est-d">${e.d}</div>` : ''}</td>
-        <td class="right">${fmt(r.Stock_Fisico)}</td>
-        <td class="right">${r.Inventario_UE === null || r.Inventario_UE === '' || r.Inventario_UE === undefined ? '<span class="m-dim">sin dato</span>' : fmt(r.Inventario_UE)}</td>
-        <td class="mx right">${mNum(r.Asignado_Transito) ? fmt(r.Asignado_Transito) : ''}${r.Transito_Info ? `<div class="m-est-d">${mEsc(r.Transito_Info)}</div>` : ''}</td>
-        <td class="mx right">${mNum(r.Reservado) ? fmt(r.Reservado) : ''}</td>
-        <td class="mx">${mEsc(r.Reservado_Doc)}</td>
-        <td class="mx center m-nw">${fmtBultosTriple(r.Bultos_Ter || 0, r.Bultos_Sec || 0, r.Bultos_Prim || 0)}</td>
-        <td class="mx m-mono">${mEsc(lotes)}</td>
-        <td class="mx m-nw">${mEsc(r.Ultimo_Despacho)}${mNum(r.Qty_Ultimo) ? ` · ${fmt(r.Qty_Ultimo)}` : ''}</td>
-        <td class="mx right">${fmt(r.Cuota_Max)}</td>
-        <td class="mx right">${fmt(r.Ejecucion_Previa)}</td>
-        <td class="mx right">${fmt(r.Saldo_Disponible)}</td>
-        <td class="center"><button class="m-lnk" onclick="openAudit(${i})">Cómo se asignó</button></td>
-      </tr>`;
-    }).join('') || `<tr><td colspan="22" class="m-vacio">No hay renglones con estos filtros.</td></tr>`;
-    const nota = [];
-    if (rows.length > LIM) nota.push(`Se muestran ${fmt(LIM)} de ${fmt(rows.length)} renglones. Use los filtros o descargue el Detalle en Excel para verlos todos.`);
-    if (rows.some(r => mNum(r.Solicitado) !== mNum(r.Solicitado_redondeado))) nota.push('* Pedido ajustado al empaque terciario; pase el cursor para ver lo que escribió la unidad.');
-    document.getElementById('mTblNota').textContent = nota.join(' ');
+    tb.innerHTML = rows.slice(0, LIM).map((r, i) =>
+      `<tr class="m-tr-${mEstado(r).c}">${cols.map(c => `<td${c.c ? ` class="${c.c}"` : ''}>${c.f(r, i)}</td>`).join('')}</tr>`
+    ).join('') || `<tr><td colspan="${cols.length}" class="m-vacio">No hay renglones con estos filtros.</td></tr>`;
+    document.getElementById('mTblNota').textContent = rows.length > LIM
+      ? `Se muestran ${fmt(LIM)} de ${fmt(rows.length)} renglones. Use los filtros o descargue el Detalle en Excel para verlos todos.` : '';
   }
 
   // ---------- Modal "Cómo se asignó" como flujo ----------
@@ -3017,7 +3089,7 @@ document.addEventListener('keydown', e => {
   showTab = function (tab) {
     _mShowTab(tab);
     document.getElementById('viewTitle').textContent = M_TITULOS[tab] || '';
-    document.getElementById('mMasCols').closest('.m-tabs-r').style.visibility = tab === 'asignacion' ? 'visible' : 'hidden';
+    document.getElementById('mColBtn').closest('.m-tabs-r').style.visibility = tab === 'asignacion' ? 'visible' : 'hidden';
   };
 
   // ---------- Fuente del dato (publicado / en vivo / histórico) ----------
@@ -3040,9 +3112,40 @@ document.addEventListener('keydown', e => {
       const p = document.getElementById('mFiltros2'); p.hidden = !p.hidden;
       document.getElementById('mMasFiltros').textContent = p.hidden ? 'Más filtros' : 'Menos filtros';
     });
-    document.getElementById('mMasCols').addEventListener('change', e => {
-      document.getElementById('tbl_asignacion').classList.toggle('m-full', e.target.checked);
+    mPintarThead();
+    document.getElementById('mColBtn').addEventListener('click', ev => {
+      ev.stopPropagation(); const p = document.getElementById('mColPanel');
+      if (p.hidden) mPintarColPanel(); p.hidden = !p.hidden;
     });
+    document.getElementById('mColPanel').addEventListener('click', ev => ev.stopPropagation());
+    document.addEventListener('click', () => { document.getElementById('mColPanel').hidden = true; });
+    document.getElementById('mColPanel').addEventListener('change', ev => {
+      const k = ev.target.dataset.col; if (!k) return;
+      if (ev.target.checked) M_OCULTAS.delete(k); else M_OCULTAS.add(k);
+      mGuardarCols();
+    });
+    document.getElementById('mColPanel').addEventListener('click', ev => {
+      const m = ev.target.dataset.cols; if (!m) return;
+      if (m === 'todas') M_OCULTAS = new Set();
+      else M_OCULTAS = new Set(['tipo', 'cat', 'grp', 'docr', 'bultos', 'lotes', 'qty', 'prom', 'riesgo', 'cuota', 'previo', 'saldo']);
+      mPintarColPanel(); mGuardarCols();
+    });
+    // Excel del reporte completo (sin filtros) con el mismo formato del filtrado
+    document.getElementById('mXlsxTodo').addEventListener('click', () => {
+      const keep = LAST_FILTERED; LAST_FILTERED = DATA;
+      try { document.getElementById('btnExportXlsx').click(); } finally { LAST_FILTERED = keep; }
+    });
+    // Tema: claro por defecto, el ícono cambia a oscuro
+    (function () {
+      const root = document.documentElement;
+      let t = 'light'; try { if (localStorage.getItem('theme') === 'dark') t = 'dark'; } catch (e) {}
+      root.setAttribute('data-theme', t);
+      document.getElementById('themeToggle').addEventListener('click', () => {
+        t = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        root.setAttribute('data-theme', t); try { localStorage.setItem('theme', t); } catch (e) {}
+      });
+    })();
+    document.getElementById('mAyuda').addEventListener('click', () => iniciarTour());
     document.getElementById('mChips').addEventListener('click', ev => {
       const b = ev.target.closest('button'); if (!b) return;
       if (b.dataset.est) document.getElementById('estado').value = b.dataset.est;
@@ -3056,10 +3159,50 @@ document.addEventListener('keydown', e => {
     document.getElementById('soloCero').removeEventListener('change', _mApply);
     document.getElementById('soloCero').addEventListener('change', () => applyFilters());
     ['ue', 'cat', 'estado'].forEach(id => document.getElementById(id).addEventListener('change', () => applyFilters()));
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAudit(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeAudit(); cerrarTour(); } });
   })();
 
+  // ---------- Recorrido guiado (el mismo de los otros tableros) ----------
+  const M_TOUR = [
+    { sel: '#mFuente', t: 'De dónde vienen los datos', x: 'Verde = copia publicada del corte (abre al instante). Si el corte cambió y la copia aún no se actualiza, la página avisa y lee en vivo del Motor.' },
+    { sel: '.m-filtros', t: 'Filtros', x: 'Busque por código, Forma 8, unidad, categoría o estado. "Más filtros" abre fechas, tipo y "solo UE en cero". Enter o Aplicar.' },
+    { sel: '#mKpis', t: 'Indicadores', x: 'Líneas, solicitado, asignado y fill rate del filtro actual. Prioridad clínica cuenta los renglones vitales y en cero.' },
+    { sel: '#mChips', t: 'Estados', x: 'Un clic filtra por completos, parciales o sin stock. Los conteos no cambian al filtrar para que pueda comparar.' },
+    { sel: '.m-acc-g', t: 'Notificar a las unidades', x: 'WhatsApp abre los mensajes por WhatsApp Web, uno por unidad. El correo deja constancia con el detalle.' },
+    { sel: '.m-acc-g:nth-child(2)', t: 'Descargas', x: 'Hoja de asignación en PDF, Detalle en Excel (lo filtrado o todo el corte), Reservas y Llenado por cuota. Se generan en el navegador.' },
+    { sel: '.m-tabs', t: 'Vistas', x: 'Renglones es el detalle línea por línea. Las otras pestañas resumen por unidad, sin stock, unidades sin cobertura, pedidos con error y categoría.' },
+    { sel: '#mColBtn', t: 'Columnas', x: 'Muestre u oculte columnas. Su selección se guarda en este equipo. "Todas" vuelve a las 30 columnas.' },
+    { sel: '#tbl_asignacion tbody tr .m-lnk', t: 'Cómo se asignó', x: 'Abre el flujo de la línea: pedido, prioridad clínica, tope del mes, empaque, inventario del CEDIS y resultado.' },
+    { sel: '#btnLoadHistory', t: 'Histórico', x: 'Carga todas las asignaciones archivadas. "Corte diario" vuelve al corte del día.' },
+    { sel: '#themeToggle', t: 'Tema', x: 'Cambia entre claro y oscuro.' }
+  ];
+  let tourI = 0;
+  function iniciarTour() { tourI = 0; showTab('asignacion'); document.getElementById('tour').classList.add('open'); pasoTour(); }
+  function pasoTour() {
+    const p = M_TOUR[tourI]; const el = document.querySelector(p.sel); if (!el) return cerrarTour();
+    if (el.scrollIntoView) el.scrollIntoView({ block: 'center' });
+    setTimeout(() => {
+      const r = el.getBoundingClientRect(), hl = document.getElementById('tourHl');
+      hl.style.left = (r.left - 4) + 'px'; hl.style.top = (r.top - 4) + 'px'; hl.style.width = (r.width + 8) + 'px'; hl.style.height = (r.height + 8) + 'px';
+      const bx = document.getElementById('tourBox');
+      bx.innerHTML = '<h4>' + p.t + '</h4><div>' + p.x + '</div><div class="pie"><span class="nota">' + (tourI + 1) + ' de ' + M_TOUR.length + '</span><span><button class="m-btn m-btn-out" id="tAnt"' + (tourI ? '' : ' disabled') + '>Anterior</button> <button class="m-btn m-btn-pri" id="tSig">' + (tourI === M_TOUR.length - 1 ? 'Terminar' : 'Siguiente') + '</button> <button class="m-btn m-btn-out" id="tFin">Salir</button></span></div>';
+      const bw = 340, top = r.bottom + 12 + 190 < window.innerHeight ? r.bottom + 12 : Math.max(10, r.top - 200);
+      bx.style.top = top + 'px'; bx.style.left = Math.min(window.innerWidth - bw - 10, Math.max(10, r.left)) + 'px';
+      document.getElementById('tSig').onclick = () => { if (tourI === M_TOUR.length - 1) return cerrarTour(); tourI++; pasoTour(); };
+      document.getElementById('tAnt').onclick = () => { if (tourI) { tourI--; pasoTour(); } };
+      document.getElementById('tFin').onclick = cerrarTour;
+      document.getElementById('tSig').focus();
+    }, 60);
+  }
+  function cerrarTour() { const t = document.getElementById('tour'); if (t) t.classList.remove('open'); }
+  document.addEventListener('keydown', e => {
+    if (!document.getElementById('tour').classList.contains('open')) return;
+    if (e.key === 'ArrowRight' && document.getElementById('tSig')) document.getElementById('tSig').click();
+    if (e.key === 'ArrowLeft' && document.getElementById('tAnt')) document.getElementById('tAnt').click();
+  });
+
   </script>
+<div class="tour-bg" id="tour"><div class="tour-hl" id="tourHl"></div><div class="tour-box" id="tourBox"></div></div>
 
 <div id="modalWA" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);
      z-index:99999;overflow-y:auto;padding:20px;box-sizing:border-box;">
