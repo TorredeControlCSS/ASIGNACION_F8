@@ -407,6 +407,18 @@ body.m tbody tr:hover td{background:#f7faff}
 [data-theme="dark"] .m-pant-txt p{color:#cbd5e1}
 [data-theme="dark"] .m-subtabs{border-bottom-color:#24324d}
 [data-theme="dark"] .m-lt-rec{background:#123323;color:#9fe0b8}
+.m-gate-e.m-gate-info{color:#5a6878;font-weight:500}
+.m-ent-fil{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px}
+.m-ent-fil .m-chip-f{display:inline-flex;gap:6px;align-items:center;background:#e1ecfb;color:#1e4f9a;border-radius:999px;padding:3px 4px 3px 10px;font-size:12px;font-weight:600}
+.m-ent-fil .m-chip-f button{border:none;background:rgba(30,79,154,.15);color:inherit;border-radius:999px;width:18px;height:18px;padding:0;cursor:pointer;font-size:12px;line-height:18px}
+.m-ent-prev{margin-top:12px}
+.m-ent-prev h3{font-size:14px;margin:0 0 6px}
+.m-ent-prev .m-tbl td,.m-ent-prev .m-tbl th{padding:5px 8px;font-size:12.5px}
+.m-ent-prev tr.m-ent-ue td{background:#f3f6fa;font-weight:700}
+.m-ent-prev tr.m-ent-f8{cursor:pointer}
+.m-ent-prev tr.m-ent-f8:hover td{background:#f7fbff}
+[data-theme="dark"] .m-ent-prev tr.m-ent-ue td{background:#131d33}
+[data-theme="dark"] .m-ent-fil .m-chip-f{background:#14274a;color:#a9c7f5}
 
   </style>
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -551,6 +563,11 @@ body.m tbody tr:hover td{background:#f7faff}
               <button id="btnExportPdfManager" hidden>Informe gerencial</button>
             </div>
           </div>
+        </div>
+        <div class="m-ent-prev">
+          <h3>Lo que se va a entregar</h3>
+          <div class="m-tbl-wrap"><table class="m-tbl" id="mEntTabla"><thead><tr><th>Unidad / Forma 8</th><th>Fecha</th><th>Tipo</th><th class="right">Renglones</th><th class="right">Completos</th><th class="right">Parciales</th><th class="right">Sin stock</th><th class="right">Solicitado</th><th class="right">Asignado</th><th class="right">Fill rate</th></tr></thead><tbody></tbody></table></div>
+          <div class="m-dim" id="mEntNota"></div>
         </div>
       </div>
 
@@ -745,10 +762,11 @@ body.m tbody tr:hover td{background:#f7faff}
     };
     function pintarUsuario(){
       const el=document.getElementById('mUsuario'); if(!el) return;
-      el.hidden = !ses;
-      el.innerHTML = ses ? ('<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'+esc(titulo(ses.nombre))+' <button type="button" id="mSalir" class="m-salir" title="Cerrar sesión">Salir</button>') : '';
+      el.hidden = !ses; if (ses) el.title = titulo(ses.nombre);
+      el.innerHTML = ses ? ('<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'+esc(corto(ses.nombre))+' <button type="button" id="mSalir" class="m-salir" title="Cerrar sesión">Salir</button>') : '';
       const b=document.getElementById('mSalir'); if(b) b.onclick=salir;
     }
+    function corto(n){ const p=titulo(n).split(/\s+/).filter(Boolean); return p.length>2 ? p[0]+' '+p[p.length-1] : p.join(' '); }
     function titulo(n){ return String(n||'').toLowerCase().replace(/(^|\s)\S/g, c=>c.toUpperCase()); }
     function bienvenida(){
       const b=document.getElementById('mBienvenida'); if(!b||!ses) return;
@@ -771,11 +789,14 @@ body.m tbody tr:hover td{background:#f7faff}
         '<div class="m-gate-n">El mismo PIN del Kanban. La sesión dura 8 horas en este equipo.</div></form>';
       document.body.appendChild(ov);
       const inp=document.getElementById('mGatePin'), err=document.getElementById('mGateE'), btn=document.getElementById('mGateB');
+      // Despierta el servidor del Motor mientras la persona escribe el PIN (la primera llamada del día es la lenta).
+      try { fetch(window.MOTOR_API, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ action:'motorPing' }) }).catch(()=>{}); } catch(e){}
       setTimeout(()=>inp.focus(),50);
       document.getElementById('mGateF').addEventListener('submit', async ev=>{
         ev.preventDefault(); const pin=inp.value.trim();
         if(!/^\d{4,6}$/.test(pin)){ err.textContent='El PIN tiene 4 a 6 dígitos.'; return; }
         btn.disabled=true; btn.textContent='Verificando…'; err.textContent='';
+        const tLento=setTimeout(()=>{ err.textContent='Conectando con el Motor… la primera conexión del día puede tardar unos segundos.'; err.classList.add('m-gate-info'); }, 5000);
         try{
           ses={pin:pin}; const r=await post('motorLogin',{});
           if(!r.success){ ses=null; err.textContent=r.error||'PIN incorrecto.'; inp.value=''; inp.focus(); return; }
@@ -783,7 +804,7 @@ body.m tbody tr:hover td{background:#f7faff}
           try{ localStorage.setItem(KEY, JSON.stringify(ses)); }catch(e){}
           ov.remove(); pintarUsuario(); bienvenida();
         }catch(e){ ses=null; err.textContent='Sin conexión con el Motor. Intente de nuevo.'; }
-        finally{ btn.disabled=false; btn.textContent='Entrar'; }
+        finally{ clearTimeout(tLento); err.classList.remove('m-gate-info'); if (err.textContent.indexOf('Conectando')===0) err.textContent=''; btn.disabled=false; btn.textContent='Entrar'; }
       });
     }
     document.addEventListener('DOMContentLoaded', ()=>{ pintarUsuario(); if(!ses) mostrarGate(); else bienvenida(); });
@@ -3530,16 +3551,53 @@ document.addEventListener('keydown', e => {
       let sol = 0, asg = 0; (DATA || []).forEach(r => { sol += +r.Solicitado || 0; asg += +r.Asignado || 0; });
       mSet('mPas3', DATA && DATA.length ? fmt(DATA.length) + ' renglones · fill rate ' + (sol ? (asg / sol * 100).toFixed(1) : '0') + ' %' : '—', false);
       mSet('mPas4', 'Notificar y descargar el último corte', false);
-      const rs = (typeof LAST_FILTERED !== 'undefined' && LAST_FILTERED.length) ? LAST_FILTERED : (DATA || []);
-      const er = document.getElementById('mEntRes');
-      if (er) {
-        const filtrado = DATA && rs.length !== DATA.length, f8 = new Set(rs.map(r => r.N_Doc)).size, ue = new Set(rs.map(r => r.Punto)).size;
-        er.innerHTML = DATA && DATA.length
-          ? (filtrado ? 'Con los filtros de arriba se entrega: ' : 'Se entrega todo el último corte: ') + '<b>' + fmt(rs.length) + '</b> renglones · <b>' + fmt(f8) + '</b> ' + (f8 === 1 ? 'Forma 8' : 'Formas 8') + ' · <b>' + fmt(ue) + '</b> ' + (ue === 1 ? 'unidad' : 'unidades') + ' · corte del ' + mEsc(mCorte()) + (filtrado ? '' : '. Para una sola unidad, CEDIS o Forma 8, use los filtros.')
-          : 'No hay corte cargado.';
-      }
+      if (document.getElementById('view_entregar').style.display !== 'none') mPintarEntrega();
     } catch (err) { console.warn('pasos:', err); }
   }
+  // Paso 4: filtros activos (en palabras) + vista previa por unidad y Forma 8
+  const M_FIL = [['q', 'Renglón'], ['doc', 'Forma 8'], ['ue', 'Unidad'], ['cat', 'Categoría'], ['estado', 'Estado'], ['tipo', 'Tipo'],
+                 ['dateFrom', 'F8 desde'], ['dateTo', 'F8 hasta'], ['allocDateFrom', 'Proceso desde'], ['allocDateTo', 'Proceso hasta']];
+  function mFiltrosActivos() {
+    const out = [];
+    M_FIL.forEach(([id, l]) => { const el = document.getElementById(id); if (!el) return; const v = String(el.value || '').trim();
+      if (v && v.toUpperCase() !== 'ALL' && v !== 'Todos' && v.toUpperCase() !== 'TODOS') out.push({ id, l, v: el.tagName === 'SELECT' ? (el.options[el.selectedIndex] || {}).text || v : v }); });
+    const sc = document.getElementById('soloCero'); if (sc && sc.checked) out.push({ id: 'soloCero', l: 'Solo', v: 'UE en cero' });
+    return out;
+  }
+  function mQuitarFiltro(id) {
+    const el = document.getElementById(id); if (!el) return;
+    if (el.type === 'checkbox') el.checked = false; else if (el.tagName === 'SELECT') el.value = [...el.options].some(o => o.value === 'ALL') ? 'ALL' : (el.options[0] || {}).value || ''; else el.value = '';
+    applyFilters();
+  }
+  function mPintarEntrega() {
+    const er = document.getElementById('mEntRes'); if (!er) return;
+    if (!DATA || !DATA.length) { er.textContent = 'No hay corte cargado.'; return; }
+    const fil = mFiltrosActivos(), rs = fil.length ? (LAST_FILTERED || []) : DATA;
+    const f8 = new Set(rs.map(r => r.N_Doc)).size, ue = new Set(rs.map(r => r.Punto)).size;
+    er.innerHTML = (fil.length ? 'Con estos filtros se entrega: ' : 'Sin filtros: se entrega <b>todo</b> el último corte: ') +
+      '<b>' + fmt(rs.length) + '</b> renglones · <b>' + fmt(f8) + '</b> ' + (f8 === 1 ? 'Forma 8' : 'Formas 8') + ' · <b>' + fmt(ue) + '</b> ' + (ue === 1 ? 'unidad' : 'unidades') + ' · corte del ' + mEsc(mCorte()) +
+      (fil.length ? '<div class="m-ent-fil">' + fil.map(f => '<span class="m-chip-f">' + mEsc(f.l) + ': ' + mEsc(f.v) + ' <button type="button" data-q="' + f.id + '" title="Quitar este filtro">×</button></span>').join('') + '</div>'
+                  : '<div class="m-dim" style="margin-top:4px">Para entregar una sola unidad, CEDIS o Forma 8, elija arriba y pulse Aplicar, o haga clic en una Forma 8 de la lista.</div>');
+    er.querySelectorAll('button[data-q]').forEach(b => b.onclick = () => mQuitarFiltro(b.dataset.q));
+    // vista previa
+    const porUE = new Map();
+    rs.forEach(r => { const u = r.Punto || '—'; if (!porUE.has(u)) porUE.set(u, new Map()); const m = porUE.get(u);
+      if (!m.has(r.N_Doc)) m.set(r.N_Doc, []); m.get(r.N_Doc).push(r); });
+    const agg = ls => { let c = 0, p = 0, s = 0, so = 0, as = 0; ls.forEach(r => { const k = coverage(r);   // misma regla que los chips del paso 3
+      so += +r.Solicitado || 0; as += +r.Asignado || 0; if (k === 'COMPLETO') c++; else if (k === 'PARCIAL') p++; else s++; }); return { n: ls.length, c, p, s, so, as }; };
+    const fila = (a) => `<td class="right">${fmt(a.n)}</td><td class="right">${fmt(a.c)}</td><td class="right">${fmt(a.p)}</td><td class="right">${fmt(a.s)}</td><td class="right">${fmt(a.so)}</td><td class="right">${fmt(a.as)}</td><td class="right">${a.so ? (a.as / a.so * 100).toFixed(1) + ' %' : '—'}</td>`;
+    let h = '', nF8 = 0; const LIM = 300;
+    [...porUE.keys()].sort().forEach(u => {
+      const m = porUE.get(u), todo = [].concat(...m.values());
+      h += `<tr class="m-ent-ue"><td colspan="3">${mEsc(u)} <span class="m-dim">· ${m.size} ${m.size === 1 ? 'Forma 8' : 'Formas 8'}</span></td>${fila(agg(todo))}</tr>`;
+      [...m.keys()].sort().forEach(d => { if (nF8++ >= LIM) return; const ls = m.get(d);
+        h += `<tr class="m-ent-f8" data-f8="${mEsc(d)}" title="Entregar solo esta Forma 8"><td style="padding-left:22px">${mEsc(d)}</td><td>${mEsc(String(ls[0].Fecha || '').slice(0, 10))}</td><td>${mEsc(ls[0].Tipo || '')}</td>${fila(agg(ls))}</tr>`; });
+    });
+    const tb = document.querySelector('#mEntTabla tbody'); tb.innerHTML = h || '<tr><td colspan="10" class="m-vacio">No hay renglones con estos filtros.</td></tr>';
+    tb.querySelectorAll('tr.m-ent-f8').forEach(tr => tr.onclick = () => { document.getElementById('doc').value = tr.dataset.f8; applyFilters(); });
+    document.getElementById('mEntNota').textContent = nF8 > LIM ? 'Se muestran ' + LIM + ' Formas 8; filtre por unidad para ver el resto.' : '';
+  }
+
   function mPintarCorrer() {
     const fu = (document.getElementById('mFuente') || {}).textContent || '';
     const act = (typeof LT !== 'undefined' && LT.actual) ? LT.actual : null;
