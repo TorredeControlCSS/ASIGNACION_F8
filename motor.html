@@ -422,6 +422,29 @@ body.m tbody tr:hover td{background:#f7faff}
 .m-aviso-b{margin-left:8px;font-family:inherit;font-size:12px;font-weight:600;border:1px solid #d9b85c;background:#fff;color:#6b4a00;border-radius:6px;padding:3px 10px;cursor:pointer}
 .m-aviso-b:hover{background:#fff9e6}
 
+/* F8 manuales (8-nov-2026) */
+.m-modal-w{max-width:860px}
+.m-lt-man-g{display:grid;grid-template-columns:1fr 2fr 1fr 1fr;gap:10px}
+.m-lt-man-g .m-f label{display:block;font-size:12px;color:#5a6878;margin-bottom:4px}
+.m-lt-ta{width:100%;font-family:ui-monospace,Consolas,monospace;font-size:13px;resize:vertical}
+.m-lt-man-av{min-height:18px;font-size:12.5px;margin:6px 0}
+.m-lt-man-prev{max-height:220px;overflow:auto;margin-top:8px}
+.m-lt-man-prev table{width:100%;border-collapse:collapse;font-size:12.5px}
+.m-lt-man-prev td,.m-lt-man-prev th{padding:4px 8px;border-bottom:1px solid #eef1f5;text-align:left}
+.m-av-ok{color:#1f6f43}.m-av-warn{color:#8a5a00}.m-av-bad{color:#a12a1f}
+.m-lt-man-tag{display:inline-block;font-size:11px;font-weight:700;border-radius:6px;padding:1px 6px;background:#efe6fb;color:#5b2d91;margin-left:6px}
+.m-lt-manvent{border:1px solid #e3d6f5;background:#faf6ff;border-radius:10px;padding:10px 12px;margin:8px 0;font-size:13px}
+.m-lt-manvent b{color:#3e1f6a}
+.m-lt-manvent ul{margin:6px 0 0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:6px}
+.m-lt-manvent li{background:#fff;border:1px solid #e3d6f5;border-radius:8px;padding:5px 8px;display:flex;gap:8px;align-items:center}
+.m-lt-mini{font-family:inherit;font-size:11.5px;font-weight:600;border:1px solid #c7b2e6;background:#fff;color:#5b2d91;border-radius:6px;padding:2px 8px;cursor:pointer}
+.m-lt-mini:hover{background:#f3ecfc}
+.m-lt-quitar{border:none;background:none;color:#a12a1f;cursor:pointer;font-size:12px;text-decoration:underline;padding:0 0 0 6px}
+@media (max-width:900px){.m-lt-man-g{grid-template-columns:1fr 1fr}}
+[data-theme="dark"] .m-lt-manvent{background:#1b1430;border-color:#3b2c5c}
+[data-theme="dark"] .m-lt-manvent li{background:#0f172a;border-color:#3b2c5c}
+[data-theme="dark"] .m-lt-man-tag{background:#2a1d45;color:#d6c2f5}
+
   </style>
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
@@ -591,12 +614,14 @@ body.m tbody tr:hover td{background:#f7faff}
         <div class="m-lt-acc">
           <span id="ltResumen" class="m-lt-res"></span>
           <span class="m-lt-acc-b">
+            <button id="ltManualBtn" class="m-btn m-btn-out" type="button" title="Para Formas 8 de unidades sin SALMI (llegan en papel)">+ Agregar F8 manual</button>
             <button id="ltSelTodo" class="m-btn m-btn-out" type="button">Seleccionar lo filtrado</button>
             <button id="ltSelNada" class="m-btn m-btn-out" type="button">Quitar lo filtrado</button>
             <button id="ltLimpiar" class="m-btn m-btn-link" type="button">Limpiar selección</button>
             <button id="ltEnviar" class="m-btn m-btn-hoja" type="button" disabled>Enviar a la lista de trabajo</button>
           </span>
         </div>
+        <div id="ltManVent" class="m-lt-manvent" hidden></div>
         <div class="m-lt-paneles">
           <div class="m-lt-card">
             <div class="m-lt-card-t">Lista de trabajo actual</div>
@@ -649,6 +674,27 @@ body.m tbody tr:hover td{background:#f7faff}
   </main>
 
   <!-- MODAL: ENVIAR A F8_DETALLE -->
+  <div id="ltManual" class="modal">
+    <div class="modal-content m-modal m-modal-w">
+      <div class="modal-header m-modal-h"><span>Agregar una Forma 8 manual</span><span class="close-btn" onclick="document.getElementById('ltManual').style.display='none'">&times;</span></div>
+      <div class="modal-body">
+        <p class="m-dim" style="margin:0 0 10px">Para las F8 de unidades que no tienen SALMI. Se agregan a la selección como <b>Manual</b> y se envían con el resto.</p>
+        <div class="m-lt-man-g">
+          <div class="m-f"><label>N.º de Forma 8</label><input id="lmF8" class="m-lt-in" placeholder="Ej.: 3105-2026-1-0412" autocomplete="off"></div>
+          <div class="m-f m-f-2"><label>Unidad ejecutora</label><input id="lmUE" class="m-lt-in" list="lmUEs" placeholder="Escriba y elija de la lista" autocomplete="off"><datalist id="lmUEs"></datalist></div>
+          <div class="m-f"><label>Fecha de la F8</label><input id="lmFecha" class="m-lt-in" type="date"></div>
+          <div class="m-f"><label>Tipo</label><select id="lmTipo" class="m-lt-in"></select></div>
+        </div>
+        <div id="lmAvisoF8" class="m-lt-man-av"></div>
+        <label class="m-lt-l">Renglones: un renglón por línea, <b>código</b> y <b>cantidad</b> (puede pegarlos desde Excel). Si el código es nuevo, escriba también su descripción entre los dos.</label>
+        <textarea id="lmLineas" class="m-lt-in m-lt-ta" rows="7" placeholder="102092901   500&#10;102093401   50&#10;209999999   Guantes de nitrilo talla M (nuevo)   200"></textarea>
+        <div id="lmPrev" class="m-lt-man-prev"></div>
+        <div id="lmMsg" class="m-lt-msg"></div>
+      </div>
+      <div class="m-modal-f"><button class="m-btn m-btn-out" type="button" onclick="document.getElementById('ltManual').style.display='none'">Cerrar</button> <button id="lmOk" class="m-btn m-btn-hoja" type="button">Agregar a la selección</button></div>
+    </div>
+  </div>
+
   <div id="ltEnvio" class="modal">
     <div class="modal-content m-modal">
       <div class="modal-header m-modal-h"><span>Enviar a la lista de trabajo (F8_DETALLE)</span><span class="close-btn" onclick="document.getElementById('ltEnvio').style.display='none'">&times;</span></div>
@@ -3779,7 +3825,7 @@ document.addEventListener('keydown', e => {
   // Pendientes = líneas de REQUISICIONES_F8 de los últimos N días (servidor, con PIN).
   // "Ya asignada" llega marcada en pendientes.json (el Motor la calcula al publicar); no se descarga el historial.
   // Nada se escribe en F8_DETALLE hasta que el analista confirma "Enviar a la lista de trabajo".
-  const LT = { filas: [], skus: {}, sel: new Map(), extras: [], actual: null, cargado: false, ocupado: false };
+  const LT = { filas: [], skus: {}, sel: new Map(), extras: [], actual: null, cargado: false, ocupado: false, maestro: {}, unidades: [], manVent: [], manual: [], tipos: [] };
   const ltKey = (f8, sku) => String(f8).trim() + '|' + String(sku).trim().replace(/^0+/, '');
   const ltFmtF = iso => { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[3] + '/' + m[2] + '/' + m[1] : String(iso || ''); };
   const ltEl = id => document.getElementById(id);
@@ -3803,7 +3849,7 @@ document.addEventListener('keydown', e => {
     const dias = +ltEl('ltDias').value || 30;
     const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - dias);
     const lim = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-    LT.filas = LT_TODAS.filter(f => f.fecha >= lim);
+    LT.filas = LT_TODAS.filter(f => f.manual || f.fecha >= lim);   // las F8 manuales se ven siempre
     ltLlenarFiltros(); ltPintar();
     if (LT.cargado) { const f8 = new Set(LT.filas.map(f => f.f8)), rec = new Set(LT.filas.filter(f => f.rec).map(f => f.f8));
       ltEstado(fmt(LT.filas.length) + ' líneas de los últimos ' + dias + ' días · ' + fmt(f8.size) + ' Formas 8, ' + fmt(rec.size) + ' recibidas en ventanilla · datos publicados ' + LT.pub, 'ok'); }
@@ -3831,10 +3877,13 @@ document.addEventListener('keydown', e => {
           sol: +a[ix('SOLICITADO')] || 0, asig: (iA >= 0 ? a[iA] : asig.get(k)) || '', rec: (iR >= 0 ? a[iR] : '') || '', enLista: false };
       }).filter(f => !esTransf(f.tipo));   // las transferencias son entre unidades: el Motor no las asigna
       LT.skus = p.skus || {};
+      LT.maestro = p.maestro || {}; LT.unidades = p.unidades || []; LT.manVent = p.manuales || [];
+      LT.tipos = [...new Set((D.tipo || []).filter(t => t && !esTransf(t)))];
+      LT.manual.forEach(m => { LT_TODAS.push(m); ltSkuDeMaestro(m.sku); });   // lo manual agregado antes sigue en pantalla
       LT.actual = p.actual || [];
       LT.pub = new Date(p.generado).toLocaleString('es-PA', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
       LT.cargado = true;
-      ltMarcarEnLista(); ltAplicarPeriodo(); ltPintarActual();
+      ltMarcarEnLista(); ltAplicarPeriodo(); ltPintarActual(); ltPintarManVent();
       // La lista actual se confirma en segundo plano (puede haber cambiado en el Excel); no detiene la pantalla.
       ltRefrescarActual();
     } catch (e) { ltEstado(e.message || String(e), 'bad'); }
@@ -3881,12 +3930,19 @@ document.addEventListener('keydown', e => {
     porF8.forEach((ls, f8) => {
       const a = ls[0], nSel = ls.filter(x => LT.sel.has(x.k)).length;
       h += `<tr class="m-lt-g"><td><input type="checkbox" data-f8="${mEsc(f8)}" ${nSel === ls.length ? 'checked' : ''} ${nSel && nSel < ls.length ? 'data-medio="1"' : ''}></td>
-        <td colspan="16"><b>${mEsc(f8)}</b> · ${ltFmtF(a.fecha)} · ${mEsc(a.tipo)} · <b>${mEsc(a.ue)}</b>${a.cat ? ' · ' + mEsc(a.cat) : ''}${a.cedis ? ' · suple ' + mEsc(a.cedis) : ''}${a.rec ? ' <span class="m-lt-rec">Recibida en ventanilla ' + ltFmtF(a.rec).slice(0, 5) + '</span>' : ''}
+        <td colspan="16"><b>${mEsc(f8)}</b> · ${ltFmtF(a.fecha)} · ${mEsc(a.tipo)} · <b>${mEsc(a.ue)}</b>${a.cat ? ' · ' + mEsc(a.cat) : ''}${a.cedis ? ' · suple ' + mEsc(a.cedis) : ''}${a.rec ? ' <span class="m-lt-rec">Recibida en ventanilla ' + ltFmtF(a.rec).slice(0, 5) + '</span>' : ''}${a.manual ? '<span class="m-lt-man-tag">Manual</span>' : ''}
         <span class="m-dim"> · ${ls.length} líneas${nSel ? ' · ' + nSel + ' seleccionadas' : ''}</span></td></tr>`;
       ls.forEach(f => {
         const sk = LT.skus[f.sku], s = LT.sel.get(f.k), net = sk ? sk[0] : null, util = sk ? sk[1] : null;
-        const cls = f.asig ? 'm-cel-info' : f.enLista ? 'm-cel-warn' : '';
-        const est = f.asig ? 'Ya asignada ' + mEsc(f.asig) : f.enLista ? 'En la lista actual' : 'Nueva';
+        let cls = f.asig ? 'm-cel-info' : f.enLista ? 'm-cel-warn' : '';
+        let est = f.asig ? 'Ya asignada ' + mEsc(f.asig) : f.enLista ? 'En la lista actual' : 'Nueva';
+        if (f.manual) {
+          cls = !f.enMaestro ? 'm-cel-bad' : !f.ueOk ? 'm-cel-warn' : 'm-cel-vio';
+          est = 'Manual' + (f.origen === 'excel' ? ' (Excel)' : '') +
+            (!f.enMaestro ? `<br><small>No está en el maestro</small> <button type="button" class="m-lt-mini" data-alta="${mEsc(f.k)}">${f.altaPedida ? 'Alta pedida' : 'Pedir alta'}</button>` : '') +
+            (f.enMaestro && !f.ueOk ? '<br><small>Unidad no reconocida por el Motor</small>' : '') +
+            ` <button type="button" class="m-lt-quitar" data-quitar="${mEsc(f.k)}" title="Quitar este renglón manual">quitar</button>`;
+        }
         const alcanza = util == null ? '' : util >= (s ? s.cant : f.sol) ? 'm-cel-ok' : util > 0 ? 'm-cel-warn' : 'm-cel-bad';
         h += `<tr data-k="${mEsc(f.k)}"${s ? ' class="m-lt-on"' : ''}>
           <td><input type="checkbox" data-k="${mEsc(f.k)}" ${s ? 'checked' : ''}></td>
@@ -3912,7 +3968,7 @@ document.addEventListener('keydown', e => {
   function ltResumen() {
     const sel = [...LT.sel.values()], f8 = new Set(sel.map(s => s.f8)), ue = new Set(sel.map(s => s.punto));
     ltEl('ltResumen').innerHTML = `<b>${fmt(sel.length)}</b> ${sel.length === 1 ? 'línea seleccionada' : 'líneas seleccionadas'} · <b>${fmt(f8.size)}</b> ${f8.size === 1 ? 'Forma 8' : 'Formas 8'} · <b>${fmt(ue.size)}</b> ${ue.size === 1 ? 'unidad' : 'unidades'}` +
-      (LT.extras.length ? ` <span class="m-dim">(incluye ${fmt(LT.extras.length)} del Excel que no están en los pendientes)</span>` : '');
+      (sel.filter(s => s.manual).length ? ` <span class="m-dim">(incluye ${fmt(sel.filter(s => s.manual).length)} renglones manuales)</span>` : '');
     ltEl('ltEnviar').disabled = !sel.length;
   }
   function ltPintarActual() {
@@ -3926,7 +3982,7 @@ document.addEventListener('keydown', e => {
   }
 
   function ltSel(f, on) {
-    if (on) LT.sel.set(f.k, { k: f.k, f8: f.f8, punto: f.punto, fecha: f.fecha, sku: f.sku, cant: (LT.sel.get(f.k) || {}).cant || f.sol, tipo: f.tipo });
+    if (on) LT.sel.set(f.k, { k: f.k, f8: f.f8, punto: f.punto, fecha: f.fecha, sku: f.sku, cant: (LT.sel.get(f.k) || {}).cant || f.sol, tipo: f.tipo, manual: !!f.manual });
     else LT.sel.delete(f.k);
   }
   const ltPorK = () => { const m = new Map(); LT.filas.forEach(f => m.set(f.k, f)); return m; };
@@ -3976,10 +4032,11 @@ document.addEventListener('keydown', e => {
           if (!f8 || !sku) return;
           if (!(q > 0) || !fe || !String(r[c.pu]).trim() || !String(r[c.ti]).trim()) { malas++; return; }
           const k = ltKey(f8, sku), f = porK.get(k);
-          LT.sel.set(k, { k, f8, punto: String(r[c.pu]).trim(), fecha: fe, sku, cant: q, tipo: String(r[c.ti]).trim() });
+          if (!f && !LT.manual.some(m => m.k === k)) ltNuevaManual({ f8, punto: String(r[c.pu]).trim(), fecha: fe, sku, cant: q, tipo: String(r[c.ti]).trim(), desc: '', origen: 'excel' });
+          LT.sel.set(k, { k, f8, punto: String(r[c.pu]).trim(), fecha: fe, sku, cant: q, tipo: String(r[c.ti]).trim(), manual: !f });
           if (!f) LT.extras.push(k);
         });
-        ltEl('ltSoloSel').checked = true; ltPintar();
+        ltEl('ltSoloSel').checked = true; ltAplicarPeriodo();
         ltEstado('Excel cargado: ' + fmt(LT.sel.size) + ' líneas seleccionadas' + (malas ? ' · ' + malas + ' líneas incompletas no se tomaron' : '') + '. Revise y envíe a la lista de trabajo.', malas ? 'warn' : 'ok');
       } catch (e) { ltEstado(e.message || String(e), 'bad'); }
     };
@@ -4031,11 +4088,115 @@ document.addEventListener('keydown', e => {
     } catch (e) { ltEstado(e.message || String(e), 'bad'); }
   }
 
+  // ---------- F8 MANUALES (unidades sin SALMI) · 8-nov-2026 ----------
+  // Avisan pero no bloquean: un código fuera del maestro o una unidad que el Motor no reconoce se marcan,
+  // y el analista decide. "Pedir alta" deja el pedido en MAESTRO_ALTAS_PENDIENTES (no toca el maestro).
+  const ltNorm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/\s+/g, ' ').trim();
+  const ltSkuN = s => String(s || '').trim().replace(/\.0$/, '').replace(/^0+/, '');
+  function ltSkuDeMaestro(sku) {
+    const m = LT.maestro[ltSkuN(sku)]; if (!m || LT.skus[sku]) return m;
+    LT.skus[sku] = [m[6] || 0, m[7] || 0, m[8] || 0, m[1] || 1, m[2] || 0, m[3] || 0, m[4] || '', m[5] || ''];   // mismo formato que los pendientes
+    return m;
+  }
+  function ltUEInfo(nombre) {
+    const n = ltNorm(nombre); const u = LT.unidades.find(x => ltNorm(x[0]) === n);
+    return u ? { ok: true, ue: u[0], cat: u[1], cedis: u[2] } : { ok: false, ue: String(nombre || '').trim(), cat: '', cedis: '' };
+  }
+  function ltNuevaManual(x) {
+    const m = ltSkuDeMaestro(x.sku), u = ltUEInfo(x.punto);
+    const f = { k: ltKey(x.f8, x.sku), f8: String(x.f8).trim(), fecha: x.fecha, tipo: x.tipo, punto: u.ue, ue: u.ue, cat: u.cat, cedis: u.cedis,
+      sku: String(x.sku).trim(), sum: m ? m[0] : (x.desc || ''), sol: x.cant, asig: '', rec: x.rec || '', enLista: false,
+      manual: true, origen: x.origen || 'manual', enMaestro: !!m, ueOk: u.ok, desc: x.desc || '' };
+    LT.manual = LT.manual.filter(o => o.k !== f.k); LT.manual.push(f);
+    LT_TODAS = LT_TODAS.filter(o => o.k !== f.k); LT_TODAS.push(f);
+    return f;
+  }
+  function ltLineasManual() {
+    const out = [];
+    String(ltEl('lmLineas').value || '').split(/\r?\n/).forEach((ln, i) => {
+      const t = ln.trim(); if (!t) return;
+      const toks = t.replace(/;/g, ' ').split(/\s+/).filter(Boolean);   // código … descripción … cantidad (sirve pegado desde Excel)
+      const sku = ltSkuN(toks[0]), qRaw = toks.length > 1 ? toks[toks.length - 1] : '', cant = Math.round(Number(String(qRaw).replace(/,/g, '')));
+      const desc = toks.slice(1, -1).join(' ');
+      out.push({ n: i + 1, sku, cant, desc, ok: !!sku && cant > 0, m: LT.maestro[sku] });
+    });
+    return out;
+  }
+  function ltPrevManual() {
+    const f8 = ltEl('lmF8').value.trim(), ue = ltEl('lmUE').value.trim(), av = ltEl('lmAvisoF8'), avs = [];
+    if (f8 && LT_TODAS.some(r => r.f8 === f8 && !r.manual)) avs.push('<span class="m-av-warn">Esta F8 ya está en los pendientes de SALMI: búsquela en la tabla en vez de cargarla a mano.</span>');
+    if (f8 && (LT.actual || []).some(x => x[0] === f8)) avs.push('<span class="m-av-warn">Esta F8 ya está en la lista de trabajo actual.</span>');
+    if (ue) { const u = ltUEInfo(ue); avs.push(u.ok ? `<span class="m-av-ok">Unidad reconocida · ${mEsc(u.cat)}${u.cedis ? ' · suple ' + mEsc(u.cedis) : ''}</span>` : '<span class="m-av-warn">El Motor no reconoce esta unidad: elíjala de la lista. Si es nueva, pida a la Torre de Control que la agregue a MATRIZ_ALIAS_UE (puede enviarla igual, pero saldrá en "Pedidos con error").</span>'); }
+    av.innerHTML = avs.join('<br>');
+    const ls = ltLineasManual();
+    ltEl('lmPrev').innerHTML = ls.length ? '<table><thead><tr><th>#</th><th>Código</th><th>Suministro</th><th class="right">Cantidad</th><th>Validación</th></tr></thead><tbody>' + ls.map(x =>
+      `<tr><td>${x.n}</td><td class="m-mono">${mEsc(x.sku)}</td><td>${mEsc(x.m ? x.m[0] : (x.desc || '—'))}</td><td class="right">${x.cant > 0 ? fmt(x.cant) : '—'}</td><td>${
+        !x.sku || !(x.cant > 0) ? '<span class="m-av-bad">Falta código o cantidad: no se agrega</span>' : x.m ? '<span class="m-av-ok">En el maestro</span>' : '<span class="m-av-bad">No está en el maestro (se agrega y podrá pedir su alta)</span>'}</td></tr>`).join('') + '</tbody></table>' : '';
+  }
+  function ltAbrirManual(pre) {
+    if (!LT.cargado) { ltEstado('Primero pulse "Cargar pendientes".', 'warn'); return; }
+    ltEl('lmUEs').innerHTML = LT.unidades.map(u => `<option value="${mEsc(u[0])}">`).join('');
+    const tipos = LT.tipos.length ? LT.tipos : ['Mensual', 'Urgencia'];
+    ltEl('lmTipo').innerHTML = tipos.map(t => `<option>${mEsc(t)}</option>`).join('');
+    const hoy = new Date(); const iso = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0') + '-' + String(hoy.getDate()).padStart(2, '0');
+    ltEl('lmF8').value = pre ? pre[0] : ''; ltEl('lmUE').value = pre ? pre[3] : ''; ltEl('lmFecha').value = pre && pre[2] ? pre[2] : iso;
+    if (pre && pre[1]) { const t = tipos.find(x => ltNorm(x) === ltNorm(pre[1])); if (t) ltEl('lmTipo').value = t; }
+    ltEl('lmLineas').value = ''; ltEl('lmMsg').textContent = pre ? 'Recibida en ventanilla ' + ltFmtF(pre[6]) + (pre[4] && pre[4].length ? ' · grupos ' + pre[4].join(', ') : '') + (pre[5] ? ' · solicitado total ' + fmt(pre[5]) : '') + '. Escriba sus renglones.' : '';
+    LT.manPre = pre || null;
+    ltPrevManual(); ltEl('ltManual').style.display = 'flex'; setTimeout(() => ltEl(pre ? 'lmLineas' : 'lmF8').focus(), 50);
+  }
+  function ltAgregarManual() {
+    const f8 = ltEl('lmF8').value.trim(), ue = ltEl('lmUE').value.trim(), fecha = ltEl('lmFecha').value, tipo = ltEl('lmTipo').value;
+    const msg = ltEl('lmMsg');
+    if (!f8 || !ue || !fecha || !tipo) { msg.innerHTML = '<span class="m-neg">Complete N.º de F8, unidad, fecha y tipo.</span>'; return; }
+    const ls = ltLineasManual().filter(x => x.ok);
+    if (!ls.length) { msg.innerHTML = '<span class="m-neg">Escriba al menos un renglón con código y cantidad.</span>'; return; }
+    const rec = LT.manPre ? LT.manPre[6] : '';
+    ls.forEach(x => { const f = ltNuevaManual({ f8, punto: ue, fecha, tipo, sku: x.sku, cant: x.cant, desc: x.desc, rec, origen: 'manual' }); ltSel(f, true); LT.sel.get(f.k).cant = x.cant; });
+    ltEl('ltManual').style.display = 'none';
+    ltEl('ltQ').value = f8; ltAplicarPeriodo(); ltPintarManVent();
+    const fuera = ls.filter(x => !x.m).length;
+    ltEstado(`F8 manual ${f8} agregada: ${ls.length} renglones seleccionados${fuera ? ' · ' + fuera + ' fuera del maestro (puede pedir su alta en la tabla)' : ''}. Envíela con "Enviar a la lista de trabajo".`, fuera ? 'warn' : 'ok');
+  }
+  function ltQuitarManual(k) {
+    LT.manual = LT.manual.filter(o => o.k !== k); LT_TODAS = LT_TODAS.filter(o => o.k !== k); LT.sel.delete(k);
+    ltAplicarPeriodo(); ltPintarManVent();
+  }
+  async function ltPedirAlta(k) {
+    const f = LT.manual.find(o => o.k === k); if (!f || f.altaPedida) return;
+    if (!(window.__mSesion && window.__mSesion())) { ltEstado('Inicie sesión para pedir el alta.', 'warn'); return; }
+    ltEstado('Registrando el pedido de alta de ' + f.sku + '…');
+    try {
+      const r = await window.__mPostSeguro('motorPedirAlta', { codigo: f.sku, descripcion: f.desc || f.sum || '', f8: f.f8, unidad: f.ue, nota: 'Pedido desde Preparar lista (F8 manual)' });
+      if (!r.success) throw new Error(r.error || 'No se pudo registrar');
+      f.altaPedida = true; ltPintar();
+      ltEstado('Alta pedida: el código ' + f.sku + ' quedó en MAESTRO_ALTAS_PENDIENTES para que lo agreguen al maestro. El renglón se puede enviar igual.', 'ok');
+    } catch (e) { ltEstado(e.message || String(e), 'bad'); }
+  }
+  function ltPintarManVent() {
+    const box = ltEl('ltManVent'); if (!box) return;
+    const enLista = new Set((LT.actual || []).map(x => x[0])), yaCargadas = new Set(LT.manual.map(m => m.f8)), enSalmi = new Set(LT_TODAS.filter(r => !r.manual).map(r => r.f8));
+    const pend = (LT.manVent || []).filter(m => !enLista.has(m[0]) && !yaCargadas.has(m[0]) && !enSalmi.has(m[0]));
+    if (!pend.length) { box.hidden = true; return; }
+    box.hidden = false;
+    box.innerHTML = `<b>${fmt(pend.length)} ${pend.length === 1 ? 'F8 manual recibida' : 'F8 manuales recibidas'} en ventanilla</b> sin renglones todavía (unidades sin SALMI). Complételas para que entren a la lista:` +
+      '<ul>' + pend.slice(0, 30).map((m, i) => `<li><span class="m-mono">${mEsc(m[0])}</span> · ${mEsc(m[3])} · ${ltFmtF(m[2])} <button type="button" class="m-lt-mini" data-manvent="${i}">Completar renglones</button></li>`).join('') + '</ul>' +
+      (pend.length > 30 ? `<div class="m-dim">y ${pend.length - 30} más.</div>` : '');
+    box.querySelectorAll('[data-manvent]').forEach(b => b.onclick = () => ltAbrirManual(pend[+b.dataset.manvent]));
+  }
+
   (function () {
     const v = ltEl('view_lista'); if (!v) return;
     ltEl('ltTraer').addEventListener('click', ltTraer);
     ltEl('ltDias').addEventListener('change', () => { if (LT.cargado) ltAplicarPeriodo(); });
     ltEl('ltDeshacer').addEventListener('click', ltDeshacerPedir);
+    ltEl('ltManualBtn').addEventListener('click', () => ltAbrirManual(null));
+    ltEl('lmOk').addEventListener('click', ltAgregarManual);
+    ['lmF8', 'lmUE', 'lmLineas'].forEach(id => ltEl(id).addEventListener('input', () => { clearTimeout(LT.tPrev); LT.tPrev = setTimeout(ltPrevManual, 200); }));
+    ltEl('ltTabla').addEventListener('click', ev => {
+      const q = ev.target.closest('[data-quitar]'); if (q) { ltQuitarManual(q.dataset.quitar); return; }
+      const a = ev.target.closest('[data-alta]'); if (a) ltPedirAlta(a.dataset.alta);
+    });
     ltEl('ltActualizar').addEventListener('click', async () => { ltEstado('Leyendo la lista actual…'); try { await ltRefrescarActual(); ltEstado('Lista actual leída.', 'ok'); } catch (e) { ltEstado(e.message || String(e), 'bad'); } });
     ltEl('ltDeshSi').addEventListener('click', () => ltDeshacer(true));
     ltEl('ltDeshNo').addEventListener('click', () => ltDeshacer(false));
