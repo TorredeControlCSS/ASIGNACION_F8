@@ -259,8 +259,11 @@ body.m tbody tr:hover td{background:#f7faff}
 .m-col-doc{max-width:92px;line-height:1.15}
 .m-tbl .m-lnk{padding:2px 6px;font-size:11px}
 .m-tbl .m-est{font-size:10.5px;padding:1px 6px}.m-tbl .m-tag{font-size:9.5px;padding:1px 4px}
-.m-usuario{font-size:12px;color:#e6edf6;white-space:nowrap}
-.m-salir{color:#9fc2ff!important;padding:0!important;font-size:12px}
+.m-usuario{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;padding:4px 6px 4px 10px;border-radius:999px;background:#c9a227;color:#1d1a0f;font-weight:600;white-space:nowrap}
+.m-usuario svg{width:13px;height:13px}
+.m-usuario .m-salir{font-family:inherit;font-size:11px;font-weight:700;border:none;background:rgba(255,255,255,.7)!important;color:#1d1a0f!important;border-radius:999px;padding:2px 8px;cursor:pointer}
+.m-usuario .m-salir:hover{background:#fff}
+
 .m-gate{position:fixed;inset:0;z-index:30000;background:#0b1f3a;display:flex;align-items:center;justify-content:center;padding:16px}
 .m-gate-c{background:#fff;color:#1d2733;border-radius:14px;padding:26px 30px;width:100%;max-width:340px;box-shadow:0 10px 40px rgba(0,0,0,.35);text-align:center}
 .m-gate-iso{width:56px;height:56px;object-fit:contain}
@@ -388,7 +391,9 @@ body.m tbody tr:hover td{background:#f7faff}
 .m-ent-card h3{margin:0 0 4px;font-size:15px}
 .m-ent-card p{margin:0 0 12px;font-size:12.5px;color:#5a6878}
 .m-ent-b{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto}
-.m-ent-hecho{font-size:12px;color:#1f6f43;font-weight:600;margin-top:8px;min-height:15px}
+.m-ent-res{font-size:13px;color:#2b3644;background:#f7f9fc;border:1px solid #e1e6ee;border-radius:10px;padding:10px 12px;margin:2px 0 4px}
+.m-ent-res b{color:#0b1f3a}
+[data-theme="dark"] .m-ent-res{background:#0f1729;border-color:#24324d;color:#cbd5e1}[data-theme="dark"] .m-ent-res b{color:#e2e8f0}
 .m-lt-rec{display:inline-block;font-size:11px;font-weight:700;border-radius:6px;padding:1px 6px;background:#dff3e6;color:#1f6f43;white-space:nowrap}
 @media (max-width:1100px){.m-pasos{grid-template-columns:repeat(2,1fr)}.m-pas::after{display:none}.m-ent{grid-template-columns:1fr}.m-pant{grid-template-columns:1fr}}
 [data-theme="dark"] .m-pas,[data-theme="dark"] .m-ent-card{background:#0f172a;border-color:#24324d;color:#e2e8f0}
@@ -413,11 +418,11 @@ body.m tbody tr:hover td{background:#f7faff}
     <img class="m-iso" src="icons/icon-192.png" alt="" width="36" height="36" onerror="this.style.visibility='hidden'">
     <div class="m-tit">
       <div class="m-tit1">Motor de Asignación de Requisiciones F8 <span class="m-tit-ced">CEDIS Panamá</span></div>
-      <div class="m-tit2">C1 Corte diario · v9.2 · Inteligencia de demanda + prioridad clínica + desabastecimiento en la UE · <span id="currentDateTime"></span></div>
+      <div class="m-tit2"><span id="currentDateTime"></span> · Corte diario · v9.2 · Inteligencia de demanda + prioridad clínica + desabastecimiento en la UE</div>
     </div>
     <div class="m-top-r">
+      <span id="mUsuario" class="m-usuario" hidden></span>
       <span id="mFuente" class="m-fuente">Cargando…</span>
-      <span id="mUsuario" class="m-usuario"></span>
       <button id="btnLoadDaily" class="m-btn m-btn-ghost">Corte diario</button>
       <button id="btnLoadHistory" class="m-btn m-btn-ghost">Histórico</button>
       <button id="mAyuda" class="m-btn m-btn-ghost" type="button">Recorrido guiado</button>
@@ -520,25 +525,24 @@ body.m tbody tr:hover td{background:#f7faff}
       </div>
 
       <div id="view_entregar" class="view" style="display:none">
+        <div class="m-ent-res" id="mEntRes"></div>
         <div class="m-ent">
           <div class="m-ent-card">
             <h3>Notificar a las unidades</h3>
-            <p>Avise a cada unidad qué se le asignó.</p>
+            <p>Avise a cada unidad qué se le asignó en el último corte.</p>
             <div class="m-ent-b">
               <button id="btnWaNotif" class="m-btn m-btn-wa" onclick="abrirPanelWA()">WhatsApp a las unidades</button>
               <button id="btnEmailNotif" class="m-btn m-btn-out" onclick="abrirPanelCorreo()">Correo (constancia)</button>
             </div>
-            <div class="m-ent-hecho" id="mEntNotif"></div>
           </div>
           <div class="m-ent-card">
             <h3>Hoja de asignación</h3>
-            <p>El documento para preparar y despachar el pedido.</p>
+            <p>El documento para preparar y despachar el pedido. Sale con los filtros de arriba (por ejemplo, una unidad o un CEDIS).</p>
             <div class="m-ent-b"><button id="btnExportPdf" class="m-btn m-btn-hoja">Hoja de asignación (PDF)</button></div>
-            <div class="m-ent-hecho" id="mEntHoja"></div>
           </div>
           <div class="m-ent-card">
             <h3>Reportes en Excel</h3>
-            <p>Detalle del corte y reportes de apoyo. "Filtrado" usa los filtros del paso 3.</p>
+            <p>"Detalle filtrado" usa los filtros de arriba; "Detalle completo" trae todo el corte.</p>
             <div class="m-ent-b">
               <button id="btnExportXlsx" class="m-btn m-btn-out">Detalle filtrado</button>
               <button id="mXlsxTodo" class="m-btn m-btn-out" type="button">Detalle completo</button>
@@ -741,7 +745,8 @@ body.m tbody tr:hover td{background:#f7faff}
     };
     function pintarUsuario(){
       const el=document.getElementById('mUsuario'); if(!el) return;
-      el.innerHTML = ses ? (esc(titulo(ses.nombre))+' · <button type="button" id="mSalir" class="m-btn-link m-salir">Salir</button>') : '';
+      el.hidden = !ses;
+      el.innerHTML = ses ? ('<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'+esc(titulo(ses.nombre))+' <button type="button" id="mSalir" class="m-salir" title="Cerrar sesión">Salir</button>') : '';
       const b=document.getElementById('mSalir'); if(b) b.onclick=salir;
     }
     function titulo(n){ return String(n||'').toLowerCase().replace(/(^|\s)\S/g, c=>c.toUpperCase()); }
@@ -749,7 +754,7 @@ body.m tbody tr:hover td{background:#f7faff}
       const b=document.getElementById('mBienvenida'); if(!b||!ses) return;
       b.innerHTML='<b>Hola, '+esc(titulo(ses.nombre))+'.</b> Te damos la bienvenida al Motor de Asignación. <button type="button" class="m-btn-link" id="mBienvX">Cerrar</button>';
       b.hidden=false; document.getElementById('mBienvX').onclick=()=>{ b.hidden=true; };
-      clearTimeout(window.__mBT); window.__mBT=setTimeout(()=>{ b.hidden=true; }, 8000);
+      clearTimeout(window.__mBT); window.__mBT=setTimeout(()=>{ b.hidden=true; }, 3000);
     }
     function esc(v){ return String(v==null?'':v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
     function salir(){ ses=null; try{ localStorage.removeItem(KEY); }catch(e){} pintarUsuario(); mostrarGate(); }
@@ -850,9 +855,8 @@ body.m tbody tr:hover td{background:#f7faff}
 
   function tickDateTime() {
     const el = document.getElementById('currentDateTime');
-    if (el) el.textContent = new Date().toLocaleString('es-PA', {
-      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
-    });
+    if (el) { const d = new Date(), p = n => String(n).padStart(2, '0');
+      el.textContent = p(d.getDate()) + '/' + p(d.getMonth() + 1) + '/' + d.getFullYear() + ' · ' + d.toLocaleTimeString('es-PA', { hour: 'numeric', minute: '2-digit' }); }
   }
 
   // --- VARIABLES ---
@@ -3500,7 +3504,9 @@ document.addEventListener('keydown', e => {
     document.getElementById('viewTitle').textContent = M_TITULOS[tab] || '';
     document.getElementById('mColBtn').closest('.m-tabs-r').style.visibility = tab === 'asignacion' ? 'visible' : 'hidden';
     document.querySelectorAll('.m-pas').forEach(b => { const on = b.dataset.paso === paso; b.classList.toggle('m-on', on); b.setAttribute('aria-current', on ? 'step' : 'false'); });
-    ['.m-filtros', '#mKpis', '#mSubtabs', '#mChips', '#mLeyenda'].forEach(sel => { const el = document.querySelector(sel); if (el) el.style.display = enRevision ? '' : 'none'; });
+    ['#mKpis', '#mSubtabs', '#mChips', '#mLeyenda'].forEach(sel => { const el = document.querySelector(sel); if (el) el.style.display = enRevision ? '' : 'none'; });
+    // Los filtros sirven para revisar (3) y para entregar (4): la hoja y el Excel filtrado salen con ellos.
+    const fi = document.querySelector('.m-filtros'); if (fi) fi.style.display = (enRevision || paso === '4') ? '' : 'none';
     if (paso === '2') mPintarCorrer();
     mPasosEstado();
   };
@@ -3512,18 +3518,7 @@ document.addEventListener('keydown', e => {
   document.getElementById('mXlsxFiltro').addEventListener('click', () => document.getElementById('btnExportXlsx').click());
 
   // Estado de cada paso, en una línea
-  const M_ENT_KEY = 'motor_entrega_v1';
   const mCorte = () => (document.getElementById('cutDate').textContent || '').trim();
-  const mHora = () => new Date().toLocaleTimeString('es-PA', { hour: '2-digit', minute: '2-digit' });
-  function mEntLeer() { try { return (JSON.parse(localStorage.getItem(M_ENT_KEY) || '{}')[mCorte()]) || {}; } catch (e) { return {}; } }
-  function mEntMarcar(k) {
-    try { const all = JSON.parse(localStorage.getItem(M_ENT_KEY) || '{}'), c = mCorte(); all[c] = all[c] || {}; all[c][k] = mHora();
-      Object.keys(all).slice(0, -10).forEach(x => delete all[x]); localStorage.setItem(M_ENT_KEY, JSON.stringify(all)); } catch (e) {}
-    mPasosEstado();
-  }
-  [['btnWaNotif', 'wa'], ['btnEmailNotif', 'correo'], ['btnExportPdf', 'hoja']].forEach(([id, k]) => {
-    const el = document.getElementById(id); if (el) el.addEventListener('click', () => mEntMarcar(k));
-  });
   function mSet(id, txt, ok) { const el = document.getElementById(id); if (el) { el.textContent = txt; el.classList.toggle('m-ok', !!ok); } }
   function mPasosEstado() {
     try {
@@ -3532,14 +3527,17 @@ document.addEventListener('keydown', e => {
       const fu = (document.getElementById('mFuente') || {}).textContent || '';
       const m = fu.match(/(\d{1,2}:\d{2}\s*[ap]\.?\s*m\.?)/i);
       mSet('mPas2', DATA && DATA.length ? 'Corte ' + mCorte() + (m ? ' · ' + m[1] : '') : 'Sin corte cargado', DATA && DATA.length);
-      const fill = (document.getElementById('k_fill') || {}).textContent || '';
-      mSet('mPas3', DATA && DATA.length ? fmt(DATA.length) + ' renglones · fill rate ' + fill.trim() : '—', false);
-      const e = mEntLeer(), hechos = [];
-      if (e.hoja) hechos.push('Hoja ' + e.hoja); if (e.wa) hechos.push('WhatsApp ' + e.wa); if (e.correo) hechos.push('Correo ' + e.correo);
-      mSet('mPas4', hechos.length ? hechos.join(' · ') : 'Pendiente: notificar y descargar', hechos.length >= 2);
-      const n = document.getElementById('mEntNotif'), h = document.getElementById('mEntHoja');
-      if (n) n.textContent = [e.wa ? 'WhatsApp abierto a las ' + e.wa : '', e.correo ? 'Correo a las ' + e.correo : ''].filter(Boolean).join(' · ');
-      if (h) h.textContent = e.hoja ? 'Descargada a las ' + e.hoja : '';
+      let sol = 0, asg = 0; (DATA || []).forEach(r => { sol += +r.Solicitado || 0; asg += +r.Asignado || 0; });
+      mSet('mPas3', DATA && DATA.length ? fmt(DATA.length) + ' renglones · fill rate ' + (sol ? (asg / sol * 100).toFixed(1) : '0') + ' %' : '—', false);
+      mSet('mPas4', 'Notificar y descargar el último corte', false);
+      const rs = (typeof LAST_FILTERED !== 'undefined' && LAST_FILTERED.length) ? LAST_FILTERED : (DATA || []);
+      const er = document.getElementById('mEntRes');
+      if (er) {
+        const filtrado = DATA && rs.length !== DATA.length, f8 = new Set(rs.map(r => r.N_Doc)).size, ue = new Set(rs.map(r => r.Punto)).size;
+        er.innerHTML = DATA && DATA.length
+          ? (filtrado ? 'Con los filtros de arriba se entrega: ' : 'Se entrega todo el último corte: ') + '<b>' + fmt(rs.length) + '</b> renglones · <b>' + fmt(f8) + '</b> ' + (f8 === 1 ? 'Forma 8' : 'Formas 8') + ' · <b>' + fmt(ue) + '</b> ' + (ue === 1 ? 'unidad' : 'unidades') + ' · corte del ' + mEsc(mCorte()) + (filtrado ? '' : '. Para una sola unidad, CEDIS o Forma 8, use los filtros.')
+          : 'No hay corte cargado.';
+      }
     } catch (err) { console.warn('pasos:', err); }
   }
   function mPintarCorrer() {
@@ -3642,7 +3640,7 @@ document.addEventListener('keydown', e => {
     { sel: '#mColBtn', t: 'Columnas', x: 'Muestre u oculte columnas. Su selección se guarda en este equipo. "Todas" vuelve a las 30 columnas.' },
     { sel: '#mSubtabs', t: 'Vistas del corte', x: 'Renglones es el detalle línea por línea; las otras resumen. "Descargar lo filtrado" baja a Excel lo que está en pantalla.' },
     { sel: '#tbl_asignacion tbody tr .m-lnk', t: 'Cómo se asignó', x: 'Abre el flujo de la línea: pedido, prioridad clínica, tope del mes, empaque, inventario del CEDIS y resultado.' },
-    { sel: '.m-ent', tab: 'entregar', t: '4 · Entregar', x: 'Notifique a las unidades (WhatsApp abre un mensaje por unidad; el correo deja constancia), descargue la hoja de asignación y los reportes. La página anota a qué hora se hizo cada cosa.' },
+    { sel: '.m-ent', tab: 'entregar', t: '4 · Entregar', x: 'Notifique a las unidades (WhatsApp abre un mensaje por unidad; el correo deja constancia), descargue la hoja de asignación y los reportes.' },
     { sel: '#btnLoadHistory', tab: 'asignacion', t: 'Histórico', x: 'Carga todas las asignaciones archivadas. "Corte diario" vuelve al corte del día.' },
     { sel: '#themeToggle', t: 'Tema', x: 'Cambia entre claro y oscuro.' }
   ];
