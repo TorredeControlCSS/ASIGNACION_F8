@@ -600,7 +600,7 @@ body.m tbody tr:hover td{background:#f7faff}
             <div id="mRunMsg" class="m-run-msg"></div>
           </div>
         </div>
-        <p class="m-dim m-run-pie">El Motor asigna la lista de trabajo del paso 1 con el inventario, las reservas y las reglas de prioridad de siempre (tarda de 1 a 4 minutos). Corre en el servidor: si se cae el internet, sigue corriendo y esta pantalla retoma el avance al volver. Al terminar, el corte nuevo se carga solo y pasa al paso 3.</p>
+        <p class="m-dim m-run-pie">El Motor asigna la lista de trabajo del paso 1 con el inventario, las reservas y las reglas de prioridad de siempre (en total de 5 a 10 minutos: el servidor la arranca en 1–2 minutos, archiva el corte anterior si hace falta y calcula unos 5 minutos). Corre en el servidor: si se cae el internet, sigue corriendo y esta pantalla retoma el avance al volver. Al terminar, el corte nuevo se carga solo y pasa al paso 3.</p>
       </div>
 
       <div id="view_entregar" class="view" style="display:none">
@@ -3893,9 +3893,9 @@ document.addEventListener('keydown', e => {
     if (!c) { li('mRun3', '', 'Listo para correr.'); barra(null); return; }
     if (c.estado === 'pendiente' || c.estado === 'corriendo') {
       const ini = Date.parse(c.inicio || c.pedido), seg = Math.max(0, Math.round((Date.now() - ini) / 1000));
-      li('mRun3', 'run', (c.estado === 'pendiente' ? 'En cola: arranca en segundos…' : 'Corriendo… ' + Math.floor(seg / 60) + ':' + String(seg % 60).padStart(2, '0')) + ' · pedido por ' + mEsc(c.usuario) + (c.archivarAntes ? ' · archiva el corte anterior primero' : ''));
+      li('mRun3', 'run', (c.estado === 'pendiente' ? (c.fase === 'archivado' ? 'Corte anterior archivado (' + fmt((c.archivo || {}).archivadas || 0) + ' renglones). El Motor arranca en 1–2 minutos…' : 'En cola: el servidor la arranca en 1–2 minutos…') : 'Corriendo… ' + Math.floor(seg / 60) + ':' + String(seg % 60).padStart(2, '0')) + ' · pedido por ' + mEsc(c.usuario) + (c.archivarAntes ? ' · archiva el corte anterior primero' : ''));
       btn.disabled = true; btn.textContent = 'El Motor está corriendo…';
-      barra(c.estado === 'pendiente' ? 5 : 10 + Math.min(85, seg / 180 * 85));
+      barra(c.estado === 'pendiente' ? (c.fase === 'archivado' ? 20 : 5) : 25 + Math.min(70, seg / 300 * 70));   // el cálculo tarda ~5 min
       return;
     }
     barra(null);
@@ -4231,7 +4231,7 @@ document.addEventListener('keydown', e => {
         filas: sel.map(s => [s.f8, s.punto, s.fecha, s.sku, s.cant, s.tipo]) },
         i => { b.textContent = i === 1 ? 'Enviando…' : 'Reintentando (' + i + ' de 3)…'; if (i > 1) ltEl('ltEnvioMsg').textContent = 'La conexión está lenta; se reintenta con el mismo envío (no se duplica).'; });
       if (!r.success) throw new Error(r.error || 'No se pudo escribir');
-      ltEl('ltEnvioMsg').innerHTML = `<span class="m-ok">Listo: ${fmt(r.escritas)} líneas ${modo === 'agregar' ? 'agregadas' : 'escritas'}${r.omitidas ? ' (' + r.omitidas + ' ya estaban)' : ''}. La lista tiene ahora ${fmt(r.total)} líneas. Copia previa: ${fmt(r.respaldadas)} líneas.</span><br>El siguiente paso es ejecutar la asignación en el Motor.`;
+      ltEl('ltEnvioMsg').innerHTML = `<span class="m-ok">Listo: ${fmt(r.escritas)} líneas ${modo === 'agregar' ? 'agregadas' : 'escritas'}${r.omitidas ? ' (' + r.omitidas + ' ya estaban)' : ''}. La lista tiene ahora ${fmt(r.total)} líneas. Copia previa: ${fmt(r.respaldadas)} líneas.</span><br>Siguiente: paso 2, Correr el Motor.`;
       b.textContent = 'Enviado';
       if (Array.isArray(r.actual)) LT.actual = r.actual;   // la lista nueva viene en la misma respuesta (sin otra llamada)
       else { try { const act = await window.__mPost('motorDetalleActual', {}); if (act.success) LT.actual = act.filas; } catch (e2) {} }
