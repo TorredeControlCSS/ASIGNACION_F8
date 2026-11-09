@@ -600,7 +600,7 @@ body.m tbody tr:hover td{background:#f7faff}
             <div id="mRunMsg" class="m-run-msg"></div>
           </div>
         </div>
-        <p class="m-dim m-run-pie">El Motor asigna la lista de trabajo del paso 1 con el inventario, las reservas y las reglas de prioridad de siempre (en total de 5 a 10 minutos: el servidor la arranca en 1–2 minutos, archiva el corte anterior si hace falta y calcula unos 5 minutos). Corre en el servidor: si se cae el internet, sigue corriendo y esta pantalla retoma el avance al volver. Al terminar, el corte nuevo se carga solo y pasa al paso 3.</p>
+        <p class="m-dim m-run-pie">El Motor asigna la lista de trabajo del paso 1 con el inventario, las reservas y las reglas de prioridad de siempre (unos 2 a 3 minutos). Corre en el servidor: si se cae el internet, sigue corriendo y esta pantalla retoma el avance al volver. Al terminar, el corte nuevo se carga solo y pasa al paso 3. El histórico, las cuotas y las reservas se guardan en segundo plano, sin hacerle esperar.</p>
       </div>
 
       <div id="view_entregar" class="view" style="display:none">
@@ -788,15 +788,21 @@ body.m tbody tr:hover td{background:#f7faff}
         } catch(e){}
       }, 30000);
     }
-    window.__motorCargar = async function(){
+    // 9-nov-2026 · fresco=true: lee el corte directo del repositorio (api.github.com), sin esperar a que la web
+    // lo publique (1-3 min). Se usa justo al terminar una corrida; si falla, sigue con la copia de la web.
+    const RAW='https://api.github.com/repos/TorredeControlCSS/ASIGNACION_F8/contents/';
+    const leer=(n,fresco,t)=> fresco ? fetch(RAW+n+'?t='+t,{cache:'no-store',headers:{Accept:'application/vnd.github.raw'}}).then(r=>{ if(!r.ok) throw new Error(n+' HTTP '+r.status); return r.json(); }).catch(()=>fetch(n+'?t='+t,{cache:'no-store'}).then(r=>{ if(!r.ok) throw new Error(n+' HTTP '+r.status); return r.json(); }))
+                                     : fetch(n+'?t='+t,{cache:'no-store'}).then(r=>{ if(!r.ok) throw new Error(n+' HTTP '+r.status); return r.json(); });
+    window.__motorCargar = async function(opc){
+      opc = opc || {};
       if (cargando) return; cargando=true;
       const t=Date.now();
       window.__mFuente('Cargando corte publicado…');
       window.__mAviso('');
       try {
         const [a, e] = await Promise.all([
-          fetch('allocation.json?t='+t, {cache:'no-store'}).then(r => { if(!r.ok) throw new Error('allocation.json HTTP '+r.status); return r.json(); }),
-          fetch('allocation_estado.json?t='+t, {cache:'no-store'}).then(r => r.ok ? r.json() : {}).catch(() => ({}))
+          leer('allocation.json', opc.fresco, t),
+          leer('allocation_estado.json', opc.fresco, t).catch(() => ({}))
         ]);
         const gen = Date.parse(a && a.generado || '');
         const inv = Date.parse(e && e.invalidado || '') || 0;
@@ -3893,13 +3899,14 @@ document.addEventListener('keydown', e => {
     if (!c) { li('mRun3', '', 'Listo para correr.'); barra(null); return; }
     if (c.estado === 'pendiente' || c.estado === 'corriendo') {
       const ini = Date.parse(c.inicio || c.pedido), seg = Math.max(0, Math.round((Date.now() - ini) / 1000));
-      li('mRun3', 'run', (c.estado === 'pendiente' ? (c.fase === 'archivado' ? 'Corte anterior archivado (' + fmt((c.archivo || {}).archivadas || 0) + ' renglones). El Motor arranca en 1–2 minutos…' : 'En cola: el servidor la arranca en 1–2 minutos…') : 'Corriendo… ' + Math.floor(seg / 60) + ':' + String(seg % 60).padStart(2, '0')) + ' · pedido por ' + mEsc(c.usuario) + (c.archivarAntes ? ' · archiva el corte anterior primero' : ''));
+      li('mRun3', 'run', (c.estado === 'pendiente' ? 'En cola…' : 'Corriendo… ' + Math.floor(seg / 60) + ':' + String(seg % 60).padStart(2, '0')) + ' · pedido por ' + mEsc(c.usuario) +
+        (c.archivo && c.archivo.diferido ? ' · corte anterior asegurado (pasa al histórico en segundo plano)' : c.archivarAntes ? ' · asegurando el corte anterior…' : ''));
       btn.disabled = true; btn.textContent = 'El Motor está corriendo…';
-      barra(c.estado === 'pendiente' ? (c.fase === 'archivado' ? 20 : 5) : 25 + Math.min(70, seg / 300 * 70));   // el cálculo tarda ~5 min
+      barra(8 + Math.min(87, seg / 150 * 87));   // calcular y publicar la hoja: ~2 a 3 min
       return;
     }
     barra(null);
-    if (c.estado === 'ok') li('mRun3', 'ok', 'Última corrida ' + hora(c.fin) + ': ' + fmt(c.renglones) + ' renglones en ' + c.seg + ' s · ' + mEsc(c.usuario) + '.');
+    if (c.estado === 'ok') li('mRun3', 'ok', 'Última corrida ' + hora(c.fin) + ': ' + fmt(c.renglones) + ' renglones en ' + Math.floor(c.seg / 60) + ':' + String(c.seg % 60).padStart(2, '0') + ' min · ' + mEsc(c.usuario) + '.');
     else if (c.estado === 'error') li('mRun3', 'bad', 'La última corrida (' + hora(c.fin) + ') falló: ' + mEsc(c.error) + '. Corrija y vuelva a correr; el corte anterior sigue intacto si el error fue antes de escribir.');
     else if (c.estado === 'interrumpida') li('mRun3', 'bad', 'La corrida de ' + hora(c.inicio) + ' no terminó (límite de tiempo del servidor). Avise a la Torre de Control antes de volver a correr.');
     else if (c.estado === 'no_arranco') li('mRun3', 'bad', 'La corrida pedida a las ' + hora(c.pedido) + ' no arrancó. Puede pedirla de nuevo.');
@@ -3918,27 +3925,40 @@ document.addEventListener('keydown', e => {
       const prev = R.est && R.est.corrida && R.est.corrida.estado;
       const e = await consultar(); const c = e && e.corrida;
       if (!c || (c.estado !== 'pendiente' && c.estado !== 'corriendo')) {
+        if (R.esperando && (!c || Date.parse(c.pedido) < R.tPedido - 120000)) return;   // el pedido aún no llegó al servidor (lo que se ve es la corrida anterior)
         clearInterval(R.poll); R.poll = null;
-        if (c && c.estado === 'ok' && (prev === 'pendiente' || prev === 'corriendo')) terminado(c);
+        if (c && c.estado === 'ok' && (prev === 'pendiente' || prev === 'corriendo' || R.mia === c.id || R.esperando)) terminado(c);
+        else if (c && c.estado !== 'ok' && R.esperando) { R.esperando = false; const b = $('mCorrerBtn'); b.disabled = false; b.textContent = 'Correr el Motor'; }
       }
     }, 6000);
   }
   async function terminado(c) {
+    if (R.fin === c.id) return; R.fin = c.id; R.esperando = false;
     window.__mBeep && window.__mBeep();
     msg('<b>Listo.</b> El Motor asignó ' + fmt(c.renglones) + ' renglones en ' + c.seg + ' s. Cargando el corte nuevo…');
     if (typeof ltRefrescarActual === 'function') try { ltRefrescarActual(); } catch (e) {}
     // A prueba de internet malo: se lee el corte publicado (liviano). Si el recién hecho aún se está publicando,
     // la franja amarilla lo avisa y la página lo carga sola en 1–3 min (o en vivo con un botón).
-    try { await window.__motorCargar(); } catch (e) {}
-    msg('<b>Corte nuevo listo</b> (' + fmt(c.renglones) + ' renglones). Revíselo en el paso 3 y, si está bien, archívelo en el paso 4. <button type="button" class="m-btn m-btn-pri" id="mRunIr3">Ir al paso 3</button>');
+    try { await window.__motorCargar({ fresco: true }); } catch (e) {}
+    msg('<b>Corte nuevo listo</b> (' + fmt(c.renglones) + ' renglones). Revíselo en el paso 3 e imprima la hoja en el paso 4.' +
+      (c.archivo && c.archivo.diferido ? ' El corte anterior se está guardando en el histórico en segundo plano.' : '') +
+      ' <button type="button" class="m-btn m-btn-pri" id="mRunIr3">Ir al paso 3</button>');
     const b = $('mRunIr3'); if (b) b.onclick = () => showTab('asignacion');
   }
   async function pedir(opc) {
     const btn = $('mCorrerBtn'); btn.disabled = true; btn.textContent = 'Enviando…';
     msg('Pidiendo la corrida al Motor…');
+    // La corrida se hace dentro de este pedido (2 a 3 min). Mientras tanto la página consulta el avance;
+    // si el internet se corta, el servidor sigue y el avance se retoma al volver.
+    R.esperando = true; R.mia = null; R.tPedido = Date.now();
+    li('mRun3', 'run', 'Iniciando la corrida…'); barra(3);
+    const tAvance = setTimeout(() => { if (R.esperando) { msg('El Motor está corriendo en el servidor. Puede seguir con otra cosa; aquí verá el avance.'); vigilar(); } }, 5000);
     try {
-      const r = await window.__mPostSeguro('motorCorrer', opc || {}, i => { if (i > 1) msg('Conexión lenta: reintento ' + i + ' de 3…'); });
+      const r = await window.__mPostSeguro('motorCorrer', opc || {}, i => { if (i > 1) msg('Conexión lenta: la página sigue consultando el avance…'); });
+      clearTimeout(tAvance);
+      if (r.corrida && r.corrida.id) R.mia = r.corrida.id;
       if (r.requiereArchivo) {
+        R.esperando = false; if (R.poll) { clearInterval(R.poll); R.poll = null; }
         R.est = r.estado; pintarArchivo(); btn.disabled = false; btn.textContent = 'Correr el Motor';
         const c = r.estado.corte;
         msg('<b>El corte anterior no está en el histórico</b> (' + hora(c.t) + ', ' + fmt(c.n) + ' renglones). ¿Qué hago?' +
@@ -3950,11 +3970,16 @@ document.addEventListener('keydown', e => {
         $('mRunC').onclick = () => msg('');
         return;
       }
-      if (!r.success) throw new Error(r.error || 'No se pudo pedir la corrida');
+      if (r.yaEnCurso) { R.est = Object.assign({}, r.estado || {}, { corrida: r.corrida }); pintarCorrida(); vigilar(); return; }
       R.est = Object.assign({}, r.estado || {}, { corrida: r.corrida });
-      msg(r.yaEnCurso ? 'Ya hay una corrida en curso (pedida por ' + mEsc(r.corrida.usuario) + '). Esta pantalla muestra su avance.' : 'Corrida pedida. Puede quedarse aquí o seguir con otra cosa: el Motor corre en el servidor.');
-      pintarCorrida(); vigilar();
-    } catch (err) { btn.disabled = false; btn.textContent = 'Correr el Motor'; msg('<span class="m-neg">' + mEsc(err.message || String(err)) + '</span>'); }
+      if (r.corrida && r.corrida.estado === 'ok') { if (R.poll) { clearInterval(R.poll); R.poll = null; } pintarArchivo(); pintarCorrida(); terminado(r.corrida); return; }
+      R.esperando = false;
+      throw new Error(r.error || 'No se pudo correr el Motor');
+    } catch (err) {
+      clearTimeout(tAvance);
+      if (err && err.sinConfirmar) { msg('Sin respuesta del servidor; la página sigue consultando si el Motor está corriendo…'); vigilar(); return; }
+      R.esperando = false; btn.disabled = false; btn.textContent = 'Correr el Motor'; msg('<span class="m-neg">' + mEsc(err.message || String(err)) + '</span>'); pintarCorrida();
+    }
   }
   async function archivar() {
     const b = $('mArchivarYa'), b2 = $('mEntArchB'); [b, b2].forEach(x => { if (x) { x.disabled = true; x.textContent = 'Archivando…'; } });
