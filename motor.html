@@ -313,8 +313,6 @@ body.m tbody tr:hover td{background:#f7faff}
 .m-leyenda span{display:inline-flex;align-items:center;gap:4px}
 
 /* Etapa 3 · preparar lista */
-body.m .tab.m-tab-lista{border-color:#1f5fb4;color:#1f5fb4;font-weight:700}
-body.m .tab.m-tab-lista.active{background:#1f5fb4;color:#fff}
 .m-lt-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:8px}
 .m-lt-bar label{display:block;font-size:11.5px;color:#5a6878;margin:0 0 4px;font-weight:600}
 .m-lt-bar input,.m-lt-bar select{padding:7px 9px;border:1px solid #cdd6e2;border-radius:8px;font-size:13px;background:#fff}
@@ -357,6 +355,34 @@ body.m .tab.m-tab-lista.active{background:#1f5fb4;color:#fff}
 .m-btn-cargar{background:#0b1f3a;color:#fff;width:100%}.m-btn-cargar:disabled{opacity:.45;cursor:not-allowed}
 [data-theme="dark"] .m-lt-card{background:#0f1729;border-color:#24324d}[data-theme="dark"] .m-lt-card-t{color:#e2e8f0}[data-theme="dark"] .m-lt-card-s{color:#cbd5e1}
 
+/* Flujo de trabajo (8-nov-2026): 1 Preparar · 2 Revisar el corte · 3 Entregar */
+.m-flujo{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fff;border:1px solid #e1e6ee;border-radius:12px;padding:10px 12px;margin:0 0 12px}
+.m-paso{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.m-paso-n{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#e8edf3;color:#3b4a5c;font-size:12px;font-weight:800;flex:0 0 auto}
+.m-paso-t{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:#5a6878;font-weight:700;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap}
+.m-paso-1{background:#e6f4f1;border:1px solid #b5ddd4;border-radius:10px;padding:5px 6px 5px 8px}
+.m-paso-1 .m-paso-n{background:#0f766e;color:#fff}
+body.m .tab.m-tab-lista{background:#0f766e;border-color:#0f766e;color:#fff;font-weight:700;font-size:14px;padding:9px 18px;box-shadow:0 2px 6px rgba(15,118,110,.35)}
+body.m .tab.m-tab-lista:hover{background:#0b5f58}
+body.m .tab.m-tab-lista.active{background:#0b5f58;border-color:#0b5f58;box-shadow:0 0 0 3px rgba(15,118,110,.25)}
+.m-flujo-sep{width:12px;height:24px;color:#9aa6b4;flex:0 0 auto}
+.m-paso-2 .m-tabs{border-bottom:none;padding-bottom:0;margin:0!important;gap:6px}
+.m-acc{border-bottom:1px solid #e1e6ee;padding-bottom:10px;margin:0 0 4px!important}
+.m-paso-t3{margin-right:4px}
+.m-vista-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0}
+.m-vista-bar .m-viewtitle{margin:0;flex:1 1 auto}
+.m-vista-bar .m-chips-tabs{margin:0}
+.m-vista-bar .m-tabs-r{margin-left:0}
+.m-lt-rec{display:inline-block;font-size:11px;font-weight:700;border-radius:6px;padding:1px 6px;background:#dff3e6;color:#1f6f43;white-space:nowrap}
+[data-theme="dark"] .m-flujo{background:#0f172a;border-color:#24324d}
+[data-theme="dark"] .m-paso-n{background:#24324d;color:#cbd5e1}
+[data-theme="dark"] .m-paso-1{background:#0d2b28;border-color:#1c5650}
+[data-theme="dark"] .m-paso-1 .m-paso-n{background:#14b8a6;color:#04201d}
+[data-theme="dark"] body.m .tab.m-tab-lista{background:#0f766e;border-color:#0f766e;color:#fff}
+[data-theme="dark"] .m-paso-t{color:#94a3b8}
+[data-theme="dark"] .m-acc{border-bottom-color:#24324d}
+[data-theme="dark"] .m-lt-rec{background:#123323;color:#9fe0b8}
+
   </style>
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
@@ -391,6 +417,26 @@ body.m .tab.m-tab-lista.active{background:#1f5fb4;color:#fff}
   </div>
 
   <main class="m-page">
+    <!-- FLUJO DE TRABAJO: 1 Preparar · 2 Revisar · 3 Entregar -->
+      <nav class="m-flujo" aria-label="Flujo de trabajo">
+        <div class="m-paso m-paso-1" title="Aquí empieza el trabajo del día">
+          <span class="m-paso-n">1</span>
+          <div class="tab m-tab-lista" data-tab="lista" role="tab">Preparar lista de trabajo</div>
+        </div>
+        <svg class="m-flujo-sep" viewBox="0 0 12 24" aria-hidden="true"><path d="M3 4l6 8-6 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="m-paso m-paso-2">
+          <span class="m-paso-t"><span class="m-paso-n">2</span>Revisar el corte</span>
+          <div class="tabs m-tabs" role="tablist">
+            <div class="tab active" data-tab="asignacion" role="tab">Renglones</div>
+            <div class="tab" data-tab="fill_ue" role="tab">Por unidad</div>
+            <div class="tab" data-tab="sku_sin" role="tab">Sin stock</div>
+            <div class="tab" data-tab="ue_sin" role="tab">Unidades sin cobertura</div>
+            <div class="tab" data-tab="invalidos" role="tab">Pedidos con error</div>
+            <div class="tab" data-tab="fill_cat" role="tab">Por categoría</div>
+          </div>
+        </div>
+      </nav>
+
     <!-- FILTROS -->
     <section class="m-card m-filtros">
       <div class="m-f-row">
@@ -433,8 +479,11 @@ body.m .tab.m-tab-lista.active{background:#1f5fb4;color:#fff}
       <div class="m-kpi m-kpi-alert"><div class="m-kpi-l">Unidad en cero sin stock</div><div class="m-kpi-v" id="mK_cero">—</div><div class="m-kpi-s" title="La unidad no tiene existencias y el CEDIS tampoco">UE y CEDIS sin existencias</div></div>
     </section>
 
-    <!-- ACCIONES -->
-    <section class="m-acc">
+    <!-- PESTAÑAS -->
+    <section class="m-card m-datos">
+      <!-- PASO 3 · ENTREGAR -->
+      <section class="m-acc">
+      <span class="m-paso-t m-paso-t3"><span class="m-paso-n">3</span>Entregar</span>
       <div class="m-acc-g">
         <span class="m-acc-t">Notificar</span>
         <button id="btnWaNotif" class="m-btn m-btn-wa" onclick="abrirPanelWA()">WhatsApp a las unidades</button>
@@ -449,25 +498,15 @@ body.m .tab.m-tab-lista.active{background:#1f5fb4;color:#fff}
         <button id="btnExportCuotas" class="m-btn m-btn-out">Llenado por cuota</button>
         <button id="btnExportPdfManager" hidden>Informe gerencial</button>
       </div>
-    </section>
+      </section>
 
-    <!-- PESTAÑAS -->
-    <section class="m-card m-datos">
-      <div class="tabs m-tabs" role="tablist">
-        <div class="tab m-tab-lista" data-tab="lista">Preparar lista de trabajo</div>
-        <div class="tab active" data-tab="asignacion">Renglones</div>
-        <div class="tab" data-tab="fill_ue">Por unidad</div>
-        <div class="tab" data-tab="sku_sin">Sin stock</div>
-        <div class="tab" data-tab="ue_sin">Unidades sin cobertura</div>
-        <div class="tab" data-tab="invalidos">Pedidos con error</div>
-        <div class="tab" data-tab="fill_cat">Por categoría</div>
+      <div class="m-vista-bar">
+        <div class="m-viewtitle"><span id="viewTitle"></span><span class="m-leyenda" id="mLeyenda"></span></div>
         <div class="m-chips m-chips-tabs" id="mChips"></div>
         <div class="m-tabs-r">
           <div class="m-colsel"><button id="mColBtn" class="m-btn m-btn-out" type="button">Columnas</button><div id="mColPanel" class="m-colpanel" hidden></div></div>
         </div>
       </div>
-      <div class="m-viewtitle"><span id="viewTitle"></span><span class="m-leyenda" id="mLeyenda"></span></div>
-
       <div id="view_lista" class="view" style="display:none">
         <div class="m-lt-bar">
           <div class="m-f m-f-dias"><label title="Fecha de la Forma 8">Período</label>
@@ -477,6 +516,7 @@ body.m .tab.m-tab-lista.active{background:#1f5fb4;color:#fff}
           <div class="m-f"><label>CEDIS que la suple</label><select id="ltCedis"><option value="">Todos los CEDIS</option></select></div>
           <div class="m-f"><label>Categoría</label><select id="ltCat"><option value="">Todas las categorías</option></select></div>
           <div class="m-f"><label>Tipo</label><select id="ltTipo"><option value="">Todos los tipos</option></select></div>
+          <div class="m-f"><label title="Confirmada en el panel de confirmación de recepción (BUFFER_F8)">Recepción en ventanilla</label><select id="ltRec"><option value="">Todas</option><option value="si">Recibidas en ventanilla</option><option value="no">Aún no recibidas</option></select></div>
           <div class="m-f m-f-q"><label>Buscar</label><input id="ltQ" placeholder="F8, código o descripción"></div>
           <div class="m-f m-f-chk"><label class="m-chk"><input type="checkbox" id="ltOcultarAsig" checked> Ocultar ya asignadas</label>
             <label class="m-chk"><input type="checkbox" id="ltSoloSel"> Solo seleccionadas</label></div>
@@ -516,8 +556,8 @@ body.m .tab.m-tab-lista.active{background:#1f5fb4;color:#fff}
           <table id="ltTabla" class="m-tbl m-lt-tbl">
             <thead><tr><th></th><th>F8</th><th>Fecha</th><th>Tipo</th><th>Unidad</th><th>Categoría</th><th>Código</th><th>Suministro</th><th>Grupo</th>
               <th class="right">Solicitado</th><th class="right">A enviar</th><th class="right" title="Existencia física en el CEDIS">Existencia</th>
-              <th class="right" title="Existencia con vencimiento de 60 días o más">Utilizable</th><th class="right">Reservado</th><th class="right">Empaque</th><th>Estado</th></tr></thead>
-            <tbody><tr><td colspan="16" class="m-vacio">Presione "Cargar pendientes".</td></tr></tbody>
+              <th class="right" title="Existencia con vencimiento de 60 días o más">Utilizable</th><th class="right">Reservado</th><th class="right">Empaque</th><th title="Fecha en que ventanilla confirmó que la F8 llegó">Ventanilla</th><th>Estado</th></tr></thead>
+            <tbody><tr><td colspan="17" class="m-vacio">Presione "Cargar pendientes".</td></tr></tbody>
           </table>
         </div>
         <div id="ltNota" class="m-nota"></div>
@@ -3489,13 +3529,15 @@ document.addEventListener('keydown', e => {
 
   // ---------- Recorrido guiado (el mismo de los otros tableros) ----------
   const M_TOUR = [
+    { sel: '.m-paso-1', t: '1 · Aquí empieza el trabajo', x: 'Preparar lista de trabajo: elija qué Formas 8 y renglones va a asignar hoy. Puede filtrar por las que ventanilla ya confirmó que llegaron al almacén.' },
+    { sel: '.m-paso-2', t: '2 · Revisar el corte', x: 'Después de correr el Motor, revise el resultado: Renglones es el detalle línea por línea; las otras vistas resumen por unidad, sin stock, unidades sin cobertura, pedidos con error y categoría.' },
+    { sel: '.m-acc', t: '3 · Entregar', x: 'Con el corte revisado: notifique a las unidades (WhatsApp o correo) y descargue la hoja de asignación y los reportes.' },
     { sel: '#mFuente', t: 'De dónde vienen los datos', x: 'Verde = copia publicada del corte (abre al instante). Si el corte cambió y la copia aún no se actualiza, la página avisa y lee en vivo del Motor.' },
     { sel: '.m-filtros', t: 'Filtros', x: 'Busque por código, Forma 8, unidad, categoría o estado. "Más filtros" abre fechas, tipo y "solo UE en cero". Enter o Aplicar.' },
     { sel: '#mKpis', t: 'Indicadores', x: 'Líneas, solicitado, asignado y fill rate del filtro actual. Prioridad clínica cuenta los renglones vitales y en cero.' },
     { sel: '#mChips', t: 'Estados', x: 'Un clic filtra por completos, parciales o sin stock. Los conteos no cambian al filtrar para que pueda comparar.' },
     { sel: '.m-acc-g', t: 'Notificar a las unidades', x: 'WhatsApp abre los mensajes por WhatsApp Web, uno por unidad. El correo deja constancia con el detalle.' },
     { sel: '.m-acc-g:nth-child(2)', t: 'Descargas', x: 'Hoja de asignación en PDF, Detalle en Excel (lo filtrado o todo el corte), Reservas y Llenado por cuota. Se generan en el navegador.' },
-    { sel: '.m-tabs', t: 'Vistas', x: 'Renglones es el detalle línea por línea. Las otras pestañas resumen por unidad, sin stock, unidades sin cobertura, pedidos con error y categoría.' },
     { sel: '#mColBtn', t: 'Columnas', x: 'Muestre u oculte columnas. Su selección se guarda en este equipo. "Todas" vuelve a las 30 columnas.' },
     { sel: '#tbl_asignacion tbody tr .m-lnk', t: 'Cómo se asignó', x: 'Abre el flujo de la línea: pedido, prioridad clínica, tope del mes, empaque, inventario del CEDIS y resultado.' },
     { sel: '#btnLoadHistory', t: 'Histórico', x: 'Carga todas las asignaciones archivadas. "Corte diario" vuelve al corte del día.' },
@@ -3556,7 +3598,8 @@ document.addEventListener('keydown', e => {
     const lim = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
     LT.filas = LT_TODAS.filter(f => f.fecha >= lim);
     ltLlenarFiltros(); ltPintar();
-    if (LT.cargado) ltEstado(fmt(LT.filas.length) + ' líneas de los últimos ' + dias + ' días · datos publicados ' + LT.pub, 'ok');
+    if (LT.cargado) { const f8 = new Set(LT.filas.map(f => f.f8)), rec = new Set(LT.filas.filter(f => f.rec).map(f => f.f8));
+      ltEstado(fmt(LT.filas.length) + ' líneas de los últimos ' + dias + ' días · ' + fmt(f8.size) + ' Formas 8, ' + fmt(rec.size) + ' recibidas en ventanilla · datos publicados ' + LT.pub, 'ok'); }
   }
   function ltMarcarEnLista() {
     const enL = new Set((LT.actual || []).map(x => ltKey(x[0], x[3])));
@@ -3572,13 +3615,13 @@ document.addEventListener('keydown', e => {
       const c = p.cols, ix = n => c.indexOf(n), D = p.dic || {}, dv = (t, i) => (D[t] || [])[i] || '';
       // "Ya asignada" viene dentro de pendientes.json (columna ASIG). Solo si el archivo es de la versión
       // anterior se recurre a historial.json (20 MB); deja de pasar en cuanto el Motor republica.
-      const iA = ix('ASIG'), asig = iA >= 0 ? null : await ltHistorialAsignadas();
+      const iA = ix('ASIG'), asig = iA >= 0 ? null : await ltHistorialAsignadas(), iR = ix('RECIBIDA');
       const esTransf = t => /TRA(N)?SFERENCIA/i.test(String(t || ''));
       LT_TODAS = p.filas.map(a => {
         const k = ltKey(a[ix('F8_ID')], a[ix('SKU')]), punto = dv('punto', a[ix('UNIDAD_SALMI')]);
         return { k, f8: a[ix('F8_ID')], fecha: a[ix('FECHA_F8')], tipo: dv('tipo', a[ix('TIPO')]), punto, ue: dv('ue', a[ix('UNIDAD')]) || punto,
           cat: dv('cat', a[ix('CATEG')]), cedis: dv('cedis', a[ix('CEDIS')]), sku: a[ix('SKU')], sum: (p.nombres || {})[a[ix('SKU')]] || '',
-          sol: +a[ix('SOLICITADO')] || 0, asig: (iA >= 0 ? a[iA] : asig.get(k)) || '', enLista: false };
+          sol: +a[ix('SOLICITADO')] || 0, asig: (iA >= 0 ? a[iA] : asig.get(k)) || '', rec: (iR >= 0 ? a[iR] : '') || '', enLista: false };
       }).filter(f => !esTransf(f.tipo));   // las transferencias son entre unidades: el Motor no las asigna
       LT.skus = p.skus || {};
       LT.actual = p.actual || [];
@@ -3610,9 +3653,10 @@ document.addEventListener('keydown', e => {
     ltOpc('ltTipo', LT.filas.map(f => f.tipo), 'Todos los tipos');
   }
   function ltFiltradas() {
-    const ue = ltEl('ltUE').value, ce = ltEl('ltCedis').value, ca = ltEl('ltCat').value, ti = ltEl('ltTipo').value;
+    const ue = ltEl('ltUE').value, ce = ltEl('ltCedis').value, ca = ltEl('ltCat').value, ti = ltEl('ltTipo').value, rc = ltEl('ltRec').value;
     const q = ltEl('ltQ').value.trim().toLowerCase(), oc = ltEl('ltOcultarAsig').checked, soloSel = ltEl('ltSoloSel').checked;
     return LT.filas.filter(f => (!ue || f.ue === ue) && (!ce || f.cedis === ce) && (!ca || f.cat === ca) && (!ti || f.tipo === ti)
+      && (!rc || (rc === 'si' ? !!f.rec : !f.rec))
       && (!oc || !f.asig || LT.sel.has(f.k)) && (!soloSel || LT.sel.has(f.k))
       && (!q || String(f.f8).toLowerCase().includes(q) || String(f.sku).includes(q) || String(f.sum).toLowerCase().includes(q)));
   }
@@ -3630,7 +3674,7 @@ document.addEventListener('keydown', e => {
     porF8.forEach((ls, f8) => {
       const a = ls[0], nSel = ls.filter(x => LT.sel.has(x.k)).length;
       h += `<tr class="m-lt-g"><td><input type="checkbox" data-f8="${mEsc(f8)}" ${nSel === ls.length ? 'checked' : ''} ${nSel && nSel < ls.length ? 'data-medio="1"' : ''}></td>
-        <td colspan="15"><b>${mEsc(f8)}</b> · ${ltFmtF(a.fecha)} · ${mEsc(a.tipo)} · <b>${mEsc(a.ue)}</b>${a.cat ? ' · ' + mEsc(a.cat) : ''}${a.cedis ? ' · suple ' + mEsc(a.cedis) : ''}
+        <td colspan="16"><b>${mEsc(f8)}</b> · ${ltFmtF(a.fecha)} · ${mEsc(a.tipo)} · <b>${mEsc(a.ue)}</b>${a.cat ? ' · ' + mEsc(a.cat) : ''}${a.cedis ? ' · suple ' + mEsc(a.cedis) : ''}${a.rec ? ' <span class="m-lt-rec">Recibida en ventanilla ' + ltFmtF(a.rec).slice(0, 5) + '</span>' : ''}
         <span class="m-dim"> · ${ls.length} líneas${nSel ? ' · ' + nSel + ' seleccionadas' : ''}</span></td></tr>`;
       ls.forEach(f => {
         const sk = LT.skus[f.sku], s = LT.sel.get(f.k), net = sk ? sk[0] : null, util = sk ? sk[1] : null;
@@ -3648,10 +3692,11 @@ document.addEventListener('keydown', e => {
           <td class="right m-cel ${alcanza}" title="Existencia con vencimiento de 60 días o más">${util == null ? '—' : fmt(util)}</td>
           <td class="right">${sk && sk[2] ? fmt(sk[2]) : '<span class="m-dim">-</span>'}</td>
           <td class="right">${sk ? fmt(sk[3]) : ''}</td>
+          <td class="m-nw">${f.rec ? ltFmtF(f.rec) : '<span class="m-dim">—</span>'}</td>
           <td class="m-cel ${cls}">${est}</td></tr>`;
       });
     });
-    tb.innerHTML = h || `<tr><td colspan="16" class="m-vacio">${LT.filas.length ? 'No hay líneas con estos filtros.' : 'Presione "Cargar pendientes".'}</td></tr>`;
+    tb.innerHTML = h || `<tr><td colspan="17" class="m-vacio">${LT.filas.length ? 'No hay líneas con estos filtros.' : 'Presione "Cargar pendientes".'}</td></tr>`;
     tb.querySelectorAll('input[data-medio]').forEach(c => { c.indeterminate = true; });
     ltEl('ltNota').textContent = rows.length > LIM ? `Se muestran ${fmt(LIM)} de ${fmt(rows.length)} líneas. Filtre por unidad o CEDIS para ver el resto.` : (rows.length ? fmt(rows.length) + ' líneas con estos filtros.' : '');
     ltResumen();
@@ -3689,10 +3734,10 @@ document.addEventListener('keydown', e => {
   function ltDescargar() {
     if (!LT.cargado) return alert('Primero traiga los pendientes.');
     const rows = ltFiltradas();
-    const H = ['INCLUIR', 'F8_ID', 'UNIDAD_SALMI', 'FECHA_F8', 'SKU', 'CANT_SOLICITADA', 'TIPO', 'UNIDAD', 'CATEGORIA', 'SUMINISTRO', 'SOLICITADO_ORIG', 'EXISTENCIA_CEDIS', 'UTILIZABLE_60D', 'RESERVADO', 'EMPAQUE', 'VEN', 'CEDIS_QUE_SUPLE', 'ESTADO'];
+    const H = ['INCLUIR', 'F8_ID', 'UNIDAD_SALMI', 'FECHA_F8', 'SKU', 'CANT_SOLICITADA', 'TIPO', 'UNIDAD', 'CATEGORIA', 'SUMINISTRO', 'SOLICITADO_ORIG', 'EXISTENCIA_CEDIS', 'UTILIZABLE_60D', 'RESERVADO', 'EMPAQUE', 'VEN', 'CEDIS_QUE_SUPLE', 'RECIBIDA_EN_VENTANILLA', 'ESTADO'];
     const out = [H];
     rows.forEach(f => { const s = LT.sel.get(f.k), sk = LT.skus[f.sku] || [];
-      out.push([s ? 'SI' : 'NO', f.f8, f.punto, ltFmtF(f.fecha), f.sku, s ? s.cant : f.sol, f.tipo, f.ue, f.cat, f.sum, f.sol, sk[0] ?? '', sk[1] ?? '', sk[2] ?? '', sk[3] ?? '', sk[6] || '', f.cedis, f.asig ? 'Ya asignada ' + f.asig : f.enLista ? 'En la lista actual' : 'Nueva']); });
+      out.push([s ? 'SI' : 'NO', f.f8, f.punto, ltFmtF(f.fecha), f.sku, s ? s.cant : f.sol, f.tipo, f.ue, f.cat, f.sum, f.sol, sk[0] ?? '', sk[1] ?? '', sk[2] ?? '', sk[3] ?? '', sk[6] || '', f.cedis, f.rec ? ltFmtF(f.rec) : '', f.asig ? 'Ya asignada ' + f.asig : f.enLista ? 'En la lista actual' : 'Nueva']); });
     ltLibro('Pendientes_F8_' + new Date().toISOString().slice(0, 10) + '.xlsx', out);
   }
   function ltDescargarActual() {
@@ -3782,7 +3827,7 @@ document.addEventListener('keydown', e => {
     ltEl('ltDeshacer').addEventListener('click', ltDeshacerPedir);
     ltEl('ltDeshSi').addEventListener('click', () => ltDeshacer(true));
     ltEl('ltDeshNo').addEventListener('click', () => ltDeshacer(false));
-    ['ltUE', 'ltCedis', 'ltCat', 'ltTipo', 'ltOcultarAsig', 'ltSoloSel'].forEach(id => ltEl(id).addEventListener('change', ltPintar));
+    ['ltUE', 'ltCedis', 'ltCat', 'ltTipo', 'ltRec', 'ltOcultarAsig', 'ltSoloSel'].forEach(id => ltEl(id).addEventListener('change', ltPintar));
     let tq; ltEl('ltQ').addEventListener('input', () => { clearTimeout(tq); tq = setTimeout(ltPintar, 250); });
     ltEl('ltTabla').addEventListener('change', ev => {
       const t = ev.target, porK = ltPorK();
