@@ -355,48 +355,53 @@ body.m tbody tr:hover td{background:#f7faff}
 .m-btn-cargar{background:#0b1f3a;color:#fff;width:100%}.m-btn-cargar:disabled{opacity:.45;cursor:not-allowed}
 [data-theme="dark"] .m-lt-card{background:#0f1729;border-color:#24324d}[data-theme="dark"] .m-lt-card-t{color:#e2e8f0}[data-theme="dark"] .m-lt-card-s{color:#cbd5e1}
 
-/* Flujo de trabajo (8-nov-2026): 1 Preparar · 2 Revisar el corte · 3 Entregar */
-.m-flujo{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fff;border:1px solid #e1e6ee;border-radius:12px;padding:10px 12px;margin:0 0 12px}
-.m-fp{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.m-fp-n{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#e8edf3;color:#3b4a5c;font-size:12px;font-weight:800;flex:0 0 auto}
-.m-fp-t{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:#5a6878;font-weight:700;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap}
-.m-fp-1{background:#e6f4f1;border:1px solid #b5ddd4;border-radius:10px;padding:5px 6px 5px 8px}
-.m-fp-1 .m-fp-n{background:#0f766e;color:#fff}
-body.m .tab.m-tab-lista{background:#0f766e;border-color:#0f766e;color:#fff;font-weight:700;font-size:14px;padding:9px 18px;box-shadow:0 2px 6px rgba(15,118,110,.35)}
-body.m .tab.m-tab-lista:hover{background:#0b5f58}
-body.m .tab.m-tab-lista.active{background:#0b5f58;border-color:#0b5f58;box-shadow:0 0 0 3px rgba(15,118,110,.25)}
-.m-flujo-sep{width:12px;height:24px;color:#9aa6b4;flex:0 0 auto}
-.m-fp-2 .m-tabs{border-bottom:none;padding-bottom:0;margin:0!important;gap:6px}
-.m-acc{border-bottom:1px solid #e1e6ee;padding-bottom:10px;margin:0 0 4px!important}
-.m-fp-t3{margin-right:4px}
+/* Pasos del día (8-nov-2026, opción A): cada paso es una pantalla */
+.m-pasos{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:0 0 12px}
+.m-pas{display:flex;align-items:center;gap:10px;text-align:left;font-family:inherit;background:#fff;border:1px solid #dfe5ee;border-radius:12px;padding:10px 12px;cursor:pointer;color:#1d2733;position:relative;min-width:0}
+.m-pas:hover{border-color:#9fb3cc;background:#f7f9fc}
+.m-pas:focus-visible{outline:2px solid #0f766e;outline-offset:2px}
+.m-pas-n{flex:0 0 30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;background:#e8edf3;color:#3b4a5c}
+.m-pas-c{display:flex;flex-direction:column;min-width:0}
+.m-pas-c b{font-size:14px;font-weight:700}
+.m-pas-c small{font-size:11.5px;color:#5a6878;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m-pas:not(:last-child)::after{content:"";position:absolute;right:-7px;top:50%;width:8px;height:8px;border-top:2px solid #b8c4d3;border-right:2px solid #b8c4d3;transform:translateY(-50%) rotate(45deg);background:transparent}
+.m-pas[data-paso="1"]{border-color:#9fd3c8;background:#f0faf8}
+.m-pas[data-paso="1"] .m-pas-n{background:#0f766e;color:#fff}
+.m-pas.m-on{border-color:#0b1f3a;box-shadow:0 0 0 2px #0b1f3a inset;background:#fff}
+.m-pas.m-on .m-pas-n{background:#0b1f3a;color:#fff}
+.m-pas[data-paso="1"].m-on{border-color:#0f766e;box-shadow:0 0 0 2px #0f766e inset;background:#f0faf8}
+.m-pas[data-paso="1"].m-on .m-pas-n{background:#0f766e}
+.m-pas small.m-ok{color:#1f6f43;font-weight:600}
+.m-subtabs{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-bottom:1px solid #e1e6ee;padding-bottom:10px}
+.m-subtabs .m-tabs{border-bottom:none;padding-bottom:0;margin:0!important;gap:6px;flex:1 1 auto}
+.m-btn-sm{padding:6px 10px;font-size:12.5px}
 .m-vista-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0}
 .m-vista-bar .m-viewtitle{margin:0;flex:1 1 auto}
 .m-vista-bar .m-chips-tabs{margin:0}
 .m-vista-bar .m-tabs-r{margin-left:0}
+.m-pant{display:grid;grid-template-columns:minmax(220px,320px) 1fr;gap:18px;padding:6px 0}
+.m-pant-est{background:#f7f9fc;border:1px solid #e1e6ee;border-radius:10px;padding:14px;font-size:13px;line-height:1.6}
+.m-pant-est b{font-size:15px}
+.m-pant-txt p{margin:0 0 10px;font-size:13.5px;line-height:1.55;color:#2b3644}
+.m-ent{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:6px 0}
+.m-ent-card{border:1px solid #e1e6ee;border-radius:12px;padding:14px;background:#fff;display:flex;flex-direction:column}
+.m-ent-card h3{margin:0 0 4px;font-size:15px}
+.m-ent-card p{margin:0 0 12px;font-size:12.5px;color:#5a6878}
+.m-ent-b{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto}
+.m-ent-hecho{font-size:12px;color:#1f6f43;font-weight:600;margin-top:8px;min-height:15px}
 .m-lt-rec{display:inline-block;font-size:11px;font-weight:700;border-radius:6px;padding:1px 6px;background:#dff3e6;color:#1f6f43;white-space:nowrap}
-[data-theme="dark"] .m-flujo{background:#0f172a;border-color:#24324d}
-[data-theme="dark"] .m-fp-n{background:#24324d;color:#cbd5e1}
-[data-theme="dark"] .m-fp-1{background:#0d2b28;border-color:#1c5650}
-[data-theme="dark"] .m-fp-1 .m-fp-n{background:#14b8a6;color:#04201d}
-[data-theme="dark"] body.m .tab.m-tab-lista{background:#0f766e;border-color:#0f766e;color:#fff}
-[data-theme="dark"] .m-fp-t{color:#94a3b8}
-[data-theme="dark"] .m-acc{border-bottom-color:#24324d}
+@media (max-width:1100px){.m-pasos{grid-template-columns:repeat(2,1fr)}.m-pas::after{display:none}.m-ent{grid-template-columns:1fr}.m-pant{grid-template-columns:1fr}}
+[data-theme="dark"] .m-pas,[data-theme="dark"] .m-ent-card{background:#0f172a;border-color:#24324d;color:#e2e8f0}
+[data-theme="dark"] .m-pas:hover{background:#131d33}
+[data-theme="dark"] .m-pas-n{background:#24324d;color:#cbd5e1}
+[data-theme="dark"] .m-pas-c small,[data-theme="dark"] .m-ent-card p{color:#94a3b8}
+[data-theme="dark"] .m-pas[data-paso="1"]{background:#0d2b28;border-color:#1c5650}
+[data-theme="dark"] .m-pas.m-on{box-shadow:0 0 0 2px #7aa2d6 inset}
+[data-theme="dark"] .m-pas.m-on .m-pas-n{background:#2b4a7e}
+[data-theme="dark"] .m-pant-est{background:#0f1729;border-color:#24324d}
+[data-theme="dark"] .m-pant-txt p{color:#cbd5e1}
+[data-theme="dark"] .m-subtabs{border-bottom-color:#24324d}
 [data-theme="dark"] .m-lt-rec{background:#123323;color:#9fe0b8}
-
-/* pasos clicables */
-button.m-fp-ir{font-family:inherit;line-height:1.2;border:none;background:none;cursor:pointer;padding:4px 8px;border-radius:8px}
-button.m-fp-ir:hover{background:#eef2f7;color:#0b1f3a}
-button.m-fp-ir:focus-visible{outline:2px solid #0f766e;outline-offset:2px}
-.m-fp-1 button.m-fp-n{padding:0;width:22px;height:22px;border-radius:50%;background:#0f766e;color:#fff}
-.m-fp-1 button.m-fp-n:hover{background:#0b5f58;color:#fff}
-.m-fp-3{gap:6px}
-.m-flujo.m-en-2 .m-fp-2 > .m-fp-t .m-fp-n,.m-flujo.m-en-3 .m-fp-3 .m-fp-n{background:#0b1f3a;color:#fff}
-.m-flujo.m-en-2 .m-fp-2 > .m-fp-t{color:#0b1f3a}
-@keyframes mDestello{0%{box-shadow:0 0 0 0 rgba(15,118,110,.55)}100%{box-shadow:0 0 0 14px rgba(15,118,110,0)}}
-.m-acc.m-destello{animation:mDestello 1s ease-out 2;border-radius:10px;background:#f0faf8}
-[data-theme="dark"] button.m-fp-ir:hover{background:#1e293b;color:#e2e8f0}
-[data-theme="dark"] .m-acc.m-destello{background:#0d2b28}
-button.m-fp-t.m-fp-ir{font-size:11.5px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:#5a6878}
 
   </style>
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -432,27 +437,13 @@ button.m-fp-t.m-fp-ir{font-size:11.5px;font-weight:700;letter-spacing:.3px;text-
   </div>
 
   <main class="m-page">
-    <!-- FLUJO DE TRABAJO: 1 Preparar · 2 Revisar · 3 Entregar -->
-      <nav class="m-flujo" aria-label="Flujo de trabajo">
-        <div class="m-fp m-fp-1" title="Aquí empieza el trabajo del día">
-          <button type="button" class="m-fp-n m-fp-ir" data-ir="1" title="Ir a preparar la lista de trabajo">1</button>
-          <div class="tab m-tab-lista" data-tab="lista" role="tab">Preparar lista de trabajo</div>
-        </div>
-        <svg class="m-flujo-sep" viewBox="0 0 12 24" aria-hidden="true"><path d="M3 4l6 8-6 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <div class="m-fp m-fp-2">
-          <button type="button" class="m-fp-t m-fp-ir" data-ir="2" title="Ir a revisar el corte (Renglones)"><span class="m-fp-n">2</span>Revisar el corte</button>
-          <div class="tabs m-tabs" role="tablist">
-            <div class="tab active" data-tab="asignacion" role="tab">Renglones</div>
-            <div class="tab" data-tab="fill_ue" role="tab">Por unidad</div>
-            <div class="tab" data-tab="sku_sin" role="tab">Sin stock</div>
-            <div class="tab" data-tab="ue_sin" role="tab">Unidades sin cobertura</div>
-            <div class="tab" data-tab="invalidos" role="tab">Pedidos con error</div>
-            <div class="tab" data-tab="fill_cat" role="tab">Por categoría</div>
-          </div>
-        </div>
-        <svg class="m-flujo-sep" viewBox="0 0 12 24" aria-hidden="true"><path d="M3 4l6 8-6 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <button type="button" class="m-fp m-fp-3 m-fp-t m-fp-ir" data-ir="3" title="Ir a notificar y descargar"><span class="m-fp-n">3</span>Entregar</button>
-      </nav>
+    <!-- PASOS DEL DIA: cada paso es una pantalla -->
+    <nav class="m-pasos" aria-label="Flujo de trabajo del día">
+      <button type="button" class="m-pas" data-paso="1"><span class="m-pas-n">1</span><span class="m-pas-c"><b>Preparar lista</b><small id="mPas1">Elegir qué se asigna hoy</small></span></button>
+      <button type="button" class="m-pas" data-paso="2"><span class="m-pas-n">2</span><span class="m-pas-c"><b>Correr el Motor</b><small id="mPas2">—</small></span></button>
+      <button type="button" class="m-pas" data-paso="3"><span class="m-pas-n">3</span><span class="m-pas-c"><b>Revisar el corte</b><small id="mPas3">—</small></span></button>
+      <button type="button" class="m-pas" data-paso="4"><span class="m-pas-n">4</span><span class="m-pas-c"><b>Entregar</b><small id="mPas4">Notificar y descargar</small></span></button>
+    </nav>
 
     <!-- FILTROS -->
     <section class="m-card m-filtros">
@@ -498,25 +489,18 @@ button.m-fp-t.m-fp-ir{font-size:11.5px;font-weight:700;letter-spacing:.3px;text-
 
     <!-- PESTAÑAS -->
     <section class="m-card m-datos">
-      <!-- PASO 3 · ENTREGAR -->
-      <section class="m-acc">
-      <span class="m-fp-t m-fp-t3" id="mPaso3"><span class="m-fp-n">3</span>Entregar</span>
-      <div class="m-acc-g">
-        <span class="m-acc-t">Notificar</span>
-        <button id="btnWaNotif" class="m-btn m-btn-wa" onclick="abrirPanelWA()">WhatsApp a las unidades</button>
-        <button id="btnEmailNotif" class="m-btn m-btn-out" onclick="abrirPanelCorreo()">Correo (constancia)</button>
-      </div>
-      <div class="m-acc-g">
-        <span class="m-acc-t">Descargar</span>
-        <button id="btnExportPdf" class="m-btn m-btn-hoja">Hoja de asignación (PDF)</button>
-        <button id="btnExportXlsx" class="m-btn m-btn-out">Detalle filtrado (Excel)</button>
-        <button id="mXlsxTodo" class="m-btn m-btn-out" type="button">Detalle completo (Excel)</button>
-        <button id="btnExportReservas" class="m-btn m-btn-out" onclick="exportarReservasExcel()">Reservas (Excel)</button>
-        <button id="btnExportCuotas" class="m-btn m-btn-out">Llenado por cuota</button>
-        <button id="btnExportPdfManager" hidden>Informe gerencial</button>
-      </div>
-      </section>
 
+      <div class="m-subtabs" id="mSubtabs">
+        <div class="tabs m-tabs" role="tablist">
+          <div class="tab active" data-tab="asignacion" role="tab">Renglones</div>
+          <div class="tab" data-tab="fill_ue" role="tab">Por unidad</div>
+          <div class="tab" data-tab="sku_sin" role="tab">Sin stock</div>
+          <div class="tab" data-tab="ue_sin" role="tab">Unidades sin cobertura</div>
+          <div class="tab" data-tab="invalidos" role="tab">Pedidos con error</div>
+          <div class="tab" data-tab="fill_cat" role="tab">Por categoría</div>
+        </div>
+        <button id="mXlsxFiltro" class="m-btn m-btn-out m-btn-sm" type="button" title="Excel con lo que está filtrado en pantalla">Descargar lo filtrado</button>
+      </div>
       <div class="m-vista-bar">
         <div class="m-viewtitle"><span id="viewTitle"></span><span class="m-leyenda" id="mLeyenda"></span></div>
         <div class="m-chips m-chips-tabs" id="mChips"></div>
@@ -524,6 +508,48 @@ button.m-fp-t.m-fp-ir{font-size:11.5px;font-weight:700;letter-spacing:.3px;text-
           <div class="m-colsel"><button id="mColBtn" class="m-btn m-btn-out" type="button">Columnas</button><div id="mColPanel" class="m-colpanel" hidden></div></div>
         </div>
       </div>
+      <div id="view_correr" class="view" style="display:none">
+        <div class="m-pant">
+          <div class="m-pant-est" id="mCorrerEst"></div>
+          <div class="m-pant-txt">
+            <p><b>Por ahora el Motor se corre desde la hoja de cálculo</b>, como siempre: menú del Motor → correr la asignación diaria, con la lista de trabajo que preparó en el paso 1.</p>
+            <p>Al terminar, el corte se publica solo y aparece en el paso 3 en pocos minutos. Si la página detecta un corte más nuevo que el publicado, lo lee en vivo.</p>
+            <p class="m-dim">Próximamente: correr el Motor desde esta pantalla, con avance y botón "Confirmar y archivar".</p>
+          </div>
+        </div>
+      </div>
+
+      <div id="view_entregar" class="view" style="display:none">
+        <div class="m-ent">
+          <div class="m-ent-card">
+            <h3>Notificar a las unidades</h3>
+            <p>Avise a cada unidad qué se le asignó.</p>
+            <div class="m-ent-b">
+              <button id="btnWaNotif" class="m-btn m-btn-wa" onclick="abrirPanelWA()">WhatsApp a las unidades</button>
+              <button id="btnEmailNotif" class="m-btn m-btn-out" onclick="abrirPanelCorreo()">Correo (constancia)</button>
+            </div>
+            <div class="m-ent-hecho" id="mEntNotif"></div>
+          </div>
+          <div class="m-ent-card">
+            <h3>Hoja de asignación</h3>
+            <p>El documento para preparar y despachar el pedido.</p>
+            <div class="m-ent-b"><button id="btnExportPdf" class="m-btn m-btn-hoja">Hoja de asignación (PDF)</button></div>
+            <div class="m-ent-hecho" id="mEntHoja"></div>
+          </div>
+          <div class="m-ent-card">
+            <h3>Reportes en Excel</h3>
+            <p>Detalle del corte y reportes de apoyo. "Filtrado" usa los filtros del paso 3.</p>
+            <div class="m-ent-b">
+              <button id="btnExportXlsx" class="m-btn m-btn-out">Detalle filtrado</button>
+              <button id="mXlsxTodo" class="m-btn m-btn-out" type="button">Detalle completo</button>
+              <button id="btnExportReservas" class="m-btn m-btn-out" onclick="exportarReservasExcel()">Reservas</button>
+              <button id="btnExportCuotas" class="m-btn m-btn-out">Llenado por cuota</button>
+              <button id="btnExportPdfManager" hidden>Informe gerencial</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div id="view_lista" class="view" style="display:none">
         <div class="m-lt-bar">
           <div class="m-f m-f-dias"><label title="Fecha de la Forma 8">Período</label>
@@ -3459,33 +3485,74 @@ document.addEventListener('keydown', e => {
   const _mRAT = renderActiveTab;
   renderActiveTab = function (rows) { if (window.__mSilent) return; return _mRAT(rows); };
 
-  // ---------- Pestañas: título de la vista ----------
+  // ---------- Pasos del día (opción A): cada paso es una pantalla ----------
+  // 1 Preparar lista (lista) · 2 Correr el Motor (correr) · 3 Revisar el corte (pestañas) · 4 Entregar (entregar)
+  M_TITULOS.correr = 'Correr el Motor con la lista de trabajo';
+  M_TITULOS.entregar = 'Entregar el corte: notificar a las unidades y descargar';
+  const M_REVISION = ['asignacion', 'fill_ue', 'sku_sin', 'ue_sin', 'invalidos', 'fill_cat'];
+  let M_ULT_REVISION = 'asignacion';
+  const mPasoDe = tab => tab === 'lista' ? '1' : tab === 'correr' ? '2' : tab === 'entregar' ? '4' : '3';
   const _mShowTab = showTab;
   showTab = function (tab) {
     _mShowTab(tab);
+    if (M_REVISION.includes(tab)) M_ULT_REVISION = tab;
+    const paso = mPasoDe(tab), enRevision = paso === '3';
     document.getElementById('viewTitle').textContent = M_TITULOS[tab] || '';
     document.getElementById('mColBtn').closest('.m-tabs-r').style.visibility = tab === 'asignacion' ? 'visible' : 'hidden';
-    const enLista = tab === 'lista';
-    const fl = document.querySelector('.m-flujo'); if (fl) { fl.classList.toggle('m-en-2', !enLista); fl.classList.remove('m-en-3'); }
-    ['.m-filtros', '#mKpis', '.m-acc', '#mChips', '#mLeyenda'].forEach(sel => { const el = document.querySelector(sel); if (el) el.style.display = enLista ? 'none' : ''; });
+    document.querySelectorAll('.m-pas').forEach(b => { const on = b.dataset.paso === paso; b.classList.toggle('m-on', on); b.setAttribute('aria-current', on ? 'step' : 'false'); });
+    ['.m-filtros', '#mKpis', '#mSubtabs', '#mChips', '#mLeyenda'].forEach(sel => { const el = document.querySelector(sel); if (el) el.style.display = enRevision ? '' : 'none'; });
+    if (paso === '2') mPintarCorrer();
+    mPasosEstado();
   };
-
-  // ---------- Pasos clicables: 1 Preparar · 2 Revisar · 3 Entregar ----------
-  document.querySelectorAll('.m-fp-ir').forEach(b => b.addEventListener('click', () => {
-    const p = b.dataset.ir;
-    if (p === '1') return showTab('lista');
-    const actual = document.querySelector('.tab.active');
-    if (!actual || actual.dataset.tab === 'lista') showTab('asignacion');
-    if (p === '3') {
-      const acc = document.querySelector('.m-acc');
-      document.querySelector('.m-flujo').classList.add('m-en-3');
-      acc.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      acc.classList.remove('m-destello'); void acc.offsetWidth; acc.classList.add('m-destello');
-      setTimeout(() => acc.classList.remove('m-destello'), 2200);
-    } else {
-      document.querySelector('.m-flujo').scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+  document.querySelectorAll('.m-pas').forEach(b => b.addEventListener('click', () => {
+    const p = b.dataset.paso;
+    showTab(p === '1' ? 'lista' : p === '2' ? 'correr' : p === '4' ? 'entregar' : M_ULT_REVISION);
+    document.querySelector('.m-pasos').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }));
+  document.getElementById('mXlsxFiltro').addEventListener('click', () => document.getElementById('btnExportXlsx').click());
+
+  // Estado de cada paso, en una línea
+  const M_ENT_KEY = 'motor_entrega_v1';
+  const mCorte = () => (document.getElementById('cutDate').textContent || '').trim();
+  const mHora = () => new Date().toLocaleTimeString('es-PA', { hour: '2-digit', minute: '2-digit' });
+  function mEntLeer() { try { return (JSON.parse(localStorage.getItem(M_ENT_KEY) || '{}')[mCorte()]) || {}; } catch (e) { return {}; } }
+  function mEntMarcar(k) {
+    try { const all = JSON.parse(localStorage.getItem(M_ENT_KEY) || '{}'), c = mCorte(); all[c] = all[c] || {}; all[c][k] = mHora();
+      Object.keys(all).slice(0, -10).forEach(x => delete all[x]); localStorage.setItem(M_ENT_KEY, JSON.stringify(all)); } catch (e) {}
+    mPasosEstado();
+  }
+  [['btnWaNotif', 'wa'], ['btnEmailNotif', 'correo'], ['btnExportPdf', 'hoja']].forEach(([id, k]) => {
+    const el = document.getElementById(id); if (el) el.addEventListener('click', () => mEntMarcar(k));
+  });
+  function mSet(id, txt, ok) { const el = document.getElementById(id); if (el) { el.textContent = txt; el.classList.toggle('m-ok', !!ok); } }
+  function mPasosEstado() {
+    try {
+      const act = (typeof LT !== 'undefined' && LT.actual) ? LT.actual : null;
+      if (act) { const f8 = new Set(act.map(x => x[0])).size; mSet('mPas1', 'Lista actual: ' + fmt(act.length) + ' líneas · ' + fmt(f8) + ' F8', true); }
+      const fu = (document.getElementById('mFuente') || {}).textContent || '';
+      const m = fu.match(/(\d{1,2}:\d{2}\s*[ap]\.?\s*m\.?)/i);
+      mSet('mPas2', DATA && DATA.length ? 'Corte ' + mCorte() + (m ? ' · ' + m[1] : '') : 'Sin corte cargado', DATA && DATA.length);
+      const fill = (document.getElementById('k_fill') || {}).textContent || '';
+      mSet('mPas3', DATA && DATA.length ? fmt(DATA.length) + ' renglones · fill rate ' + fill.trim() : '—', false);
+      const e = mEntLeer(), hechos = [];
+      if (e.hoja) hechos.push('Hoja ' + e.hoja); if (e.wa) hechos.push('WhatsApp ' + e.wa); if (e.correo) hechos.push('Correo ' + e.correo);
+      mSet('mPas4', hechos.length ? hechos.join(' · ') : 'Pendiente: notificar y descargar', hechos.length >= 2);
+      const n = document.getElementById('mEntNotif'), h = document.getElementById('mEntHoja');
+      if (n) n.textContent = [e.wa ? 'WhatsApp abierto a las ' + e.wa : '', e.correo ? 'Correo a las ' + e.correo : ''].filter(Boolean).join(' · ');
+      if (h) h.textContent = e.hoja ? 'Descargada a las ' + e.hoja : '';
+    } catch (err) { console.warn('pasos:', err); }
+  }
+  function mPintarCorrer() {
+    const fu = (document.getElementById('mFuente') || {}).textContent || '';
+    const act = (typeof LT !== 'undefined' && LT.actual) ? LT.actual : null;
+    document.getElementById('mCorrerEst').innerHTML =
+      '<div class="m-dim">Corte en pantalla</div><b>' + mEsc(mCorte() || '—') + '</b><br>' + mEsc(fu) +
+      '<br><br><div class="m-dim">Lista de trabajo (F8_DETALLE)</div><b>' + (act ? fmt(act.length) + ' líneas' : 'Vea el paso 1') + '</b>';
+  }
+  window.mPasosEstado = mPasosEstado;
+  const _mRK = renderKPIs;
+  renderKPIs = function (rows) { const r = _mRK(rows); mPasosEstado(); return r; };
+  setInterval(mPasosEstado, 15000);
 
   // ---------- Fuente del dato (publicado / en vivo / histórico) ----------
   const _mFetch = fetchAndLoad;
@@ -3564,24 +3631,25 @@ document.addEventListener('keydown', e => {
 
   // ---------- Recorrido guiado (el mismo de los otros tableros) ----------
   const M_TOUR = [
-    { sel: '.m-fp-1', t: '1 · Aquí empieza el trabajo', x: 'Preparar lista de trabajo: elija qué Formas 8 y renglones va a asignar hoy. Puede filtrar por las que ventanilla ya confirmó que llegaron al almacén.' },
-    { sel: '.m-fp-2', t: '2 · Revisar el corte', x: 'Después de correr el Motor, revise el resultado: Renglones es el detalle línea por línea; las otras vistas resumen por unidad, sin stock, unidades sin cobertura, pedidos con error y categoría.' },
-    { sel: '.m-acc', t: '3 · Entregar', x: 'Con el corte revisado: notifique a las unidades (WhatsApp o correo) y descargue la hoja de asignación y los reportes.' },
+    { sel: '.m-pasos', t: 'El trabajo del día en 4 pasos', x: 'Cada paso es una pantalla. Debajo de cada número se ve cómo va: la lista enviada, la hora del corte, el fill rate y si ya se notificó.' },
+    { sel: '.m-pas[data-paso="1"]', t: '1 · Preparar lista', x: 'Aquí empieza el día: elija qué Formas 8 y renglones se asignan. Puede filtrar por las que ventanilla confirmó que llegaron.' },
+    { sel: '.m-pas[data-paso="2"]', t: '2 · Correr el Motor', x: 'Por ahora se corre desde la hoja de cálculo. Esta pantalla muestra el corte y la lista con que se trabajó.' },
+    { sel: '.m-pas[data-paso="3"]', t: '3 · Revisar el corte', x: 'Renglones, Por unidad, Sin stock y las demás vistas, con filtros e indicadores.' },
     { sel: '#mFuente', t: 'De dónde vienen los datos', x: 'Verde = copia publicada del corte (abre al instante). Si el corte cambió y la copia aún no se actualiza, la página avisa y lee en vivo del Motor.' },
     { sel: '.m-filtros', t: 'Filtros', x: 'Busque por código, Forma 8, unidad, categoría o estado. "Más filtros" abre fechas, tipo y "solo UE en cero". Enter o Aplicar.' },
     { sel: '#mKpis', t: 'Indicadores', x: 'Líneas, solicitado, asignado y fill rate del filtro actual. Prioridad clínica cuenta los renglones vitales y en cero.' },
     { sel: '#mChips', t: 'Estados', x: 'Un clic filtra por completos, parciales o sin stock. Los conteos no cambian al filtrar para que pueda comparar.' },
-    { sel: '.m-acc-g', t: 'Notificar a las unidades', x: 'WhatsApp abre los mensajes por WhatsApp Web, uno por unidad. El correo deja constancia con el detalle.' },
-    { sel: '.m-acc-g:nth-child(2)', t: 'Descargas', x: 'Hoja de asignación en PDF, Detalle en Excel (lo filtrado o todo el corte), Reservas y Llenado por cuota. Se generan en el navegador.' },
     { sel: '#mColBtn', t: 'Columnas', x: 'Muestre u oculte columnas. Su selección se guarda en este equipo. "Todas" vuelve a las 30 columnas.' },
+    { sel: '#mSubtabs', t: 'Vistas del corte', x: 'Renglones es el detalle línea por línea; las otras resumen. "Descargar lo filtrado" baja a Excel lo que está en pantalla.' },
     { sel: '#tbl_asignacion tbody tr .m-lnk', t: 'Cómo se asignó', x: 'Abre el flujo de la línea: pedido, prioridad clínica, tope del mes, empaque, inventario del CEDIS y resultado.' },
-    { sel: '#btnLoadHistory', t: 'Histórico', x: 'Carga todas las asignaciones archivadas. "Corte diario" vuelve al corte del día.' },
+    { sel: '.m-ent', tab: 'entregar', t: '4 · Entregar', x: 'Notifique a las unidades (WhatsApp abre un mensaje por unidad; el correo deja constancia), descargue la hoja de asignación y los reportes. La página anota a qué hora se hizo cada cosa.' },
+    { sel: '#btnLoadHistory', tab: 'asignacion', t: 'Histórico', x: 'Carga todas las asignaciones archivadas. "Corte diario" vuelve al corte del día.' },
     { sel: '#themeToggle', t: 'Tema', x: 'Cambia entre claro y oscuro.' }
   ];
   let tourI = 0;
   function iniciarTour() { tourI = 0; showTab('asignacion'); document.getElementById('tour').classList.add('open'); pasoTour(); }
   function pasoTour() {
-    const p = M_TOUR[tourI]; const el = document.querySelector(p.sel); if (!el) return cerrarTour();
+    const p = M_TOUR[tourI]; if (p.tab) showTab(p.tab); const el = document.querySelector(p.sel); if (!el) return cerrarTour();
     if (el.scrollIntoView) el.scrollIntoView({ block: 'center' });
     setTimeout(() => {
       const r = el.getBoundingClientRect(), hl = document.getElementById('tourHl');
@@ -3750,6 +3818,7 @@ document.addEventListener('keydown', e => {
       : 'F8_DETALLE está <b>vacía</b>';
     ltEl('ltActualTxt').innerHTML = ltEl('ltActual').innerHTML; ltEl('ltActual').innerHTML = '';
     const b = ltEl('ltVerActual'); if (b) b.onclick = ltDescargarActual;
+    if (window.mPasosEstado) window.mPasosEstado();
   }
 
   function ltSel(f, on) {
