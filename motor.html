@@ -465,15 +465,18 @@ body.m tbody tr:hover td{background:#f7faff}
 [data-theme="dark"] .m-run-msg{color:#cbd5e1}
 @media (max-width:1100px){.m-run{grid-template-columns:1fr}}
 /* ---- Paso 4 compacto ---- */
-.m-ent-bar{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;border:1px solid #e1e6ee;border-radius:12px;padding:8px 12px;background:#fff;margin:6px 0}
-.m-ent-g{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.m-ent-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;margin:6px 0}
+.m-ent-g{display:flex;gap:6px;align-items:center;flex-wrap:wrap;border-radius:10px;padding:5px 8px;border:1px solid transparent}
+.m-ent-g:nth-child(1){background:#e9f6ee;border-color:#c9e8d4}.m-ent-g:nth-child(2){background:#e8f0fc;border-color:#c7d9f5}.m-ent-g:nth-child(3){background:#f3f0fa;border-color:#ddd4f0}
+.m-ent-g:nth-child(1) .m-ent-l{color:#1f6b3d}.m-ent-g:nth-child(2) .m-ent-l{color:#1e4f9a}.m-ent-g:nth-child(3) .m-ent-l{color:#5b3d99}
+.m-ent-g.m-ent-arch{background:transparent;border-color:transparent}
+[data-theme="dark"] .m-ent-g:nth-child(1){background:#12301f;border-color:#1f4a31}[data-theme="dark"] .m-ent-g:nth-child(2){background:#14274a;border-color:#22406e}[data-theme="dark"] .m-ent-g:nth-child(3){background:#241b3a;border-color:#3a2d5c}
 .m-ent-l{font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin-right:2px}
 .m-ent-arch{margin-left:auto;font-size:12.5px}
 .m-ent-res{padding:7px 12px;font-size:12.5px}
 .m-ent-fil{margin-top:0;display:inline-flex;margin-left:6px}
 .m-arch-ok{background:#eaf7ee;color:#1f6b3d;border-radius:999px;padding:3px 10px;font-weight:600}
 .m-arch-no{background:#fff6e0;color:#8a5a00;border-radius:999px;padding:3px 10px;font-weight:600}
-[data-theme="dark"] .m-ent-bar{background:#0f172a;border-color:#24324d}
 [data-theme="dark"] .m-arch-ok{background:#12301f;color:#8fd6a8}[data-theme="dark"] .m-arch-no{background:#3a2f12;color:#f3cf7a}
 
 .m-pas small.m-warn{color:#a86b00!important;font-weight:600}
@@ -3644,6 +3647,8 @@ document.addEventListener('keydown', e => {
     document.getElementById('mColBtn').closest('.m-tabs-r').style.visibility = tab === 'asignacion' ? 'visible' : 'hidden';
     document.querySelectorAll('.m-pas').forEach(b => { const on = b.dataset.paso === paso; b.classList.toggle('m-on', on); b.setAttribute('aria-current', on ? 'step' : 'false'); });
     ['#mKpis', '#mSubtabs', '#mChips', '#mLeyenda'].forEach(sel => { const el = document.querySelector(sel); if (el) el.style.display = enRevision ? '' : 'none'; });
+    // Fuera del paso 3 la barra de título no aporta (la tarjeta del paso ya dice dónde está): se oculta y no deja espacio.
+    { const vb = document.querySelector('.m-vista-bar'); if (vb) vb.style.display = enRevision ? '' : 'none'; }
     // Los filtros sirven para revisar (3) y para entregar (4): la hoja y el Excel filtrado salen con ellos.
     const fi = document.querySelector('.m-filtros'); if (fi) fi.style.display = (enRevision || paso === '4') ? '' : 'none';
     if (paso === '2') mPintarCorrer();
