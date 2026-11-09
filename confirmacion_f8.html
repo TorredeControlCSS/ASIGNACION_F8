@@ -682,32 +682,68 @@ document.getElementById('btnConfirmar').onclick=async ()=>{
     cedis:d.cedis, cantidad:d.cantidad,
     grupos:(d.grupos||[]).map(g=>g.grupo)
   }));
-  const btn=document.getElementById('btnConfirmar');
-  btn.disabled=true;btn.textContent='Confirmando…';
-  // Quitar de la vista al instante y recordarlo en este equipo hasta que el JSON lo refleje
-  const _conf=[...SEL];
-  ovlMarcar(_conf);
-  [ALL, ALL_TODOS||[]].forEach(l=>l.forEach(d=>{ if(SEL.has(d.nDoc)) d.estado='BUFFER'; }));
-  DOCS=DOCS.filter(d=>!SEL.has(d.nDoc));
-  SEL.clear();
+  // 8-nov-2026 · CONFIRMACION POR TANDAS. Antes todo iba en UNA direccion web; con mas de
+  // ~30 F8 Google la rechazaba, la pagina las quitaba de la vista igual y decia "se envio":
+  // no se escribia nada en BUFFER_F8. Ahora: tandas de 15, una tras otra, y solo se quita
+  // de la vista lo que el servidor confirmo. Reintentar es seguro: el servidor omite lo que
+  // ya esta en el buffer (no duplica).
+  const TANDA=15, btn=document.getElementById('btnConfirmar');
+  btn.disabled=true;
+  const ok=[], yaEstaban=[], fallidas=[];
+  let ultimoError='';
+  for(let i=0;i<seleccionados.length;i+=TANDA){
+    const lote=seleccionados.slice(i,i+TANDA);
+    btn.textContent=`Confirmando ${Math.min(i+TANDA,seleccionados.length)} de ${seleccionados.length}…`;
+    let res=null;
+    for(let intento=1;intento<=2 && !(res&&res.ok);intento++){
+      try{
+        const url=`${WEBAPP_BASE}?file=buffer_confirmar&payload=${encodeURIComponent(JSON.stringify(lote))}&quien=VENTANILLA`;
+        res=await loadJsonp(url, 60000);
+        if(!(res&&res.ok)) ultimoError=(res&&res.msg)||'respuesta inválida';
+      }catch(err){ res=null; ultimoError=err.message==='Timeout'?'la conexión no respondió':'no se pudo contactar al servidor'; }
+    }
+    if(res&&res.ok){
+      ok.push(...(res.confirmados||[]));
+      yaEstaban.push(...(res.omitidos_ya_en_buffer||[]));
+    }else{
+      fallidas.push(...lote.map(d=>d.nDoc));
+    }
+  }
+  // Solo lo confirmado por el servidor sale de la vista (y se recuerda en este equipo)
+  const hechas=new Set([...ok,...yaEstaban]);
+  if(hechas.size){
+    ovlMarcar([...hechas]);
+    [ALL, ALL_TODOS||[]].forEach(l=>l.forEach(d=>{ if(hechas.has(d.nDoc)) d.estado='BUFFER'; }));
+    DOCS=DOCS.filter(d=>!hechas.has(d.nDoc));
+  }
+  SEL.clear(); fallidas.forEach(n=>SEL.add(n));   // lo que fallo queda seleccionado para reintentar
   if(ALL.length){ const r=resumenLocal(ALL); pintarKPIs(r); pintarFlow(r); }
   render();
-  try{
-    const payload=encodeURIComponent(JSON.stringify(seleccionados));
-    const url=`${WEBAPP_BASE}?file=buffer_confirmar&payload=${payload}&quien=VENTANILLA`;
-    const res=await loadJsonp(url, 45000);
-    if(res&&res.ok){
-      let msg=`✔ ${res.confirmados.length} F8 confirmadas.`;
-      if(res.omitidos_ya_en_buffer&&res.omitidos_ya_en_buffer.length)msg+=` ${res.omitidos_ya_en_buffer.length} ya en buffer.`;
-      toast(msg);
-    }else{
-      toast('No se pudo confirmar: '+((res&&res.msg)||'error')+' — actualice para reintentar',true);
-    }
-  }catch(err){
-    toast('Conexión lenta: se envió, verifique al actualizar. ('+err.message+')',true);
+  btn.textContent='✔ Confirmar recepción en ventanilla';
+  if(!fallidas.length){
+    let msg=`✔ ${ok.length} F8 confirmadas en ventanilla.`;
+    if(yaEstaban.length) msg+=` ${yaEstaban.length} ya estaban confirmadas.`;
+    toast(msg);
+  }else{
+    avisoFijo(`Se confirmaron ${hechas.size} de ${seleccionados.length} F8. `+
+      `${fallidas.length} NO se confirmaron (${ultimoError}) y siguen seleccionadas: `+
+      `pulse otra vez "Confirmar recepción" para reintentar. No se duplica nada.`);
   }
-  finally{btn.textContent='✔ Confirmar recepción en ventanilla';syncBar();}
+  syncBar();
 };
+
+// Aviso que no desaparece solo (para errores que el operativo debe leer)
+function avisoFijo(msg){
+  let a=document.getElementById('avisoFijo');
+  if(!a){ a=document.createElement('div'); a.id='avisoFijo';
+    a.style.cssText='position:fixed;left:50%;bottom:70px;transform:translateX(-50%);max-width:640px;z-index:9999;'+
+      'background:#fdecea;color:#7a1f1a;border:1px solid #e8b4ae;border-radius:8px;padding:12px 40px 12px 16px;'+
+      'font-size:14px;line-height:1.4;box-shadow:0 4px 16px rgba(0,0,0,.15)';
+    document.body.appendChild(a); }
+  a.innerHTML='<b>Atención.</b> '+msg.replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))+
+    '<button type="button" aria-label="Cerrar" style="position:absolute;right:8px;top:8px;border:none;background:none;font-size:18px;cursor:pointer;color:#7a1f1a">×</button>';
+  a.querySelector('button').onclick=()=>a.remove();
+}
 
 /* ===== Pestañas ===== */
 function switchTab(which){
