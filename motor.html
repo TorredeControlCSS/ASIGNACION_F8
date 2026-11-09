@@ -445,6 +445,39 @@ body.m tbody tr:hover td{background:#f7faff}
 [data-theme="dark"] .m-lt-manvent li{background:#0f172a;border-color:#3b2c5c}
 [data-theme="dark"] .m-lt-man-tag{background:#2a1d45;color:#d6c2f5}
 
+/* ---- Paso 2 · correr el Motor (8-nov-2026) ---- */
+.m-run{display:grid;grid-template-columns:1fr minmax(260px,340px);gap:18px;align-items:start;padding:6px 0}
+.m-run-l{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.m-run-l li{display:flex;align-items:center;gap:12px;border:1px solid #e1e6ee;border-radius:12px;padding:10px 14px;background:#fff}
+.m-run-l li>div{flex:1;min-width:0}.m-run-l b{display:block;font-size:14px}.m-run-l small{display:block;font-size:12.5px;color:#5a6878;margin-top:2px}
+.m-run-n{width:28px;height:28px;border-radius:50%;background:#eef2f7;color:#475569;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex:none}
+.m-run-l li.ok{background:#eaf7ee;border-color:#bfe3c9}.m-run-l li.ok .m-run-n{background:#2e8b57;color:#fff}
+.m-run-l li.warn{background:#fff6e0;border-color:#f1d79a}.m-run-l li.warn .m-run-n{background:#d99a00;color:#fff}
+.m-run-l li.bad{background:#fdecec;border-color:#f2c0c0}.m-run-l li.bad .m-run-n{background:#c0392b;color:#fff}
+.m-run-l li.run{background:#e8f1fd;border-color:#bcd3f5}.m-run-l li.run .m-run-n{background:#2563eb;color:#fff}
+.m-run-acc{border:1px solid #e1e6ee;border-radius:12px;padding:16px;background:#f7f9fc;display:flex;flex-direction:column;gap:10px}
+.m-btn-xl{font-size:16px;padding:14px 18px;width:100%}
+.m-run-barra{height:8px;border-radius:99px;background:#e3e9f2;overflow:hidden}.m-run-barra i{display:block;height:100%;width:0;background:#2563eb;transition:width .6s}
+.m-run-msg{font-size:13px;line-height:1.5;color:#2b3644}.m-run-msg .m-run-op{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.m-run-pie{margin:10px 2px 0;font-size:12.5px;max-width:900px}
+[data-theme="dark"] .m-run-l li{background:#0f172a;border-color:#24324d}[data-theme="dark"] .m-run-acc{background:#0f1729;border-color:#24324d}
+[data-theme="dark"] .m-run-l li.ok{background:#12301f}[data-theme="dark"] .m-run-l li.warn{background:#3a2f12}[data-theme="dark"] .m-run-l li.bad{background:#3a1717}[data-theme="dark"] .m-run-l li.run{background:#14274a}
+[data-theme="dark"] .m-run-msg{color:#cbd5e1}
+@media (max-width:1100px){.m-run{grid-template-columns:1fr}}
+/* ---- Paso 4 compacto ---- */
+.m-ent-bar{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;border:1px solid #e1e6ee;border-radius:12px;padding:8px 12px;background:#fff;margin:6px 0}
+.m-ent-g{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.m-ent-l{font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin-right:2px}
+.m-ent-arch{margin-left:auto;font-size:12.5px}
+.m-ent-res{padding:7px 12px;font-size:12.5px}
+.m-ent-fil{margin-top:0;display:inline-flex;margin-left:6px}
+.m-arch-ok{background:#eaf7ee;color:#1f6b3d;border-radius:999px;padding:3px 10px;font-weight:600}
+.m-arch-no{background:#fff6e0;color:#8a5a00;border-radius:999px;padding:3px 10px;font-weight:600}
+[data-theme="dark"] .m-ent-bar{background:#0f172a;border-color:#24324d}
+[data-theme="dark"] .m-arch-ok{background:#12301f;color:#8fd6a8}[data-theme="dark"] .m-arch-no{background:#3a2f12;color:#f3cf7a}
+
+.m-pas small.m-warn{color:#a86b00!important;font-weight:600}
+
   </style>
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
@@ -551,43 +584,37 @@ body.m tbody tr:hover td{background:#f7faff}
         </div>
       </div>
       <div id="view_correr" class="view" style="display:none">
-        <div class="m-pant">
-          <div class="m-pant-est" id="mCorrerEst"></div>
-          <div class="m-pant-txt">
-            <p><b>Por ahora el Motor se corre desde la hoja de cálculo</b>, como siempre: menú del Motor → correr la asignación diaria, con la lista de trabajo que preparó en el paso 1.</p>
-            <p>Al terminar, el corte se publica solo y aparece en el paso 3 en pocos minutos. Si la página detecta un corte más nuevo que el publicado, lo lee en vivo.</p>
-            <p class="m-dim">Próximamente: correr el Motor desde esta pantalla, con avance y botón "Confirmar y archivar".</p>
+        <div class="m-run">
+          <ol class="m-run-l">
+            <li id="mRun1"><span class="m-run-n">1</span><div><b>Lista de trabajo</b><small id="mRun1t">Consultando…</small></div></li>
+            <li id="mRun2"><span class="m-run-n">2</span><div><b>Corte anterior guardado en el histórico</b><small id="mRun2t">Consultando…</small></div>
+              <button type="button" id="mArchivarYa" class="m-btn m-btn-out" hidden>Archivar ahora</button></li>
+            <li id="mRun3"><span class="m-run-n">3</span><div><b>Correr el Motor</b><small id="mRun3t">Listo para correr.</small></div></li>
+          </ol>
+          <div class="m-run-acc">
+            <button type="button" id="mCorrerBtn" class="m-btn m-btn-hoja m-btn-xl">Correr el Motor</button>
+            <div class="m-run-barra" id="mRunBarra" hidden><i id="mRunBar"></i></div>
+            <div id="mRunMsg" class="m-run-msg"></div>
           </div>
         </div>
+        <p class="m-dim m-run-pie">El Motor asigna la lista de trabajo del paso 1 con el inventario, las reservas y las reglas de prioridad de siempre (tarda de 1 a 4 minutos). Corre en el servidor: si se cae el internet, sigue corriendo y esta pantalla retoma el avance al volver. Al terminar, el corte nuevo se carga solo y pasa al paso 3.</p>
       </div>
 
       <div id="view_entregar" class="view" style="display:none">
         <div class="m-ent-res" id="mEntRes"></div>
-        <div class="m-ent">
-          <div class="m-ent-card">
-            <h3>Notificar a las unidades</h3>
-            <p>Avise a cada unidad qué se le asignó en el último corte.</p>
-            <div class="m-ent-b">
-              <button id="btnWaNotif" class="m-btn m-btn-wa" onclick="abrirPanelWA()">WhatsApp a las unidades</button>
-              <button id="btnEmailNotif" class="m-btn m-btn-out" onclick="abrirPanelCorreo()">Correo (constancia)</button>
-            </div>
-          </div>
-          <div class="m-ent-card">
-            <h3>Hoja de asignación</h3>
-            <p>El documento para preparar y despachar el pedido. Sale con los filtros de arriba (por ejemplo, una unidad o un CEDIS).</p>
-            <div class="m-ent-b"><button id="btnExportPdf" class="m-btn m-btn-hoja">Hoja de asignación (PDF)</button></div>
-          </div>
-          <div class="m-ent-card">
-            <h3>Reportes en Excel</h3>
-            <p>"Detalle filtrado" usa los filtros de arriba; "Detalle completo" trae todo el corte.</p>
-            <div class="m-ent-b">
-              <button id="btnExportXlsx" class="m-btn m-btn-out">Detalle filtrado</button>
-              <button id="mXlsxTodo" class="m-btn m-btn-out" type="button">Detalle completo</button>
-              <button id="btnExportReservas" class="m-btn m-btn-out" onclick="exportarReservasExcel()">Reservas</button>
-              <button id="btnExportCuotas" class="m-btn m-btn-out">Llenado por cuota</button>
-              <button id="btnExportPdfManager" hidden>Informe gerencial</button>
-            </div>
-          </div>
+        <div class="m-ent-bar">
+          <div class="m-ent-g"><span class="m-ent-l">Notificar</span>
+            <button id="btnWaNotif" class="m-btn m-btn-wa" onclick="abrirPanelWA()" title="Avise a cada unidad qué se le asignó">WhatsApp</button>
+            <button id="btnEmailNotif" class="m-btn m-btn-out" onclick="abrirPanelCorreo()" title="Correo de constancia a cada unidad">Correo</button></div>
+          <div class="m-ent-g"><span class="m-ent-l">Despachar</span>
+            <button id="btnExportPdf" class="m-btn m-btn-hoja" title="Documento para preparar y despachar; sale con los filtros de arriba">Hoja de asignación (PDF)</button></div>
+          <div class="m-ent-g"><span class="m-ent-l">Excel</span>
+            <button id="btnExportXlsx" class="m-btn m-btn-out" title="Con los filtros de arriba">Filtrado</button>
+            <button id="mXlsxTodo" class="m-btn m-btn-out" type="button" title="Todo el corte">Completo</button>
+            <button id="btnExportReservas" class="m-btn m-btn-out" onclick="exportarReservasExcel()">Reservas</button>
+            <button id="btnExportCuotas" class="m-btn m-btn-out" title="Reporte mensual de llenado contra la cuota de consumo">Llenado por cuota</button>
+            <button id="btnExportPdfManager" hidden>Informe gerencial</button></div>
+          <div class="m-ent-g m-ent-arch" id="mEntArch"></div>
         </div>
         <div class="m-ent-prev">
           <h3>Lo que se va a entregar</h3>
@@ -3641,7 +3668,11 @@ document.addEventListener('keydown', e => {
       mSet('mPas2', DATA && DATA.length ? 'Corte ' + mCorte() + (m ? ' · ' + m[1] : '') : 'Sin corte cargado', DATA && DATA.length);
       let sol = 0, asg = 0; (DATA || []).forEach(r => { sol += +r.Solicitado || 0; asg += +r.Asignado || 0; });
       mSet('mPas3', DATA && DATA.length ? fmt(DATA.length) + ' renglones · fill rate ' + (sol ? (asg / sol * 100).toFixed(1) : '0') + ' %' : '—', false);
-      mSet('mPas4', 'Notificar y descargar el último corte', false);
+      const ea = window.__mRun && window.__mRun.est && window.__mRun.est();
+      const cr = ea && ea.corrida;
+      if (cr && (cr.estado === 'pendiente' || cr.estado === 'corriendo')) mSet('mPas2', 'El Motor está corriendo…', false);
+      mSet('mPas4', ea && ea.archivado === false ? 'Corte sin archivar en el histórico' : ea && ea.archivado ? 'Corte archivado · notificar y descargar' : 'Notificar y descargar el último corte', !!(ea && ea.archivado));
+      const p4 = document.getElementById('mPas4'); if (p4) p4.classList.toggle('m-warn', !!(ea && ea.archivado === false));
       if (document.getElementById('view_entregar').style.display !== 'none') mPintarEntrega();
     } catch (err) { console.warn('pasos:', err); }
   }
@@ -3665,10 +3696,10 @@ document.addEventListener('keydown', e => {
     if (!DATA || !DATA.length) { er.textContent = 'No hay corte cargado.'; return; }
     const fil = mFiltrosActivos(), rs = fil.length ? (LAST_FILTERED || []) : DATA;
     const f8 = new Set(rs.map(r => r.N_Doc)).size, ue = new Set(rs.map(r => r.Punto)).size;
-    er.innerHTML = (fil.length ? 'Con estos filtros se entrega: ' : 'Sin filtros: se entrega <b>todo</b> el último corte: ') +
-      '<b>' + fmt(rs.length) + '</b> renglones · <b>' + fmt(f8) + '</b> ' + (f8 === 1 ? 'Forma 8' : 'Formas 8') + ' · <b>' + fmt(ue) + '</b> ' + (ue === 1 ? 'unidad' : 'unidades') + ' · corte del ' + mEsc(mCorte()) +
-      (fil.length ? '<div class="m-ent-fil">' + fil.map(f => '<span class="m-chip-f">' + mEsc(f.l) + ': ' + mEsc(f.v) + ' <button type="button" data-q="' + f.id + '" title="Quitar este filtro">×</button></span>').join('') + '</div>'
-                  : '<div class="m-dim" style="margin-top:4px">Para entregar una sola unidad, CEDIS o Forma 8, elija arriba y pulse Aplicar, o haga clic en una Forma 8 de la lista.</div>');
+    // Una sola línea: qué se entrega y con qué filtros (los filtros se quitan con ×)
+    er.innerHTML = 'Se entrega: <b>' + fmt(rs.length) + '</b> renglones · <b>' + fmt(f8) + '</b> F8 · <b>' + fmt(ue) + '</b> ' + (ue === 1 ? 'unidad' : 'unidades') +
+      (fil.length ? '<span class="m-ent-fil">' + fil.map(f => '<span class="m-chip-f">' + mEsc(f.l) + ': ' + mEsc(f.v) + ' <button type="button" data-q="' + f.id + '" title="Quitar este filtro">×</button></span>').join('') + '</span>'
+                  : ' <span class="m-dim">· todo el corte (clic en una F8 de la lista para entregar solo esa)</span>');
     er.querySelectorAll('button[data-q]').forEach(b => b.onclick = () => mQuitarFiltro(b.dataset.q));
     // vista previa
     const porUE = new Map();
@@ -3689,13 +3720,7 @@ document.addEventListener('keydown', e => {
     document.getElementById('mEntNota').textContent = nF8 > LIM ? 'Se muestran ' + LIM + ' Formas 8; filtre por unidad para ver el resto.' : '';
   }
 
-  function mPintarCorrer() {
-    const fu = (document.getElementById('mFuente') || {}).textContent || '';
-    const act = (typeof LT !== 'undefined' && LT.actual) ? LT.actual : null;
-    document.getElementById('mCorrerEst').innerHTML =
-      '<div class="m-dim">Corte en pantalla</div><b>' + mEsc(mCorte() || '—') + '</b><br>' + mEsc(fu) +
-      '<br><br><div class="m-dim">Lista de trabajo (F8_DETALLE)</div><b>' + (act ? fmt(act.length) + ' líneas' : 'Vea el paso 1') + '</b>';
-  }
+  function mPintarCorrer() { if (window.__mRun) window.__mRun.entrar(); }
   window.mPasosEstado = mPasosEstado;
   const _mRK = renderKPIs;
   renderKPIs = function (rows) { const r = _mRK(rows); mPasosEstado(); return r; };
@@ -3820,6 +3845,146 @@ document.addEventListener('keydown', e => {
     if (e.key === 'ArrowRight' && document.getElementById('tSig')) document.getElementById('tSig').click();
     if (e.key === 'ArrowLeft' && document.getElementById('tAnt')) document.getElementById('tAnt').click();
   });
+
+
+// =====================================================================
+// PASO 2 · CORRER EL MOTOR DESDE LA PÁGINA + CANDADO DEL HISTÓRICO (8-nov-2026)
+// La página pide la corrida; el Motor corre en el servidor (activador de una sola vez).
+// La página pregunta el avance cada 6 s; si se cae el internet, al volver retoma.
+// El histórico: si el corte que está en el Motor no se archivó, se pregunta antes de
+// sobrescribirlo (archivar y correr / correr sin archivar / cancelar).
+// =====================================================================
+(function () {
+  const $ = id => document.getElementById(id);
+  const hora = iso => { try { return new Date(iso).toLocaleString('es-PA', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); } catch (e) { return ''; } };
+  const R = { est: null, poll: null, t0: 0, cargando: false };
+  function li(id, cls, txt) { const el = $(id); if (!el) return; el.className = cls || ''; $(id + 't').innerHTML = txt; }
+  function msg(h) { $('mRunMsg').innerHTML = h || ''; }
+  function barra(p) { const b = $('mRunBarra'); if (p == null) { b.hidden = true; return; } b.hidden = false; $('mRunBar').style.width = Math.min(100, p) + '%'; }
+
+  function pintarLista() {
+    const act = (typeof LT !== 'undefined' && LT.actual) ? LT.actual : null;
+    if (!act) { li('mRun1', '', 'Consultando la lista de trabajo…'); return 0; }
+    const f8 = new Set(act.map(x => x[0])).size, ue = new Set(act.map(x => x[1])).size;
+    if (!act.length) { li('mRun1', 'bad', 'La lista está vacía. Prepárela en el <a href="#" id="mRunIr1">paso 1</a>.'); const a = $('mRunIr1'); if (a) a.onclick = e => { e.preventDefault(); showTab('lista'); }; return 0; }
+    li('mRun1', 'ok', fmt(act.length) + ' líneas · ' + fmt(f8) + ' F8 · ' + fmt(ue) + ' ' + (ue === 1 ? 'unidad' : 'unidades'));
+    return act.length;
+  }
+  function pintarArchivo() {
+    const e = R.est, b = $('mArchivarYa');
+    if (!e) { li('mRun2', '', 'Consultando…'); b.hidden = true; return; }
+    const c = e.corte;
+    if (e.archivado === true) { li('mRun2', 'ok', 'Sí. El corte de ' + hora(c.t) + (c.n ? ' (' + fmt(c.n) + ' renglones)' : '') + ' está en el histórico' + (e.archivo && e.archivo.por ? ' · archivó ' + mEsc(String(e.archivo.por).split('@')[0]) : '') + '.'); b.hidden = true; }
+    else if (e.archivado === false) { li('mRun2', 'warn', 'No. El corte de ' + hora(c.t) + ' (' + fmt(c.n) + ' renglones) todavía no está en el histórico. Si corre sin archivarlo, ese corte se pierde y sus F8 vuelven a salir como nuevas.'); b.hidden = false; }
+    else { li('mRun2', 'warn', 'Sin registro del corte actual. Archívelo una vez para asegurarlo (si ya estaba, no se duplica).'); b.hidden = false; }
+    const a = $('mEntArch');
+    if (a) a.innerHTML = e.archivado === true ? '<span class="m-arch-ok">Corte archivado en el histórico</span>'
+      : '<span class="m-arch-no">Corte sin archivar</span> <button type="button" class="m-btn m-btn-out" id="mEntArchB">Archivar</button>';
+    const ab = $('mEntArchB'); if (ab) ab.onclick = archivar;
+  }
+  function pintarCorrida() {
+    const c = R.est && R.est.corrida, btn = $('mCorrerBtn');
+    btn.disabled = false; btn.textContent = 'Correr el Motor';
+    if (!c) { li('mRun3', '', 'Listo para correr.'); barra(null); return; }
+    if (c.estado === 'pendiente' || c.estado === 'corriendo') {
+      const ini = Date.parse(c.inicio || c.pedido), seg = Math.max(0, Math.round((Date.now() - ini) / 1000));
+      li('mRun3', 'run', (c.estado === 'pendiente' ? 'En cola: arranca en segundos…' : 'Corriendo… ' + Math.floor(seg / 60) + ':' + String(seg % 60).padStart(2, '0')) + ' · pedido por ' + mEsc(c.usuario) + (c.archivarAntes ? ' · archiva el corte anterior primero' : ''));
+      btn.disabled = true; btn.textContent = 'El Motor está corriendo…';
+      barra(c.estado === 'pendiente' ? 5 : 10 + Math.min(85, seg / 180 * 85));
+      return;
+    }
+    barra(null);
+    if (c.estado === 'ok') li('mRun3', 'ok', 'Última corrida ' + hora(c.fin) + ': ' + fmt(c.renglones) + ' renglones en ' + c.seg + ' s · ' + mEsc(c.usuario) + '.');
+    else if (c.estado === 'error') li('mRun3', 'bad', 'La última corrida (' + hora(c.fin) + ') falló: ' + mEsc(c.error) + '. Corrija y vuelva a correr; el corte anterior sigue intacto si el error fue antes de escribir.');
+    else if (c.estado === 'interrumpida') li('mRun3', 'bad', 'La corrida de ' + hora(c.inicio) + ' no terminó (límite de tiempo del servidor). Avise a la Torre de Control antes de volver a correr.');
+    else if (c.estado === 'no_arranco') li('mRun3', 'bad', 'La corrida pedida a las ' + hora(c.pedido) + ' no arrancó. Puede pedirla de nuevo.');
+  }
+  async function consultar() {
+    try {
+      const e = await window.__mPost('motorEstadoCorte', {});
+      if (e && e.success) R.est = e;
+    } catch (err) { /* internet inestable: se reintenta en el próximo ciclo */ }
+    pintarArchivo(); pintarCorrida(); if (window.mPasosEstado) window.mPasosEstado();
+    return R.est;
+  }
+  function vigilar() {
+    if (R.poll) return;
+    R.poll = setInterval(async () => {
+      const prev = R.est && R.est.corrida && R.est.corrida.estado;
+      const e = await consultar(); const c = e && e.corrida;
+      if (!c || (c.estado !== 'pendiente' && c.estado !== 'corriendo')) {
+        clearInterval(R.poll); R.poll = null;
+        if (c && c.estado === 'ok' && (prev === 'pendiente' || prev === 'corriendo')) terminado(c);
+      }
+    }, 6000);
+  }
+  async function terminado(c) {
+    window.__mBeep && window.__mBeep();
+    msg('<b>Listo.</b> El Motor asignó ' + fmt(c.renglones) + ' renglones en ' + c.seg + ' s. Cargando el corte nuevo…');
+    if (typeof ltRefrescarActual === 'function') try { ltRefrescarActual(); } catch (e) {}
+    // A prueba de internet malo: se lee el corte publicado (liviano). Si el recién hecho aún se está publicando,
+    // la franja amarilla lo avisa y la página lo carga sola en 1–3 min (o en vivo con un botón).
+    try { await window.__motorCargar(); } catch (e) {}
+    msg('<b>Corte nuevo listo</b> (' + fmt(c.renglones) + ' renglones). Revíselo en el paso 3 y, si está bien, archívelo en el paso 4. <button type="button" class="m-btn m-btn-pri" id="mRunIr3">Ir al paso 3</button>');
+    const b = $('mRunIr3'); if (b) b.onclick = () => showTab('asignacion');
+  }
+  async function pedir(opc) {
+    const btn = $('mCorrerBtn'); btn.disabled = true; btn.textContent = 'Enviando…';
+    msg('Pidiendo la corrida al Motor…');
+    try {
+      const r = await window.__mPostSeguro('motorCorrer', opc || {}, i => { if (i > 1) msg('Conexión lenta: reintento ' + i + ' de 3…'); });
+      if (r.requiereArchivo) {
+        R.est = r.estado; pintarArchivo(); btn.disabled = false; btn.textContent = 'Correr el Motor';
+        const c = r.estado.corte;
+        msg('<b>El corte anterior no está en el histórico</b> (' + hora(c.t) + ', ' + fmt(c.n) + ' renglones). ¿Qué hago?' +
+          '<div class="m-run-op"><button type="button" class="m-btn m-btn-pri" id="mRunA">Archivarlo y correr (recomendado)</button>' +
+          '<button type="button" class="m-btn m-btn-out" id="mRunS">Correr sin archivar (ese corte se pierde)</button>' +
+          '<button type="button" class="m-btn m-btn-ghost" id="mRunC">Cancelar</button></div>');
+        $('mRunA').onclick = () => pedir({ archivarAntes: true });
+        $('mRunS').onclick = () => { if (confirm('El corte de ' + hora(c.t) + ' no quedará en el histórico y sus Formas 8 volverán a salir como nuevas en el paso 1. ¿Correr igual?')) pedir({ sinArchivar: true }); };
+        $('mRunC').onclick = () => msg('');
+        return;
+      }
+      if (!r.success) throw new Error(r.error || 'No se pudo pedir la corrida');
+      R.est = Object.assign({}, r.estado || {}, { corrida: r.corrida });
+      msg(r.yaEnCurso ? 'Ya hay una corrida en curso (pedida por ' + mEsc(r.corrida.usuario) + '). Esta pantalla muestra su avance.' : 'Corrida pedida. Puede quedarse aquí o seguir con otra cosa: el Motor corre en el servidor.');
+      pintarCorrida(); vigilar();
+    } catch (err) { btn.disabled = false; btn.textContent = 'Correr el Motor'; msg('<span class="m-neg">' + mEsc(err.message || String(err)) + '</span>'); }
+  }
+  async function archivar() {
+    const b = $('mArchivarYa'), b2 = $('mEntArchB'); [b, b2].forEach(x => { if (x) { x.disabled = true; x.textContent = 'Archivando…'; } });
+    msg('Archivando el corte en el histórico (unos segundos)…');
+    try {
+      const r = await window.__mPostSeguro('motorArchivar', {});
+      if (!r.success) throw new Error(r.error || 'No se pudo archivar');
+      R.est = r.estado || R.est;
+      msg(r.ya ? 'Ese corte ya estaba en el histórico; no se duplicó nada.' : '<b>Archivado:</b> ' + fmt(r.archivadas) + ' renglones agregados al histórico (total ' + fmt(r.total) + '). La marca "Ya asignada" del paso 1 se actualiza en unos minutos.');
+    } catch (err) { msg('<span class="m-neg">' + mEsc(err.message || String(err)) + '</span> Si se cortó el internet, vuelva a pulsar: nunca se duplica.'); }
+    [b, b2].forEach(x => { if (x) { x.disabled = false; x.textContent = x.id === 'mEntArchB' ? 'Archivar' : 'Archivar ahora'; } });
+    pintarArchivo();
+  }
+  async function entrar() {
+    pintarLista(); pintarArchivo(); pintarCorrida();
+    if (typeof ltRefrescarActual === 'function' && window.__mSesion && window.__mSesion()) ltRefrescarActual().then(pintarLista);
+    const e = await consultar();
+    if (e && e.corrida && (e.corrida.estado === 'pendiente' || e.corrida.estado === 'corriendo')) vigilar();
+  }
+  window.__mRun = { entrar, consultar, pintarLista, est: () => R.est };
+  window.__mBeep = function () {
+    try { const A = new (window.AudioContext || window.webkitAudioContext)(), o = A.createOscillator(), g = A.createGain();
+      o.frequency.value = 880; g.gain.value = 0.08; o.connect(g); g.connect(A.destination); o.start(); o.stop(A.currentTime + 0.25); } catch (e) {}
+  };
+  document.addEventListener('DOMContentLoaded', () => {});
+  $('mCorrerBtn').addEventListener('click', () => {
+    const n = pintarLista();
+    if (!n && LT && LT.actual) { msg('<span class="m-neg">La lista de trabajo está vacía.</span>'); return; }
+    pedir({});
+  });
+  $('mArchivarYa').addEventListener('click', archivar);
+  // El estado del archivo se consulta al abrir (para el paso 4) y luego cada 2 min.
+  setTimeout(() => { if (window.__mSesion && window.__mSesion()) consultar(); }, 4000);
+  setInterval(() => { if (window.__mSesion && window.__mSesion() && !R.poll) consultar(); }, 120000);
+})();
 
   // ===================== ETAPA 3 · Preparar la lista de trabajo (F8_DETALLE) =====================
   // Pendientes = líneas de REQUISICIONES_F8 de los últimos N días (servidor, con PIN).
