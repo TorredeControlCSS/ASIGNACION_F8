@@ -3526,12 +3526,22 @@ document.addEventListener('keydown', e => {
     window.__currentData = rows;
     window.__exportRows = rows; window.__exportName = 'asignacion';
     const cols = mVisibles();
-    const LIM = 3000;
-    tb.innerHTML = rows.slice(0, LIM).map((r, i) =>
-      `<tr>${cols.map(c => { const k = [c.c || '', c.cls ? c.cls(r) : ''].join(' ').trim(); return `<td${k ? ` class="${k}"` : ''}>${c.f(r, i)}</td>`; }).join('')}</tr>`
-    ).join('') || `<tr><td colspan="${cols.length}" class="m-vacio">No hay renglones con estos filtros.</td></tr>`;
-    document.getElementById('mTblNota').textContent = rows.length > LIM
-      ? `Se muestran ${fmt(LIM)} de ${fmt(rows.length)} renglones. Use los filtros o descargue el Detalle en Excel para verlos todos.` : '';
+    // 9-nov · se dibujan 400 renglones (y más con un botón). Con un filtro nuevo se vuelve a 400.
+    if (rows !== renderAsignacion._rows) { renderAsignacion._rows = rows; renderAsignacion._lim = 400; }
+    const LIM = renderAsignacion._lim;
+    const fila = (r, i) => `<tr>${cols.map(c => { const k = [c.c || '', c.cls ? c.cls(r) : ''].join(' ').trim(); return `<td${k ? ` class="${k}"` : ''}>${c.f(r, i)}</td>`; }).join('')}</tr>`;
+    // los primeros 100 se ven al instante; el resto se agrega en tandas sin congelar la pantalla
+    const tok = renderAsignacion._tok = (renderAsignacion._tok || 0) + 1, PRIM = 100, TANDA = 150, tope = Math.min(LIM, rows.length);
+    tb.innerHTML = rows.slice(0, Math.min(PRIM, tope)).map(fila).join('') || `<tr><td colspan="${cols.length}" class="m-vacio">No hay renglones con estos filtros.</td></tr>`;
+    const seguir = desde => { if (tok !== renderAsignacion._tok || desde >= tope) return;
+      const h = Math.min(tope, desde + TANDA); let s = ''; for (let i = desde; i < h; i++) s += fila(rows[i], i);
+      tb.insertAdjacentHTML('beforeend', s); setTimeout(() => seguir(h), 0); };
+    setTimeout(() => seguir(PRIM), 0);
+    const nota = document.getElementById('mTblNota');
+    nota.innerHTML = rows.length > LIM
+      ? `Se muestran ${fmt(LIM)} de ${fmt(rows.length)} renglones. <button type="button" class="m-btn m-btn-out m-btn-sm" id="mTblMas">Mostrar ${fmt(Math.min(400, rows.length - LIM))} más</button> <span class="m-dim">o use los filtros. El Excel trae todos.</span>` : '';
+    const bm = document.getElementById('mTblMas');
+    if (bm) bm.onclick = () => { renderAsignacion._lim = LIM + 400; renderAsignacion(rows); };
   }
 
   // ---------- Modal "Cómo se asignó" como flujo ----------
@@ -3867,7 +3877,7 @@ document.addEventListener('keydown', e => {
 // =====================================================================
 (function () {
   const $ = id => document.getElementById(id);
-  const hora = iso => { try { return new Date(iso).toLocaleString('es-PA', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); } catch (e) { return ''; } };
+  const hora = iso => { if (!iso) return ''; try { return new Date(iso).toLocaleString('es-PA', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); } catch (e) { return ''; } };
   const R = { est: null, poll: null, t0: 0, cargando: false };
   function li(id, cls, txt) { const el = $(id); if (!el) return; el.className = cls || ''; $(id + 't').innerHTML = txt; }
   function msg(h) { $('mRunMsg').innerHTML = h || ''; }
@@ -3884,7 +3894,7 @@ document.addEventListener('keydown', e => {
   function pintarArchivo() {
     const e = R.est, b = $('mArchivarYa');
     if (!e) { li('mRun2', '', 'Consultando…'); b.hidden = true; return; }
-    const c = e.corte;
+    const c = e.corte || {};   // 9-nov · sin corte registrado no debe romper la pantalla
     if (e.archivado === true) { li('mRun2', 'ok', 'Sí. El corte de ' + hora(c.t) + (c.n ? ' (' + fmt(c.n) + ' renglones)' : '') + ' está en el histórico' + (e.archivo && e.archivo.por ? ' · archivó ' + mEsc(String(e.archivo.por).split('@')[0]) : '') + '.'); b.hidden = true; }
     else if (e.archivado === false) { li('mRun2', 'warn', 'No. El corte de ' + hora(c.t) + ' (' + fmt(c.n) + ' renglones) todavía no está en el histórico. Si corre sin archivarlo, ese corte se pierde y sus F8 vuelven a salir como nuevas.'); b.hidden = false; }
     else { li('mRun2', 'warn', 'Sin registro del corte actual. Archívelo una vez para asegurarlo (si ya estaba, no se duplica).'); b.hidden = false; }
@@ -4122,8 +4132,9 @@ document.addEventListener('keydown', e => {
     const rows = ltFiltradas(), LIM = LT.lim || 400, tb = ltEl('ltTabla').querySelector('tbody');
     const porF8 = new Map();
     rows.slice(0, LIM).forEach(f => { if (!porF8.has(f.f8)) porF8.set(f.f8, []); porF8.get(f.f8).push(f); });
-    let h = '';
+    const partes = [];
     porF8.forEach((ls, f8) => {
+      let h = '';
       const a = ls[0], nSel = ls.filter(x => LT.sel.has(x.k)).length;
       h += `<tr class="m-lt-g"><td><input type="checkbox" data-f8="${mEsc(f8)}" ${nSel === ls.length ? 'checked' : ''} ${nSel && nSel < ls.length ? 'data-medio="1"' : ''}></td>
         <td colspan="16"><b>${mEsc(f8)}</b> · ${ltFmtF(a.fecha)} · ${mEsc(a.tipo)} · <b>${mEsc(a.ue)}</b>${a.cat ? ' · ' + mEsc(a.cat) : ''}${a.cedis ? ' · suple ' + mEsc(a.cedis) : ''}${a.rec ? ' <span class="m-lt-rec">Recibida en ventanilla ' + ltFmtF(a.rec).slice(0, 5) + '</span>' : ''}${a.manual ? '<span class="m-lt-man-tag">Manual</span>' : ''}
@@ -4154,9 +4165,20 @@ document.addEventListener('keydown', e => {
           <td class="m-nw">${f.rec ? ltFmtF(f.rec) : '<span class="m-dim">—</span>'}</td>
           <td class="m-cel ${cls}">${est}</td></tr>`;
       });
+      partes.push([h, ls.length]);
     });
-    tb.innerHTML = h || `<tr><td colspan="17" class="m-vacio">${LT.filas.length ? 'No hay líneas con estos filtros.' : 'Presione "Cargar pendientes".'}</td></tr>`;
-    tb.querySelectorAll('input[data-medio]').forEach(c => { c.indeterminate = true; });
+    // los primeros ~100 renglones se ven al instante; el resto se agrega en tandas sin congelar la pantalla
+    const v0 = LT.selV, tok = LT.tokPintar = (LT.tokPintar || 0) + 1, medio = () => tb.querySelectorAll('input[data-medio]').forEach(c => { c.indeterminate = true; c.removeAttribute('data-medio'); });
+    const tanda = (desde, max) => { let s = '', n = 0, i = desde; for (; i < partes.length && n < max; i++) { s += partes[i][0]; n += partes[i][1]; } return [s, i]; };
+    const [h0, i0] = tanda(0, 100);
+    tb.innerHTML = h0 || `<tr><td colspan="17" class="m-vacio">${LT.filas.length ? 'No hay líneas con estos filtros.' : 'Presione "Cargar pendientes".'}</td></tr>`;
+    medio();
+    const seguir = desde => { if (tok !== LT.tokPintar || desde >= partes.length) return;
+      const [s, i] = tanda(desde, 150); tb.insertAdjacentHTML('beforeend', s); medio();
+      // si marcaron algo mientras se agregaban tandas, estas filas nuevas se ponen al día
+      if (LT.selV !== v0) { const v = LT.selV; ltRefrescarFilas([...porF8.keys()].slice(0, i).flatMap(f8 => porF8.get(f8).map(f => f.k))); LT.selV = v; }
+      setTimeout(() => seguir(i), 0); };
+    setTimeout(() => seguir(i0), 0);
     ltEl('ltNota').innerHTML = rows.length > LIM ? `Se muestran ${fmt(LIM)} de ${fmt(rows.length)} líneas. <button type="button" class="m-btn m-btn-out m-btn-sm" id="ltMas">Mostrar ${fmt(Math.min(400, rows.length - LIM))} más</button> <span class="m-dim">o filtre por unidad o CEDIS.</span>` : (rows.length ? fmt(rows.length) + ' líneas con estos filtros.' : '');
     const bm = ltEl('ltMas'); if (bm) bm.onclick = () => { LT.lim = LIM + 400; ltPintar(); };
     ltResumen();
@@ -4164,6 +4186,7 @@ document.addEventListener('keydown', e => {
 
   // Actualiza solo las filas tocadas (marcar/desmarcar), sin volver a dibujar la tabla.
   function ltRefrescarFilas(ks) {
+    LT.selV = (LT.selV || 0) + 1;
     const tb = ltEl('ltTabla').querySelector('tbody'), f8s = new Set();
     ks.forEach(k => {
       const tr = tb.querySelector('tr[data-k="' + CSS.escape(k) + '"]'); if (!tr) return;
