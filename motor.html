@@ -562,7 +562,9 @@ body.m tbody tr:hover td{background:#f7faff}
 .pre-peligro{border-color:#d14343!important;color:#9b1c1c!important}
 .pre-tag{display:inline-block;font-size:10.5px;font-weight:700;border-radius:6px;padding:1px 6px;background:#efe7fb;color:#5b2d99;white-space:nowrap}
 .pre-ban{background:#f7f2fd;border:1px solid #d9c8f2;color:#3e1f6e;border-radius:10px;padding:9px 12px;font-size:13px;line-height:1.5;margin:0 0 8px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-.pre-ban[hidden]{display:none}.pre-b{background:#5b2d99!important;color:#fff!important}
+.pre-ban[hidden]{display:none}.pre-ac-no{opacity:.55;cursor:not-allowed}.pre-ac-no small{color:#b42318!important}
+.lt-vent{background:#e9f5ee;border:1px solid #b8e0c6;color:#14532d;border-radius:10px;padding:8px 12px;font-size:13px;margin:0 0 8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}.lt-vent[hidden]{display:none}
+.pre-b{background:#5b2d99!important;color:#fff!important}
 .pre-usar{border-color:#c8b3ea!important;color:#5b2d99!important}
 [data-theme="dark"] .pre-card,[data-theme="dark"] .pre-r{background:#0f172a;border-color:#24324d;color:#e2e8f0}
   </style>
@@ -727,6 +729,7 @@ body.m tbody tr:hover td{background:#f7faff}
       <div id="view_pre" class="view" style="display:none"></div>
       <div id="view_lista" class="view" style="display:none">
         <div class="pre-ban" id="preBanP1" hidden></div>
+        <div class="lt-vent" id="ltVentBan" hidden></div>
         <div class="m-lt-bar">
           <div class="m-f m-f-dias"><label title="Fecha de la Forma 8">Período</label>
             <select id="ltDias"><option value="7">Últimos 7 días</option><option value="15">Últimos 15 días</option><option value="30" selected>Últimos 30 días</option><option value="45">Últimos 45 días</option><option value="60">Últimos 60 días</option><option value="90">Últimos 90 días</option></select></div>
@@ -4262,6 +4265,7 @@ document.addEventListener('keydown', e => {
   function ltPintar() {
     if (!LT.cargado) return;
     if (window.__preBannerP1) setTimeout(window.__preBannerP1, 0);   // 18-nov-2026 · aviso de preasignaciones
+    try { ltVentBanner(); } catch (e) {}   // 18-nov-2026 · aviso de recepción en ventanilla
     // 9-nov · se dibujan pocas filas (400, y más con un botón): dibujar 2.500 tardaba ~1,3 s por clic.
     const rows = ltFiltradas(), LIM = LT.lim || 400, tb = ltEl('ltTabla').querySelector('tbody');
     const porF8 = new Map();
@@ -4338,6 +4342,25 @@ document.addEventListener('keydown', e => {
     });
     ltResumen();
   }
+  // 18-nov-2026 · Lo que el equipo registra en la ventanilla (panel de confirmación de recepción) se ve aquí.
+  function ltVentBanner() {
+    const el = ltEl('ltVentBan'); if (!el) return;
+    if (!LT.cargado) { el.hidden = true; return; }
+    const hoy = new Date(Date.now() - 5 * 3600e3).toISOString().slice(0, 10), rec = new Map();
+    LT.filas.forEach(f => { if (f.rec) { const o = rec.get(f.f8) || { d: String(f.rec).slice(0, 10), pend: false }; if (!f.asig) o.pend = true; rec.set(f.f8, o); } });
+    const v = [...rec.values()], nHoy = v.filter(o => o.d === hoy).length, nPend = v.filter(o => o.pend).length;
+    const desde = v.length ? v.map(o => o.d).sort()[0] : '';
+    el.hidden = false;
+    el.innerHTML = v.length
+      ? `<span>Recepción en ventanilla: <b>${v.length.toLocaleString('es-PA')} F8 recibidas</b> en el periodo${nHoy ? ' · <b>' + nHoy + ' hoy</b>' : ''} · ${nPend.toLocaleString('es-PA')} con renglones aún sin asignar${desde ? ' · registro desde ' + ltFmtF(desde) : ''}</span>`
+        + (ltEl('ltRec').value === 'si' ? '<button type="button" class="m-btn m-btn-out m-btn-sm" id="ltVentTodas">Ver todas</button>' : '<button type="button" class="m-btn m-btn-out m-btn-sm" id="ltVentSolo">Ver solo las recibidas</button>')
+      : '<span>Recepción en ventanilla: todavía no hay F8 de este periodo registradas como recibidas.</span>';
+  }
+  document.addEventListener('click', ev => {
+    const b = ev.target.closest('#ltVentSolo,#ltVentTodas'); if (!b) return;
+    const s = ltEl('ltRec'); s.value = b.id === 'ltVentSolo' ? 'si' : ''; s.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+
   function ltResumen() {
     const sel = [...LT.sel.values()], f8 = new Set(sel.map(s => s.f8)), ue = new Set(sel.map(s => s.punto));
     ltEl('ltResumen').innerHTML = `<b>${fmt(sel.length)}</b> ${sel.length === 1 ? 'línea seleccionada' : 'líneas seleccionadas'} · <b>${fmt(f8.size)}</b> ${f8.size === 1 ? 'Forma 8' : 'Formas 8'} · <b>${fmt(ue.size)}</b> ${ue.size === 1 ? 'unidad' : 'unidades'}` +
@@ -5170,24 +5193,34 @@ document.addEventListener('keydown', e => {
       try { navigator.clipboard.writeText(msg).then(ok, () => toast(E(msg), 12000)); } catch (e) { toast(E(msg), 12000); }
     }
 
+    // 18-nov-2026 · Solo se reparte a lo que atiende CEDIS Panamá (columna «CEDIS QUE SUPLE» de MAESTROS_DINALOG),
+    // más CEDIS Divisa y CEDIS Chiriquí como receptores. Lo de sus unidades ya viene dentro de la fila de su CEDIS.
+    function cedisDe(ue) { const k = U(ue); if (!PRE.cedisMap) { PRE.cedisMap = new Map(); (PRE.T.unidades || []).forEach(u => PRE.cedisMap.set(U(u[0]), String(u[2] || ''))); } return PRE.cedisMap.has(k) ? PRE.cedisMap.get(k) : ''; }
+    const deAqui = ue => { const c = U(cedisDe(ue)); return !c || c.indexOf('PANAMA') >= 0; };
     // buscador propio de unidades (sin datalist del navegador)
     const AC = { items: [], sel: -1 };
     function acAbrir(qv) {
       const p = planActual(), pan = document.getElementById('preAC'); if (!p || !pan) return;
       const n = U(qv), ya = new Set(p.lineas.map(l => U(l.ue)));
-      AC.items = (PRE.T.unidades || []).filter(u => U(u[0]).indexOf('CEDIS PANAMA') !== 0 && !ya.has(U(u[0])) && (!n || U(u[0]).includes(n))).slice(0, 60); AC.sel = AC.items.length ? 0 : -1;
-      pan.innerHTML = AC.items.length ? AC.items.map((u, i) => `<div class="pre-ac-i${i === AC.sel ? ' on' : ''}" role="option" data-pre-ac="${i}"><b>${E(u[0])}</b><small>${E(u[1] || '')}${u[2] ? ' · suple ' + E(u[2]) : ''}</small></div>`).join('') : '<div class="pre-ac-v">Ninguna unidad con ese nombre en el directorio.</div>';
+      const cand = (PRE.T.unidades || []).filter(u => U(u[0]).indexOf('CEDIS PANAMA') !== 0 && !ya.has(U(u[0])) && (!n || U(u[0]).includes(n)));
+      AC.items = cand.filter(u => deAqui(u[0])).concat(cand.filter(u => !deAqui(u[0]))).slice(0, 60);
+      AC.sel = AC.items.findIndex(u => deAqui(u[0]));
+      pan.innerHTML = AC.items.length ? AC.items.map((u, i) => deAqui(u[0])
+          ? `<div class="pre-ac-i${i === AC.sel ? ' on' : ''}" role="option" data-pre-ac="${i}"><b>${E(u[0])}</b><small>${E(u[1] || '')}${u[2] && U(u[0]).indexOf('CEDIS') === 0 ? ' · recibe de CEDIS Panamá' : ''}</small></div>`
+          : `<div class="pre-ac-i pre-ac-no" role="option" aria-disabled="true" data-pre-ac="${i}"><b>${E(u[0])}</b><small>${E(u[1] || '')} · la atiende ${E(u[2])}: se le reparte a través de ese CEDIS</small></div>`).join('')
+        : '<div class="pre-ac-v">Ninguna unidad con ese nombre en el directorio.</div>';
       pan.classList.add('open');
     }
     const acCerrar = () => { const pan = document.getElementById('preAC'); if (pan) pan.classList.remove('open'); AC.sel = -1; };
-    const acElegir = i => { const u = AC.items[i]; if (!u) return; acCerrar(); agregar(u[0]); setTimeout(() => { const x = document.getElementById('preUE'); if (x) x.focus(); }, 0); };
+    const acElegir = i => { const u = AC.items[i]; if (!u) return; if (!deAqui(u[0])) return toast(E(u[0]) + ' la atiende <b>' + E(cedisDe(u[0])) + '</b>: desde aquí se le reparte a ese CEDIS, no a la unidad.'); acCerrar(); agregar(u[0]); setTimeout(() => { const x = document.getElementById('preUE'); if (x) x.focus(); }, 0); };
     document.addEventListener('input', ev => { if (ev.target.id === 'preUE') acAbrir(ev.target.value); if (ev.target.id === 'preQ') { PRE.q = ev.target.value; const pos = ev.target.selectionStart; pintar(); const x = document.getElementById('preQ'); if (x) { x.focus(); x.setSelectionRange(pos, pos); } } });
     document.addEventListener('focusin', ev => { if (ev.target.id === 'preUE') acAbrir(ev.target.value); });
     document.addEventListener('keydown', ev => {
       if (ev.target.id !== 'preUE') return;
       const mark = () => document.querySelectorAll('#preAC .pre-ac-i').forEach((d, i) => { d.classList.toggle('on', i === AC.sel); if (i === AC.sel) d.scrollIntoView({ block: 'nearest' }); });
-      if (ev.key === 'ArrowDown' && AC.items.length) { ev.preventDefault(); AC.sel = (AC.sel + 1) % AC.items.length; mark(); }
-      else if (ev.key === 'ArrowUp' && AC.items.length) { ev.preventDefault(); AC.sel = (AC.sel - 1 + AC.items.length) % AC.items.length; mark(); }
+      const okIdx = AC.items.map((u, i) => deAqui(u[0]) ? i : -1).filter(i => i >= 0), pos = okIdx.indexOf(AC.sel);
+      if (ev.key === 'ArrowDown' && okIdx.length) { ev.preventDefault(); AC.sel = okIdx[(pos + 1) % okIdx.length]; mark(); }
+      else if (ev.key === 'ArrowUp' && okIdx.length) { ev.preventDefault(); AC.sel = okIdx[(pos - 1 + okIdx.length) % okIdx.length]; mark(); }
       else if (ev.key === 'Enter') { ev.preventDefault(); if (AC.sel >= 0) acElegir(AC.sel); }
       else if (ev.key === 'Escape') acCerrar();
     });
@@ -5200,9 +5233,12 @@ document.addEventListener('keydown', e => {
       else if (b.dataset.preDel !== undefined && p) { p.lineas.splice(Number(b.dataset.preDel), 1); sucio(); pintar(); }
       else if (b.dataset.preF8 !== undefined) pedirF8(Number(b.dataset.preF8));
       else if (b.id === 'preSug' && p) { const r = PRE.T.renglones[p.sku] || { ues: {} }; let n = 0;
-        Object.keys(r.ues || {}).filter(u => N(r.ues[u][0]) > 0 && U(u).indexOf('CEDIS PANAMA') !== 0).sort((a, z) => N(r.ues[z][0]) - N(r.ues[a][0]))
+        const cons = Object.keys(r.ues || {}).filter(u => N(r.ues[u][0]) > 0 && U(u).indexOf('CEDIS PANAMA') !== 0), fuera = cons.filter(u => !deAqui(u));
+        cons.filter(deAqui).sort((a, z) => N(r.ues[z][0]) - N(r.ues[a][0]))
           .forEach(u => { if (!p.lineas.some(l => U(l.ue) === U(u))) { p.lineas.push({ ue: u, q: 0, estado: 'ESPERANDO_F8', f8: '' }); n++; } });
-        sucio(); pintar(); toast(n ? n + ' unidades agregadas (las que reportan consumo de este renglón). Use «Proponer reparto» o escriba las cantidades.' : 'Ya están todas las unidades que reportan consumo de este renglón.'); }
+        sucio(); pintar();
+        const nota = fuera.length ? ' No se agregaron ' + fuera.length + ' que atienden CEDIS Divisa o CEDIS Chiriquí: su consumo ya va en la fila de su CEDIS.' : '';
+        toast((n ? n + ' unidades agregadas: las de CEDIS Panamá y los CEDIS del interior que consumen este renglón. Use «Proponer reparto» o escriba las cantidades.' : 'Ya están todas las unidades de CEDIS Panamá que consumen este renglón.') + nota, 8000); }
       else if (b.id === 'preGuardar') guardar();
       else if (b.id === 'preAnular') anular();
     });
