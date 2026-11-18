@@ -562,7 +562,7 @@ body.m tbody tr:hover td{background:#f7faff}
 .pre-peligro{border-color:#d14343!important;color:#9b1c1c!important}
 .pre-tag{display:inline-block;font-size:10.5px;font-weight:700;border-radius:6px;padding:1px 6px;background:#efe7fb;color:#5b2d99;white-space:nowrap}
 .pre-ban{background:#f7f2fd;border:1px solid #d9c8f2;color:#3e1f6e;border-radius:10px;padding:9px 12px;font-size:13px;line-height:1.5;margin:0 0 8px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-.pre-ban[hidden]{display:none}.aj-emp{display:flex;flex-wrap:wrap;gap:4px;margin:3px 0}.aj-emp>span.em{background:#eef2f7;border-radius:5px;padding:0 6px;font-size:11.5px;white-space:nowrap}.aj-emp-mal{color:#b42318;font-size:11.5px}.pre-emp{margin:2px 0 8px}.pre-bul{font-size:11px;color:#5b6575;margin-top:2px;white-space:nowrap}.pre-ac-no{opacity:.55;cursor:not-allowed}.pre-ac-no small{color:#b42318!important}
+.pre-ban[hidden]{display:none}.aj-resv{border:1px solid #f5b800;background:#fff7db;border-radius:7px;padding:1px 7px;font:inherit;font-size:12px;cursor:pointer;white-space:nowrap}.aj-tp{font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:#eef2f7}.aj-tp-u{background:#fde8e8;color:#b42318}.aj-tp-m{background:#e8effd;color:#1f4fa3}.aj-resv-hint{background:#fff4e5;border:1px solid #fcd9a8;border-radius:8px;padding:8px 10px;margin:10px 0;font-size:13px}.aj-emp{display:flex;flex-wrap:wrap;gap:4px;margin:3px 0}.aj-emp>span.em{background:#eef2f7;border-radius:5px;padding:0 6px;font-size:11.5px;white-space:nowrap}.aj-emp-mal{color:#b42318;font-size:11.5px}.pre-emp{margin:2px 0 8px}.pre-bul{font-size:11px;color:#5b6575;margin-top:2px;white-space:nowrap}.pre-ac-no{opacity:.55;cursor:not-allowed}.pre-ac-no small{color:#b42318!important}
 .lt-vent{background:#e9f5ee;border:1px solid #b8e0c6;color:#14532d;border-radius:10px;padding:8px 12px;font-size:13px;margin:0 0 8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}.lt-vent[hidden]{display:none}
 .pre-b{background:#5b2d99!important;color:#fff!important}
 .pre-usar{border-color:#c8b3ea!important;color:#5b2d99!important}
@@ -3612,7 +3612,7 @@ document.addEventListener('keydown', e => {
     { k: 'red', t: 'Redond.', c: 'right', f: r => r.Acaparamiento ? `<span class="m-recorte" title="Recortado por tope de cuota">${fmt(r.Solicitado_redondeado)}</span>` : fmt(r.Solicitado_redondeado) },
     { k: 'asg', t: 'Asig.', c: 'right m-b', f: r => fmt(r.Asignado) },
     { k: 'trans', t: 'Trans.', c: 'right m-col-tr', f: r => dashSi(r.Asignado_Transito) },
-    { k: 'resv', t: 'Resv.', c: 'right m-col-rs', f: r => dashSi(r.Reservado) },
+    { k: 'resv', t: 'Resv.', c: 'right m-col-rs', f: r => window.__resvCelda ? window.__resvCelda(r) : dashSi(r.Reservado) },
     { k: 'docr', t: 'Doc.R', c: 'm-small', f: r => mEsc(r.Reservado_Doc) },
     { k: 'pend', t: 'Pend.', c: 'right', f: r => fmt(r.Pendiente) },
     { k: 'bultos', t: 'Bultos', c: 'center m-nw', tit: 'Terciario / secundario / primario', f: r => fmtBultosTriple(r.Bultos_Ter || 0, r.Bultos_Sec || 0, r.Bultos_Prim || 0) },
@@ -4647,7 +4647,7 @@ document.addEventListener('keydown', e => {
     const N = v => Number(v || 0);
     const E = v => String(v == null ? '' : v).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     const F = n => Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: 1 });
-    const MOTIVOS = ['Liberar tope de cuota', 'Dar más meses de consumo', 'Ajuste a empaque cerrado', 'Distribución de escasos', 'Cedido a otra unidad', 'Preasignación de tránsito', 'Corrección del pedido', 'Otro'];
+    const MOTIVOS = ['Liberar tope de cuota', 'Dar más meses de consumo', 'Ajuste a empaque cerrado', 'Distribución de escasos', 'Cedido a otra unidad', 'Preasignación de tránsito', 'Ya tiene reserva vigente', 'Corrección del pedido', 'Otro'];
     const enVivo = () => window._MODO_ACTUAL !== 'history';
     window.__ajVisible = () => AJ.activo && enVivo();
     window.__ajPendientes = () => AJ.pend.size;
@@ -4752,6 +4752,69 @@ document.addEventListener('keydown', e => {
     const esTope = r => r.Acaparamiento || /CUOTA/.test(String(r.Estado || '').toUpperCase());
 
     // ---------- celda de la columna "Ajuste del analista" ----------
+    // 18-nov-2026 · RESERVAS (columna Resv.): qué está reservado para esta unidad, de qué tipo (mensual/urgencia) y desde cuándo.
+    // reservas_motor.json = todas las reservas con su tipo; reservas.json aporta la fecha de asignación de las de 3 días o más.
+    const RV = { m: null, h: null, cargando: null };
+    const RAWR = 'https://api.github.com/repos/TorredeControlCSS/ASIGNACION_F8/contents/';
+    const leerR = n => fetch(RAWR + n + '?t=' + Date.now(), { cache: 'no-store', headers: { Accept: 'application/vnd.github.raw' } })
+      .then(r => { if (!r.ok) throw new Error(n + ' ' + r.status); return r.json(); })
+      .catch(() => fetch(n + '?t=' + Date.now(), { cache: 'no-store' }).then(r => { if (!r.ok) throw new Error(n + ' ' + r.status); return r.json(); }));
+    function rvCargar() {
+      if (RV.m) return Promise.resolve();
+      if (!RV.cargando) RV.cargando = Promise.all([leerR('reservas_motor.json'), leerR('reservas.json').catch(() => null)]).then(([m, h]) => {
+        RV.m = (m && m.r) || {}; RV.h = new Map(); RV.gen = m && m.generado;
+        ((h && h.lista) || []).forEach(L => (L.subs || []).forEach(x => RV.h.set(String(x.f8).trim() + '|' + String(L.sku).trim(), x)));
+      }).catch(e => { RV.cargando = null; throw e; });
+      return RV.cargando;
+    }
+    const docsDe = r => String(r.Reservado_Doc || '').split(',').map(x => x.trim()).filter(Boolean);
+    window.__resvCelda = r => {
+      const q = N(r.Reservado); if (!q) return '<span class="m-dim">-</span>';
+      const n = docsDe(r).length;
+      return `<button type="button" class="aj-resv" data-resv="${E(K(r))}" title="Ver qué está reservado y de qué tipo">${F(q)}${n ? ' · ' + n + (n === 1 ? ' reserva' : ' reservas') : ''} ▾</button>`;
+    };
+    function rvFila(f8, sku) {
+      const m = RV.m[f8 + '|' + sku] || null, h = RV.h.get(f8 + '|' + sku) || null;
+      return { f8, q: m ? N(m[0]) : (h ? N(h.cant) : 0), tipo: (m && m[1]) || (h && h.tipo) || '', fechaF8: m ? m[2] : '', ue: (m && m[3]) || (h && h.ue) || '', asig: h ? h.fechaAsig : '', dias: h ? h.dias : null };
+    }
+    const pill = t => t ? `<span class="aj-tp ${/URGEN/.test(t) ? 'aj-tp-u' : (/MENS/.test(t) ? 'aj-tp-m' : '')}">${E(t)}</span>` : '<span class="m-dim">sin dato</span>';
+    async function rvAbrir(k) {
+      const r = filaDe(k); if (!r) return;
+      if (!document.getElementById('ajResM')) document.body.insertAdjacentHTML('beforeend', `<div class="aj-modal" id="ajResM" hidden><div class="aj-modal-c aj-modal-w"><div class="aj-modal-h"><span id="ajResT">Reservas</span><button type="button" class="aj-x" data-cerrar="ajResM">&times;</button></div>
+          <div class="aj-modal-b" id="ajResB"></div><div class="m-modal-f"><button class="m-btn m-btn-out" type="button" data-cerrar="ajResM">Cerrar</button></div></div></div>`);
+      const M = document.getElementById('ajResM'), B = document.getElementById('ajResB'), sku = String(r.Codigo).trim();
+      document.getElementById('ajResT').textContent = 'Reservado para ' + r.Punto + ' · ' + (r.Suministro || sku);
+      B.innerHTML = '<p class="m-dim">Cargando reservas…</p>'; M.hidden = false;
+      try { await rvCargar(); } catch (e) { B.innerHTML = '<p class="aj-val-bad">No se pudo leer el archivo de reservas. Intente de nuevo en un momento.</p>'; return; }
+      const mias = docsDe(r).map(d => rvFila(d, sku)), set = new Set(docsDe(r));
+      const otras = Object.keys(RV.m).filter(x => x.endsWith('|' + sku) && !set.has(x.split('|')[0])).map(x => rvFila(x.split('|')[0], sku)).sort((a, b) => b.q - a.q);
+      const urg = mias.some(x => /URGEN/.test(x.tipo)), men = mias.some(x => /MENS/.test(x.tipo)), esUrg = /URGEN/.test(String(r.Tipo || '').toUpperCase());
+      const dias = x => x.dias != null ? x.dias : (x.asig === '' && !RV.h.has(x.f8 + '|' + sku) ? '<span class="m-dim">menos de 3</span>' : '—');
+      let hint = '';
+      if (urg) hint = `<b>Ya tiene una urgencia reservada</b> de este renglón para esta unidad. Si esta F8 pide lo mismo, puede quedar sin efecto.`;
+      else if (esUrg && men) hint = `Esta F8 es <b>urgencia</b> y la unidad tiene un <b>mensual reservado</b>. Si la urgencia apremia, se puede ajustar ese mensual en SALMI y darle aquí la urgencia.`;
+      const asig = N(finalDe(r));
+      const puede = AJ.activo && asig > 0;
+      B.innerHTML = `<p>Esta línea: ${pill(String(r.Tipo || '').toUpperCase())} · F8 <b class="m-mono">${E(r.N_Doc)}</b> · pide <b>${F(r.Solicitado)}</b> · el Motor le da <b>${F(asig)}</b></p>
+        <table class="m-tbl"><thead><tr><th>Tipo</th><th>F8 reservada</th><th class="right">Cantidad</th><th>Fecha F8</th><th>Asignada</th><th class="right">Días esperando despacho</th></tr></thead><tbody>
+        ${mias.map(x => `<tr><td>${pill(x.tipo)}</td><td class="m-mono">${E(x.f8)}</td><td class="right">${x.q ? F(x.q) : '—'}</td><td>${x.fechaF8 ? E(x.fechaF8) : '—'}</td><td>${x.asig ? E(x.asig) : '—'}</td><td class="right">${dias(x)}</td></tr>`).join('') || '<tr><td colspan="6" class="m-vacio">El corte dice que hay reserva, pero no encuentro el documento en la hoja RESERVAS.</td></tr>'}
+        </tbody></table>
+        ${hint ? `<div class="aj-resv-hint">${hint}</div>` : ''}
+        <div class="aj-acc" style="margin:8px 0">${puede ? `<button type="button" class="m-btn m-btn-hoja m-btn-sm" data-resv-anular="${E(K(r))}">Anular esta línea: ya tiene reserva vigente</button>` : `<span class="m-dim">${asig > 0 ? 'Los ajustes no están activos en este corte.' : 'El Motor no le asignó a esta línea: no hay nada que anular.'}</span>`}</div>
+        <details><summary>Otras unidades con reserva de este renglón (${otras.length})</summary>
+          <table class="m-tbl"><thead><tr><th>Unidad</th><th>Tipo</th><th>F8</th><th class="right">Cantidad</th><th class="right">Días</th></tr></thead><tbody>
+          ${otras.map(x => `<tr><td>${E(x.ue)}</td><td>${pill(x.tipo)}</td><td class="m-mono">${E(x.f8)}</td><td class="right">${F(x.q)}</td><td class="right">${dias(x)}</td></tr>`).join('') || '<tr><td colspan="5" class="m-vacio">Ninguna.</td></tr>'}
+          </tbody></table></details>
+        <p class="m-dim" style="font-size:11.5px;margin-top:8px">Hoja RESERVAS · tipo y fecha de REQUISICIONES_F8 · días desde la asignación (historial) · datos ${RV.gen ? new Date(RV.gen).toLocaleString('es-PA') : ''}</p>`;
+    }
+    document.addEventListener('click', ev => {
+      const b = ev.target.closest('[data-resv]'); if (b) { ev.preventDefault(); rvAbrir(b.dataset.resv); return; }
+      const a = ev.target.closest('[data-resv-anular]'); if (!a) return;
+      const r = filaDe(a.dataset.resvAnular); if (!r) return;
+      poner(r, 0, 'Ya tiene reserva vigente'); document.getElementById('ajResM').hidden = true; repintar();
+      toast('Línea en 0 con motivo «Ya tiene reserva vigente». Queda pendiente: revise y pulse <b>Guardar ajustes</b>.', 7000);
+    });
+
     window.__ajCelda = function (r) {
       const cod = String(r.Codigo).trim(), c = calcSku(cod), d = c.porLinea.get(K(r)) || { tomados: [], liberados: [] };
       const v = validar(r, c), p = AJ.pend.get(K(r)), emp = N(r.Empaque_Ter) || 1, i = E(K(r)), em = window.__emp(cod, emp);
