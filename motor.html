@@ -460,6 +460,30 @@ body.m tbody tr:hover td{background:#f7faff}
 .m-run-barra{height:8px;border-radius:99px;background:#e3e9f2;overflow:hidden}.m-run-barra i{display:block;height:100%;width:0;background:#2563eb;transition:width .6s}
 .m-run-msg{font-size:13px;line-height:1.5;color:#2b3644}.m-run-msg .m-run-op{display:flex;flex-direction:column;gap:6px;margin-top:8px}
 .m-run-pie{margin:10px 2px 0;font-size:12.5px;max-width:900px}
+.tp-card{margin-top:14px;border:1px solid var(--line,#d9dee7);border-radius:12px;padding:14px 16px;background:var(--card,#fff)}
+.tp-cab{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.tp-chip{font-size:12px;padding:2px 9px;border-radius:999px;background:#eef2f7;color:#334}
+.tp-chip.on{background:#fff4d6;color:#7a5200}
+.tp-modos{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tp-op{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--line,#d9dee7);border-radius:10px;padding:10px;cursor:pointer}
+.tp-op:has(input:checked){border-color:#1f3b63;box-shadow:0 0 0 1px #1f3b63}
+.tp-op input[type=radio]{width:auto;flex:0 0 auto;margin:3px 0 0}.tp-op>span{flex:1;text-align:left;font-size:13.5px}
+.tp-bar>span{font-size:12.5px}.tp-tab select{width:auto;max-width:260px}.tp-bus{font-size:13px!important;height:auto}
+.tp-op small{display:block;color:#5b6575;font-size:12.5px;margin-top:2px}
+.tp-num{width:64px;padding:2px 6px;border:1px solid #c5ccd8;border-radius:6px;font:inherit}
+.tp-det{margin-top:10px}.tp-det summary{cursor:pointer;font-weight:600;padding:4px 0}
+.tp-bar{display:flex;gap:10px;align-items:center;margin:8px 0;flex-wrap:wrap}
+.tp-bus{padding:6px 10px;border:1px solid #c5ccd8;border-radius:8px;min-width:240px;font:inherit}
+.tp-tab-w{max-height:360px;overflow:auto;border:1px solid var(--line,#e3e7ee);border-radius:8px}
+.tp-tab{width:100%;border-collapse:collapse;font-size:13px}.tp-tab th{position:sticky;top:0;background:#f4f6fa;text-align:left;padding:6px 8px;font-size:12px}
+.tp-tab td{padding:5px 8px;border-top:1px solid #eef1f5}.tp-tab tr.on td{background:#fffaf0}
+.tp-tab input[type=number]{width:62px}.tp-tab select{font:inherit;font-size:12.5px;padding:2px 4px}
+.tp-tab input:disabled,.tp-tab select:disabled{opacity:.45}
+.tp-sw{position:relative;display:inline-block;width:34px;height:18px}.tp-sw input{opacity:0;width:0;height:0}
+.tp-sw i{position:absolute;inset:0;background:#c5ccd8;border-radius:18px;transition:.15s}.tp-sw i:before{content:"";position:absolute;width:14px;height:14px;left:2px;top:2px;background:#fff;border-radius:50%;transition:.15s}
+.tp-sw input:checked+i{background:#1f3b63}.tp-sw input:checked+i:before{transform:translateX(16px)}
+.tp-pie{margin:8px 0 0;font-size:12px}
+@media(max-width:800px){.tp-modos{grid-template-columns:1fr}}
 [data-theme="dark"] .m-run-l li{background:#0f172a;border-color:#24324d}[data-theme="dark"] .m-run-acc{background:#0f1729;border-color:#24324d}
 [data-theme="dark"] .m-run-l li.ok{background:#12301f}[data-theme="dark"] .m-run-l li.warn{background:#3a2f12}[data-theme="dark"] .m-run-l li.bad{background:#3a1717}[data-theme="dark"] .m-run-l li.run{background:#14274a}
 [data-theme="dark"] .m-run-msg{color:#cbd5e1}
@@ -660,6 +684,18 @@ body.m tbody tr:hover td{background:#f7faff}
             <div class="m-run-barra" id="mRunBarra" hidden><i id="mRunBar"></i></div>
             <div id="mRunMsg" class="m-run-msg"></div>
           </div>
+        </div>
+        <div class="tp-card" id="tpCard">
+          <div class="tp-cab"><b>Tope de cuota de esta corrida</b><span class="tp-chip" id="tpChip">Como siempre</span></div>
+          <div class="tp-modos">
+            <label class="tp-op"><input type="radio" name="tpModo" value="motor" checked> <span><b>Como siempre</b><small>El Motor da a cada unidad hasta su consumo × factor de riesgo del renglón (1.0 a 1.3 meses), menos lo ya despachado este mes.</small></span></label>
+            <label class="tp-op"><input type="radio" name="tpModo" value="general"> <span><b>Tope general para toda la corrida</b><small>Cada unidad recibe hasta <input type="number" id="tpMeses" min="0.5" max="6" step="0.5" value="1.5" class="tp-num"> meses de su consumo, menos lo despachado.</small></span></label>
+          </div>
+          <details class="tp-det" id="tpDet"><summary>Tope propio por renglón <span class="m-dim" id="tpDetN"></span></summary>
+            <div class="tp-bar"><input type="search" id="tpBus" class="tp-bus" placeholder="Buscar código o renglón"><span class="m-dim">Encienda el renglón y elija los meses. Lo que no encienda sigue la opción de arriba.</span><button type="button" class="m-lnk" id="tpLimpiar">Apagar todos</button></div>
+            <div class="tp-tab-w"><table class="tp-tab"><thead><tr><th>Código</th><th>Renglón</th><th class="right">Unidades</th><th class="right">Solicitado</th><th>Tope propio</th><th>Meses</th><th>Motivo</th></tr></thead><tbody id="tpBody"></tbody></table></div>
+          </details>
+          <p class="m-dim tp-pie">Se aplica solo a esta corrida y queda en la bitácora con su nombre. Los renglones vitales y el consumo suprimido siguen protegidos igual que siempre.</p>
         </div>
         <p class="m-dim m-run-pie">El Motor asigna la lista de trabajo del paso 1 con el inventario, las reservas y las reglas de prioridad de siempre (unos 2 a 3 minutos). Corre en el servidor: si se cae el internet, sigue corriendo y esta pantalla retoma el avance al volver. Al terminar, el corte nuevo se carga solo y pasa al paso 3. El histórico, las cuotas y las reservas se guardan en segundo plano, sin hacerle esperar.</p>
       </div>
@@ -4057,7 +4093,8 @@ document.addEventListener('keydown', e => {
     li('mRun3', 'run', 'Iniciando la corrida…'); barra(3);
     const tAvance = setTimeout(() => { if (R.esperando) { msg('El Motor está corriendo en el servidor. Puede seguir con otra cosa; aquí verá el avance.'); vigilar(); } }, 5000);
     try {
-      const r = await window.__mPostSeguro('motorCorrer', opc || {}, i => { if (i > 1) msg('Conexión lenta: la página sigue consultando el avance…'); });
+      opc = Object.assign({}, opc || {}); if (window.__tope) { const t = window.__tope.valor(); if (t) opc.tope = t; }
+      const r = await window.__mPostSeguro('motorCorrer', opc, i => { if (i > 1) msg('Conexión lenta: la página sigue consultando el avance…'); });
       clearTimeout(tAvance);
       if (r.corrida && r.corrida.id) R.mia = r.corrida.id;
       if (r.requiereArchivo) {
@@ -4097,6 +4134,7 @@ document.addEventListener('keydown', e => {
     pintarArchivo();
   }
   async function entrar() {
+    try { if (window.__tope) { window.__tope.chip(); if (document.getElementById('tpDet').open) window.__tope.pintar(); } } catch (e) {}
     pintarLista(); pintarArchivo(); pintarCorrida();
     if (typeof ltRefrescarActual === 'function' && window.__mSesion && window.__mSesion()) ltRefrescarActual().then(pintarLista);
     const e = await consultar();
@@ -5314,5 +5352,66 @@ document.addEventListener('keydown', e => {
   </div>
 </div>
 
+
+<script>
+/* 18-nov-2026 · Paso 2: tope de cuota de la corrida (general y por renglón). Se envía con «Correr el Motor». */
+(function () {
+  const $ = id => document.getElementById(id), E = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const MOT = ['Escasez: repartir entre más unidades', 'Unidad prioritaria / vital', 'Producto por vencer', 'Llega tránsito pronto', 'Indicación de la Dirección', 'Otro'];
+  const KEY = 'motor_tope_v1', hoy = () => new Date().toISOString().slice(0, 10);
+  let T = { modo: 'motor', meses: 1.5, ren: {} };   // ren[sku] = {on, meses, motivo}
+  try { const g = JSON.parse(localStorage.getItem(KEY) || 'null'); if (g && g.dia === hoy()) T = Object.assign(T, g.t); } catch (e) {}
+  const guardar = () => { try { localStorage.setItem(KEY, JSON.stringify({ dia: hoy(), t: T })); } catch (e) {} };
+  const okM = v => { v = Number(v); return v >= 0.5 && v <= 6 ? Math.round(v * 2) / 2 : null; };
+  function renglones() {
+    const act = (typeof LT !== 'undefined' && LT.actual) ? LT.actual : [], m = new Map();
+    act.forEach(x => { const k = String(x[3]).trim(); if (!k) return; const o = m.get(k) || { sku: k, ue: new Set(), sol: 0 }; o.ue.add(x[1]); o.sol += Number(x[4]) || 0; m.set(k, o); });
+    const nom = k => { try { const r = typeof ltSkuDeMaestro === 'function' ? ltSkuDeMaestro(k) : null; return r ? r[0] : ''; } catch (e) { return ''; } };
+    return [...m.values()].map(o => ({ sku: o.sku, nom: nom(o.sku), ues: o.ue.size, sol: o.sol })).sort((a, b) => b.ues - a.ues || a.nom.localeCompare(b.nom));
+  }
+  function encendidos() { const enL = new Set(renglones().map(r => r.sku)); return Object.keys(T.ren).filter(k => T.ren[k].on && enL.has(k) && okM(T.ren[k].meses)); }
+  function chip() {
+    const n = encendidos().length, c = $('tpChip'); if (!c) return;
+    const g = T.modo === 'general' && okM(T.meses);
+    c.textContent = (g ? 'Tope general ' + okM(T.meses) + ' meses' : 'Como siempre') + (n ? ' · ' + n + ' renglón' + (n === 1 ? '' : 'es') + ' con tope propio' : '');
+    c.classList.toggle('on', !!(g || n));
+  }
+  function pintar() {
+    const L = renglones(), q = ($('tpBus').value || '').toLowerCase().trim(), F = n => (window.fmt ? window.fmt(n) : Number(n).toLocaleString('es-PA'));
+    $('tpDetN').textContent = L.length ? '· ' + L.length + ' renglones en la lista' : '· la lista de trabajo está vacía';
+    const V = q ? L.filter(r => (r.sku + ' ' + r.nom).toLowerCase().includes(q)) : L;
+    $('tpBody').innerHTML = V.map(r => { const t = T.ren[r.sku] || {}, on = !!t.on;
+      return `<tr class="${on ? 'on' : ''}" data-sku="${E(r.sku)}"><td class="m-mono">${E(r.sku)}</td><td>${E(r.nom || '—')}</td><td class="right">${r.ues}</td><td class="right">${F(r.sol)}</td>
+        <td><label class="tp-sw"><input type="checkbox" data-t="on" ${on ? 'checked' : ''}><i></i></label></td>
+        <td><input type="number" data-t="meses" min="0.5" max="6" step="0.5" value="${E(t.meses || 1)}" ${on ? '' : 'disabled'}></td>
+        <td><select data-t="motivo" ${on ? '' : 'disabled'}>${MOT.map(m => `<option ${t.motivo === m ? 'selected' : ''}>${E(m)}</option>`).join('')}</select></td></tr>`; }).join('') ||
+      '<tr><td colspan="7" class="m-vacio">' + (L.length ? 'Ningún renglón coincide.' : 'Prepare la lista en el paso 1.') + '</td></tr>';
+    chip();
+  }
+  function montar() {
+    if (!$('tpCard')) return;
+    document.querySelectorAll('input[name=tpModo]').forEach(r => { r.checked = r.value === T.modo; r.addEventListener('change', () => { T.modo = r.value; guardar(); chip(); }); });
+    $('tpMeses').value = T.meses;
+    $('tpMeses').addEventListener('input', () => { T.meses = $('tpMeses').value; T.modo = 'general'; document.querySelector('input[name=tpModo][value=general]').checked = true; guardar(); chip(); });
+    $('tpBus').addEventListener('input', pintar);
+    $('tpDet').addEventListener('toggle', () => { if ($('tpDet').open) pintar(); });
+    $('tpLimpiar').addEventListener('click', () => { Object.values(T.ren).forEach(o => o.on = false); guardar(); pintar(); });
+    $('tpBody').addEventListener('input', ev => { const el = ev.target, tr = el.closest('tr[data-sku]'); if (!tr || !el.dataset.t) return;
+      const k = tr.dataset.sku, o = T.ren[k] || (T.ren[k] = { on: false, meses: 1, motivo: MOT[0] });
+      if (el.dataset.t === 'on') { o.on = el.checked; tr.classList.toggle('on', o.on); tr.querySelectorAll('input[type=number],select').forEach(x => x.disabled = !o.on); }
+      else if (el.dataset.t === 'meses') o.meses = el.value; else o.motivo = el.value;
+      guardar(); chip(); });
+    chip();
+  }
+  /** Lo que viaja con motorCorrer. null = como siempre. */
+  function valor() {
+    const g = T.modo === 'general' ? okM(T.meses) : null, ren = encendidos().map(k => ({ sku: k, ue: '', meses: okM(T.ren[k].meses), motivo: T.ren[k].motivo || '' }));
+    if (g === null && !ren.length) return null;
+    return { general: g, renglones: ren };
+  }
+  window.__tope = { valor, pintar, chip };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', montar); else montar();
+})();
+</script>
 </body>
 </html>
