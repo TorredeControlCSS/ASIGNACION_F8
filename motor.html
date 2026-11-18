@@ -511,6 +511,35 @@ body.m tbody tr:hover td{background:#f7faff}
 .aj-in-l{width:96px;padding:4px 6px;text-align:right;border:1.5px solid #9fb3cc;border-radius:6px;font-size:12px}
 [data-theme="dark"] #tbl_asignacion td.aj-col{background:#12233d}[data-theme="dark"] #tbl_asignacion th.aj-col{background:#16223b;color:#cbd5e1}
 [data-theme="dark"] .aj-modal-c{background:#111a2e;color:#e2e8f0}
+
+/* ---------- 18-nov-2026 · Paso 0 preasignar tránsito ---------- */
+.m-pasos{grid-template-columns:repeat(5,1fr)!important}
+@media (max-width:1100px){.m-pasos{grid-template-columns:repeat(2,1fr)!important}}
+.m-pas.m-pas0{border-color:#d9c8f2;background:#f7f2fd}.m-pas.m-pas0 .m-pas-n{background:#5b2d99;color:#fff}
+.m-pas.m-pas0.m-on{box-shadow:0 0 0 2px #5b2d99 inset;border-color:#5b2d99;background:#f7f2fd}
+.pre-grid{display:grid;grid-template-columns:300px 1fr;gap:14px;margin-top:10px}
+@media (max-width:1100px){.pre-grid{grid-template-columns:1fr}}
+.pre-lista{max-height:70vh;overflow:auto;padding-right:2px}
+.pre-card{border:1px solid #dfe5ee;border-radius:10px;padding:9px 11px;margin-bottom:6px;cursor:pointer;font-size:12.5px;line-height:1.45;background:#fff}
+.pre-card:hover{border-color:#9fb3cc}.pre-card.on{border-color:#5b2d99;box-shadow:0 0 0 2px #5b2d99 inset}
+.pre-sucio{color:#7a5200}
+.pre-r{border:1px solid #e1e6ee;border-radius:12px;padding:12px 14px;background:#fff;min-width:0}
+.pre-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:8px 0}
+.pre-k{border-radius:10px;padding:7px 12px;display:flex;flex-direction:column}.pre-k span{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;opacity:.85}.pre-k b{font-size:18px}
+.pre-k-a{background:#e3edfb;color:#1e4f9a}.pre-k-v{background:#e3f4ea;color:#1f6f43}.pre-k-g{background:#eef1f5;color:#3d4a5a}.pre-k-r{background:#fde4e4;color:#9b1c1c}.pre-k-w{background:#fff1d1;color:#7a5200}
+.pre-acc{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}
+.pre-combo{position:relative;display:inline-block}.pre-combo input{width:300px}
+.pre-ac{position:absolute;left:0;top:calc(100% + 4px);z-index:60;width:400px;max-height:300px;overflow-y:auto;background:#fff;border:1px solid #c9d6ea;border-radius:10px;box-shadow:0 8px 24px rgba(11,31,58,.16);display:none;padding:4px 0}
+.pre-ac.open{display:block}.pre-ac-i{padding:7px 12px;cursor:pointer;display:flex;flex-direction:column;border-bottom:1px solid #f0f3f8}.pre-ac-i b{font-size:12.5px;color:#0b1f3a}.pre-ac-i small{font-size:10.5px;color:#6b7785}
+.pre-ac-i:hover,.pre-ac-i.on{background:#eef4fd}.pre-ac-v{padding:10px 12px;font-size:12px;color:#6b7785}
+.pre-in{width:96px;padding:4px 6px;text-align:right;border:1.5px solid #c8b3ea;border-radius:6px;font-size:12px}
+.pre-est{font-size:11.5px;font-weight:600;border-radius:999px;padding:3px 9px}.pre-est-ok{background:#e3f4ea;color:#1f6f43}.pre-est-p{background:#fff1d1;color:#7a5200}
+.pre-peligro{border-color:#d14343!important;color:#9b1c1c!important}
+.pre-tag{display:inline-block;font-size:10.5px;font-weight:700;border-radius:6px;padding:1px 6px;background:#efe7fb;color:#5b2d99;white-space:nowrap}
+.pre-ban{background:#f7f2fd;border:1px solid #d9c8f2;color:#3e1f6e;border-radius:10px;padding:9px 12px;font-size:13px;line-height:1.5;margin:0 0 8px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.pre-ban[hidden]{display:none}.pre-b{background:#5b2d99!important;color:#fff!important}
+.pre-usar{border-color:#c8b3ea!important;color:#5b2d99!important}
+[data-theme="dark"] .pre-card,[data-theme="dark"] .pre-r{background:#0f172a;border-color:#24324d;color:#e2e8f0}
   </style>
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
@@ -548,6 +577,7 @@ body.m tbody tr:hover td{background:#f7faff}
   <main class="m-page">
     <!-- PASOS DEL DIA: cada paso es una pantalla -->
     <nav class="m-pasos" aria-label="Flujo de trabajo del día">
+      <button type="button" class="m-pas m-pas0" data-paso="0"><span class="m-pas-n">0</span><span class="m-pas-c"><b>Preasignar tránsito</b><small id="mPas0">Repartir antes de que llegue</small></span></button>
       <button type="button" class="m-pas" data-paso="1"><span class="m-pas-n">1</span><span class="m-pas-c"><b>Preparar lista</b><small id="mPas1">Elegir qué se asigna hoy</small></span></button>
       <button type="button" class="m-pas" data-paso="2"><span class="m-pas-n">2</span><span class="m-pas-c"><b>Correr el Motor</b><small id="mPas2">—</small></span></button>
       <button type="button" class="m-pas" data-paso="3"><span class="m-pas-n">3</span><span class="m-pas-c"><b>Revisar el corte</b><small id="mPas3">—</small></span></button>
@@ -657,7 +687,9 @@ body.m tbody tr:hover td{background:#f7faff}
         </div>
       </div>
 
+      <div id="view_pre" class="view" style="display:none"></div>
       <div id="view_lista" class="view" style="display:none">
+        <div class="pre-ban" id="preBanP1" hidden></div>
         <div class="m-lt-bar">
           <div class="m-f m-f-dias"><label title="Fecha de la Forma 8">Período</label>
             <select id="ltDias"><option value="7">Últimos 7 días</option><option value="15">Últimos 15 días</option><option value="30" selected>Últimos 30 días</option><option value="45">Últimos 45 días</option><option value="60">Últimos 60 días</option><option value="90">Últimos 90 días</option></select></div>
@@ -668,7 +700,7 @@ body.m tbody tr:hover td{background:#f7faff}
           <div class="m-f"><label>Tipo</label><select id="ltTipo"><option value="">Todos los tipos</option></select></div>
           <div class="m-f"><label title="Confirmada en el panel de confirmación de recepción (BUFFER_F8)">Recepción en ventanilla</label><select id="ltRec"><option value="">Todas</option><option value="si">Recibidas en ventanilla</option><option value="no">Aún no recibidas</option></select></div>
           <div class="m-f m-f-q"><label>Buscar</label><input id="ltQ" placeholder="F8, código o descripción"></div>
-          <div class="m-f m-f-chk"><label class="m-chk"><input type="checkbox" id="ltOcultarAsig" checked> Ocultar ya asignadas</label>
+          <div class="m-f m-f-chk"><label class="m-chk"><input type="checkbox" id="ltOcultarAsig" checked> Ocultar ya asignadas</label> <label class="m-chk" title="Solo las F8 que coinciden con una preasignación del paso 0"><input type="checkbox" id="ltSoloPre"> Con preasignación</label>
             <label class="m-chk"><input type="checkbox" id="ltSoloSel"> Solo seleccionadas</label></div>
         </div>
         <div id="ltEstado" class="m-lt-estado">Cargue los pendientes para armar la lista. Nada se escribe en F8_DETALLE hasta que usted lo envíe.</div>
@@ -3703,7 +3735,8 @@ document.addEventListener('keydown', e => {
   M_TITULOS.entregar = 'Entregar el corte: notificar a las unidades y descargar';
   const M_REVISION = ['asignacion', 'fill_ue', 'sku_sin', 'ue_sin', 'invalidos', 'fill_cat'];
   let M_ULT_REVISION = 'asignacion';
-  const mPasoDe = tab => tab === 'lista' ? '1' : tab === 'correr' ? '2' : tab === 'entregar' ? '4' : '3';
+  const mPasoDe = tab => tab === 'pre' ? '0' : tab === 'lista' ? '1' : tab === 'correr' ? '2' : tab === 'entregar' ? '4' : '3';
+  M_TITULOS.pre = 'Preasignar tránsito: repartir lo que viene antes de que llegue';
   const _mShowTab = showTab;
   showTab = function (tab) {
     _mShowTab(tab);
@@ -3718,11 +3751,12 @@ document.addEventListener('keydown', e => {
     // Los filtros sirven para revisar (3) y para entregar (4): la hoja y el Excel filtrado salen con ellos.
     const fi = document.querySelector('.m-filtros'); if (fi) fi.style.display = (enRevision || paso === '4') ? '' : 'none';
     if (paso === '2') mPintarCorrer();
+    if (paso === '0' && window.__preEntrar) window.__preEntrar();   // 18-nov-2026 · paso 0
     mPasosEstado();
   };
   document.querySelectorAll('.m-pas').forEach(b => b.addEventListener('click', () => {
     const p = b.dataset.paso;
-    showTab(p === '1' ? 'lista' : p === '2' ? 'correr' : p === '4' ? 'entregar' : M_ULT_REVISION);
+    showTab(p === '0' ? 'pre' : p === '1' ? 'lista' : p === '2' ? 'correr' : p === '4' ? 'entregar' : M_ULT_REVISION);
     document.querySelector('.m-pasos').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }));
   document.getElementById('mXlsxFiltro').addEventListener('click', () => document.getElementById('btnExportXlsx').click());
@@ -4175,9 +4209,10 @@ document.addEventListener('keydown', e => {
   function ltFiltradas() {
     const ue = ltEl('ltUE').value, ce = ltEl('ltCedis').value, ca = ltEl('ltCat').value, ti = ltEl('ltTipo').value, rc = ltEl('ltRec').value;
     const q = ltEl('ltQ').value.trim().toLowerCase(), oc = ltEl('ltOcultarAsig').checked, soloSel = ltEl('ltSoloSel').checked;
+    const soloPre = !!(ltEl('ltSoloPre') && ltEl('ltSoloPre').checked) && !!window.__preDe;
     return LT.filas.filter(f => (!ue || f.ue === ue) && (!ce || f.cedis === ce) && (!ca || f.cat === ca) && (!ti || f.tipo === ti)
       && (!rc || (rc === 'si' ? !!f.rec : !f.rec))
-      && (!oc || !f.asig || LT.sel.has(f.k)) && (!soloSel || LT.sel.has(f.k))
+      && (!oc || !f.asig || LT.sel.has(f.k)) && (!soloSel || LT.sel.has(f.k)) && (!soloPre || !!window.__preDe(f.sku, f.ue))
       && (!q || String(f.f8).toLowerCase().includes(q) || String(f.sku).includes(q) || String(f.sum).toLowerCase().includes(q)));
   }
   function ltIconos(sk) {
@@ -4187,6 +4222,7 @@ document.addEventListener('keydown', e => {
 
   function ltPintar() {
     if (!LT.cargado) return;
+    if (window.__preBannerP1) setTimeout(window.__preBannerP1, 0);   // 18-nov-2026 · aviso de preasignaciones
     // 9-nov · se dibujan pocas filas (400, y más con un botón): dibujar 2.500 tardaba ~1,3 s por clic.
     const rows = ltFiltradas(), LIM = LT.lim || 400, tb = ltEl('ltTabla').querySelector('tbody');
     const porF8 = new Map();
@@ -4222,7 +4258,7 @@ document.addEventListener('keydown', e => {
           <td class="right">${sk && sk[2] ? fmt(sk[2]) : '<span class="m-dim">-</span>'}</td>
           <td class="right">${sk ? fmt(sk[3]) : ''}</td>
           <td class="m-nw">${f.rec ? ltFmtF(f.rec) : '<span class="m-dim">—</span>'}</td>
-          <td class="m-cel ${cls}">${est}</td></tr>`;
+          <td class="m-cel ${cls}">${est}${window.__preTag ? window.__preTag(f.sku, f.ue) : ''}</td></tr>`;
       });
       partes.push([h, ls.length]);
     });
@@ -4499,7 +4535,7 @@ document.addEventListener('keydown', e => {
     ltEl('ltDeshSi').addEventListener('click', () => ltDeshacer(true));
     ltEl('ltDeshNo').addEventListener('click', () => ltDeshacer(false));
     const ltPintarDesde0 = () => { LT.lim = 400; ltPintar(); };
-    ['ltUE', 'ltCedis', 'ltCat', 'ltTipo', 'ltRec', 'ltOcultarAsig', 'ltSoloSel'].forEach(id => ltEl(id).addEventListener('change', ltPintarDesde0));
+    ['ltUE', 'ltCedis', 'ltCat', 'ltTipo', 'ltRec', 'ltOcultarAsig', 'ltSoloSel', 'ltSoloPre'].forEach(id => ltEl(id).addEventListener('change', ltPintarDesde0));
     let tq; ltEl('ltQ').addEventListener('input', () => { clearTimeout(tq); tq = setTimeout(ltPintarDesde0, 250); });
     ltEl('ltTabla').addEventListener('change', ev => {
       const t = ev.target, porK = ltPorK();
@@ -4645,7 +4681,7 @@ document.addEventListener('keydown', e => {
       n = Math.max(0, Math.round(Number(n) || 0));
       const k = K(r), act = N(r.Asignado), prev = AJ.pend.get(k);
       if (n === act) { AJ.pend.delete(k); return; }
-      AJ.pend.set(k, { nueva: n, motivo: motivo !== undefined ? motivo : (prev ? prev.motivo : ''), previo: act, f8: String(r.N_Doc).trim(), sku: String(r.Codigo).trim() });
+      AJ.pend.set(k, { nueva: n, motivo: motivo !== undefined ? motivo : (prev ? prev.motivo : ''), previo: act, f8: String(r.N_Doc).trim(), sku: String(r.Codigo).trim(), preId: motivo === undefined && prev ? prev.preId : '', preUe: motivo === undefined && prev ? prev.preUe : '' });
     }
     const haciaEmpaque = (n, emp) => n >= emp ? Math.floor(n / emp) * emp : n;
     const esTope = r => r.Acaparamiento || /CUOTA/.test(String(r.Estado || '').toUpperCase());
@@ -4664,11 +4700,14 @@ document.addEventListener('keydown', e => {
         if (esTope(r)) acc.push(`<button type="button" class="m-lnk" data-aj="liberar" data-k="${i}" title="Dar lo pedido, a empaque cerrado y sin pasar de lo libre">Liberar tope</button>`);
         if (N(r.Consumo_Base) > 0) acc.push(`<button type="button" class="m-lnk" data-aj="dos" data-k="${i}" title="Consumo × 2 − lo ya despachado en el mes">Dar 2 meses</button>`);
       }
+      const pm = window.__preDe ? window.__preDe(cod, r.Punto) : null;
+      if (pm && pm.l.estado !== 'ASIGNADA' && !p && c.libre + N(r.Asignado) > N(r.Asignado)) acc.unshift(`<button type="button" class="m-lnk pre-usar" data-aj="pre" data-k="${i}" title="${E(pm.p.id)} · tránsito ${E(pm.p.transito)}">Usar preasignación (${F(pm.l.q)})</button>`);
       const hay = c.lineas.length > 1;
       return `<div class="aj-q"><button type="button" data-aj="menos" data-k="${i}" title="Quitar un empaque">−</button>` +
         `<input type="number" min="0" step="${emp}" value="${finalDe(r)}" data-ajq="${i}" class="${v.c ? 'aj-in-' + v.c : ''}" aria-label="Cantidad final">` +
         `<button type="button" data-aj="mas" data-k="${i}" title="Sumar un empaque">+</button></div>` +
         (v.m ? `<div class="aj-val aj-val-${v.c}">${E(v.m)}</div>` : '') +
+        (pm ? `<div class="aj-lt"><span class="pre-tag">Preasignado ${F(pm.l.q)}${pm.l.estado === 'ASIGNADA' ? ' · usada' : ''}</span>${pm.l.estado !== 'ASIGNADA' && c.libre <= 0 && !p ? ' entra cuando ingrese el tránsito' : ''}</div>` : '') +
         (r.Ajuste && !p ? `<div class="aj-hecho">Ajustado por ${E(r.Ajuste.por)} · ${E(r.Ajuste.fecha)} · Motor ${F(motorV)}</div>` : '') +
         `<div class="aj-lt">${lotes ? 'Lotes: ' + lotes : ''}${mov.length ? '<br>' + mov.join('<br>') : ''}</div>` +
         `<div class="aj-lt">Libre en CEDIS: <b class="${c.libre < 0 ? 'm-neg' : ''}">${F(c.libre)}</b> · empaque ${F(emp)} <button type="button" class="m-lnk aj-lb" data-aj="lotes" data-k="${i}">Lotes${hay ? ' · ' + c.lineas.length + ' unidades' : ''}</button></div>` +
@@ -4693,6 +4732,8 @@ document.addEventListener('keydown', e => {
       else if (a === 'liberar') { const obj = haciaEmpaque(N(r.Solicitado), emp) || N(r.Solicitado); poner(r, Math.min(obj, N(r.Asignado) + libreLinea()), 'Liberar tope de cuota'); }
       else if (a === 'dos') { const obj = Math.max(0, N(r.Consumo_Base) * 2 - N(r.Ejecucion_Previa)), tope = Math.min(obj, N(r.Solicitado));
         poner(r, Math.min(haciaEmpaque(tope, emp) || tope, N(r.Asignado) + libreLinea()), 'Dar más meses de consumo'); }
+      else if (a === 'pre') { const pm = window.__preDe && window.__preDe(cod, r.Punto); if (pm) { poner(r, Math.min(N(pm.l.q), N(r.Asignado) + libreLinea()), 'Preasignación de tránsito'); const pp = AJ.pend.get(K(r)); if (pp) { pp.preId = pm.p.id; pp.preUe = pm.l.ue; }
+          if (N(pm.l.q) > N(r.Asignado) + libreLinea()) toast('Solo hay ' + F(N(r.Asignado) + libreLinea()) + ' disponibles de las ' + F(pm.l.q) + ' preasignadas: el tránsito todavía no ingresa completo.'); } }
       else if (a === 'lotes') { pintarLotes(cod); document.getElementById('ajLotesM').hidden = false; return; }
       repintar();
     });
@@ -4746,13 +4787,14 @@ document.addEventListener('keydown', e => {
     }
     async function guardar() {
       if (!AJ.pend.size || AJ.guardando) return;
-      const cambios = [...AJ.pend.values()].map(p => ({ f8: p.f8, sku: p.sku, previo: p.previo, nueva: p.nueva, motivo: p.motivo }));
+      const cambios = [...AJ.pend.values()].map(p => ({ f8: p.f8, sku: p.sku, previo: p.previo, nueva: p.nueva, motivo: p.motivo, preId: p.preId || '', preUe: p.preUe || '' }));
       AJ.guardando = true; pintarBarra(); document.getElementById('ajConfM').hidden = true;
       try {
         const r = await window.__mPostSeguro('motorAjustar', { corte: AJ.corte, cambios: cambios }, i => { if (i > 1) toast('Reintentando el guardado (intento ' + i + ' de 3)…'); });
         if (r && r.success) {
           AJ.pend.clear();
           if (r.estado) window.__ajCargar(r.estado); else await window.__ajRecargar();
+          if (cambios.some(c => c.preId) && window.__preRecargar) setTimeout(window.__preRecargar, 2500);
           if (typeof applyFilters === 'function') applyFilters();
           toast(`<b>Guardado.</b> ${E(r.resumen || (cambios.length + ' ajustes'))}. La Hoja de asignación ya sale con estas cantidades; el historial y el correo a la unidad también.`, 7000);
         } else {
@@ -4909,6 +4951,241 @@ document.addEventListener('keydown', e => {
       pintarBarra();
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', montar); else montar();
+  })();
+  </script>
+  <script>
+  // ===================== PASO 0 · PREASIGNAR TRÁNSITO (18-nov-2026) =====================
+  // El analista reparte un tránsito antes de que llegue, pide a cada unidad su Forma 8 por esa cantidad
+  // y, cuando llega, la usa en el paso 3 («Usar»). Se lee de JSON publicados por el Motor:
+  //   transitos.json (CALENDARIO + existencia + consumo/inventario por unidad) y preasignaciones.json.
+  // Guardar = una llamada con PIN (motorPreasignar). Mientras no guarda, el borrador queda en este equipo.
+  (function () {
+    const PRE = { T: null, planes: [], cargado: false, cargando: null, sel: null, bor: null, q: '', bajo: false, guardando: false };
+    const E = v => String(v == null ? '' : v).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const F = n => Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: 1 });
+    const N = v => Number(v || 0);
+    const U = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/\s+/g, ' ').trim();
+    const toast = (t, ms) => window.__ajToast ? window.__ajToast(t, ms) : console.log(t);
+    const RAW = 'https://api.github.com/repos/TorredeControlCSS/ASIGNACION_F8/contents/';
+    const leer = n => fetch(RAW + n + '?t=' + Date.now(), { cache: 'no-store', headers: { Accept: 'application/vnd.github.raw' } })
+      .then(r => { if (!r.ok) throw new Error(n + ' ' + r.status); return r.json(); })
+      .catch(() => fetch(n + '?t=' + Date.now(), { cache: 'no-store' }).then(r => { if (!r.ok) throw new Error(n + ' ' + r.status); return r.json(); }));
+    const BKEY = 'motor_pre_borrador_v1';
+    try { PRE.bor = JSON.parse(localStorage.getItem(BKEY) || 'null'); } catch (e) {}
+    const guardarBorrador = () => { try { if (PRE.bor) localStorage.setItem(BKEY, JSON.stringify(PRE.bor)); else localStorage.removeItem(BKEY); } catch (e) {} };
+
+    // ---------- coincidencias (Paso 1 y Paso 3) ----------
+    function activos() { const hoy = new Date().toISOString().slice(0, 10); return PRE.planes.filter(p => p.estado !== 'ANULADA' && (!p.hasta || p.hasta >= hoy)); }
+    window.__preDe = function (sku, ue) {
+      sku = String(sku || '').trim(); const u = U(ue);
+      for (const p of activos()) { if (String(p.sku) !== sku) continue; const l = p.lineas.find(x => U(x.ue) === u); if (l) return { p, l }; }
+      return null;
+    };
+    window.__preTag = function (sku, ue) {
+      const m = window.__preDe(sku, ue); if (!m) return '';
+      return ` <span class="pre-tag" title="${E(m.p.id)} · tránsito ${E(m.p.transito)}">Preasignado ${F(m.l.q)}${m.l.estado === 'ASIGNADA' ? ' · usada' : ''}</span>`;
+    };
+    async function cargarPlanes() {
+      try { const j = await leer('preasignaciones.json'); PRE.planes = (j && j.planes) || []; } catch (e) { PRE.planes = PRE.planes || []; }
+      refrescarFuera();
+    }
+    function refrescarFuera() {
+      try { if (typeof LT !== 'undefined' && LT.cargado) ltPintar(); } catch (e) {}
+      try { if (window.__ajVisible && window.__ajVisible()) renderAsignacion(renderAsignacion._rows || LAST_FILTERED || []); } catch (e) {}
+      pintarBannerP1();
+    }
+    window.__preRecargar = cargarPlanes;
+    window.__preBannerP1 = () => pintarBannerP1();
+
+    // ---------- aviso en el Paso 1 ----------
+    function pintarBannerP1() {
+      const b = document.getElementById('preBanP1'); if (!b) return;
+      const act = activos().filter(p => p.lineas.some(l => l.estado !== 'ASIGNADA'));
+      if (!act.length) { b.hidden = true; return; }
+      let coinciden = 0, sinIncluir = 0, esperando = 0;
+      const filasLT = (typeof LT !== 'undefined' && LT.cargado) ? LT.filas : [];
+      act.forEach(p => p.lineas.forEach(l => { if (l.estado === 'ASIGNADA') return;
+        const fs = filasLT.filter(f => String(f.sku) === String(p.sku) && U(f.ue) === U(l.ue));
+        if (fs.length) { coinciden += fs.length; sinIncluir += fs.filter(f => !LT.sel.has(f.k)).length; } else esperando++; }));
+      b.hidden = false;
+      b.innerHTML = `<span><b>Preasignaciones activas: ${act.length}</b>${filasLT.length ? ` · ${coinciden} F8 de esta lista coinciden con una preasignación${sinIncluir ? ` (<b>${sinIncluir} sin incluir</b>)` : ''}` : ' · cargue los pendientes para ver cuáles F8 ya llegaron'} · ${esperando} unidades todavía no envían su F8.</span>
+        ${sinIncluir ? '<button type="button" class="m-btn m-btn-sm pre-b" id="preIncluir">Incluir las preasignadas</button>' : ''}
+        <button type="button" class="m-btn m-btn-out m-btn-sm" id="preVer0">Ver preasignaciones (paso 0)</button>`;
+    }
+    document.addEventListener('click', ev => {
+      if (ev.target.id === 'preVer0') { const b = document.querySelector('.m-pas[data-paso="0"]'); if (b) b.click(); }
+      if (ev.target.id === 'preIncluir' && typeof LT !== 'undefined') {
+        let n = 0; LT.filas.forEach(f => { if (window.__preDe(f.sku, f.ue) && !LT.sel.has(f.k)) { ltSel(f, true); n++; } });
+        try { ltPintar(); ltResumen(); } catch (e) {} pintarBannerP1(); toast(n + ' líneas preasignadas quedaron seleccionadas en la lista.');
+      }
+    });
+
+    // ---------- Paso 0 ----------
+    function nivel(r) { const c = N(r.consumo), u = r.stock ? N(r.stock[1]) : 0; if (!c) return { t: '', m: null }; const m = u / c;
+      return m <= 0 ? { t: 'Agotado', c: 'bad', m } : m < 1 ? { t: 'Crítico', c: 'bad', m } : m < 2.5 ? { t: 'Bajo', c: 'warn', m } : { t: '', m }; }
+    function planActual() { return PRE.bor && PRE.bor.sku === PRE.sel ? PRE.bor : null; }
+    function planGuardado(sku) { return activos().find(p => String(p.sku) === String(sku)) || null; }
+    function abrir(sku) {
+      PRE.sel = sku;
+      if (!planActual()) {
+        const g = planGuardado(sku), r = PRE.T.renglones[sku] || { citas: [] }, c0 = (r.citas || [])[0] || [];
+        PRE.bor = g ? JSON.parse(JSON.stringify(g)) : { id: '', sku, nombre: r.nombre, transito: (c0[0] || '') + (c0[3] ? ' · ' + c0[3] : ''), cantTransito: N(c0[1]), hasta: masDias(c0[0], 30), apartar: true, lineas: [] };
+        PRE.bor.sucio = false; guardarBorrador();
+      }
+      pintar();
+    }
+    function masDias(iso, d) { const t = Date.parse((iso || new Date().toISOString().slice(0, 10)) + 'T12:00:00'); return new Date(t + d * 864e5).toISOString().slice(0, 10); }
+    function estadoLinea(p, l) {
+      if (l.estado === 'ASIGNADA') return { t: 'Asignada' + (l.f8 ? ' · ' + l.f8 : ''), c: 'ok' };
+      const lt = (typeof LT !== 'undefined' && LT.cargado) ? LT.filas.some(f => String(f.sku) === String(p.sku) && U(f.ue) === U(l.ue)) : false;
+      const corte = (typeof DATA !== 'undefined' && Array.isArray(DATA)) ? DATA.some(r => String(r.Codigo).trim() === String(p.sku) && U(r.Punto) === U(l.ue)) : false;
+      return lt || corte ? { t: 'F8 recibida', c: 'info' } : { t: 'Esperando F8', c: 'warn' };
+    }
+    function pintar() {
+      const v = document.getElementById('view_pre'); if (!v) return;
+      if (!PRE.T) { v.innerHTML = `<div class="pre-wrap"><div class="m-vacio">${PRE.cargando ? 'Cargando los tránsitos…' : 'Todavía no hay tránsitos publicados por el Motor (transitos.json).'}</div></div>`; return; }
+      const R = PRE.T.renglones, q = PRE.q.toLowerCase();
+      const lista = Object.keys(R).map(k => ({ k, r: R[k], n: nivel(R[k]) }))
+        .filter(x => (!q || (x.k + ' ' + x.r.nombre).toLowerCase().includes(q)) && (!PRE.bajo || (x.n.m !== null && x.n.m < 2.5)))
+        .sort((a, b) => (a.n.m == null ? 99 : a.n.m) - (b.n.m == null ? 99 : b.n.m));
+      const tarjeta = x => { const g = planGuardado(x.k), cit = x.r.citas || [], tot = cit.reduce((s, c) => s + N(c[1]), 0), rec = cit.some(c => /RECIBID/i.test(c[3] || ''));
+        const pre = g ? g.lineas.reduce((s, l) => s + N(l.q), 0) : 0, ok = g ? g.lineas.filter(l => l.estado === 'ASIGNADA').length : 0;
+        return `<div class="pre-card${PRE.sel === x.k ? ' on' : ''}" data-pre-sku="${E(x.k)}"><b>${E(x.r.nombre)}</b>${x.n.t ? ` <span class="m-tag m-tag-${x.n.c}">${x.n.t}</span>` : ''}<br>
+          <span class="m-mono">${E(x.k)}</span> · ${cit.length} cita${cit.length === 1 ? '' : 's'} · ${rec ? 'recibido' : 'llega ' + E((cit[0] || [])[0] || '')}<br>
+          Viene ${F(tot)} · CEDIS ${x.r.stock ? F(x.r.stock[1]) : 's/d'}${x.n.m != null ? ' (' + F(x.n.m) + ' meses)' : ''}<br>
+          ${g ? `${F(pre)} preasignados · ${ok} de ${g.lineas.length} asignadas` : '<span class="m-dim">Sin preasignar · clic para repartir</span>'}${planActual() && planActual().sku === x.k && PRE.bor.sucio ? ' · <b class="pre-sucio">sin guardar</b>' : ''}</div>`; };
+      v.innerHTML = `<div class="pre-wrap"><div class="pre-cab"><div><div class="m-sec-t" style="font-size:15px;font-weight:700;color:#0b1f3a">Preasignar tránsito</div>
+          <div class="m-nota" style="margin:2px 0 0">Reparta un tránsito antes de que llegue y pida a cada unidad su Forma 8 por esa cantidad. Cuando la F8 llega, sale marcada en el paso 1 y en el corte (paso 3) con el botón «Usar». Fuente: ${E(PRE.T.fuente || '')} · ${E(String(PRE.T.generado || '').slice(0, 16).replace('T', ' '))} UTC.</div></div></div>
+        <div class="pre-grid"><div class="pre-l">
+          <div class="m-filtros"><input id="preQ" placeholder="Buscar código o renglón" value="${E(PRE.q)}" style="width:100%"></div>
+          <label class="m-chk" style="margin:6px 0 8px!important"><input type="checkbox" id="preBajo"${PRE.bajo ? ' checked' : ''}> Solo agotados, críticos o bajos</label>
+          <div class="pre-lista">${lista.map(tarjeta).join('') || '<div class="m-vacio">Ningún tránsito con este filtro.</div>'}</div></div>
+          <div class="pre-r" id="preEd">${editor()}</div></div></div>`;
+    }
+    function editor() {
+      const p = planActual(); if (!p) return '<div class="m-vacio">Elija un tránsito de la lista para repartirlo.</div>';
+      const r = PRE.T.renglones[p.sku] || { citas: [], ues: {} }, tot = p.lineas.reduce((s, l) => s + N(l.q), 0), libres = N(p.cantTransito) - tot;
+      const citas = (r.citas || []).map((c, i) => `<option value="${i}"${(c[0] + (c[3] ? ' · ' + c[3] : '')) === p.transito ? ' selected' : ''}>${E(c[0] || 'sin fecha')} · ${F(c[1])} · ${E(c[2] || '')}${c[3] ? ' · ' + E(c[3]) : ''}</option>`).join('');
+      return `<div class="m-f-row"><div class="m-f m-f-q m-filtros"><label>Tránsito (cita del calendario)</label><select id="preCita">${citas}</select></div>
+          <div class="m-f m-filtros" style="flex:0 0 160px"><label>Vigente hasta</label><input type="date" id="preHasta" value="${E(p.hasta || '')}"></div></div>
+        <div class="pre-kpis"><div class="pre-k pre-k-a"><span>Viene en el tránsito</span><b>${F(p.cantTransito)}</b></div><div class="pre-k pre-k-v"><span>Preasignado</span><b>${F(tot)}</b></div>
+          <div class="pre-k ${libres < 0 ? 'pre-k-r' : 'pre-k-g'}"><span>Sin preasignar</span><b>${F(libres)}</b></div><div class="pre-k pre-k-w"><span>Existencia en el CEDIS</span><b>${r.stock ? F(r.stock[1]) : 's/d'}</b></div></div>
+        <div class="pre-acc"><span class="m-acc-t">Proponer reparto</span>
+          <button type="button" class="m-btn m-btn-out m-btn-sm" data-pre-rep="cons">Proporcional al consumo</button>
+          <button type="button" class="m-btn m-btn-out m-btn-sm" data-pre-rep="cob">Igualar cobertura</button>
+          <span class="m-filtros pre-combo"><input id="preUE" placeholder="Agregar unidad: escriba el nombre" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="preAC"><span class="pre-ac" id="preAC" role="listbox"></span></span>
+          <button type="button" class="m-btn m-btn-out m-btn-sm" id="preSug" title="Las unidades que reportan consumo de este renglón">Agregar las que consumen este renglón</button></div>
+        <div class="scroll" style="max-height:none"><table class="m-tbl"><thead><tr><th>Unidad</th><th class="right">Consumo mes</th><th class="right">Inventario en la UE</th><th class="right">Cobertura (meses)</th><th>Preasignado</th><th class="right">Cobertura después</th><th>Estado</th><th>Acción</th></tr></thead><tbody>
+        ${p.lineas.map((l, i) => { const d = (r.ues || {})[l.ue] || [0, null], es = estadoLinea(p, l), c = N(d[0]);
+          return `<tr><td class="m-ue">${E(l.ue)}</td><td class="right">${c ? F(c) : '<span class="m-dim">s/d</span>'}</td><td class="right">${d[1] == null ? '<span class="m-dim">s/d</span>' : F(d[1])}</td>
+            <td class="right">${c ? F(N(d[1]) / c) : '—'}</td><td><input type="number" min="0" class="pre-in" value="${N(l.q)}" data-pre-q="${i}"${l.estado === 'ASIGNADA' ? ' disabled' : ''}></td>
+            <td class="right m-b">${c ? F((N(d[1]) + N(l.q)) / c) : '—'}</td><td><span class="m-est m-est-${es.c}">${E(es.t)}</span></td>
+            <td class="m-nw">${es.t === 'Esperando F8' ? `<button type="button" class="m-lnk" data-pre-f8="${i}">Pedir F8</button> ` : ''}${l.estado !== 'ASIGNADA' ? `<button type="button" class="m-lnk" data-pre-del="${i}">Quitar</button>` : ''}</td></tr>`; }).join('')
+          || '<tr><td colspan="8" class="m-vacio">Agregue unidades con el buscador o con «Agregar las que consumen este renglón».</td></tr>'}
+        </tbody></table></div>
+        <label class="m-chk" style="margin-top:10px!important"><input type="checkbox" id="preApartar"${p.apartar ? ' checked' : ''}> Apartar en el Motor: mientras esté vigente, el Motor no le entrega estas cantidades a otras unidades cuando el tránsito ingrese.</label>
+        <div class="m-nota">Si vence sin F8, lo apartado vuelve al reparto normal del Motor. El estado «F8 recibida» se ve cuando la F8 de esa unidad está en la lista del paso 1 o en el corte.</div>
+        <div class="pre-acc" style="justify-content:flex-end">
+          <span class="pre-est ${p.sucio || !p.id ? 'pre-est-p' : 'pre-est-ok'}">${PRE.guardando ? 'Guardando en el servidor…' : p.sucio || !p.id ? 'Cambios sin guardar · quedan en este equipo hasta que guarde' : 'Guardada en el servidor · ' + E(p.actualizado || '') + ' (hora de Panamá) · ' + E(p.por || '')}</span>
+          ${p.id ? '<button type="button" class="m-btn m-btn-out" id="preAnular">Anular preasignación</button>' : ''}
+          <button type="button" class="m-btn m-btn-pri" id="preGuardar"${libres < 0 || PRE.guardando ? ' disabled' : ''}>Guardar preasignación</button></div>`;
+    }
+    const sucio = () => { if (PRE.bor) { PRE.bor.sucio = true; guardarBorrador(); } };
+    function repartir(met) {
+      const p = planActual(); if (!p || !p.lineas.length) return toast('Agregue primero las unidades.');
+      const r = PRE.T.renglones[p.sku] || { ues: {} }, T = N(p.cantTransito);
+      const L = p.lineas.map(l => { const d = (r.ues || {})[l.ue] || [0, null]; return { l, c: N(d[0]) || 1, inv: Math.max(0, N(d[1])), fija: l.estado === 'ASIGNADA' }; });
+      const fijo = L.filter(x => x.fija).reduce((s, x) => s + N(x.l.q), 0), A = L.filter(x => !x.fija), S = Math.max(0, T - fijo);
+      let q;
+      if (met === 'cob') { let lo = 0, hi = 240; for (let k = 0; k < 60; k++) { const t = (lo + hi) / 2, s = A.reduce((a, x) => a + Math.max(0, t * x.c - x.inv), 0); if (s > S) hi = t; else lo = t; } q = A.map(x => Math.max(0, lo * x.c - x.inv)); }
+      else { const sc = A.reduce((s, x) => s + x.c, 0); q = A.map(x => S * x.c / sc); }
+      q = q.map(Math.floor); let sobra = S - q.reduce((a, b) => a + b, 0);
+      for (let g = 0; g < 100000 && sobra > 0; g++) { let k = -1, m = Infinity; A.forEach((x, i) => { const cb = (x.inv + q[i]) / x.c; if (cb < m) { m = cb; k = i; } }); if (k < 0) break; q[k]++; sobra--; }
+      A.forEach((x, i) => { x.l.q = q[i]; }); sucio(); pintar();
+    }
+    function agregar(ue) { const p = planActual(); if (!p || !ue) return; if (p.lineas.some(l => U(l.ue) === U(ue))) return; p.lineas.push({ ue, q: 0, estado: 'ESPERANDO_F8', f8: '' }); sucio(); pintar(); }
+    async function guardar() {
+      const p = planActual(); if (!p || PRE.guardando) return;
+      PRE.guardando = true; pintar();
+      try {
+        const plan = { id: p.id, sku: p.sku, nombre: p.nombre, transito: p.transito, cantTransito: p.cantTransito, hasta: p.hasta, apartar: !!p.apartar, lineas: p.lineas.map(l => ({ ue: l.ue, q: N(l.q) })) };
+        const r = await window.__mPostSeguro('motorPreasignar', { plan });
+        if (!r || !r.success) throw new Error(r && r.error || 'Sin respuesta');
+        PRE.planes = r.planes || PRE.planes;
+        const g = PRE.planes.find(x => x.id === r.id); PRE.bor = g ? JSON.parse(JSON.stringify(g)) : PRE.bor; if (PRE.bor) PRE.bor.sucio = false; guardarBorrador();
+        toast('<b>Preasignación guardada</b> (' + E(r.id) + '). Ya la ven los demás analistas; las F8 que lleguen saldrán marcadas en el paso 1 y en el corte.', 7000);
+        refrescarFuera();
+      } catch (e) { toast('<b>No se guardó.</b> ' + E(e.message || e) + ' El borrador sigue en este equipo.', 10000); }
+      finally { PRE.guardando = false; pintar(); }
+    }
+    async function anular() {
+      const p = planActual(); if (!p || !p.id) return;
+      if (!document.getElementById('preAnular').dataset.conf) { const b = document.getElementById('preAnular'); b.dataset.conf = '1'; b.textContent = 'Confirmar: anular'; b.classList.add('pre-peligro'); return; }
+      try { const r = await window.__mPostSeguro('motorPreAnular', { id: p.id }); if (!r.success) throw new Error(r.error); PRE.planes = r.planes || PRE.planes; PRE.bor = null; guardarBorrador(); toast('Preasignación anulada.'); refrescarFuera(); pintar(); }
+      catch (e) { toast('<b>No se anuló.</b> ' + E(e.message || e)); }
+    }
+    function pedirF8(i) {
+      const p = planActual(), l = p && p.lineas[i]; if (!l) return;
+      const msg = `Buen día. Para el renglón ${p.sku} ${p.nombre} tenemos preasignadas ${F(l.q)} unidades del tránsito (${p.transito}) para ${l.ue}. Favor enviar la Forma 8 por esa cantidad para asignarla en cuanto ingrese. Dirección Nacional de Logística · CEDIS Panamá.`;
+      const ok = () => toast('Mensaje copiado. Péguelo en WhatsApp o en el correo de la unidad:<br><i>' + E(msg) + '</i>', 9000);
+      try { navigator.clipboard.writeText(msg).then(ok, () => toast(E(msg), 12000)); } catch (e) { toast(E(msg), 12000); }
+    }
+
+    // buscador propio de unidades (sin datalist del navegador)
+    const AC = { items: [], sel: -1 };
+    function acAbrir(qv) {
+      const p = planActual(), pan = document.getElementById('preAC'); if (!p || !pan) return;
+      const n = U(qv), ya = new Set(p.lineas.map(l => U(l.ue)));
+      AC.items = (PRE.T.unidades || []).filter(u => U(u[0]).indexOf('CEDIS PANAMA') !== 0 && !ya.has(U(u[0])) && (!n || U(u[0]).includes(n))).slice(0, 60); AC.sel = AC.items.length ? 0 : -1;
+      pan.innerHTML = AC.items.length ? AC.items.map((u, i) => `<div class="pre-ac-i${i === AC.sel ? ' on' : ''}" role="option" data-pre-ac="${i}"><b>${E(u[0])}</b><small>${E(u[1] || '')}${u[2] ? ' · suple ' + E(u[2]) : ''}</small></div>`).join('') : '<div class="pre-ac-v">Ninguna unidad con ese nombre en el directorio.</div>';
+      pan.classList.add('open');
+    }
+    const acCerrar = () => { const pan = document.getElementById('preAC'); if (pan) pan.classList.remove('open'); AC.sel = -1; };
+    const acElegir = i => { const u = AC.items[i]; if (!u) return; acCerrar(); agregar(u[0]); setTimeout(() => { const x = document.getElementById('preUE'); if (x) x.focus(); }, 0); };
+    document.addEventListener('input', ev => { if (ev.target.id === 'preUE') acAbrir(ev.target.value); if (ev.target.id === 'preQ') { PRE.q = ev.target.value; const pos = ev.target.selectionStart; pintar(); const x = document.getElementById('preQ'); if (x) { x.focus(); x.setSelectionRange(pos, pos); } } });
+    document.addEventListener('focusin', ev => { if (ev.target.id === 'preUE') acAbrir(ev.target.value); });
+    document.addEventListener('keydown', ev => {
+      if (ev.target.id !== 'preUE') return;
+      const mark = () => document.querySelectorAll('#preAC .pre-ac-i').forEach((d, i) => { d.classList.toggle('on', i === AC.sel); if (i === AC.sel) d.scrollIntoView({ block: 'nearest' }); });
+      if (ev.key === 'ArrowDown' && AC.items.length) { ev.preventDefault(); AC.sel = (AC.sel + 1) % AC.items.length; mark(); }
+      else if (ev.key === 'ArrowUp' && AC.items.length) { ev.preventDefault(); AC.sel = (AC.sel - 1 + AC.items.length) % AC.items.length; mark(); }
+      else if (ev.key === 'Enter') { ev.preventDefault(); if (AC.sel >= 0) acElegir(AC.sel); }
+      else if (ev.key === 'Escape') acCerrar();
+    });
+    document.addEventListener('mousedown', ev => { const it = ev.target.closest('[data-pre-ac]'); if (it) { ev.preventDefault(); acElegir(Number(it.dataset.preAc)); return; } if (!ev.target.closest('.pre-combo')) acCerrar(); });
+    document.addEventListener('click', ev => {
+      const c = ev.target.closest('[data-pre-sku]'); if (c) return abrir(c.dataset.preSku);
+      const b = ev.target.closest('button'); if (!b || !document.getElementById('view_pre') || !document.getElementById('view_pre').contains(b)) return;
+      const p = planActual();
+      if (b.dataset.preRep) repartir(b.dataset.preRep);
+      else if (b.dataset.preDel !== undefined && p) { p.lineas.splice(Number(b.dataset.preDel), 1); sucio(); pintar(); }
+      else if (b.dataset.preF8 !== undefined) pedirF8(Number(b.dataset.preF8));
+      else if (b.id === 'preSug' && p) { const r = PRE.T.renglones[p.sku] || { ues: {} }; let n = 0;
+        Object.keys(r.ues || {}).filter(u => N(r.ues[u][0]) > 0 && U(u).indexOf('CEDIS PANAMA') !== 0).sort((a, z) => N(r.ues[z][0]) - N(r.ues[a][0]))
+          .forEach(u => { if (!p.lineas.some(l => U(l.ue) === U(u))) { p.lineas.push({ ue: u, q: 0, estado: 'ESPERANDO_F8', f8: '' }); n++; } });
+        sucio(); pintar(); toast(n ? n + ' unidades agregadas (las que reportan consumo de este renglón). Use «Proponer reparto» o escriba las cantidades.' : 'Ya están todas las unidades que reportan consumo de este renglón.'); }
+      else if (b.id === 'preGuardar') guardar();
+      else if (b.id === 'preAnular') anular();
+    });
+    document.addEventListener('change', ev => {
+      const t = ev.target, p = planActual(); if (!p) { if (t.id === 'preBajo') { PRE.bajo = t.checked; pintar(); } return; }
+      if (t.dataset.preQ !== undefined) { p.lineas[Number(t.dataset.preQ)].q = Math.max(0, Math.round(Number(t.value) || 0)); sucio(); pintar(); }
+      else if (t.id === 'preHasta') { p.hasta = t.value; sucio(); }
+      else if (t.id === 'preApartar') { p.apartar = t.checked; sucio(); }
+      else if (t.id === 'preCita') { const c = (PRE.T.renglones[p.sku].citas || [])[Number(t.value)] || []; p.transito = (c[0] || '') + (c[3] ? ' · ' + c[3] : ''); p.cantTransito = N(c[1]); if (!p.id) p.hasta = masDias(c[0], 30); sucio(); pintar(); }
+      else if (t.id === 'preBajo') { PRE.bajo = t.checked; pintar(); }
+    });
+
+    window.__preEntrar = async function () {
+      if (!PRE.T && !PRE.cargando) {
+        PRE.cargando = Promise.all([leer('transitos.json').then(j => { PRE.T = j; }).catch(e => console.warn('transitos.json', e)), cargarPlanes()]);
+        pintar(); await PRE.cargando; PRE.cargando = null;
+        if (PRE.bor && PRE.T && PRE.T.renglones[PRE.bor.sku]) PRE.sel = PRE.bor.sku;
+      }
+      pintar();
+    };
+    // las preasignaciones se cargan al abrir la página (pequeñas): así el paso 1 y el corte las muestran
+    setTimeout(cargarPlanes, 1500);
   })();
   </script>
 
