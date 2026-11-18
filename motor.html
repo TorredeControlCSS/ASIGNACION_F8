@@ -562,6 +562,9 @@ body.m tbody tr:hover td{background:#f7faff}
 .pre-peligro{border-color:#d14343!important;color:#9b1c1c!important}
 .pre-tag{display:inline-block;font-size:10.5px;font-weight:700;border-radius:6px;padding:1px 6px;background:#efe7fb;color:#5b2d99;white-space:nowrap}
 .pre-ban{background:#f7f2fd;border:1px solid #d9c8f2;color:#3e1f6e;border-radius:10px;padding:9px 12px;font-size:13px;line-height:1.5;margin:0 0 8px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.m-vista{display:inline-flex;border:1px solid #c5ccd8;border-radius:10px;overflow:hidden;margin-right:8px;vertical-align:middle}.m-vista button{border:0;background:#fff;padding:6px 11px;font:inherit;font-size:13px;cursor:pointer;color:#1d2939}.m-vista button.on{background:#0b1f3a;color:#fff}
+#tbl_asignacion .m-fija{position:sticky;z-index:2;background:#fff;box-shadow:6px 0 8px -7px rgba(0,0,0,.25)}#tbl_asignacion th.m-fija{z-index:4;background:#f4f6fa}
+[data-theme="dark"] #tbl_asignacion .m-fija{background:#0f1a2e}[data-theme="dark"] #tbl_asignacion th.m-fija{background:#16223b}[data-theme="dark"] .m-vista button{background:#16223b;color:#cbd5e1}[data-theme="dark"] .m-vista button.on{background:#3b5bdb}
 .pre-ban[hidden]{display:none}.aj-resv{border:1px solid #f5b800;background:#fff7db;border-radius:7px;padding:1px 7px;font:inherit;font-size:12px;cursor:pointer;white-space:nowrap}.aj-tp{font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:#eef2f7}.aj-tp-u{background:#fde8e8;color:#b42318}.aj-tp-m{background:#e8effd;color:#1f4fa3}.aj-resv-hint{background:#fff4e5;border:1px solid #fcd9a8;border-radius:8px;padding:8px 10px;margin:10px 0;font-size:13px}.aj-emp{display:flex;flex-wrap:wrap;gap:4px;margin:3px 0}.aj-emp>span.em{background:#eef2f7;border-radius:5px;padding:0 6px;font-size:11.5px;white-space:nowrap}.aj-emp-mal{color:#b42318;font-size:11.5px}.pre-emp{margin:2px 0 8px}.pre-bul{font-size:11px;color:#5b6575;margin-top:2px;white-space:nowrap}.pre-ac-no{opacity:.55;cursor:not-allowed}.pre-ac-no small{color:#b42318!important}
 .lt-vent{background:#e9f5ee;border:1px solid #b8e0c6;color:#14532d;border-radius:10px;padding:8px 12px;font-size:13px;margin:0 0 8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}.lt-vent[hidden]{display:none}
 .pre-b{background:#5b2d99!important;color:#fff!important}
@@ -4839,7 +4842,7 @@ document.addEventListener('keydown', e => {
         (r.Ajuste && !p ? `<div class="aj-hecho">Ajustado por ${E(r.Ajuste.por)} · ${E(r.Ajuste.fecha)} · Motor ${F(motorV)}</div>` : '') +
         `<div class="aj-lt">${lotes ? 'Lotes: ' + lotes : ''}${mov.length ? '<br>' + mov.join('<br>') : ''}</div>` +
         `<div class="aj-lt">Libre en CEDIS: <b class="${c.libre < 0 ? 'm-neg' : ''}">${F(c.libre)}</b>${em.p || em.t > 1 ? ' = ' + window.__empBultos(c.libre, em) : ' · empaque ' + F(emp)} <button type="button" class="m-lnk aj-lb" data-aj="lotes" data-k="${i}">Lotes${hay ? ' · ' + c.lineas.length + ' unidades' : ''}</button></div>` +
-        (em.p || em.t > 1 ? `<div class="aj-emp">${window.__empChips(em)}</div><div class="aj-lt">${F(finalDe(r))} = <b>${window.__empBultos(finalDe(r), em)}</b></div>` : '') +
+        (em.p || em.t > 1 ? `<div class="aj-emp">${window.__empChips(em)}</div>${finalDe(r) > 0 ? `<div class="aj-lt">${F(finalDe(r))} = <b>${window.__empBultos(finalDe(r), em)}</b></div>` : ''}` : '') +
         (em.cuadra === false ? `<div class="aj-lt aj-emp-mal">Maestro: ${F(em.p)} × ${F(em.s)} = ${F(em.p * em.s)}, no la caja de ${F(em.t)}. <button type="button" class="m-lnk" data-emp-lista="1">Lista para corregir</button></div>` : '') +
         (p || r.Ajuste ? `<select data-ajm="${i}" class="aj-mot"${p ? '' : ' disabled'}><option value="">Motivo…</option>${MOTIVOS.map(m => `<option${(p ? p.motivo : r.Ajuste.motivo) === m ? ' selected' : ''}>${m}</option>`).join('')}</select>` : '') +
         (acc.length ? `<div class="aj-acc">${acc.join(' ')}</div>` : '');
@@ -5618,6 +5621,50 @@ document.addEventListener('keydown', e => {
   }
   document.addEventListener('click', ev => { if (ev.target.closest('[data-emp-lista]')) { ev.preventDefault(); lista(); } });
   window.__empLista = lista;
+})();
+</script>
+
+<script>
+/* 18-nov-2026 · Paso 3 · «Vista de trabajo»: las columnas que se usan para revisar y ajustar, con UE y Suministro
+   fijas a la izquierda (el ajuste ya queda fijo a la derecha). «Vista completa» = todas. Usa el mismo selector de
+   columnas (se guarda en el equipo); si el analista arma su propia selección, ningún botón queda marcado. */
+(function () {
+  const TRAB = ['ver', 'tipo', 'ue', 'cod', 'sum', 'prio', 'stock', 'invue', 'sol', 'asg', 'trans', 'resv', 'estado'];
+  const ocultasTrab = () => new Set(M_COLS.filter(c => !c.fijo && !TRAB.includes(c.k)).map(c => c.k));
+  function vistaActual() {
+    if (!M_OCULTAS.size) return 'comp';
+    const t = ocultasTrab(); return (t.size === M_OCULTAS.size && [...t].every(k => M_OCULTAS.has(k))) ? 'trab' : '';
+  }
+  function marcar() { const v = vistaActual(); document.querySelectorAll('#mVista [data-vista]').forEach(b => b.classList.toggle('on', b.dataset.vista === v)); }
+  function fijar() {
+    const t = document.getElementById('tbl_asignacion'); if (!t) return;
+    const vis = mVisibles(), iU = vis.findIndex(c => c.k === 'ue'), iS = vis.findIndex(c => c.k === 'sum');
+    t.querySelectorAll('.m-fija').forEach(e => { e.classList.remove('m-fija'); e.style.left = ''; });
+    const th = t.querySelectorAll('#mThead th'); if (!th.length) return;
+    let left = 0;
+    [iU, iS].filter(i => i >= 0).forEach(i => {
+      const w = th[i].getBoundingClientRect().width;
+      th[i].classList.add('m-fija'); th[i].style.left = left + 'px';
+      t.querySelectorAll('tbody tr').forEach(tr => { const td = tr.children[i]; if (td && tr.children.length === vis.length) { td.classList.add('m-fija'); td.style.left = left + 'px'; } });
+      left += w;
+    });
+  }
+  let pend = 0; const programar = () => { cancelAnimationFrame(pend); pend = requestAnimationFrame(() => { fijar(); marcar(); }); };
+  function montar() {
+    const cs = document.querySelector('.m-colsel'); if (!cs || document.getElementById('mVista')) return;
+    cs.insertAdjacentHTML('beforebegin', '<div class="m-vista" id="mVista" role="group" aria-label="Vista de la tabla"><button type="button" data-vista="trab" title="Las columnas para revisar y ajustar; UE y Suministro quedan fijas">Vista de trabajo</button><button type="button" data-vista="comp" title="Todas las columnas">Vista completa</button></div>');
+    document.getElementById('mVista').addEventListener('click', ev => {
+      const b = ev.target.closest('[data-vista]'); if (!b) return;
+      M_OCULTAS = b.dataset.vista === 'trab' ? ocultasTrab() : new Set();
+      try { mPintarColPanel(); } catch (e) {}
+      mGuardarCols(); programar();
+    });
+    const tb = document.querySelector('#tbl_asignacion tbody'); if (tb) new MutationObserver(programar).observe(tb, { childList: true });
+    const hd = document.getElementById('mThead'); if (hd) new MutationObserver(programar).observe(hd, { childList: true });
+    window.addEventListener('resize', programar);
+    programar();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', montar); else montar();
 })();
 </script>
 </body>
