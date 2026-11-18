@@ -4764,12 +4764,15 @@ document.addEventListener('keydown', e => {
       .catch(() => fetch(n + '?t=' + Date.now(), { cache: 'no-store' }).then(r => { if (!r.ok) throw new Error(n + ' ' + r.status); return r.json(); }));
     function rvCargar() {
       if (RV.m) return Promise.resolve();
-      if (!RV.cargando) RV.cargando = Promise.all([leerR('reservas_motor.json'), leerR('reservas.json').catch(() => null)]).then(([m, h]) => {
-        RV.m = (m && m.r) || {}; RV.h = new Map(); RV.gen = m && m.generado;
-        ((h && h.lista) || []).forEach(L => (L.subs || []).forEach(x => RV.h.set(String(x.f8).trim() + '|' + String(L.sku).trim(), x)));
-      }).catch(e => { RV.cargando = null; throw e; });
+      if (!RV.h) { RV.h = new Map(); RV.hProm = leerR('reservas.json').then(h => {   // aporta fecha de asignación y días (no frena el panel)
+        ((h && h.lista) || []).forEach(L => (L.subs || []).forEach(x => RV.h.set(String(x.f8).trim() + '|' + String(L.sku).trim(), x))); RV.hListo = true;
+        const M = document.getElementById('ajResM'); if (M && !M.hidden && RV.abierta) rvAbrir(RV.abierta);
+      }).catch(() => { RV.hListo = true; }); }
+      if (!RV.cargando) RV.cargando = leerR('reservas_motor.json').then(m => { RV.m = (m && m.r) || {}; RV.gen = m && m.generado; })
+        .catch(e => { RV.cargando = null; throw e; });
       return RV.cargando;
     }
+    setTimeout(() => { if (AJ.activo || (typeof DATA !== 'undefined' && DATA.some && DATA.some(r => N(r.Reservado) > 0))) rvCargar().catch(() => {}); }, 3500);   // se adelanta la lectura
     const docsDe = r => String(r.Reservado_Doc || '').split(',').map(x => x.trim()).filter(Boolean);
     window.__resvCelda = r => {
       const q = N(r.Reservado); if (!q) return '<span class="m-dim">-</span>';
@@ -4782,7 +4785,7 @@ document.addEventListener('keydown', e => {
     }
     const pill = t => t ? `<span class="aj-tp ${/URGEN/.test(t) ? 'aj-tp-u' : (/MENS/.test(t) ? 'aj-tp-m' : '')}">${E(t)}</span>` : '<span class="m-dim">sin dato</span>';
     async function rvAbrir(k) {
-      const r = filaDe(k); if (!r) return;
+      const r = filaDe(k); if (!r) return; RV.abierta = k;
       if (!document.getElementById('ajResM')) document.body.insertAdjacentHTML('beforeend', `<div class="aj-modal" id="ajResM" hidden><div class="aj-modal-c aj-modal-w"><div class="aj-modal-h"><span id="ajResT">Reservas</span><button type="button" class="aj-x" data-cerrar="ajResM">&times;</button></div>
           <div class="aj-modal-b" id="ajResB"></div><div class="m-modal-f"><button class="m-btn m-btn-out" type="button" data-cerrar="ajResM">Cerrar</button></div></div></div>`);
       const M = document.getElementById('ajResM'), B = document.getElementById('ajResB'), sku = String(r.Codigo).trim();
@@ -4792,7 +4795,7 @@ document.addEventListener('keydown', e => {
       const mias = docsDe(r).map(d => rvFila(d, sku)), set = new Set(docsDe(r));
       const otras = Object.keys(RV.m).filter(x => x.endsWith('|' + sku) && !set.has(x.split('|')[0])).map(x => rvFila(x.split('|')[0], sku)).sort((a, b) => b.q - a.q);
       const urg = mias.some(x => /URGEN/.test(x.tipo)), men = mias.some(x => /MENS/.test(x.tipo)), esUrg = /URGEN/.test(String(r.Tipo || '').toUpperCase());
-      const dias = x => x.dias != null ? x.dias : (x.asig === '' && !RV.h.has(x.f8 + '|' + sku) ? '<span class="m-dim">menos de 3</span>' : '—');
+      const dias = x => x.dias != null ? x.dias : (!RV.hListo ? '<span class="m-dim">…</span>' : (!RV.h.has(x.f8 + '|' + sku) ? '<span class="m-dim">menos de 3</span>' : '—'));
       let hint = '';
       if (urg) hint = `<b>Ya tiene una urgencia reservada</b> de este renglón para esta unidad. Si esta F8 pide lo mismo, puede quedar sin efecto.`;
       else if (esUrg && men) hint = `Esta F8 es <b>urgencia</b> y la unidad tiene un <b>mensual reservado</b>. Si la urgencia apremia, se puede ajustar ese mensual en SALMI y darle aquí la urgencia.`;
