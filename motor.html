@@ -481,6 +481,35 @@ body.m tbody tr:hover td{background:#f7faff}
 
 .m-pas small.m-warn{color:#a86b00!important;font-weight:600}
 
+
+/* ---------- 18-nov-2026 · Ajustes del analista (paso 3) ---------- */
+#tbl_asignacion td.aj-col,#tbl_asignacion th.aj-col{position:sticky;right:0;z-index:2;min-width:250px;max-width:290px;box-shadow:-6px 0 8px -6px rgba(0,0,0,.18)}
+#tbl_asignacion td.aj-col{background:#f4f8ff}#tbl_asignacion th.aj-col{z-index:3;background:#e3edfb;color:#1e4f9a}
+.aj-q{display:flex;align-items:center;gap:3px}
+.aj-q button{width:24px;height:26px;padding:0;border:1px solid #c9d3e0;border-radius:6px;background:#fff;font-weight:700;cursor:pointer;color:#1d2733}
+.aj-q input{width:88px;padding:4px 6px;text-align:right;border:1.5px solid #cdd6e2;border-radius:6px;font-size:12px;font-variant-numeric:tabular-nums}
+.aj-in-ok{border-color:#2e8b57!important;background:#f2fbf5}.aj-in-warn{border-color:#e0a21b!important;background:#fffaf0}.aj-in-bad{border-color:#d14343!important;background:#fff5f5}
+.aj-val{font-size:10.5px;margin-top:2px;font-weight:600}.aj-val-ok{color:#1f6f43}.aj-val-warn{color:#7a5200}.aj-val-bad{color:#9b1c1c}
+.aj-hecho{font-size:10.5px;margin-top:2px;color:#1e4f9a;font-weight:600}
+.aj-lt{font-size:10.5px;color:#5a6878;margin-top:3px;line-height:1.35;white-space:normal}
+.aj-mas{color:#1f6f43;font-weight:600}.aj-menos{color:#9b1c1c;font-weight:600}
+.aj-lb{padding:1px 6px!important;font-size:10.5px!important}
+.aj-mot{width:100%;margin-top:4px;padding:3px 5px;border:1px solid #cdd6e2;border-radius:6px;font-size:11.5px;background:#fff}
+.aj-acc{margin-top:4px;display:flex;gap:4px;flex-wrap:wrap}
+.aj-barra{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:900;display:flex;gap:10px;align-items:center;background:#0b1f3a;color:#fff;border-radius:12px;padding:10px 14px;box-shadow:0 6px 24px rgba(0,0,0,.25);font-size:13px}
+.aj-b-out{background:transparent!important;color:#fff!important;border:1px solid rgba(255,255,255,.4)!important}.aj-malos{color:#ffb4b4}
+.aj-toast{position:fixed;right:16px;bottom:84px;z-index:1000;max-width:460px;background:#1d2733;color:#fff;border-radius:10px;padding:10px 14px;font-size:13px;line-height:1.45;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+.aj-modal{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:950;display:flex;align-items:center;justify-content:center}
+.aj-modal[hidden]{display:none}
+.aj-modal-c{background:#fff;border-radius:12px;overflow:hidden;max-height:90vh;display:flex;flex-direction:column;width:720px;max-width:95vw}
+.aj-modal-w{width:940px}
+.aj-modal-h{display:flex;justify-content:space-between;align-items:center;padding:12px 18px;color:#fff;background:#0b1f3a;font-weight:700;font-size:15px}
+.aj-x{background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1}
+.aj-modal-b{padding:14px 18px;overflow:auto;font-size:13px}
+.aj-ol{margin:0 0 10px;padding-left:20px;line-height:1.6}.aj-sub{margin:12px 0 6px;font-size:13px}
+.aj-in-l{width:96px;padding:4px 6px;text-align:right;border:1.5px solid #9fb3cc;border-radius:6px;font-size:12px}
+[data-theme="dark"] #tbl_asignacion td.aj-col{background:#12233d}[data-theme="dark"] #tbl_asignacion th.aj-col{background:#16223b;color:#cbd5e1}
+[data-theme="dark"] .aj-modal-c{background:#111a2e;color:#e2e8f0}
   </style>
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
@@ -811,15 +840,18 @@ body.m tbody tr:hover td{background:#f7faff}
       window.__mFuente('Cargando corte publicado…');
       window.__mAviso('');
       try {
-        const [a, e] = await Promise.all([
+        const [a, e, aj] = await Promise.all([
           leer('allocation.json', opc.fresco, t),
-          leer('allocation_estado.json', opc.fresco, t).catch(() => ({}))
+          leer('allocation_estado.json', opc.fresco, t).catch(() => ({})),
+          leer('ajustes_corte.json', true, t).catch(() => null)   // 18-nov-2026 · ajustes del analista (si el servidor ya los activó)
         ]);
         const gen = Date.parse(a && a.generado || '');
         const inv = Date.parse(e && e.invalidado || '') || 0;
         if (!a || !Array.isArray(a.filas) || !isFinite(gen)) throw new Error('allocation.json sin filas');
         const hayNuevo = inv > gen;   // el Motor corrió después de la última publicación
         DATA = a.filas;
+        window._MODO_ACTUAL = 'live';
+        if (window.__ajCargar) window.__ajCargar(aj);
         PARAMS = { cut_date: fechaLocal(gen), generated_at: a.generado, fuente: 'publicado' };
         window._MODO_ACTUAL = 'live';
         window.__mModo && window.__mModo('diario');
@@ -1527,6 +1559,8 @@ body.m tbody tr:hover td{background:#f7faff}
   // EXPORTAR PDF (F8) - V8.5 (CORREGIDO: ERROR FILENAME + VISUAL)
   // ==============================================================
   function exportPdfAsignacion() {
+    // 18-nov-2026 · no se imprime con ajustes sin guardar: la Hoja debe salir con lo que quedó en el corte.
+    if (window.__ajPendientes && window.__ajPendientes() > 0) { window.__ajToast && window.__ajToast('<b>Hay ajustes sin guardar.</b> Guárdelos (o descártelos) antes de imprimir la Hoja de asignación: así sale con las cantidades que quedan en el corte.', 8000); return; }
     const rows = _pickingRows();
     if (!rows.length) { alert("No hay datos visibles para exportar."); return; }
 
@@ -1639,12 +1673,12 @@ body.m tbody tr:hover td{background:#f7faff}
         <td style="font-size:8px;">${esc(r.Grupo || "-")}</td>
         <td class="num">${fmt0(r.Solicitado)}</td>
         <td class="num" style="${r.Acaparamiento ? 'color:#bf360c;font-weight:bold;text-decoration:underline;' : ''}">${fmt0(r.Solicitado_redondeado)}${r.Acaparamiento ? ' ⚠️' : ''}</td>
-        <td class="num" style="background:rgba(255,255,255,0.5); font-weight:bold;">${fmt0(r.Asignado)}</td>
+        <td class="num" style="background:rgba(255,255,255,0.5); font-weight:bold;">${fmt0(r.Asignado)}${r.Ajuste ? ' <span title="Ajustado por el analista" style="font-size:7px;color:#1e4f9a;">(A)</span>' : ''}</td>
         <td class="num" style="color:blue;">${transito}</td>
         <td class="num" style="color:purple;">${r.Reservado > 0 ? fmt0(r.Reservado) : "-"}</td>
         <td style="font-size:8px; color:#444; text-align:center;">${esc(r.Reservado_Doc || "")}</td>
         <td class="num">${fmt0(r.Pendiente)}</td>
-        <td style="font-size:7px; text-align:center;">${esc(r.Estado || "")}</td>
+        <td style="font-size:7px; text-align:center;">${esc(r.Estado || "")}${r.Ajuste ? `<div style="color:#1e4f9a;font-weight:bold;">AJUSTE: ${esc(r.Ajuste.motivo || '')} · Motor ${fmt0(r.__ajMotor)}</div>` : ''}</td>
         <td class="center">${esc(b)}</td>
         <td style="font-size:9px;">${esc(lotes)} ${r.Transito_Info ? '<br><span style="color:blue">' + esc(r.Transito_Info) + '</span>' : ''}</td>
         <td>${esc(r.Ultimo_Despacho || "-")}</td>
@@ -2220,6 +2254,8 @@ body.m tbody tr:hover td{background:#f7faff}
       else {
         DATA = newData;
         window._MODO_ACTUAL = (type === 'history') ? 'history' : 'live';
+        if (type !== 'history' && window.__ajRecargar) setTimeout(window.__ajRecargar, 0);   // 18-nov-2026 · ajustes del analista
+        else if (window.__ajCargar) { try { mPintarThead(); } catch (eT) {} }
         populateFilters();
         // Auto-filtrar por UE si viene en la URL (?ue=NOMBRE)
         const urlUE = new URLSearchParams(window.location.search).get('ue');
@@ -3516,13 +3552,15 @@ document.addEventListener('keydown', e => {
     { k: 'previo', t: 'Previo', c: 'right', f: r => fmt(r.Ejecucion_Previa) },
     { k: 'saldo', t: 'Saldo', c: 'right', f: r => mNum(r.Saldo_Disponible) < 0 ? `<b class="m-neg">${fmt(r.Saldo_Disponible)}</b>` : fmt(r.Saldo_Disponible) }
   ];
+  // 18-nov-2026 · columna fija de ajustes del analista (solo en el corte diario y si el servidor ya la activó)
+  M_COLS.push({ k: 'ajuste', t: 'Ajuste del analista', fijo: true, soloAj: true, c: 'aj-col', f: r => window.__ajCelda ? window.__ajCelda(r) : '' });
   const M_COLS_KEY = 'motor_columnas_v1';
   let M_OCULTAS = new Set();
   try { M_OCULTAS = new Set(JSON.parse(localStorage.getItem(M_COLS_KEY) || '[]')); } catch (e) {}
-  const mVisibles = () => M_COLS.filter(c => c.fijo || !M_OCULTAS.has(c.k));
+  const mVisibles = () => M_COLS.filter(c => (c.fijo || !M_OCULTAS.has(c.k)) && (!c.soloAj || (window.__ajVisible && window.__ajVisible())));
   function mPintarThead() {
     document.getElementById('mThead').innerHTML = mVisibles().map(c =>
-      `<th class="${(c.c || '').includes('right') ? 'right' : (c.c || '').includes('center') ? 'center' : ''}"${c.tit ? ` title="${c.tit}"` : ''}>${c.t}</th>`).join('');
+      `<th class="${(c.c || '').includes('right') ? 'right' : (c.c || '').includes('center') ? 'center' : ''}${c.soloAj ? ' aj-col' : ''}"${c.tit ? ` title="${c.tit}"` : ''}>${c.t}</th>`).join('');
     document.getElementById('mColBtn').textContent = 'Columnas (' + mVisibles().length + ' de ' + M_COLS.length + ')';
   }
   function mPintarColPanel() {
@@ -4492,6 +4530,267 @@ document.addEventListener('keydown', e => {
   })();
 
   </script>
+  <script>
+  // ===================== AJUSTES DEL ANALISTA SOBRE EL CORTE (18-nov-2026) =====================
+  // Paso 3: el analista corrige cantidades antes de imprimir la Hoja de asignación.
+  // - Lo que el Motor asignó a cada unidad queda CONGELADO con sus lotes. Un aumento solo toma de
+  //   lo LIBRE (primero el lote que vence antes); una rebaja libera primero el lote que vence más tarde.
+  // - El estado vigente (lo libre por lote y los ajustes guardados) viene en ajustes_corte.json, que el
+  //   Motor publica al terminar cada corrida y cada vez que se guardan ajustes. Si ese archivo no existe
+  //   (servidor sin activar), la página se ve y funciona exactamente como antes.
+  // - Guardar = una sola llamada con PIN (motorAjustar). El servidor vuelve a validar todo con sus
+  //   propios lotes; si algo no cuadra no escribe nada.
+  (function () {
+    const AJ = { activo: false, corte: '', lotes: {}, ajustes: {}, pend: new Map(), guardando: false };
+    const K = r => String(r.N_Doc || '').trim() + '|' + String(r.Codigo || '').trim();
+    const N = v => Number(v || 0);
+    const E = v => String(v == null ? '' : v).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const F = n => Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: 1 });
+    const MOTIVOS = ['Liberar tope de cuota', 'Dar más meses de consumo', 'Ajuste a empaque cerrado', 'Distribución de escasos', 'Cedido a otra unidad', 'Preasignación de tránsito', 'Corrección del pedido', 'Otro'];
+    const enVivo = () => window._MODO_ACTUAL !== 'history';
+    window.__ajVisible = () => AJ.activo && enVivo();
+    window.__ajPendientes = () => AJ.pend.size;
+    window.__AJ = AJ;
+    const filas = () => (typeof DATA !== 'undefined' && Array.isArray(DATA)) ? DATA : [];
+
+    function toast(t, ms) {
+      let e = document.getElementById('ajToast');
+      if (!e) { e = document.createElement('div'); e.id = 'ajToast'; e.className = 'aj-toast'; document.body.appendChild(e); }
+      e.innerHTML = t; e.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(() => { e.hidden = true; }, ms || 5000);
+    }
+    window.__ajToast = toast;
+
+    // ---------- carga y aplicación sobre DATA ----------
+    function lotesParse(s) {
+      return String(s || '').split(',').map(x => x.trim().match(/^(.+)\((\d+(?:\.\d+)?)\)$/)).filter(Boolean).map(m => ({ lote: m[1].trim(), q: Number(m[2]) })).filter(x => x.q > 0);
+    }
+    function aplicar() {
+      const rows = filas();
+      rows.forEach(r => {
+        const a = AJ.activo ? AJ.ajustes[K(r)] : null;
+        if (r.__ajMotor === undefined) r.__ajMotor = N(r.Asignado);
+        if (!a) { r.Ajuste = null; return; }
+        // Si allocation.json todavía trae el valor del Motor (se republica en segundo plano), se aplica el final.
+        const antes = N(r.Asignado);
+        r.__ajMotor = N(a.motor);
+        if (antes !== N(a.final)) {
+          if (antes > 0 && N(r.Bultos_Prim)) r.Bultos_Prim = N(r.Bultos_Prim) * N(a.final) / antes;
+          r.Asignado = N(a.final);
+          r.Bultos_Ter = N(r.Empaque_Ter) > 0 ? N(a.final) / N(r.Empaque_Ter) : r.Bultos_Ter;
+          r.Pendiente = N(r.Solicitado_redondeado) - N(a.final);
+        }
+        r.Lotes_Usados = a.lotes || r.Lotes_Usados;
+        r.Ajuste = N(a.final) !== N(a.motor) ? a : null;
+      });
+    }
+    window.__ajCargar = function (aj) {
+      AJ.activo = !!(aj && aj.lotes && typeof aj.lotes === 'object');
+      if (AJ.activo) {
+        if (AJ.corte && aj.corte !== AJ.corte && AJ.pend.size) { AJ.pend.clear(); toast('El Motor corrió de nuevo: los cambios sin guardar del corte anterior se descartaron.'); }
+        AJ.corte = aj.corte || ''; AJ.lotes = aj.lotes || {}; AJ.ajustes = aj.ajustes || {};
+      }
+      aplicar();
+      try { mPintarThead(); } catch (e) {}
+      pintarBarra();
+    };
+    window.__ajRecargar = async function () {
+      if (!enVivo()) return;
+      try {
+        const r = await fetch('https://api.github.com/repos/TorredeControlCSS/ASIGNACION_F8/contents/ajustes_corte.json?t=' + Date.now(), { cache: 'no-store', headers: { Accept: 'application/vnd.github.raw' } })
+          .catch(() => null);
+        const j = r && r.ok ? await r.json() : await fetch('ajustes_corte.json?t=' + Date.now(), { cache: 'no-store' }).then(x => x.ok ? x.json() : null).catch(() => null);
+        window.__ajCargar(j);
+        if (typeof applyFilters === 'function') applyFilters();
+      } catch (e) { console.warn('ajustes_corte.json:', e); }
+    };
+
+    // ---------- modelo de lotes (el mismo que valida el servidor) ----------
+    function vtoDe(cod, lote) { const l = (AJ.lotes[cod] || []).find(x => x[0] === lote); return l ? l[1] : ''; }
+    function filasSku(cod) { return filas().filter(r => String(r.Codigo).trim() === cod); }
+    function calcSku(cod) {
+      const pool = (AJ.lotes[cod] || []).map(l => ({ lote: l[0], vto: l[1] || '', libre: N(l[2]), ini: N(l[2]) }));
+      const L = filasSku(cod), out = new Map();
+      L.forEach(r => out.set(K(r), { tomados: [], liberados: [], falta: 0 }));
+      const nueva = r => { const p = AJ.pend.get(K(r)); return p ? p.nueva : null; };
+      L.filter(r => nueva(r) !== null && nueva(r) < N(r.Asignado)).forEach(r => {
+        let x = N(r.Asignado) - nueva(r);
+        const ls = lotesParse(r.Lotes_Usados).map(l => ({ ...l, vto: vtoDe(cod, l.lote) })).sort((a, b) => String(b.vto || '9999').localeCompare(String(a.vto || '9999')));
+        for (const l of ls) { if (x <= 0) break; const q = Math.min(x, l.q); x -= q; out.get(K(r)).liberados.push({ lote: l.lote, q, vto: l.vto });
+          const pl = pool.find(p => p.lote === l.lote); if (pl) pl.libre += q; else pool.push({ lote: l.lote, vto: l.vto, libre: q, ini: 0 }); }
+        if (x > 0) out.get(K(r)).falta = -x;   // no tiene lotes para rebajar (raro)
+      });
+      pool.sort((a, b) => String(a.vto || '9999').localeCompare(String(b.vto || '9999')));
+      L.filter(r => nueva(r) !== null && nueva(r) > N(r.Asignado)).forEach(r => {
+        let x = nueva(r) - N(r.Asignado);
+        for (const p of pool) { if (x <= 0) break; if (p.libre <= 0) continue; const q = Math.min(x, p.libre); p.libre -= q; x -= q; out.get(K(r)).tomados.push({ lote: p.lote, q, vto: p.vto }); }
+        out.get(K(r)).falta = x;
+      });
+      return { pool, porLinea: out, libre: pool.reduce((s, p) => s + p.libre, 0), lineas: L };
+    }
+    const fVto = v => { const m = String(v || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[3] + '/' + m[2] + '/' + m[1] : 'vence s/d'; };
+    const finalDe = r => { const p = AJ.pend.get(K(r)); return p ? p.nueva : N(r.Asignado); };
+    function validar(r, c) {
+      const p = AJ.pend.get(K(r)); if (!p) return { c: '', m: '' };
+      const d = (c || calcSku(String(r.Codigo).trim())).porLinea.get(K(r)), emp = N(r.Empaque_Ter) || 1;
+      if (!(p.nueva >= 0)) return { c: 'bad', m: 'Cantidad inválida' };
+      if (d && d.falta > 0) return { c: 'bad', m: 'Faltan ' + F(d.falta) + ': no hay más lotes libres' };
+      if (d && d.falta < 0) return { c: 'bad', m: 'La línea no tiene lotes para rebajar' };
+      if (!p.motivo) return { c: 'bad', m: 'Elija el motivo' };
+      if (p.nueva > 0 && p.nueva >= emp && p.nueva % emp) return { c: 'warn', m: 'No es empaque cerrado (' + F(emp) + ')' };
+      if (p.nueva > N(r.Solicitado)) return { c: 'warn', m: 'Más de lo que pidió (' + F(r.Solicitado) + ')' };
+      return { c: 'ok', m: 'Listo para guardar' };
+    }
+    function poner(r, n, motivo) {
+      n = Math.max(0, Math.round(Number(n) || 0));
+      const k = K(r), act = N(r.Asignado), prev = AJ.pend.get(k);
+      if (n === act) { AJ.pend.delete(k); return; }
+      AJ.pend.set(k, { nueva: n, motivo: motivo !== undefined ? motivo : (prev ? prev.motivo : ''), previo: act, f8: String(r.N_Doc).trim(), sku: String(r.Codigo).trim() });
+    }
+    const haciaEmpaque = (n, emp) => n >= emp ? Math.floor(n / emp) * emp : n;
+    const esTope = r => r.Acaparamiento || /CUOTA/.test(String(r.Estado || '').toUpperCase());
+
+    // ---------- celda de la columna "Ajuste del analista" ----------
+    window.__ajCelda = function (r) {
+      const cod = String(r.Codigo).trim(), c = calcSku(cod), d = c.porLinea.get(K(r)) || { tomados: [], liberados: [] };
+      const v = validar(r, c), p = AJ.pend.get(K(r)), emp = N(r.Empaque_Ter) || 1, i = E(K(r));
+      const lotes = lotesParse(r.Lotes_Usados).map(l => `${E(l.lote)} ${F(l.q)}`).join(', ');
+      const mov = [...d.tomados.map(l => `<span class="aj-mas">+${F(l.q)} de ${E(l.lote)} (${fVto(l.vto)})</span>`), ...d.liberados.map(l => `<span class="aj-menos">−${F(l.q)} libera ${E(l.lote)}</span>`)];
+      const acc = [];
+      const motorV = N(r.__ajMotor);
+      if (p) acc.push(`<button type="button" class="m-lnk" data-aj="desc" data-k="${i}">Descartar</button>`);
+      if (!p && r.Ajuste) acc.push(`<button type="button" class="m-lnk" data-aj="motor" data-k="${i}" title="Volver a la cantidad que dio el Motor">Volver al Motor (${F(motorV)})</button>`);
+      if (!p && N(r.Asignado) < N(r.Solicitado) && (c.libre > 0)) {
+        if (esTope(r)) acc.push(`<button type="button" class="m-lnk" data-aj="liberar" data-k="${i}" title="Dar lo pedido, a empaque cerrado y sin pasar de lo libre">Liberar tope</button>`);
+        if (N(r.Consumo_Base) > 0) acc.push(`<button type="button" class="m-lnk" data-aj="dos" data-k="${i}" title="Consumo × 2 − lo ya despachado en el mes">Dar 2 meses</button>`);
+      }
+      const hay = c.lineas.length > 1;
+      return `<div class="aj-q"><button type="button" data-aj="menos" data-k="${i}" title="Quitar un empaque">−</button>` +
+        `<input type="number" min="0" step="${emp}" value="${finalDe(r)}" data-ajq="${i}" class="${v.c ? 'aj-in-' + v.c : ''}" aria-label="Cantidad final">` +
+        `<button type="button" data-aj="mas" data-k="${i}" title="Sumar un empaque">+</button></div>` +
+        (v.m ? `<div class="aj-val aj-val-${v.c}">${E(v.m)}</div>` : '') +
+        (r.Ajuste && !p ? `<div class="aj-hecho">Ajustado por ${E(r.Ajuste.por)} · ${E(r.Ajuste.fecha)} · Motor ${F(motorV)}</div>` : '') +
+        `<div class="aj-lt">${lotes ? 'Lotes: ' + lotes : ''}${mov.length ? '<br>' + mov.join('<br>') : ''}</div>` +
+        `<div class="aj-lt">Libre en CEDIS: <b class="${c.libre < 0 ? 'm-neg' : ''}">${F(c.libre)}</b> · empaque ${F(emp)} <button type="button" class="m-lnk aj-lb" data-aj="lotes" data-k="${i}">Lotes${hay ? ' · ' + c.lineas.length + ' unidades' : ''}</button></div>` +
+        (p || r.Ajuste ? `<select data-ajm="${i}" class="aj-mot"${p ? '' : ' disabled'}><option value="">Motivo…</option>${MOTIVOS.map(m => `<option${(p ? p.motivo : r.Ajuste.motivo) === m ? ' selected' : ''}>${m}</option>`).join('')}</select>` : '') +
+        (acc.length ? `<div class="aj-acc">${acc.join(' ')}</div>` : '');
+    };
+
+    function filaDe(k) { return filas().find(r => K(r) === k); }
+    function repintar() {
+      try { renderAsignacion(renderAsignacion._rows || LAST_FILTERED || []); } catch (e) {}
+      pintarBarra();
+      if (!document.getElementById('ajLotesM').hidden && pintarLotes._cod) pintarLotes(pintarLotes._cod);
+    }
+    document.addEventListener('click', ev => {
+      const b = ev.target.closest('[data-aj]'); if (!b) return;
+      const r = filaDe(b.dataset.k); if (!r) return;
+      const emp = N(r.Empaque_Ter) || 1, a = b.dataset.aj, act = finalDe(r), cod = String(r.Codigo).trim();
+      const libreLinea = () => calcSku(cod).libre + (finalDe(r) - N(r.Asignado) > 0 ? finalDe(r) - N(r.Asignado) : 0);
+      if (a === 'mas' || a === 'menos') { const s = a === 'mas' ? 1 : -1, paso = (act + emp * s) >= emp ? emp : 1; poner(r, act + paso * s); }
+      else if (a === 'desc') AJ.pend.delete(K(r));
+      else if (a === 'motor') poner(r, N(r.__ajMotor), 'Corrección del pedido');
+      else if (a === 'liberar') { const obj = haciaEmpaque(N(r.Solicitado), emp) || N(r.Solicitado); poner(r, Math.min(obj, N(r.Asignado) + libreLinea()), 'Liberar tope de cuota'); }
+      else if (a === 'dos') { const obj = Math.max(0, N(r.Consumo_Base) * 2 - N(r.Ejecucion_Previa)), tope = Math.min(obj, N(r.Solicitado));
+        poner(r, Math.min(haciaEmpaque(tope, emp) || tope, N(r.Asignado) + libreLinea()), 'Dar más meses de consumo'); }
+      else if (a === 'lotes') { pintarLotes(cod); document.getElementById('ajLotesM').hidden = false; return; }
+      repintar();
+    });
+    document.addEventListener('change', ev => {
+      const t = ev.target;
+      if (t.dataset.ajq !== undefined) { const r = filaDe(t.dataset.ajq); if (r) { poner(r, t.value); repintar(); } }
+      else if (t.dataset.ajm !== undefined) { const p = AJ.pend.get(t.dataset.ajm); if (p) { p.motivo = t.value; repintar(); } }
+      else if (t.dataset.ajlq !== undefined) { const r = filaDe(t.dataset.ajlq); if (r) { const n = Number(t.value) || 0; poner(r, n, n < N(r.Asignado) ? 'Cedido a otra unidad' : undefined); repintar(); } }
+    });
+
+    // ---------- ventana de lotes de un renglón ----------
+    function pintarLotes(cod) {
+      pintarLotes._cod = cod;
+      const c = calcSku(cod), r0 = c.lineas[0] || {};
+      document.getElementById('ajLotesT').textContent = 'Lotes · ' + cod + ' · ' + (r0.Suministro || '');
+      const mot = new Map(); c.lineas.forEach(r => lotesParse(r.Lotes_Usados).forEach(l => mot.set(l.lote, (mot.get(l.lote) || 0) + l.q)));
+      const nombres = [...new Set([...c.pool.map(p => p.lote), ...mot.keys()])];
+      const filas = nombres.map(n => { const p = c.pool.find(x => x.lote === n) || { libre: 0, ini: 0, vto: vtoDe(cod, n) };
+        const mas = c.lineas.reduce((s, r) => s + c.porLinea.get(K(r)).tomados.filter(l => l.lote === n).reduce((a, l) => a + l.q, 0), 0);
+        const men = c.lineas.reduce((s, r) => s + c.porLinea.get(K(r)).liberados.filter(l => l.lote === n).reduce((a, l) => a + l.q, 0), 0);
+        return `<tr><td class="m-mono">${E(n)}</td><td>${fVto(p.vto)}</td><td class="right">${F(mot.get(n) || 0)}</td><td class="right">${F(p.ini || 0)}</td><td class="right aj-mas">${men ? '+' + F(men) : '—'}</td><td class="right aj-menos">${mas ? '−' + F(mas) : '—'}</td><td class="right m-b">${F(p.libre)}</td></tr>`; }).join('');
+      document.getElementById('ajLotesB').innerHTML =
+        `<p style="margin-top:0">Lo que el Motor asignó a cada unidad está <b>congelado</b>. Un aumento solo toma de lo <b>libre</b>, empezando por el lote que vence primero. Si no alcanza, hay que rebajar a otra unidad: lo que se le quita queda libre.</p>
+        <div class="scroll" style="max-height:30vh"><table class="m-tbl"><thead><tr><th>Lote</th><th>Vence</th><th class="right">En este corte (asignado)</th><th class="right">Libre guardado</th><th class="right">Liberado por rebajas</th><th class="right">Tomado por aumentos</th><th class="right">Libre ahora</th></tr></thead><tbody>${filas || '<tr><td colspan="7" class="m-vacio">Sin lotes con vencimiento de 60 días o más.</td></tr>'}</tbody></table></div>
+        <div class="aj-sub"><b>Unidades de este renglón en el corte</b> <span class="m-nota">Puede ajustar aquí mismo.</span></div>
+        <div class="scroll" style="max-height:34vh"><table class="m-tbl"><thead><tr><th>Unidad</th><th>F8</th><th class="right">Pidió</th><th class="right">Motor</th><th>Cantidad final</th><th>Movimiento de lotes</th></tr></thead><tbody>
+        ${c.lineas.map(r => { const d = c.porLinea.get(K(r)); const mv = [...d.tomados.map(l => `+${F(l.q)} ${E(l.lote)}`), ...d.liberados.map(l => `−${F(l.q)} ${E(l.lote)}`)].join(', ') || '<span class="m-dim">sin cambios</span>';
+          return `<tr><td class="m-ue">${E(r.Punto)}</td><td class="m-mono">${E(r.N_Doc)}</td><td class="right">${F(r.Solicitado)}</td><td class="right">${F(r.__ajMotor)}</td><td><input type="number" min="0" class="aj-in-l" value="${finalDe(r)}" data-ajlq="${E(K(r))}">${d.falta > 0 ? `<div class="aj-val aj-val-bad">Faltan ${F(d.falta)}</div>` : ''}</td><td class="m-small">${mv}</td></tr>`; }).join('')}
+        </tbody></table></div><div class="m-nota">Libre total ahora: <b>${F(c.libre)}</b>. Los lotes que vencen en menos de 60 días no se cuentan (regla del Motor).</div>`;
+    }
+
+    // ---------- barra de guardado ----------
+    function pintarBarra() {
+      const b = document.getElementById('ajBarra'); if (!b) return;
+      const n = AJ.pend.size;
+      if (!n || !window.__ajVisible()) { b.hidden = true; return; }
+      const malos = [...AJ.pend.keys()].map(filaDe).filter(r => r && validar(r).c === 'bad').length;
+      b.hidden = false;
+      document.getElementById('ajBarraT').innerHTML = `<b>${n}</b> cambio${n === 1 ? '' : 's'} sin guardar` + (malos ? ` · <span class="aj-malos">${malos} por corregir</span>` : '') + (AJ.guardando ? ' · guardando…' : '');
+      document.getElementById('ajGuardar').disabled = malos > 0 || AJ.guardando;
+    }
+    function resumenCambios() {
+      return [...AJ.pend.values()].map(p => { const r = filaDe(p.f8 + '|' + p.sku) || {};
+        return `<tr><td class="m-mono">${E(p.f8)}</td><td class="m-ue">${E(r.Punto)}</td><td class="m-sum">${E(r.Suministro)}</td><td class="right">${F(p.previo)}</td><td class="right m-b">${F(p.nueva)}</td><td>${E(p.motivo)}</td></tr>`; }).join('');
+    }
+    async function guardar() {
+      if (!AJ.pend.size || AJ.guardando) return;
+      const cambios = [...AJ.pend.values()].map(p => ({ f8: p.f8, sku: p.sku, previo: p.previo, nueva: p.nueva, motivo: p.motivo }));
+      AJ.guardando = true; pintarBarra(); document.getElementById('ajConfM').hidden = true;
+      try {
+        const r = await window.__mPostSeguro('motorAjustar', { corte: AJ.corte, cambios: cambios }, i => { if (i > 1) toast('Reintentando el guardado (intento ' + i + ' de 3)…'); });
+        if (r && r.success) {
+          AJ.pend.clear();
+          if (r.estado) window.__ajCargar(r.estado); else await window.__ajRecargar();
+          if (typeof applyFilters === 'function') applyFilters();
+          toast(`<b>Guardado.</b> ${E(r.resumen || (cambios.length + ' ajustes'))}. La Hoja de asignación ya sale con estas cantidades; el historial y el correo a la unidad también.`, 7000);
+        } else {
+          if (r && r.estado) window.__ajCargar(r.estado);
+          if (r && r.cambioCorte) { AJ.pend.clear(); if (window.__motorCargar) await window.__motorCargar({ fresco: true }); }
+          if (typeof applyFilters === 'function') applyFilters();
+          toast('<b>No se guardó.</b> ' + E(r && r.error || 'Error desconocido'), 12000);
+        }
+      } catch (e) { toast('<b>No se pudo confirmar el guardado.</b> ' + E(e.message || e), 12000); }
+      finally { AJ.guardando = false; pintarBarra(); }
+    }
+
+    // ---------- marcado ----------
+    function montar() {
+      if (document.getElementById('ajBarra')) return;
+      document.body.insertAdjacentHTML('beforeend',
+        `<div class="aj-barra" id="ajBarra" hidden><span id="ajBarraT"></span>
+          <button class="m-btn aj-b-out" type="button" id="ajDescartar">Descartar</button>
+          <button class="m-btn m-btn-hoja" type="button" id="ajGuardar">Guardar ajustes</button></div>
+        <div class="aj-modal" id="ajConfM" hidden><div class="aj-modal-c"><div class="aj-modal-h"><span>Guardar ajustes del corte</span><button type="button" class="aj-x" data-cerrar="ajConfM">&times;</button></div>
+          <div class="aj-modal-b" id="ajConfB"></div>
+          <div class="m-modal-f"><button class="m-btn m-btn-out" type="button" data-cerrar="ajConfM">Volver</button> <button class="m-btn m-btn-hoja" type="button" id="ajConfOk">Guardar</button></div></div></div>
+        <div class="aj-modal" id="ajLotesM" hidden><div class="aj-modal-c aj-modal-w"><div class="aj-modal-h"><span id="ajLotesT">Lotes</span><button type="button" class="aj-x" data-cerrar="ajLotesM">&times;</button></div>
+          <div class="aj-modal-b" id="ajLotesB"></div>
+          <div class="m-modal-f"><button class="m-btn m-btn-out" type="button" data-cerrar="ajLotesM">Cerrar</button></div></div></div>`);
+      document.getElementById('ajDescartar').onclick = () => { AJ.pend.clear(); repintar(); };
+      document.getElementById('ajGuardar').onclick = () => {
+        document.getElementById('ajConfB').innerHTML = `<p style="margin-top:0">Se guardan <b>${AJ.pend.size}</b> ajustes en el corte. Al confirmar:</p>
+          <ol class="aj-ol"><li>El servidor vuelve a revisar cada línea con sus lotes; si una no cuadra, no guarda ninguna.</li>
+          <li>El corte queda con la cantidad final y sus lotes; el valor del Motor queda en la bitácora.</li>
+          <li>Cada cambio queda registrado con su nombre, la hora y el motivo.</li>
+          <li>La Hoja de asignación, el historial y el correo a la unidad salen con la cantidad final.</li></ol>
+          <div class="scroll" style="max-height:40vh"><table class="m-tbl"><thead><tr><th>F8</th><th>Unidad</th><th>Renglón</th><th class="right">Antes</th><th class="right">Final</th><th>Motivo</th></tr></thead><tbody>${resumenCambios()}</tbody></table></div>`;
+        document.getElementById('ajConfM').hidden = false;
+      };
+      document.getElementById('ajConfOk').onclick = guardar;
+      document.addEventListener('click', ev => { const c = ev.target.closest('[data-cerrar]'); if (c) document.getElementById(c.dataset.cerrar).hidden = true;
+        const m = ev.target.classList && ev.target.classList.contains('aj-modal') ? ev.target : null; if (m) m.hidden = true; });
+      document.addEventListener('keydown', ev => { if (ev.key === 'Escape') ['ajConfM', 'ajLotesM'].forEach(id => { const x = document.getElementById(id); if (x) x.hidden = true; }); });
+      window.addEventListener('beforeunload', ev => { if (AJ.pend.size) { ev.preventDefault(); ev.returnValue = ''; } });
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', montar); else montar();
+  })();
+  </script>
+
 <div class="tour-bg" id="tour"><div class="tour-hl" id="tourHl"></div><div class="tour-box" id="tourBox"></div></div>
 
 <div id="modalWA" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);
