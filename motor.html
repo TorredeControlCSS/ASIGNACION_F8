@@ -507,6 +507,7 @@ body.m tbody tr:hover td{background:#f7faff}
 .aj-x{background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1}
 .aj-modal-b{padding:14px 18px;overflow:auto;font-size:13px}
 .aj-ol{margin:0 0 10px;padding-left:20px;line-height:1.6}.aj-sub{margin:12px 0 6px;font-size:13px}
+.aj-rep{display:flex;gap:6px;align-items:center;flex-wrap:wrap;background:#f7f9fc;border:1px solid #e1e6ee;border-radius:10px;padding:7px 10px;margin:0 0 8px;font-size:12.5px}
 .aj-in-l{width:96px;padding:4px 6px;text-align:right;border:1.5px solid #9fb3cc;border-radius:6px;font-size:12px}
 [data-theme="dark"] #tbl_asignacion td.aj-col{background:#12233d}[data-theme="dark"] #tbl_asignacion th.aj-col{background:#16223b;color:#cbd5e1}
 [data-theme="dark"] .aj-modal-c{background:#111a2e;color:#e2e8f0}
@@ -4716,15 +4717,21 @@ document.addEventListener('keydown', e => {
       document.getElementById('ajLotesB').innerHTML =
         `<p style="margin-top:0">Lo que el Motor asignó a cada unidad está <b>congelado</b>. Un aumento solo toma de lo <b>libre</b>, empezando por el lote que vence primero. Si no alcanza, hay que rebajar a otra unidad: lo que se le quita queda libre.</p>
         <div class="scroll" style="max-height:30vh"><table class="m-tbl"><thead><tr><th>Lote</th><th>Vence</th><th class="right">En este corte (asignado)</th><th class="right">Libre guardado</th><th class="right">Liberado por rebajas</th><th class="right">Tomado por aumentos</th><th class="right">Libre ahora</th></tr></thead><tbody>${filas || '<tr><td colspan="7" class="m-vacio">Sin lotes con vencimiento de 60 días o más.</td></tr>'}</tbody></table></div>
-        <div class="aj-sub"><b>Unidades de este renglón en el corte</b> <span class="m-nota">Puede ajustar aquí mismo.</span></div>
-        <div class="scroll" style="max-height:34vh"><table class="m-tbl"><thead><tr><th>Unidad</th><th>F8</th><th class="right">Pidió</th><th class="right">Motor</th><th>Cantidad final</th><th>Movimiento de lotes</th></tr></thead><tbody>
+        <div class="aj-sub"><b>Unidades de este renglón en el corte</b> <span class="m-nota">Puede ajustar aquí mismo o repartir.</span></div>
+        ${c.lineas.length > 1 ? `<div class="aj-rep"><span>Repartir <b>${F(totalRepartible(cod))}</b> (lo asignado + lo libre) entre ${c.lineas.length} unidades:</span>
+          <button type="button" class="m-btn m-btn-out m-btn-sm" data-aj-rep="cons">Proporcional al consumo</button>
+          <button type="button" class="m-btn m-btn-out m-btn-sm" data-aj-rep="cob">Igualar cobertura</button>
+          <button type="button" class="m-btn m-btn-out m-btn-sm" id="ajPlantilla">Plantilla Excel</button>
+          <button type="button" class="m-btn m-btn-out m-btn-sm" id="ajSubir">Subir Excel</button></div>` : ''}
+        <div class="scroll" style="max-height:34vh"><table class="m-tbl"><thead><tr><th>Unidad</th><th>F8</th><th class="right">Pidió</th><th class="right">Consumo mes</th><th class="right">Inv. UE</th><th class="right">Motor</th><th>Cantidad final</th><th class="right">Cobertura después (meses)</th><th>Movimiento de lotes</th></tr></thead><tbody>
         ${c.lineas.map(r => { const d = c.porLinea.get(K(r)); const mv = [...d.tomados.map(l => `+${F(l.q)} ${E(l.lote)}`), ...d.liberados.map(l => `−${F(l.q)} ${E(l.lote)}`)].join(', ') || '<span class="m-dim">sin cambios</span>';
-          return `<tr><td class="m-ue">${E(r.Punto)}</td><td class="m-mono">${E(r.N_Doc)}</td><td class="right">${F(r.Solicitado)}</td><td class="right">${F(r.__ajMotor)}</td><td><input type="number" min="0" class="aj-in-l" value="${finalDe(r)}" data-ajlq="${E(K(r))}">${d.falta > 0 ? `<div class="aj-val aj-val-bad">Faltan ${F(d.falta)}</div>` : ''}</td><td class="m-small">${mv}</td></tr>`; }).join('')}
+          return `<tr><td class="m-ue">${E(r.Punto)}</td><td class="m-mono">${E(r.N_Doc)}</td><td class="right">${F(r.Solicitado)}</td><td class="right">${F(r.Consumo_Base)}</td><td class="right">${r.Inventario_UE == null ? '<span class="m-dim">s/d</span>' : F(r.Inventario_UE)}</td><td class="right">${F(r.__ajMotor)}</td><td><input type="number" min="0" class="aj-in-l" value="${finalDe(r)}" data-ajlq="${E(K(r))}">${d.falta > 0 ? `<div class="aj-val aj-val-bad">Faltan ${F(d.falta)}</div>` : ''}</td><td class="right m-b">${N(r.Consumo_Base) > 0 ? F((Math.max(0, N(r.Inventario_UE)) + finalDe(r)) / N(r.Consumo_Base)) : '—'}</td><td class="m-small">${mv}</td></tr>`; }).join('')}
         </tbody></table></div><div class="m-nota">Libre total ahora: <b>${F(c.libre)}</b>. Los lotes que vencen en menos de 60 días no se cuentan (regla del Motor).</div>`;
     }
 
     // ---------- barra de guardado ----------
     function pintarBarra() {
+      const eb = document.getElementById('ajEscBtn'); if (eb) eb.hidden = !window.__ajVisible();
       const b = document.getElementById('ajBarra'); if (!b) return;
       const n = AJ.pend.size;
       if (!n || !window.__ajVisible()) { b.hidden = true; return; }
@@ -4758,6 +4765,113 @@ document.addEventListener('keydown', e => {
       finally { AJ.guardando = false; pintarBarra(); }
     }
 
+    // ---------- Etapa 2 · repartir un renglón escaso entre las unidades del corte ----------
+    // Reparte lo que ya asignó el Motor + lo libre. Solo propone: cada unidad queda como un ajuste
+    // pendiente con motivo «Distribución de escasos», que se revisa y se guarda como cualquier otro.
+    function totalRepartible(cod) {
+      const L = filasSku(cod);
+      return L.reduce((s, r) => s + N(r.Asignado), 0) + (AJ.lotes[cod] || []).reduce((s, l) => s + N(l[2]), 0);
+    }
+    function repartir(cod, metodo) {
+      const L = filasSku(cod), T = totalRepartible(cod);
+      const prim = r => { const a = N(r.Asignado), b = N(r.Bultos_Prim); const x = a > 0 && b > 0 ? Math.round(a / b) : 1; return x >= 1 && x <= (N(r.Empaque_Ter) || 1) ? x : 1; };
+      const U = L.map(r => ({ r, c: N(r.Consumo_Base) || N(r.Solicitado) || 1, inv: Math.max(0, N(r.Inventario_UE)), pid: N(r.Solicitado), emp: N(r.Empaque_Ter) || 1, prim: prim(r) }));
+      const pedido = U.reduce((s, u) => s + u.pid, 0);
+      let p;
+      if (pedido <= T) p = U.map(u => u.pid);                    // alcanza: cada unidad recibe lo que pidió
+      else if (metodo === 'cob') {                                 // igualar los meses de cobertura
+        let lo = 0, hi = 60;
+        for (let k = 0; k < 60; k++) { const t = (lo + hi) / 2, s = U.reduce((a, u) => a + Math.min(u.pid, Math.max(0, t * u.c - u.inv)), 0); if (s > T) hi = t; else lo = t; }
+        p = U.map(u => Math.min(u.pid, Math.max(0, lo * u.c - u.inv)));
+      } else {                                                     // proporcional al consumo mensual
+        p = U.map(() => 0); let libre = T, act = U.map((u, i) => i);
+        for (let k = 0; k < 12 && libre > 0.5 && act.length; k++) {
+          const sc = act.reduce((s, i) => s + U[i].c, 0), nx = [];
+          act.forEach(i => { const q = Math.min(U[i].pid - p[i], libre * U[i].c / sc); p[i] += q; if (U[i].pid - p[i] > 0.5) nx.push(i); });
+          libre = T - p.reduce((a, b) => a + b, 0); act = nx;
+        }
+      }
+      // Redondeo: a caja cerrada (empaque terciario) cuando alcanza para una; si no, al empaque primario.
+      // Lo que sobra se da de a un empaque primario a la unidad con menos cobertura, sin pasar de lo que pidió.
+      p = p.map((x, i) => x >= U[i].emp ? Math.floor(x / U[i].emp) * U[i].emp : Math.floor(x / U[i].prim) * U[i].prim);
+      let sobra = T - p.reduce((a, b) => a + b, 0);
+      for (let g = 0; g < 20000 && sobra > 0; g++) {
+        let k = -1, m = Infinity;
+        U.forEach((u, i) => { const cb = (u.inv + p[i]) / u.c; if (p[i] < u.pid && cb < m) { m = cb; k = i; } });
+        if (k < 0) break; const st = Math.min(U[k].prim, U[k].pid - p[k], sobra); if (st <= 0) break; p[k] += st; sobra -= st;
+      }
+      U.forEach((u, i) => poner(u.r, p[i], 'Distribución de escasos'));
+      toast(pedido <= T ? 'Alcanza para todas: cada unidad queda con lo que pidió.' : 'Reparto propuesto ' + (metodo === 'cob' ? 'igualando la cobertura' : 'en proporción al consumo') + ' (' + F(T) + ' entre ' + U.length + ' unidades). Revise y guarde.');
+      repintar();
+    }
+    function escasos() {
+      const por = new Map();
+      filas().forEach(r => { const c = String(r.Codigo).trim(); if (!por.has(c)) por.set(c, []); por.get(c).push(r); });
+      const out = [];
+      por.forEach((L, c) => {
+        if (L.length < 2) return;
+        const ped = L.reduce((s, r) => s + N(r.Solicitado), 0), T = totalRepartible(c);
+        if (ped > T && T > 0) out.push({ c, nom: L[0].Suministro, n: L.length, ped, T, pct: T / ped * 100 });
+      });
+      return out.sort((a, b) => a.pct - b.pct);
+    }
+    function pintarEscasos() {
+      const L = escasos();
+      document.getElementById('ajEscB').innerHTML = `<p style="margin-top:0">Renglones de este corte que piden <b>dos o más unidades</b> y en los que <b>no alcanza</b> para todas (lo asignado más lo libre). Al abrir uno puede repartirlo en proporción al consumo, igualando la cobertura, o con el reparto que trae en Excel.</p>
+        <div class="scroll" style="max-height:60vh"><table class="m-tbl"><thead><tr><th>Código</th><th>Renglón</th><th class="right">Unidades</th><th class="right">Piden</th><th class="right">Hay para repartir</th><th class="right">Alcanza</th><th></th></tr></thead><tbody>
+        ${L.map(x => `<tr><td class="m-mono">${E(x.c)}</td><td class="m-sum">${E(x.nom)}</td><td class="right">${x.n}</td><td class="right">${F(x.ped)}</td><td class="right">${F(x.T)}</td><td class="right m-b">${F(x.pct)} %</td><td><button type="button" class="m-lnk" data-aj-esc="${E(x.c)}">Repartir</button></td></tr>`).join('') || '<tr><td colspan="7" class="m-vacio">No hay renglones escasos repartidos entre varias unidades en este corte.</td></tr>'}
+        </tbody></table></div>`;
+    }
+    document.addEventListener('click', ev => {
+      const e1 = ev.target.closest('[data-aj-esc]'); if (e1) { document.getElementById('ajEscM').hidden = true; pintarLotes(e1.dataset.ajEsc); document.getElementById('ajLotesM').hidden = false; return; }
+      const e2 = ev.target.closest('[data-aj-rep]'); if (e2) { repartir(pintarLotes._cod, e2.dataset.ajRep); return; }
+      if (ev.target.id === 'ajEscBtn') { pintarEscasos(); document.getElementById('ajEscM').hidden = false; }
+      if (ev.target.id === 'ajPlantilla') plantillaExcel(pintarLotes._cod);
+      if (ev.target.id === 'ajSubir') document.getElementById('ajArchivo').click();
+    });
+    document.addEventListener('change', ev => { if (ev.target.id === 'ajArchivo' && ev.target.files[0]) { subirExcel(pintarLotes._cod, ev.target.files[0]); ev.target.value = ''; } });
+
+    async function plantillaExcel(cod) {
+      if (typeof ExcelJS === 'undefined') return toast('La librería de Excel no cargó; revise la conexión e intente de nuevo.');
+      const L = filasSku(cod), r0 = L[0] || {};
+      const wb = new ExcelJS.Workbook(), ws = wb.addWorksheet('Reparto', { views: [{ state: 'frozen', ySplit: 4 }] });
+      const fill = a => ({ type: 'pattern', pattern: 'solid', fgColor: { argb: a } });
+      ws.mergeCells('A1:I1'); ws.getCell('A1').value = 'CAJA DE SEGURO SOCIAL · Dirección Nacional de Logística · CEDIS Panamá';
+      ws.getCell('A1').font = { name: 'Arial', size: 12, bold: true, color: { argb: 'FF0B1F3A' } };
+      ws.mergeCells('A2:I2'); ws.getCell('A2').value = 'Reparto de renglón escaso · ' + cod + ' · ' + (r0.Suministro || '') + ' · hay para repartir ' + totalRepartible(cod);
+      ws.getCell('A2').font = { name: 'Arial', size: 10, color: { argb: 'FF5A6878' } };
+      ws.mergeCells('A3:I3'); ws.getCell('A3').value = 'Escriba la cantidad acordada en la columna ACORDADO (no cambie F8_ID ni CODIGO) y súbalo con «Subir Excel».';
+      ws.getCell('A3').font = { name: 'Arial', size: 9, italic: true, color: { argb: 'FF7A5200' } };
+      const h = ws.addRow(['F8_ID', 'UNIDAD', 'CODIGO', 'SUMINISTRO', 'PIDIO', 'CONSUMO_MES', 'INVENTARIO_UE', 'MOTOR', 'ACORDADO']);
+      h.eachCell(c => { c.fill = fill('FF0B1F3A'); c.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFFFF' } }; c.alignment = { horizontal: 'center' }; });
+      L.forEach(r => { const row = ws.addRow([r.N_Doc, r.Punto, String(r.Codigo), r.Suministro, N(r.Solicitado), N(r.Consumo_Base), r.Inventario_UE == null ? '' : N(r.Inventario_UE), N(r.__ajMotor), finalDe(r)]);
+        row.getCell(9).fill = fill('FFFFF6D6'); row.font = { name: 'Arial', size: 9 }; });
+      ws.columns.forEach((c, i) => { c.width = [20, 34, 12, 44, 10, 13, 14, 10, 12][i]; });
+      ws.autoFilter = { from: 'A4', to: 'I4' };
+      const buf = await wb.xlsx.writeBuffer(), a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+      a.download = 'Reparto_' + cod + '_' + new Date().toISOString().slice(0, 10) + '.xlsx'; document.body.appendChild(a); a.click(); a.remove();
+    }
+    async function subirExcel(cod, file) {
+      if (typeof ExcelJS === 'undefined') return toast('La librería de Excel no cargó; revise la conexión e intente de nuevo.');
+      try {
+        const wb = new ExcelJS.Workbook(); await wb.xlsx.load(await file.arrayBuffer());
+        const ws = wb.worksheets[0]; let hdr = null, iF = -1, iA = -1, iC = -1, n = 0, sin = 0;
+        ws.eachRow((row, rn) => {
+          const v = row.values.map(x => (x && typeof x === 'object' && 'result' in x) ? x.result : x);
+          if (!hdr) { const u = v.map(x => String(x || '').trim().toUpperCase()); if (u.includes('F8_ID') && u.includes('ACORDADO')) { hdr = u; iF = u.indexOf('F8_ID'); iA = u.indexOf('ACORDADO'); iC = u.indexOf('CODIGO'); } return; }
+          const f8 = String(v[iF] || '').trim(); if (!f8) return;
+          const c = iC >= 0 ? String(v[iC] || '').trim() : cod; if (c && c !== cod) return;
+          const r = filaDe(f8 + '|' + cod); if (!r) { sin++; return; }
+          const q = Number(v[iA]); if (!(q >= 0)) return;
+          poner(r, q, 'Distribución de escasos'); n++;
+        });
+        if (!hdr) return toast('El archivo no tiene las columnas F8_ID y ACORDADO. Use la plantilla.');
+        toast('Excel leído: ' + n + ' unidades con su cantidad acordada' + (sin ? ' · ' + sin + ' líneas no están en este corte' : '') + '. Revise y guarde.');
+        repintar();
+      } catch (e) { toast('No se pudo leer el Excel: ' + E(e.message || e)); }
+    }
+
     // ---------- marcado ----------
     function montar() {
       if (document.getElementById('ajBarra')) return;
@@ -4768,9 +4882,15 @@ document.addEventListener('keydown', e => {
         <div class="aj-modal" id="ajConfM" hidden><div class="aj-modal-c"><div class="aj-modal-h"><span>Guardar ajustes del corte</span><button type="button" class="aj-x" data-cerrar="ajConfM">&times;</button></div>
           <div class="aj-modal-b" id="ajConfB"></div>
           <div class="m-modal-f"><button class="m-btn m-btn-out" type="button" data-cerrar="ajConfM">Volver</button> <button class="m-btn m-btn-hoja" type="button" id="ajConfOk">Guardar</button></div></div></div>
+        <div class="aj-modal" id="ajEscM" hidden><div class="aj-modal-c aj-modal-w"><div class="aj-modal-h"><span>Repartir renglones escasos del corte</span><button type="button" class="aj-x" data-cerrar="ajEscM">&times;</button></div>
+          <div class="aj-modal-b" id="ajEscB"></div>
+          <div class="m-modal-f"><button class="m-btn m-btn-out" type="button" data-cerrar="ajEscM">Cerrar</button></div></div></div>
+        <input type="file" id="ajArchivo" accept=".xlsx" hidden>
         <div class="aj-modal" id="ajLotesM" hidden><div class="aj-modal-c aj-modal-w"><div class="aj-modal-h"><span id="ajLotesT">Lotes</span><button type="button" class="aj-x" data-cerrar="ajLotesM">&times;</button></div>
           <div class="aj-modal-b" id="ajLotesB"></div>
           <div class="m-modal-f"><button class="m-btn m-btn-out" type="button" data-cerrar="ajLotesM">Cerrar</button></div></div></div>`);
+      const bx = document.getElementById('mXlsxFiltro');
+      if (bx && !document.getElementById('ajEscBtn')) bx.insertAdjacentHTML('beforebegin', '<button id="ajEscBtn" class="m-btn m-btn-out m-btn-sm" type="button" hidden title="Renglones que piden varias unidades y no alcanzan">Repartir escasos</button>');
       document.getElementById('ajDescartar').onclick = () => { AJ.pend.clear(); repintar(); };
       document.getElementById('ajGuardar').onclick = () => {
         document.getElementById('ajConfB').innerHTML = `<p style="margin-top:0">Se guardan <b>${AJ.pend.size}</b> ajustes en el corte. Al confirmar:</p>
@@ -4784,8 +4904,9 @@ document.addEventListener('keydown', e => {
       document.getElementById('ajConfOk').onclick = guardar;
       document.addEventListener('click', ev => { const c = ev.target.closest('[data-cerrar]'); if (c) document.getElementById(c.dataset.cerrar).hidden = true;
         const m = ev.target.classList && ev.target.classList.contains('aj-modal') ? ev.target : null; if (m) m.hidden = true; });
-      document.addEventListener('keydown', ev => { if (ev.key === 'Escape') ['ajConfM', 'ajLotesM'].forEach(id => { const x = document.getElementById(id); if (x) x.hidden = true; }); });
+      document.addEventListener('keydown', ev => { if (ev.key === 'Escape') ['ajConfM', 'ajLotesM', 'ajEscM'].forEach(id => { const x = document.getElementById(id); if (x) x.hidden = true; }); });
       window.addEventListener('beforeunload', ev => { if (AJ.pend.size) { ev.preventDefault(); ev.returnValue = ''; } });
+      pintarBarra();
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', montar); else montar();
   })();
