@@ -551,6 +551,7 @@ body.m tbody tr:hover td{background:#f7faff}
 .pre-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:8px 0}
 .pre-k{border-radius:10px;padding:7px 12px;display:flex;flex-direction:column}.pre-k span{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;opacity:.85}.pre-k b{font-size:18px}
 .pre-k-a{background:#e3edfb;color:#1e4f9a}.pre-k-v{background:#e3f4ea;color:#1f6f43}.pre-k-g{background:#eef1f5;color:#3d4a5a}.pre-k-r{background:#fde4e4;color:#9b1c1c}.pre-k-w{background:#fff1d1;color:#7a5200}
+.m-combo{position:relative;display:block}.m-combo>input{width:100%}.m-combo>.pre-ac{width:100%;min-width:260px}
 .pre-acc{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}
 .pre-combo{position:relative;display:inline-block}.pre-combo input{width:300px}
 .pre-ac{position:absolute;left:0;top:calc(100% + 4px);z-index:60;width:400px;max-height:300px;overflow-y:auto;background:#fff;border:1px solid #c9d6ea;border-radius:10px;box-shadow:0 8px 24px rgba(11,31,58,.16);display:none;padding:4px 0}
@@ -612,7 +613,7 @@ body.m tbody tr:hover td{background:#f7faff}
     <section class="m-card m-filtros">
       <div class="m-f-row">
         <div class="m-f m-f-q"><label>Buscar renglón</label><input id="q" placeholder="Código o descripción"/></div>
-        <div class="m-f"><label>Forma 8</label><input id="doc" placeholder="N.º de documento" list="docList"/><datalist id="docList"></datalist></div>
+        <div class="m-f"><label>Forma 8</label><span class="m-combo"><input id="doc" placeholder="N.º de documento" autocomplete="off" role="combobox" aria-expanded="false" data-combo="docList"/><div class="pre-ac" role="listbox"></div></span><datalist id="docList" hidden></datalist></div>
         <div class="m-f m-f-ue"><label>Unidad ejecutora</label><select id="ue"></select></div>
         <div class="m-f"><label>Categoría</label><select id="cat"></select></div>
         <div class="m-f"><label>Estado</label>
@@ -820,7 +821,7 @@ body.m tbody tr:hover td{background:#f7faff}
         <p class="m-dim" style="margin:0 0 10px">Para las F8 de unidades que no tienen SALMI. Se agregan a la selección como <b>Manual</b> y se envían con el resto.</p>
         <div class="m-lt-man-g">
           <div class="m-f"><label>N.º de Forma 8</label><input id="lmF8" class="m-lt-in" placeholder="Ej.: 3105-2026-1-0412" autocomplete="off"></div>
-          <div class="m-f m-f-2"><label>Unidad ejecutora</label><input id="lmUE" class="m-lt-in" list="lmUEs" placeholder="Escriba y elija de la lista" autocomplete="off"><datalist id="lmUEs"></datalist></div>
+          <div class="m-f m-f-2"><label>Unidad ejecutora</label><span class="m-combo"><input id="lmUE" class="m-lt-in" placeholder="Escriba y elija de la lista" autocomplete="off" role="combobox" aria-expanded="false" data-combo="lmUEs"><div class="pre-ac" role="listbox"></div></span><datalist id="lmUEs" hidden></datalist></div>
           <div class="m-f"><label>Fecha de la F8</label><input id="lmFecha" class="m-lt-in" type="date"></div>
           <div class="m-f"><label>Tipo</label><select id="lmTipo" class="m-lt-in"></select></div>
         </div>
@@ -4507,7 +4508,7 @@ document.addEventListener('keydown', e => {
   }
   function ltAbrirManual(pre) {
     if (!LT.cargado) { ltEstado('Primero pulse "Cargar pendientes".', 'warn'); return; }
-    ltEl('lmUEs').innerHTML = LT.unidades.map(u => `<option value="${mEsc(u[0])}">`).join('');
+    ltEl('lmUEs').innerHTML = LT.unidades.map(u => `<option value="${mEsc(u[0])}" label="${mEsc([u[1], u[2] ? 'suple ' + u[2] : ''].filter(Boolean).join(' · '))}">`).join('');
     const tipos = LT.tipos.length ? LT.tipos : ['Mensual', 'Urgencia'];
     ltEl('lmTipo').innerHTML = tipos.map(t => `<option>${mEsc(t)}</option>`).join('');
     const hoy = new Date(); const iso = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0') + '-' + String(hoy.getDate()).padStart(2, '0');
@@ -5411,6 +5412,43 @@ document.addEventListener('keydown', e => {
   }
   window.__tope = { valor, pintar, chip };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', montar); else montar();
+})();
+</script>
+
+<script>
+/* 18-nov-2026 · Buscador propio para los campos que usaban la lista del navegador (Forma 8 y unidad de la F8 manual).
+   Lee las opciones del <datalist> oculto que ya llena la página: misma fuente, sin el desplegable nativo. */
+(function () {
+  const E = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const U = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
+  const C = { inp: null, items: [], sel: -1 };
+  const pan = inp => inp.parentElement.querySelector('.pre-ac');
+  function abrir(inp) {
+    const dl = document.getElementById(inp.dataset.combo); if (!dl) return;
+    const n = U(inp.value.trim());
+    C.inp = inp; C.items = [...dl.options].map(o => [o.value, o.label && o.label !== o.value ? o.label : '']).filter(o => !n || U(o[0] + ' ' + o[1]).includes(n)).slice(0, 60);
+    C.sel = C.items.length && n ? 0 : -1;
+    const p = pan(inp);
+    p.innerHTML = C.items.length ? C.items.map((o, i) => `<div class="pre-ac-i${i === C.sel ? ' on' : ''}" role="option" data-m-combo="${i}"><b>${E(o[0])}</b>${o[1] ? '<small>' + E(o[1]) + '</small>' : ''}</div>`).join('')
+      : '<div class="pre-ac-v">' + (dl.options.length ? 'Nada coincide con lo escrito.' : 'Todavía no hay opciones cargadas.') + '</div>';
+    p.classList.add('open'); inp.setAttribute('aria-expanded', 'true');
+  }
+  function cerrar() { if (!C.inp) return; pan(C.inp).classList.remove('open'); C.inp.setAttribute('aria-expanded', 'false'); C.inp = null; C.sel = -1; }
+  function elegir(i) {
+    const o = C.items[i], inp = C.inp; if (!o || !inp) return; inp.value = o[0]; cerrar();
+    inp.dispatchEvent(new Event('input', { bubbles: true })); inp.dispatchEvent(new Event('change', { bubbles: true })); setTimeout(cerrar, 0);
+  }
+  document.addEventListener('focusin', ev => { if (ev.target.dataset && ev.target.dataset.combo) abrir(ev.target); });
+  document.addEventListener('input', ev => { if (ev.isTrusted && ev.target.dataset && ev.target.dataset.combo) abrir(ev.target); });
+  document.addEventListener('keydown', ev => {
+    const inp = ev.target; if (!inp.dataset || !inp.dataset.combo || C.inp !== inp) return;
+    const mark = () => pan(inp).querySelectorAll('.pre-ac-i').forEach((d, i) => { d.classList.toggle('on', i === C.sel); if (i === C.sel) d.scrollIntoView({ block: 'nearest' }); });
+    if (ev.key === 'ArrowDown' && C.items.length) { ev.preventDefault(); C.sel = (C.sel + 1) % C.items.length; mark(); }
+    else if (ev.key === 'ArrowUp' && C.items.length) { ev.preventDefault(); C.sel = (C.sel - 1 + C.items.length) % C.items.length; mark(); }
+    else if (ev.key === 'Enter' && C.sel >= 0) { ev.preventDefault(); elegir(C.sel); }
+    else if (ev.key === 'Escape' || ev.key === 'Tab') cerrar();
+  });
+  document.addEventListener('mousedown', ev => { const it = ev.target.closest('[data-m-combo]'); if (it) { ev.preventDefault(); elegir(Number(it.dataset.mCombo)); return; } if (!ev.target.closest('.m-combo')) cerrar(); });
 })();
 </script>
 </body>
