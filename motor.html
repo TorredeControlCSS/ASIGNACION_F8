@@ -562,7 +562,7 @@ body.m tbody tr:hover td{background:#f7faff}
 .pre-peligro{border-color:#d14343!important;color:#9b1c1c!important}
 .pre-tag{display:inline-block;font-size:10.5px;font-weight:700;border-radius:6px;padding:1px 6px;background:#efe7fb;color:#5b2d99;white-space:nowrap}
 .pre-ban{background:#f7f2fd;border:1px solid #d9c8f2;color:#3e1f6e;border-radius:10px;padding:9px 12px;font-size:13px;line-height:1.5;margin:0 0 8px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-.pre-ban[hidden]{display:none}.pre-ac-no{opacity:.55;cursor:not-allowed}.pre-ac-no small{color:#b42318!important}
+.pre-ban[hidden]{display:none}.aj-emp{display:flex;flex-wrap:wrap;gap:4px;margin:3px 0}.aj-emp>span.em{background:#eef2f7;border-radius:5px;padding:0 6px;font-size:11.5px;white-space:nowrap}.aj-emp-mal{color:#b42318;font-size:11.5px}.pre-emp{margin:2px 0 8px}.pre-bul{font-size:11px;color:#5b6575;margin-top:2px;white-space:nowrap}.pre-ac-no{opacity:.55;cursor:not-allowed}.pre-ac-no small{color:#b42318!important}
 .lt-vent{background:#e9f5ee;border:1px solid #b8e0c6;color:#14532d;border-radius:10px;padding:8px 12px;font-size:13px;margin:0 0 8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}.lt-vent[hidden]{display:none}
 .pre-b{background:#5b2d99!important;color:#fff!important}
 .pre-usar{border-color:#c8b3ea!important;color:#5b2d99!important}
@@ -913,10 +913,11 @@ body.m tbody tr:hover td{background:#f7faff}
       window.__mFuente('Cargando corte publicado…');
       window.__mAviso('');
       try {
-        const [a, e, aj] = await Promise.all([
+        const [a, e, aj, emq] = await Promise.all([
           leer('allocation.json', opc.fresco, t),
           leer('allocation_estado.json', opc.fresco, t).catch(() => ({})),
-          leer('ajustes_corte.json', true, t).catch(() => null)   // 18-nov-2026 · ajustes del analista (si el servidor ya los activó)
+          leer('ajustes_corte.json', true, t).catch(() => null),   // 18-nov-2026 · ajustes del analista (si el servidor ya los activó)
+          leer('empaques.json', false, t).catch(() => null)        // 18-nov-2026 · empaques de MAESTROS_DINALOG
         ]);
         const gen = Date.parse(a && a.generado || '');
         const inv = Date.parse(e && e.invalidado || '') || 0;
@@ -924,6 +925,7 @@ body.m tbody tr:hover td{background:#f7faff}
         const hayNuevo = inv > gen;   // el Motor corrió después de la última publicación
         DATA = a.filas;
         window._MODO_ACTUAL = 'live';
+        if (window.__empCargar) window.__empCargar(emq);
         if (window.__ajCargar) window.__ajCargar(aj);
         PARAMS = { cut_date: fechaLocal(gen), generated_at: a.generado, fuente: 'publicado' };
         window._MODO_ACTUAL = 'live';
@@ -4735,7 +4737,8 @@ document.addEventListener('keydown', e => {
       if (d && d.falta > 0) return { c: 'bad', m: 'Faltan ' + F(d.falta) + ': no hay más lotes libres' };
       if (d && d.falta < 0) return { c: 'bad', m: 'La línea no tiene lotes para rebajar' };
       if (!p.motivo) return { c: 'bad', m: 'Elija el motivo' };
-      if (p.nueva > 0 && p.nueva >= emp && p.nueva % emp) return { c: 'warn', m: 'No es empaque cerrado (' + F(emp) + ')' };
+      const pr = window.__emp(String(r.Codigo).trim(), emp).p;   // 18-nov-2026 · el primario también es empaque cerrado
+      if (p.nueva > 0 && (pr > 0 ? p.nueva % pr : (p.nueva >= emp && p.nueva % emp))) return { c: 'warn', m: 'No es empaque cerrado (' + (pr > 0 ? 'primario de ' + F(pr) : F(emp)) + ')' };
       if (p.nueva > N(r.Solicitado)) return { c: 'warn', m: 'Más de lo que pidió (' + F(r.Solicitado) + ')' };
       return { c: 'ok', m: 'Listo para guardar' };
     }
@@ -4751,7 +4754,7 @@ document.addEventListener('keydown', e => {
     // ---------- celda de la columna "Ajuste del analista" ----------
     window.__ajCelda = function (r) {
       const cod = String(r.Codigo).trim(), c = calcSku(cod), d = c.porLinea.get(K(r)) || { tomados: [], liberados: [] };
-      const v = validar(r, c), p = AJ.pend.get(K(r)), emp = N(r.Empaque_Ter) || 1, i = E(K(r));
+      const v = validar(r, c), p = AJ.pend.get(K(r)), emp = N(r.Empaque_Ter) || 1, i = E(K(r)), em = window.__emp(cod, emp);
       const lotes = lotesParse(r.Lotes_Usados).map(l => `${E(l.lote)} ${F(l.q)}`).join(', ');
       const mov = [...d.tomados.map(l => `<span class="aj-mas">+${F(l.q)} de ${E(l.lote)} (${fVto(l.vto)})</span>`), ...d.liberados.map(l => `<span class="aj-menos">−${F(l.q)} libera ${E(l.lote)}</span>`)];
       const acc = [];
@@ -4765,14 +4768,16 @@ document.addEventListener('keydown', e => {
       const pm = window.__preDe ? window.__preDe(cod, r.Punto) : null;
       if (pm && pm.l.estado !== 'ASIGNADA' && !p && c.libre + N(r.Asignado) > N(r.Asignado)) acc.unshift(`<button type="button" class="m-lnk pre-usar" data-aj="pre" data-k="${i}" title="${E(pm.p.id)} · tránsito ${E(pm.p.transito)}">Usar preasignación (${F(pm.l.q)})</button>`);
       const hay = c.lineas.length > 1;
-      return `<div class="aj-q"><button type="button" data-aj="menos" data-k="${i}" title="Quitar un empaque">−</button>` +
+      return `<div class="aj-q"><button type="button" data-aj="menos" data-k="${i}" title="Quitar una caja (Mayús + clic: un primario)">−</button>` +
         `<input type="number" min="0" step="${emp}" value="${finalDe(r)}" data-ajq="${i}" class="${v.c ? 'aj-in-' + v.c : ''}" aria-label="Cantidad final">` +
-        `<button type="button" data-aj="mas" data-k="${i}" title="Sumar un empaque">+</button></div>` +
+        `<button type="button" data-aj="mas" data-k="${i}" title="Sumar una caja (Mayús + clic: un primario)">+</button></div>` +
         (v.m ? `<div class="aj-val aj-val-${v.c}">${E(v.m)}</div>` : '') +
         (pm ? `<div class="aj-lt"><span class="pre-tag">Preasignado ${F(pm.l.q)}${pm.l.estado === 'ASIGNADA' ? ' · usada' : ''}</span>${pm.l.estado !== 'ASIGNADA' && c.libre <= 0 && !p ? ' entra cuando ingrese el tránsito' : ''}</div>` : '') +
         (r.Ajuste && !p ? `<div class="aj-hecho">Ajustado por ${E(r.Ajuste.por)} · ${E(r.Ajuste.fecha)} · Motor ${F(motorV)}</div>` : '') +
         `<div class="aj-lt">${lotes ? 'Lotes: ' + lotes : ''}${mov.length ? '<br>' + mov.join('<br>') : ''}</div>` +
-        `<div class="aj-lt">Libre en CEDIS: <b class="${c.libre < 0 ? 'm-neg' : ''}">${F(c.libre)}</b> · empaque ${F(emp)} <button type="button" class="m-lnk aj-lb" data-aj="lotes" data-k="${i}">Lotes${hay ? ' · ' + c.lineas.length + ' unidades' : ''}</button></div>` +
+        `<div class="aj-lt">Libre en CEDIS: <b class="${c.libre < 0 ? 'm-neg' : ''}">${F(c.libre)}</b>${em.p || em.t > 1 ? ' = ' + window.__empBultos(c.libre, em) : ' · empaque ' + F(emp)} <button type="button" class="m-lnk aj-lb" data-aj="lotes" data-k="${i}">Lotes${hay ? ' · ' + c.lineas.length + ' unidades' : ''}</button></div>` +
+        (em.p || em.t > 1 ? `<div class="aj-emp">${window.__empChips(em)}</div><div class="aj-lt">${F(finalDe(r))} = <b>${window.__empBultos(finalDe(r), em)}</b></div>` : '') +
+        (em.cuadra === false ? `<div class="aj-lt aj-emp-mal">Maestro: ${F(em.p)} × ${F(em.s)} = ${F(em.p * em.s)}, no la caja de ${F(em.t)}. <button type="button" class="m-lnk" data-emp-lista="1">Lista para corregir</button></div>` : '') +
         (p || r.Ajuste ? `<select data-ajm="${i}" class="aj-mot"${p ? '' : ' disabled'}><option value="">Motivo…</option>${MOTIVOS.map(m => `<option${(p ? p.motivo : r.Ajuste.motivo) === m ? ' selected' : ''}>${m}</option>`).join('')}</select>` : '') +
         (acc.length ? `<div class="aj-acc">${acc.join(' ')}</div>` : '');
     };
@@ -4788,7 +4793,8 @@ document.addEventListener('keydown', e => {
       const r = filaDe(b.dataset.k); if (!r) return;
       const emp = N(r.Empaque_Ter) || 1, a = b.dataset.aj, act = finalDe(r), cod = String(r.Codigo).trim();
       const libreLinea = () => calcSku(cod).libre + (finalDe(r) - N(r.Asignado) > 0 ? finalDe(r) - N(r.Asignado) : 0);
-      if (a === 'mas' || a === 'menos') { const s = a === 'mas' ? 1 : -1, paso = (act + emp * s) >= emp ? emp : 1; poner(r, act + paso * s); }
+      if (a === 'mas' || a === 'menos') { const s = a === 'mas' ? 1 : -1, pr = window.__emp(cod, emp).p;
+        const paso = (ev.shiftKey && pr > 0) ? pr : ((act + emp * s) >= emp ? emp : (pr > 0 ? pr : 1)); poner(r, Math.max(0, act + paso * s)); }
       else if (a === 'desc') AJ.pend.delete(K(r));
       else if (a === 'motor') poner(r, N(r.__ajMotor), 'Corrección del pedido');
       else if (a === 'liberar') { const obj = haciaEmpaque(N(r.Solicitado), emp) || N(r.Solicitado); poner(r, Math.min(obj, N(r.Asignado) + libreLinea()), 'Liberar tope de cuota'); }
@@ -5132,6 +5138,7 @@ document.addEventListener('keydown', e => {
           <div class="m-f m-filtros" style="flex:0 0 160px"><label>Vigente hasta</label><input type="date" id="preHasta" value="${E(p.hasta || '')}"></div></div>
         <div class="pre-kpis"><div class="pre-k pre-k-a"><span>Viene en el tránsito</span><b>${F(p.cantTransito)}</b></div><div class="pre-k pre-k-v"><span>Preasignado</span><b>${F(tot)}</b></div>
           <div class="pre-k ${libres < 0 ? 'pre-k-r' : 'pre-k-g'}"><span>Sin preasignar</span><b>${F(libres)}</b></div><div class="pre-k pre-k-w"><span>Existencia en el CEDIS</span><b>${r.stock ? F(r.stock[1]) : 's/d'}</b></div></div>
+        ${(() => { const em = window.__emp ? window.__emp(p.sku, 0) : null; return em && (em.p || em.t) ? `<div class="aj-emp pre-emp">${window.__empChips(em)}${em.cuadra === false ? ' <span class="aj-emp-mal">el maestro no cuadra: ' + F(em.p) + ' × ' + F(em.s) + ' ≠ ' + F(em.t) + '</span>' : ''}</div>` : '<div class="aj-emp pre-emp m-dim">Sin empaques en MAESTROS_DINALOG para este renglón: el reparto va en unidades sueltas.</div>'; })()}
         <div class="pre-acc"><span class="m-acc-t">Proponer reparto</span>
           <button type="button" class="m-btn m-btn-out m-btn-sm" data-pre-rep="cons">Proporcional al consumo</button>
           <button type="button" class="m-btn m-btn-out m-btn-sm" data-pre-rep="cob">Igualar cobertura</button>
@@ -5140,7 +5147,7 @@ document.addEventListener('keydown', e => {
         <div class="scroll" style="max-height:none"><table class="m-tbl"><thead><tr><th>Unidad</th><th class="right">Consumo mes</th><th class="right">Inventario en la UE</th><th class="right">Cobertura (meses)</th><th>Preasignado</th><th class="right">Cobertura después</th><th>Estado</th><th>Acción</th></tr></thead><tbody>
         ${p.lineas.map((l, i) => { const d = (r.ues || {})[l.ue] || [0, null], es = estadoLinea(p, l), c = N(d[0]);
           return `<tr><td class="m-ue">${E(l.ue)}</td><td class="right">${c ? F(c) : '<span class="m-dim">s/d</span>'}</td><td class="right">${d[1] == null ? '<span class="m-dim">s/d</span>' : F(d[1])}</td>
-            <td class="right">${c ? F(N(d[1]) / c) : '—'}</td><td><input type="number" min="0" class="pre-in" value="${N(l.q)}" data-pre-q="${i}"${l.estado === 'ASIGNADA' ? ' disabled' : ''}></td>
+            <td class="right">${c ? F(N(d[1]) / c) : '—'}</td><td><input type="number" min="0" class="pre-in" value="${N(l.q)}" data-pre-q="${i}"${l.estado === 'ASIGNADA' ? ' disabled' : ''}>${(() => { const em = window.__emp ? window.__emp(p.sku, 0) : null; return em && (em.p || em.t > 1) && N(l.q) ? '<div class="pre-bul">' + window.__empBultos(N(l.q), em) + '</div>' : ''; })()}</td>
             <td class="right m-b">${c ? F((N(d[1]) + N(l.q)) / c) : '—'}</td><td><span class="m-est m-est-${es.c}">${E(es.t)}</span></td>
             <td class="m-nw">${es.t === 'Esperando F8' ? `<button type="button" class="m-lnk" data-pre-f8="${i}">Pedir F8</button> ` : ''}${l.estado !== 'ASIGNADA' ? `<button type="button" class="m-lnk" data-pre-del="${i}">Quitar</button>` : ''}</td></tr>`; }).join('')
           || '<tr><td colspan="8" class="m-vacio">Agregue unidades con el buscador o con «Agregar las que consumen este renglón».</td></tr>'}
@@ -5161,9 +5168,14 @@ document.addEventListener('keydown', e => {
       let q;
       if (met === 'cob') { let lo = 0, hi = 240; for (let k = 0; k < 60; k++) { const t = (lo + hi) / 2, s = A.reduce((a, x) => a + Math.max(0, t * x.c - x.inv), 0); if (s > S) hi = t; else lo = t; } q = A.map(x => Math.max(0, lo * x.c - x.inv)); }
       else { const sc = A.reduce((s, x) => s + x.c, 0); q = A.map(x => S * x.c / sc); }
-      q = q.map(Math.floor); let sobra = S - q.reduce((a, b) => a + b, 0);
-      for (let g = 0; g < 100000 && sobra > 0; g++) { let k = -1, m = Infinity; A.forEach((x, i) => { const cb = (x.inv + q[i]) / x.c; if (cb < m) { m = cb; k = i; } }); if (k < 0) break; q[k]++; sobra--; }
+      // 18-nov-2026 · a empaque cerrado (MAESTROS_DINALOG): caja si a la unidad le alcanza para una; si no, primarios.
+      // Lo que sobra va de primario en primario a quien queda con menos meses de cobertura. Nunca más de lo que llega.
+      const em = window.__emp ? window.__emp(p.sku, 0) : { p: 0, t: 0 }, Pp = em.p || 0, Tt = em.t || 0, u = Pp || (Tt && !Pp ? 1 : 1);
+      const paso = x => (Tt && x >= Tt) ? Tt : u;
+      q = q.map(x => Math.floor(x / paso(x)) * paso(x)); let sobra = S - q.reduce((a, b) => a + b, 0);
+      for (let g = 0; g < 100000 && sobra >= u; g++) { let k = -1, m = Infinity; A.forEach((x, i) => { const cb = (x.inv + q[i]) / x.c; if (cb < m) { m = cb; k = i; } }); if (k < 0) break; q[k] += u; sobra -= u; }
       A.forEach((x, i) => { x.l.q = q[i]; }); sucio(); pintar();
+      if (Pp || Tt > 1) toast('Reparto a empaque cerrado: ' + window.__empChips(em, true) + (sobra > 0 ? ' · quedan <b>' + F(sobra) + '</b> sin repartir (menos de un primario).' : '.'), 6000);
     }
     function agregar(ue) { const p = planActual(); if (!p || !ue) return; if (p.lineas.some(l => U(l.ue) === U(ue))) return; p.lineas.push({ ue, q: 0, estado: 'ESPERANDO_F8', f8: '' }); sucio(); pintar(); }
     async function guardar() {
@@ -5485,6 +5497,64 @@ document.addEventListener('keydown', e => {
     else if (ev.key === 'Escape' || ev.key === 'Tab') cerrar();
   });
   document.addEventListener('mousedown', ev => { const it = ev.target.closest('[data-m-combo]'); if (it) { ev.preventDefault(); elegir(Number(it.dataset.mCombo)); return; } if (!ev.target.closest('.m-combo')) cerrar(); });
+})();
+</script>
+
+<script>
+/* 18-nov-2026 · EMPAQUES de MAESTROS_DINALOG (MAESTRO_EMPAQUE), publicados en empaques.json.
+   primario · secundario (primarios por caja) · terciario (caja) · pallet. 0 = sin dato. */
+(function () {
+  const EM = { e: {}, gen: '', nc: 0 };
+  const N = v => Number(v) || 0, F = n => Math.round(N(n)).toLocaleString('en-US');
+  window.__empCargar = d => { if (d && d.e) { EM.e = d.e; EM.gen = d.generado || ''; EM.nc = N(d.noCuadran); } };
+  window.__emp = (cod, terMotor) => {
+    const x = EM.e[String(cod || '').trim()] || [0, 0, 0, 0], t = N(x[2]) || N(terMotor);
+    return { p: N(x[0]), s: N(x[1]), t, pal: N(x[3]), cuadra: (x[0] && x[1] && x[2]) ? Math.abs(x[0] * x[1] - x[2]) < 0.5 : null };
+  };
+  window.__empChips = (em, texto) => {
+    const c = [];
+    if (em.p) c.push(['Primario', F(em.p)]);
+    if (em.s) c.push(['Secundario', F(em.s)]);
+    if (em.t > 1) c.push(['Caja', F(em.t) + (em.p && em.t % em.p === 0 && em.t / em.p > 1 ? ' (' + F(em.t / em.p) + ' prim.)' : '')]);
+    c.push(['Pallet', em.pal ? F(em.pal) + (em.t > 1 ? ' (' + F(em.pal / em.t) + ' cajas)' : '') : 'sin dato']);
+    return texto ? c.map(x => x[0].toLowerCase() + ' ' + x[1]).join(' · ') : c.map(x => `<span class="em">${x[0]} <b>${x[1]}</b></span>`).join('');
+  };
+  window.__empBultos = (q, em) => {
+    q = Math.max(0, Math.round(N(q))); if (!q) return '0';
+    const T = em.t > 1 ? em.t : 0, P = em.p > 0 ? em.p : 0, cj = T ? Math.floor(q / T) : 0; let r = q - cj * T;
+    const pr = P ? Math.floor(r / P) : 0; r -= pr * P;
+    const out = [];
+    if (cj) out.push(F(cj) + (cj === 1 ? ' caja' : ' cajas'));
+    if (pr) out.push(F(pr) + (pr === 1 ? ' primario' : ' primarios'));
+    if (r) out.push(F(r) + ' sueltas');
+    let t = out.join(' + ') || '0';
+    if (em.pal && q >= em.pal * 0.25) t += ' · ' + (q / em.pal).toLocaleString('es-PA', { maximumFractionDigits: 1 }) + ' pallet';
+    return t;
+  };
+  async function lista() {
+    if (typeof ExcelJS === 'undefined') return window.__ajToast && window.__ajToast('La librería de Excel no cargó; revise la conexión e intente de nuevo.');
+    const nom = k => { try { const m = typeof ltSkuDeMaestro === 'function' ? ltSkuDeMaestro(k) : null; if (m && m[0]) return m[0]; } catch (e) {}
+      const r = (typeof DATA !== 'undefined' && DATA || []).find(x => String(x.Codigo).trim() === k); return r ? r.Suministro : ''; };
+    const L = Object.keys(EM.e).filter(k => { const x = EM.e[k]; return x[0] && x[1] && x[2] && Math.abs(x[0] * x[1] - x[2]) >= 0.5; }).sort();
+    const wb = new ExcelJS.Workbook(), ws = wb.addWorksheet('Empaques por revisar', { views: [{ state: 'frozen', ySplit: 4 }] });
+    const fill = a => ({ type: 'pattern', pattern: 'solid', fgColor: { argb: a } });
+    ws.mergeCells('A1:H1'); ws.getCell('A1').value = 'CAJA DE SEGURO SOCIAL · Dirección Nacional de Logística · CEDIS Panamá';
+    ws.getCell('A1').font = { name: 'Arial', size: 12, bold: true, color: { argb: 'FF0B1F3A' } };
+    ws.mergeCells('A2:H2'); ws.getCell('A2').value = 'MAESTRO_EMPAQUE (MAESTROS_DINALOG) · renglones donde primario × secundario no da el terciario (caja) · ' + L.length + ' renglones · datos ' + (EM.gen ? new Date(EM.gen).toLocaleString('es-PA') : '');
+    ws.getCell('A2').font = { name: 'Arial', size: 10, color: { argb: 'FF5A6878' } };
+    ws.mergeCells('A3:H3'); ws.getCell('A3').value = 'Corrija el dato que esté mal en MAESTROS_DINALOG. El Motor usa el terciario tal como está en el maestro.';
+    ws.getCell('A3').font = { name: 'Arial', size: 9, italic: true, color: { argb: 'FF7A5200' } };
+    const h = ws.addRow(['CODIGO', 'SUMINISTRO', 'EMPAQUE PRIMARIO', 'EMPAQUE SECUNDARIO', 'EMPAQUE TERCIARIO', 'PRIMARIO × SECUNDARIO', 'DIFERENCIA', 'PALLET']);
+    h.eachCell(c => { c.fill = fill('FF0B1F3A'); c.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFFFF' } }; c.alignment = { horizontal: 'center', wrapText: true }; });
+    L.forEach(k => { const x = EM.e[k]; ws.addRow([k, nom(k), x[0], x[1], x[2], x[0] * x[1], x[0] * x[1] - x[2], x[3] || '']).font = { name: 'Arial', size: 9 }; });
+    ws.columns.forEach((c, i) => { c.width = [12, 46, 12, 13, 13, 15, 12, 12][i]; });
+    ws.autoFilter = { from: 'A4', to: 'H4' };
+    const buf = await wb.xlsx.writeBuffer(), a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+    a.download = 'Empaques_por_revisar_' + new Date().toISOString().slice(0, 10) + '.xlsx'; document.body.appendChild(a); a.click(); a.remove();
+  }
+  document.addEventListener('click', ev => { if (ev.target.closest('[data-emp-lista]')) { ev.preventDefault(); lista(); } });
+  window.__empLista = lista;
 })();
 </script>
 </body>
