@@ -315,12 +315,51 @@ body.m tbody tr:hover td{background:#f7faff}
 .m-leyenda{display:inline-flex;gap:10px;align-items:center;font-size:11.5px;color:#5a6878;margin-left:12px}
 .m-leyenda span{display:inline-flex;align-items:center;gap:4px}
 
+/* 20-nov-2026 · Revisión antes de imprimir */
+.m-rev{background:#fff;border:1px solid #e1e6ee;border-radius:12px;padding:10px 12px;margin-top:10px}
+.m-rev:empty{display:none}
+.m-rev-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.m-rev-h b{font-size:14px}
+.m-rev-est{font-size:12.5px;border-radius:999px;padding:2px 10px;background:#fff4d6;color:#7a5200;font-weight:600}.m-rev-est.ok{background:#e7f6ec;color:#1f6f43}
+.m-rev-h .m-rev-acc{margin-left:auto;display:flex;gap:6px}
+.m-rev-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(178px,1fr));gap:8px;margin-top:10px}
+.m-rev-c{border:1px solid #e1e6ee;border-left:4px solid #9aa7b8;border-radius:10px;padding:7px 10px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.m-rev-c.bad{border-left-color:#b42318}.m-rev-c.warn{border-left-color:#e0a100}.m-rev-c.info{border-left-color:#1f4fa3}.m-rev-c.vio{border-left-color:#6d3fc0}
+.m-rev-c.on{box-shadow:0 0 0 2px #0b1f3a inset}.m-rev-c.cero{opacity:.55}.m-rev-c.hecho{background:#f3faf5}
+.m-rev-t{font-size:12px;font-weight:600;color:#344054}.m-rev-n{font-size:20px;font-weight:700;line-height:1.1}.m-rev-s{font-size:11.5px;color:#5a6878;min-height:15px}
+.m-rev-p{display:flex;justify-content:space-between;align-items:center;gap:6px;margin-top:4px;font-size:12px}
+.m-rev-p button{border:1px solid #cdd6e2;background:#fff;border-radius:7px;padding:2px 9px;font:inherit;font-size:12px;cursor:pointer;color:inherit}.m-rev-c.on .m-rev-p button{background:#0b1f3a;color:#fff;border-color:#0b1f3a}
+.m-rev-p label{display:flex;align-items:center;gap:4px;cursor:pointer}
+.m-rev-c.fuera{opacity:.45;border-style:dashed}
+.m-rev-nota{font-size:11.5px;color:#5a6878;margin:8px 0 0}
+.m-ent-rev{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fff4d6;border:1px solid #f1d58a;color:#5c3d00;border-radius:10px;padding:8px 12px;margin:8px 0;font-size:13px}.m-ent-rev.ok{background:#e7f6ec;border-color:#b8e0c6;color:#1f6f43}
+.m-ent-rev[hidden]{display:none}
+[data-theme="dark"] .m-rev,[data-theme="dark"] .m-rev-c,[data-theme="dark"] .m-rev-p button{background:#111a2e;border-color:#24324d;color:#e2e8f0}
+[data-theme="dark"] .m-rev-t{color:#cbd5e1}[data-theme="dark"] .m-rev-s,[data-theme="dark"] .m-rev-nota{color:#94a3b8}[data-theme="dark"] .m-rev-c.hecho{background:#10261b}
+
 /* Etapa 3 · preparar lista */
 .m-lt-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:8px}
 .m-lt-bar label{display:block;font-size:11.5px;color:#5a6878;margin:0 0 4px;font-weight:600}
 .m-lt-bar input,.m-lt-bar select{padding:7px 9px;border:1px solid #cdd6e2;border-radius:8px;font-size:13px;background:#fff}
 .m-lt-bar .m-f-dias{flex:0 0 160px;min-width:150px}.m-lt-bar .m-f-btn{flex:0 0 auto}.m-lt-bar .m-f-btn .m-btn{padding:9px 14px}
 .m-lt-bar select,.m-lt-bar input{width:100%;box-sizing:border-box}
+/* 20-nov-2026 · período con calendario propio (nota 33) */
+.m-lt-bar .lt-per{flex:0 0 205px;min-width:190px;position:relative}
+.lt-per-b{width:100%;display:flex;justify-content:space-between;align-items:center;gap:6px;padding:4px 9px;border:1px solid #cdd6e2;border-radius:8px;background:#fff;font:inherit;font-size:13px;cursor:pointer;text-align:left;color:inherit;min-height:34px}
+.lt-per-t{display:flex;flex-direction:column;line-height:1.15;min-width:0}.lt-per-t b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.lt-per-t small{font-size:10.5px;color:#5a6878}
+.lt-per-b.lt-rec{border-color:#0f766e;box-shadow:0 0 0 1px #0f766e inset}.lt-per-b.lt-rec small{color:#0f766e;font-weight:600}
+.lt-cal{position:absolute;top:100%;left:0;margin-top:4px;z-index:60;background:#fff;border:1px solid #c9d3e3;border-radius:12px;box-shadow:0 12px 30px rgba(11,31,58,.18);padding:12px;width:310px}
+.lt-cal[hidden]{display:none}
+.lt-cal-modo{display:flex;flex-direction:column;gap:4px;margin-bottom:10px;font-size:11.5px;color:#5a6878;font-weight:600}
+.lt-seg{display:flex;border:1px solid #cdd6e2;border-radius:8px;overflow:hidden}.lt-seg button{flex:1;border:0;background:#fff;padding:6px 4px;font:inherit;font-size:12px;cursor:pointer;color:inherit}.lt-seg button.on{background:#0b1f3a;color:#fff}
+.lt-cal-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}.lt-cal-h b{display:inline-block}.lt-cal-h b::first-letter{text-transform:uppercase}.lt-cal-h button{border:0;background:#eef2f7;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:15px;color:inherit}
+.lt-cal-g{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;font-size:12.5px}.lt-cal-g .dw{color:#8592a3;font-size:11px;padding:3px 0}
+.lt-cal-g button{border:0;background:transparent;border-radius:6px;padding:6px 0;cursor:pointer;font:inherit;font-size:12.5px;color:inherit}.lt-cal-g button:hover:not([disabled]){background:#eef2f7}
+.lt-cal-g button.in{background:#e3ebff}.lt-cal-g button.ex,.lt-cal-g button.ex:hover:not([disabled]){background:#0b1f3a;color:#fff}.lt-cal-g button.hoy{outline:1px solid #f5b800}.lt-cal-g button[disabled]{color:#c0c6d0;cursor:default}
+.lt-atajos{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}.lt-atajos button{border:1px solid #cdd6e2;background:#fff;border-radius:999px;padding:3px 9px;font:inherit;font-size:12px;cursor:pointer;color:inherit}.lt-atajos button.on{background:#0b1f3a;color:#fff;border-color:#0b1f3a}
+.lt-cal-n{margin:8px 0 0;font-size:11.5px;color:#8592a3}
+[data-theme="dark"] .lt-per-b,[data-theme="dark"] .lt-cal,[data-theme="dark"] .lt-seg button,[data-theme="dark"] .lt-atajos button{background:#111a2e;border-color:#24324d;color:#e2e8f0}
+[data-theme="dark"] .lt-cal-h button{background:#1c2740}[data-theme="dark"] .lt-cal-g button.in{background:#1e3360}
+[data-theme="dark"] .lt-seg button.on,[data-theme="dark"] .lt-atajos button.on,[data-theme="dark"] .lt-cal-g button.ex{background:#3b82f6;color:#fff}
 .m-lt-estado{font-size:12.5px;color:#5a6878;margin:4px 0 8px}
 .m-lt-estado-ok{color:#1f6f43}.m-lt-estado-bad{color:#a61b1b;font-weight:600}.m-lt-estado-warn{color:#7a5200}
 .m-lt-acc{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
@@ -656,6 +695,9 @@ body.m tbody tr:hover td{background:#f7faff}
       <div class="m-kpi m-kpi-alert"><div class="m-kpi-l">Unidad en cero sin stock</div><div class="m-kpi-v" id="mK_cero">—</div><div class="m-kpi-s" title="La unidad no tiene existencias y el CEDIS tampoco">UE y CEDIS sin existencias</div></div>
     </section>
 
+    <!-- 20-nov-2026 · Revisión antes de imprimir (nota 32 del analista) -->
+    <section class="m-rev" id="mRev"></section>
+
     <!-- PESTAÑAS -->
     <section class="m-card m-datos">
 
@@ -708,6 +750,7 @@ body.m tbody tr:hover td{background:#f7faff}
 
       <div id="view_entregar" class="view" style="display:none">
         <div class="m-ent-res" id="mEntRes"></div>
+        <div class="m-ent-rev" id="mEntRev" hidden></div>
         <div class="m-ent-bar">
           <div class="m-ent-g"><span class="m-ent-l">Notificar</span>
             <button id="btnWaNotif" class="m-btn m-btn-wa" onclick="abrirPanelWA()" title="Avise a cada unidad qué se le asignó">WhatsApp</button>
@@ -734,8 +777,15 @@ body.m tbody tr:hover td{background:#f7faff}
         <div class="pre-ban" id="preBanP1" hidden></div>
         <div class="lt-vent" id="ltVentBan" hidden></div>
         <div class="m-lt-bar">
-          <div class="m-f m-f-dias"><label title="Fecha de la Forma 8">Período</label>
-            <select id="ltDias"><option value="7">Últimos 7 días</option><option value="15">Últimos 15 días</option><option value="30" selected>Últimos 30 días</option><option value="45">Últimos 45 días</option><option value="60">Últimos 60 días</option><option value="90">Últimos 90 días</option></select></div>
+          <div class="m-f m-f-dias lt-per"><label title="Por fecha de la Forma 8 o por la fecha en que ventanilla confirmó que llegó">Período</label>
+            <button type="button" class="lt-per-b" id="ltPerBtn" aria-haspopup="dialog"><span class="lt-per-t"><b id="ltPerTxt">Últimos 30 días</b><small id="ltPerModo">por fecha de la F8</small></span><span aria-hidden="true">▾</span></button>
+            <div class="lt-cal" id="ltCal" hidden role="dialog" aria-label="Elegir período">
+              <div class="lt-cal-modo"><span>Contar por</span><div class="lt-seg" id="ltPerSeg"><button type="button" data-m="f8">Fecha de la F8</button><button type="button" data-m="rec">Recepción en ventanilla</button></div></div>
+              <div class="lt-cal-h"><button type="button" id="ltCalPrev" aria-label="Mes anterior">‹</button><b id="ltCalMes"></b><button type="button" id="ltCalNext" aria-label="Mes siguiente">›</button></div>
+              <div class="lt-cal-g" id="ltCalG"></div>
+              <div class="lt-atajos" id="ltAtajos"><button type="button" data-a="hoy">Hoy</button><button type="button" data-a="ayer">Ayer</button><button type="button" data-a="sem">Esta semana</button><button type="button" data-a="7">7 días</button><button type="button" data-a="15">15 días</button><button type="button" data-a="30">30 días</button><button type="button" data-a="60">60 días</button><button type="button" data-a="90">90 días</button></div>
+              <p class="lt-cal-n">Un clic en un día elige ese día; un segundo clic arma el rango.</p>
+            </div></div>
           <div class="m-f m-f-btn"><button id="ltTraer" class="m-btn m-btn-pri" type="button">Cargar pendientes</button></div>
           <div class="m-f"><label>Unidad</label><select id="ltUE"><option value="">Todas las unidades</option></select></div>
           <div class="m-f"><label>CEDIS que la suple</label><select id="ltCedis"><option value="">Todos los CEDIS</option></select></div>
@@ -1205,6 +1255,8 @@ body.m tbody tr:hover td{background:#f7faff}
     if (tipo !== "ALL") rows = rows.filter(r => r.Tipo === tipo);
     if (estado !== "ALL") rows = rows.filter(r => coverage(r) === estado);
 
+    if (window.__revPred) rows = rows.filter(window.__revPred);   // 20-nov-2026 · tarjeta de la revisión
+
     // Filtro: solo renglones donde la UE destino está en cero (saldo en línea)
     const soloCero = document.getElementById('soloCero');
     if (soloCero && soloCero.checked) rows = rows.filter(r => r.En_Cero === true);
@@ -1639,8 +1691,9 @@ body.m tbody tr:hover td{background:#f7faff}
   function exportPdfAsignacion() {
     // 18-nov-2026 · no se imprime con ajustes sin guardar: la Hoja debe salir con lo que quedó en el corte.
     if (window.__ajPendientes && window.__ajPendientes() > 0) { window.__ajToast && window.__ajToast('<b>Hay ajustes sin guardar.</b> Guárdelos (o descártelos) antes de imprimir la Hoja de asignación: así sale con las cantidades que quedan en el corte.', 8000); return; }
+    try { const fl = window.__revFaltan ? window.__revFaltan() : []; if (fl.length && window.__ajToast) window.__ajToast('<b>Imprimiendo.</b> Quedó sin marcar como revisado: ' + fl.join(', ') + '.', 7000); } catch (e) {}
     const rows = _pickingRows();
-    if (!rows.length) { alert("No hay datos visibles para exportar."); return; }
+    if (!rows.length) { (window.__ajToast || alert)("No hay datos visibles para exportar."); return; }
 
     const fechaGen = new Date().toLocaleString("en-US");
     const groups = new Map();
@@ -3558,7 +3611,8 @@ document.addEventListener('keydown', e => {
       chip('COMPLETO', 'completos', cnt.COMPLETO, 'ok') +
       chip('PARCIAL', 'parciales', cnt.PARCIAL, 'warn') +
       chip('SIN', 'sin stock', cnt.SIN, 'bad') +
-      `<button class="m-chip m-chip-cero${document.getElementById('soloCero').checked ? ' on' : ''}" data-cero="1">Solo unidad en cero</button>`;
+      `<button class="m-chip m-chip-cero${document.getElementById('soloCero').checked ? ' on' : ''}" data-cero="1">Solo unidad en cero</button>` +
+      (window.__revPred ? `<button class="m-chip m-chip-all on" data-revx="1" title="Quitar el filtro de la revisión">Revisión: ${mEsc(window.__revNombre || '')} ✕</button>` : '');
   }
 
   // ---------- Tabla de renglones: las 30 columnas de siempre + selector ----------
@@ -3770,7 +3824,103 @@ document.addEventListener('keydown', e => {
       try { _mApply(); window.__mBase = LAST_FILTERED; } finally { window.__mSilent = false; sel.value = v; }
     }
     _mApply();
+    try { window.__revPintar && window.__revPintar(); } catch (e) { console.warn('revisión:', e); }
   };
+  // ---------- 20-nov-2026 · Revisión antes de imprimir (nota 32 del analista) ----------
+  // Tarjetas con lo que conviene mirar del corte antes de imprimir la Hoja. Cuentan sobre todo el corte
+  // (no cambian al filtrar); "Ver líneas" filtra la tabla de renglones. El analista elige qué tarjetas
+  // quiere (Personalizar) y las marca como revisadas; eso queda guardado en su equipo.
+  (function () {
+    const N = v => mNum(v), ST = r => String(r.Estado || '').toUpperCase();
+    const cubre = r => N(r.Asignado) + N(r.Asignado_Transito);
+    const uds = L => { const n = new Set(L.map(r => r.Punto)).size; return fmt(n) + (n === 1 ? ' unidad' : ' unidades'); };
+    const CARTAS = [
+      { id: 'vit', c: 'bad', t: 'Vitales sin cubrir completo', p: r => r.Importancia === 'VITAL' && N(r.Solicitado_redondeado) > 0 && cubre(r) < N(r.Solicitado_redondeado),
+        s: L => { const z = L.filter(r => cubre(r) <= 0).length; return z ? fmt(z) + ' quedan en cero' : 'Todas reciben algo'; } },
+      { id: 'cero', c: 'bad', t: 'Unidad en cero y sin asignar', p: r => r.En_Cero === true && N(r.Asignado) <= 0 && N(r.Asignado_Transito) <= 0,
+        s: L => uds(L) + ' sin saldo del renglón' },
+      { id: 'sin', c: 'bad', t: 'Sin stock ni tránsito', p: r => coverage(r) === 'SIN',
+        s: L => { const v = L.filter(r => /VENC/.test(ST(r))).length; return fmt(new Set(L.map(r => String(r.Codigo))).size) + ' renglones' + (v ? ' · ' + fmt(v) + ' por vencimiento' : ''); } },
+      { id: 'cuota', c: 'vio', t: 'Frenadas por la cuota', p: r => !!r.Acaparamiento || /CUOTA/.test(ST(r)),
+        s: L => { const b = L.filter(r => /BLOQUEA/.test(ST(r))).length; return [L.length - b ? fmt(L.length - b) + ' al tope' : '', b ? fmt(b) + ' bloqueadas' : ''].filter(Boolean).join(' · '); } },
+      { id: 'parc', c: 'warn', t: 'Parciales', p: r => coverage(r) === 'PARCIAL', s: L => 'Reciben menos de lo pedido' },
+      { id: 'trans', c: 'info', t: 'Cubiertas con tránsito', p: r => N(r.Asignado_Transito) > 0, s: L => 'Dependen de que llegue la mercancía' },
+      { id: 'frio', c: 'info', t: 'Cadena de frío', p: r => !!r.Frio && N(r.Asignado) > 0, s: L => uds(L) + ' · preparar con el almacén' },
+      { id: 'ctrl', c: 'vio', t: 'Controlados', p: r => !!r.Narcotico && N(r.Asignado) > 0, s: L => uds(L) + ' · despacho con control' },
+      { id: 'aj', c: 'info', t: 'Ajustes del analista', p: r => !!r.Ajuste, s: L => 'Cambios hechos a mano, con su motivo' },
+      { id: 'resv', c: 'info', t: 'Con reserva vigente', p: r => N(r.Reservado) > 0, s: L => 'Algo de ese renglón está reservado' },
+      { id: 'emp', c: '', t: 'Ajustadas a empaque', p: r => /EMPAQUE/.test(ST(r)), s: L => 'El Motor redondeó a empaque cerrado' },
+      { id: 'min', c: '', t: 'Pedido menor al mínimo', p: r => /MINIMO/.test(ST(r)), s: L => 'Piden menos de un empaque' },
+      { id: 'pack', c: '', t: 'Sin empaque en el maestro', p: r => !!r.Pack_Missing, s: L => 'Se trabajó con empaque 1' }
+    ];
+    const POR_DEFECTO = ['vit', 'cero', 'sin', 'cuota', 'trans', 'frio', 'ctrl', 'aj'];
+    const RV = { pers: false, cache: null };
+    const leer = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k) || 'null'); return v == null ? d : v; } catch (e) { return d; } };
+    const guardar = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+    const elegidas = new Set(leer('motor_rev_cartas', POR_DEFECTO));
+    let plegado = !!leer('motor_rev_plegado', false);
+    const corteK = () => ((document.getElementById('cutDate') || {}).textContent || '').trim() + '|' + (DATA ? DATA.length : 0);
+    const revisadas = () => { const o = leer('motor_rev_ok', {}); return new Set(o[corteK()] || []); };
+    const marcar = (id, on) => { const k = corteK(), set = revisadas(); on ? set.add(id) : set.delete(id); guardar('motor_rev_ok', { [k]: [...set] }); };
+    function contar() {
+      const na = DATA.reduce((a, r) => a + (r.Ajuste ? 1 : 0), 0);
+      if (RV.cache && RV.cache.k === DATA && RV.cache.n === DATA.length && RV.cache.a === na) return RV.cache.v;
+      const v = {}; CARTAS.forEach(c => { v[c.id] = DATA.filter(c.p); });
+      RV.cache = { k: DATA, n: DATA.length, a: na, v }; return v;
+    }
+    function faltan() {   // nombres de las tarjetas elegidas, con casos, aún sin marcar
+      if (!DATA || !DATA.length) return [];
+      const v = contar(), ok = revisadas();
+      return CARTAS.filter(c => elegidas.has(c.id) && v[c.id].length && !ok.has(c.id)).map(c => c.t);
+    }
+    function pintar() {
+      const box = document.getElementById('mRev'); if (!box) return;
+      if (!DATA || !DATA.length) { box.innerHTML = ''; pintarEntrega(); return; }
+      const v = contar(), ok = revisadas(), act = window.__revId || '';
+      const lista = RV.pers ? CARTAS : CARTAS.filter(c => elegidas.has(c.id));
+      const conCasos = CARTAS.filter(c => elegidas.has(c.id) && v[c.id].length), fl = conCasos.filter(c => !ok.has(c.id)).length;
+      const est = !conCasos.length ? '<span class="m-rev-est ok">Nada que revisar</span>' : fl ? `<span class="m-rev-est">Faltan ${fl} de ${conCasos.length}</span>` : '<span class="m-rev-est ok">Todo revisado ✓</span>';
+      box.innerHTML = `<div class="m-rev-h"><b>Revisión antes de imprimir</b>${est}
+        <span class="m-rev-acc"><button type="button" class="m-btn m-btn-out m-btn-sm" data-rv="pers">${RV.pers ? 'Listo' : 'Personalizar'}</button>
+        <button type="button" class="m-btn m-btn-out m-btn-sm" data-rv="plegar">${plegado ? 'Mostrar ▾' : 'Ocultar ▴'}</button></span></div>` +
+        (plegado && !RV.pers ? '' : `<div class="m-rev-g">` + lista.map(c => { const L = v[c.id], n = L.length, el = elegidas.has(c.id), h = ok.has(c.id);
+          return `<div class="m-rev-c ${c.c}${act === c.id ? ' on' : ''}${!n ? ' cero' : ''}${h && n ? ' hecho' : ''}${RV.pers && !el ? ' fuera' : ''}">
+            <span class="m-rev-t">${c.t}</span><span class="m-rev-n">${fmt(n)}</span><span class="m-rev-s">${n ? c.s(L) : 'Nada en este corte'}</span>
+            <span class="m-rev-p">${RV.pers ? `<label><input type="checkbox" data-rvq="${c.id}"${el ? ' checked' : ''}> Mostrar</label>`
+              : (n ? `<button type="button" data-rvv="${c.id}">${act === c.id ? 'Quitar filtro' : 'Ver líneas'}</button><label><input type="checkbox" data-rvok="${c.id}"${h ? ' checked' : ''}> Revisado</label>` : '')}</span></div>`; }).join('') + '</div>' +
+          (RV.pers ? '<p class="m-rev-nota">Marque las tarjetas que quiere ver en cada corte. La selección queda guardada en este equipo.</p>' : ''));
+      pintarEntrega();
+    }
+    function pintarEntrega() {
+      const el = document.getElementById('mEntRev'); if (!el) return;
+      if (!DATA || !DATA.length) { el.hidden = true; return; }
+      const fl = faltan(); el.hidden = false; el.classList.toggle('ok', !fl.length);
+      el.innerHTML = fl.length ? `<span>Revisión antes de imprimir: falta marcar <b>${fl.join(', ')}</b>.</span><button type="button" class="m-btn m-btn-out m-btn-sm" data-rvir="1">Ir a la revisión</button>`
+        : '<span>Revisión antes de imprimir: todo revisado ✓</span>';
+    }
+    function ver(id) {
+      if (window.__revId === id) { quitar(); return; }
+      const c = CARTAS.find(x => x.id === id); if (!c) return;
+      window.__revId = id; window.__revPred = c.p; window.__revNombre = c.t;
+      if (ACTIVE_TAB !== 'asignacion') showTab('asignacion');
+      applyFilters();
+      const t = document.getElementById('mSubtabs'); if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    function quitar() { window.__revId = ''; window.__revPred = null; window.__revNombre = ''; applyFilters(); }
+    document.addEventListener('click', ev => {
+      const b = ev.target.closest('[data-rv],[data-rvv],[data-rvir]'); if (!b) return;
+      if (b.dataset.rvir) { const p = document.querySelector('.m-pas[data-paso="3"]'); if (p) p.click(); return; }
+      if (b.dataset.rvv) { ver(b.dataset.rvv); return; }
+      if (b.dataset.rv === 'pers') { RV.pers = !RV.pers; if (RV.pers) plegado = false; pintar(); }
+      if (b.dataset.rv === 'plegar') { plegado = !plegado; guardar('motor_rev_plegado', plegado); pintar(); }
+    });
+    document.addEventListener('change', ev => {
+      const t = ev.target;
+      if (t.dataset.rvq) { t.checked ? elegidas.add(t.dataset.rvq) : elegidas.delete(t.dataset.rvq); guardar('motor_rev_cartas', [...elegidas]); pintar(); }
+      if (t.dataset.rvok) { marcar(t.dataset.rvok, t.checked); pintar(); }
+    });
+    window.__revPintar = pintar; window.__revFaltan = faltan; window.__revQuitar = quitar;
+  })();
   const _mRAT = renderActiveTab;
   renderActiveTab = function (rows) { if (window.__mSilent) return; return _mRAT(rows); };
 
@@ -3790,7 +3940,8 @@ document.addEventListener('keydown', e => {
     document.getElementById('viewTitle').textContent = M_TITULOS[tab] || '';
     document.getElementById('mColBtn').closest('.m-tabs-r').style.visibility = tab === 'asignacion' ? 'visible' : 'hidden';
     document.querySelectorAll('.m-pas').forEach(b => { const on = b.dataset.paso === paso; b.classList.toggle('m-on', on); b.setAttribute('aria-current', on ? 'step' : 'false'); });
-    ['#mKpis', '#mSubtabs', '#mChips', '#mLeyenda'].forEach(sel => { const el = document.querySelector(sel); if (el) el.style.display = enRevision ? '' : 'none'; });
+    if (!enRevision && window.__revPred && window.__revQuitar) window.__revQuitar();
+    ['#mKpis', '#mRev', '#mSubtabs', '#mChips', '#mLeyenda'].forEach(sel => { const el = document.querySelector(sel); if (el) el.style.display = enRevision ? '' : 'none'; });
     // Fuera del paso 3 la barra de título no aporta (la tarjeta del paso ya dice dónde está): se oculta y no deja espacio.
     { const vb = document.querySelector('.m-vista-bar'); if (vb) vb.style.display = enRevision ? '' : 'none'; }
     // Los filtros sirven para revisar (3) y para entregar (4): la hoja y el Excel filtrado salen con ellos.
@@ -3951,6 +4102,7 @@ document.addEventListener('keydown', e => {
       const b = ev.target.closest('button'); if (!b) return;
       if (b.dataset.est) document.getElementById('estado').value = b.dataset.est;
       if (b.dataset.cero) { const c = document.getElementById('soloCero'); c.checked = !c.checked; }
+      if (b.dataset.revx && window.__revQuitar) { window.__revQuitar(); return; }
       applyFilters();
     });
     ['q', 'doc'].forEach(id => document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') applyFilters(); }));
@@ -4190,15 +4342,79 @@ document.addEventListener('keydown', e => {
   // Los pendientes los publica el Motor en pendientes.json (90 días) cada vez que entra dato nuevo:
   // la página no llama al servidor para leerlos. El período se filtra aquí, al instante.
   let LT_TODAS = [];
-  function ltAplicarPeriodo() {
-    const dias = +ltEl('ltDias').value || 30;
-    const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - dias);
-    const lim = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-    LT.filas = LT_TODAS.filter(f => f.manual || f.fecha >= lim);   // las F8 manuales se ven siempre
-    ltLlenarFiltros(); ltPintar();
-    if (LT.cargado) { const f8 = new Set(LT.filas.map(f => f.f8)), rec = new Set(LT.filas.filter(f => f.rec).map(f => f.f8));
-      ltEstado(fmt(LT.filas.length) + ' líneas de los últimos ' + dias + ' días · ' + fmt(f8.size) + ' Formas 8, ' + fmt(rec.size) + ' recibidas en ventanilla · datos publicados ' + LT.pub, 'ok'); }
+  // 20-nov-2026 · Período con calendario (nota 33 del analista): se cuenta por fecha de la F8 o por la fecha
+  // en que ventanilla confirmó la recepción. Atajos (Hoy, Ayer, 7…90 días) o un día / rango del calendario.
+  const ltISO = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const ltHoy = () => { const d = new Date(Date.now() - 5 * 3600e3); return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()); };   // día de Panamá
+  const ltMas = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+  const LT_PER = { modo: 'f8', atajo: '30', ini: '', fin: '' };
+  try { const g = JSON.parse(localStorage.getItem('motor_lt_periodo') || 'null'); if (g && (g.modo === 'f8' || g.modo === 'rec')) { LT_PER.modo = g.modo; if (g.atajo) LT_PER.atajo = String(g.atajo); } } catch (e) {}
+  function ltRango() {   // { ini, fin } en ISO; fin vacío = sin tope
+    const h = ltHoy(), a = LT_PER.atajo;
+    if (a === 'hoy') return { ini: ltISO(h), fin: ltISO(h) };
+    if (a === 'ayer') { const y = ltISO(ltMas(h, -1)); return { ini: y, fin: y }; }
+    if (a === 'sem') return { ini: ltISO(ltMas(h, -((h.getDay() + 6) % 7))), fin: '' };
+    if (a) return { ini: ltISO(ltMas(h, -(+a))), fin: '' };   // igual que antes: "últimos N días"
+    return { ini: LT_PER.ini, fin: LT_PER.fin };
   }
+  function ltPerTexto() {
+    const a = LT_PER.atajo, r = ltRango();
+    const t = a === 'hoy' ? 'Hoy · ' + ltFmtF(r.ini).slice(0, 5) : a === 'ayer' ? 'Ayer · ' + ltFmtF(r.ini).slice(0, 5) : a === 'sem' ? 'Esta semana'
+      : a ? 'Últimos ' + a + ' días' : (r.ini === r.fin ? ltFmtF(r.ini) : ltFmtF(r.ini).slice(0, 5) + ' – ' + ltFmtF(r.fin));
+    return t;
+  }
+  function ltAplicarPeriodo() {
+    const r = ltRango(), rec = LT_PER.modo === 'rec';
+    const fe = f => rec ? String(f.rec || '').slice(0, 10) : String(f.fecha || '').slice(0, 10);
+    LT.filas = LT_TODAS.filter(f => { if (f.manual) return true;   // las F8 manuales se ven siempre
+      const d = fe(f); return !!d && d >= r.ini && (!r.fin || d <= r.fin); });
+    ltPerPintarBoton();
+    ltLlenarFiltros(); ltPintar();
+    if (LT.cargado) { const f8 = new Set(LT.filas.map(f => f.f8)), recb = new Set(LT.filas.filter(f => f.rec).map(f => f.f8));
+      ltEstado(fmt(LT.filas.length) + ' líneas · ' + ltPerTexto().toLowerCase() + (rec ? ' (recibidas en ventanilla)' : ' (por fecha de la F8)') + ' · ' + fmt(f8.size) + ' Formas 8, ' + fmt(recb.size) + ' recibidas en ventanilla · datos publicados ' + LT.pub, 'ok'); }
+  }
+  function ltPerPintarBoton() {
+    const rec = LT_PER.modo === 'rec';
+    ltEl('ltPerTxt').textContent = ltPerTexto();
+    ltEl('ltPerModo').textContent = rec ? 'por recepción en ventanilla' : 'por fecha de la F8';
+    ltEl('ltPerBtn').classList.toggle('lt-rec', rec);
+    // Contando por recepción, todo lo que se ve ya llegó a ventanilla: el filtro de recepción no aplica.
+    const s = ltEl('ltRec'); if (s) { if (rec && s.value) s.value = ''; s.disabled = rec; s.title = rec ? 'El período ya cuenta por recepción en ventanilla' : ''; }
+    try { localStorage.setItem('motor_lt_periodo', JSON.stringify({ modo: LT_PER.modo, atajo: LT_PER.atajo })); } catch (e) {}
+  }
+  (function ltCalendario() {
+    const C = { vista: null, clic: 0 };
+    const cal = ltEl('ltCal'); if (!cal) return;
+    function pintar() {
+      const r = ltRango(), h = ltHoy(), hoyI = ltISO(h), fin = r.fin || hoyI;
+      if (!C.vista) C.vista = new Date(h.getFullYear(), h.getMonth(), 1);
+      const y = C.vista.getFullYear(), m = C.vista.getMonth(), off = (new Date(y, m, 1).getDay() + 6) % 7, dias = new Date(y, m + 1, 0).getDate();
+      ltEl('ltCalMes').textContent = C.vista.toLocaleDateString('es-PA', { month: 'long', year: 'numeric' });
+      let g = ['L', 'M', 'M', 'J', 'V', 'S', 'D'].map(x => '<span class="dw">' + x + '</span>').join('') + '<span></span>'.repeat(off);
+      for (let d = 1; d <= dias; d++) { const i = ltISO(new Date(y, m, d));
+        const cls = [i === hoyI ? 'hoy' : '', i >= r.ini && i <= fin ? 'in' : '', i === r.ini || i === fin ? 'ex' : ''].join(' ');
+        g += '<button type="button" class="' + cls + '" data-d="' + i + '"' + (i > hoyI ? ' disabled' : '') + '>' + d + '</button>'; }
+      ltEl('ltCalG').innerHTML = g;
+      ltEl('ltCalNext').disabled = y === h.getFullYear() && m === h.getMonth();
+      ltEl('ltPerSeg').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.m === LT_PER.modo));
+      ltEl('ltAtajos').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.a === LT_PER.atajo));
+    }
+    const aplicar = () => { pintar(); LT.lim = 400; if (LT.cargado) ltAplicarPeriodo(); else ltPerPintarBoton(); };
+    ltEl('ltPerBtn').addEventListener('click', () => { cal.hidden = !cal.hidden; if (!cal.hidden) { C.vista = null; C.clic = 0; pintar(); } });
+    ltEl('ltCalPrev').addEventListener('click', () => { C.vista = new Date(C.vista.getFullYear(), C.vista.getMonth() - 1, 1); pintar(); });
+    ltEl('ltCalNext').addEventListener('click', () => { C.vista = new Date(C.vista.getFullYear(), C.vista.getMonth() + 1, 1); pintar(); });
+    ltEl('ltCalG').addEventListener('click', ev => { const b = ev.target.closest('button[data-d]'); if (!b || b.disabled) return;
+      const d = b.dataset.d;
+      if (C.clic === 0) { LT_PER.atajo = ''; LT_PER.ini = d; LT_PER.fin = d; C.clic = 1; }
+      else { if (d < LT_PER.ini) { LT_PER.fin = LT_PER.ini; LT_PER.ini = d; } else LT_PER.fin = d; C.clic = 0; }
+      aplicar(); });
+    ltEl('ltAtajos').addEventListener('click', ev => { const b = ev.target.closest('button[data-a]'); if (!b) return; LT_PER.atajo = b.dataset.a; C.clic = 0; aplicar(); cal.hidden = true; });
+    ltEl('ltPerSeg').addEventListener('click', ev => { const b = ev.target.closest('button[data-m]'); if (!b) return; LT_PER.modo = b.dataset.m; aplicar(); });
+    const caja = cal.closest('.lt-per');   // composedPath: el día clicado se redibuja y queda fuera del DOM
+    document.addEventListener('click', ev => { if (!cal.hidden && !ev.composedPath().includes(caja)) cal.hidden = true; });
+    document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && !cal.hidden) cal.hidden = true; });
+    ltPerPintarBoton();
+  })();
   function ltMarcarEnLista() {
     const enL = new Set((LT.actual || []).map(x => ltKey(x[0], x[3])));
     LT_TODAS.forEach(f => { f.enLista = enL.has(f.k); });
@@ -4358,7 +4574,7 @@ document.addEventListener('keydown', e => {
     el.hidden = false;
     el.innerHTML = v.length
       ? `<span>Recepción en ventanilla: <b>${v.length.toLocaleString('es-PA')} F8 recibidas</b> en el periodo${nHoy ? ' · <b>' + nHoy + ' hoy</b>' : ''} · ${nPend.toLocaleString('es-PA')} con renglones aún sin asignar${desde ? ' · registro desde ' + ltFmtF(desde) : ''}</span>`
-        + (ltEl('ltRec').value === 'si' ? '<button type="button" class="m-btn m-btn-out m-btn-sm" id="ltVentTodas">Ver todas</button>' : '<button type="button" class="m-btn m-btn-out m-btn-sm" id="ltVentSolo">Ver solo las recibidas</button>')
+        + (LT_PER.modo === 'rec' ? '' : ltEl('ltRec').value === 'si' ? '<button type="button" class="m-btn m-btn-out m-btn-sm" id="ltVentTodas">Ver todas</button>' : '<button type="button" class="m-btn m-btn-out m-btn-sm" id="ltVentSolo">Ver solo las recibidas</button>')
       : '<span>Recepción en ventanilla: todavía no hay F8 de este periodo registradas como recibidas.</span>';
   }
   document.addEventListener('click', ev => {
@@ -4589,7 +4805,6 @@ document.addEventListener('keydown', e => {
   (function () {
     const v = ltEl('view_lista'); if (!v) return;
     ltEl('ltTraer').addEventListener('click', ltTraer);
-    ltEl('ltDias').addEventListener('change', () => { if (LT.cargado) ltAplicarPeriodo(); });
     ltEl('ltDeshacer').addEventListener('click', ltDeshacerPedir);
     ltEl('ltManualBtn').addEventListener('click', () => ltAbrirManual(null));
     ltEl('lmOk').addEventListener('click', ltAgregarManual);
