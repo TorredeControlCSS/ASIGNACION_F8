@@ -5414,10 +5414,12 @@ document.addEventListener('keydown', e => {
       return m <= 0 ? { t: 'Agotado', c: 'bad', m } : m < 1 ? { t: 'Crítico', c: 'bad', m } : m < 2.5 ? { t: 'Bajo', c: 'warn', m } : { t: '', m }; }
     function planActual() { return PRE.bor && PRE.bor.sku === PRE.sel ? PRE.bor : null; }
     function planGuardado(sku) { return activos().find(p => String(p.sku) === String(sku)) || null; }
-    function abrir(sku) {
+    function abrir(sku, id) {
+      // 25-nov-2026 · nota 37: una preasignación duplicada del mismo renglón se abre por su id
+      if (id && PRE.bor && PRE.bor.sku === sku && PRE.bor.id !== id) { if (PRE.bor.sucio) return toast('Guarde primero los cambios de la otra preasignación de este renglón.'); PRE.bor = null; }
       PRE.sel = sku;
       if (!planActual()) {
-        const g = planGuardado(sku), r = PRE.T.renglones[sku] || { citas: [] }, c0 = (r.citas || [])[0] || [];
+        const g = (id && PRE.planes.find(p => p.id === id)) || planGuardado(sku), r = PRE.T.renglones[sku] || { citas: [] }, c0 = (r.citas || [])[0] || [];
         PRE.bor = g ? JSON.parse(JSON.stringify(g)) : { id: '', sku, nombre: r.nombre, transito: (c0[0] || '') + (c0[3] ? ' · ' + c0[3] : ''), cantTransito: N(c0[1]), hasta: masDias(c0[0], 30), apartar: true, lineas: [] };
         PRE.bor.sucio = false; guardarBorrador();
       }
@@ -5435,14 +5437,29 @@ document.addEventListener('keydown', e => {
       if (!PRE.T) { v.innerHTML = `<div class="pre-wrap"><div class="m-vacio">${PRE.cargando ? 'Cargando los tránsitos…' : 'Todavía no hay tránsitos publicados por el Motor (transitos.json).'}</div></div>`; return; }
       const R = PRE.T.renglones, q = PRE.q.toLowerCase(), nv = nuevas();
       // 25-nov-2026 · nota 35: dos listas, lo que falta preasignar y lo ya preasignado
-      const todas = Object.keys(R).map(k => ({ k, r: R[k], n: nivel(R[k]), g: !!planGuardado(k), nueva: nv.has(k) }))
+      // 25-nov-2026 · nota 37: transitos.json solo trae las citas de los últimos días; la preasignación vigente de un tránsito
+      // que ya salió de esa ventana (recibido hace más de una semana) seguía activa pero no aparecía en ninguna de las dos listas.
+      // También se muestran las preasignaciones duplicadas del mismo renglón, para poder revisarlas o anular la sobrante.
+      const vistos = new Set(), extra = [];
+      activos().forEach(p => { const k = String(p.sku);
+        const r = R[k] || { nombre: p.nombre, citas: [], stock: null, ues: {} };
+        if (vistos.has(k)) extra.push({ k, r, n: R[k] ? nivel(R[k]) : { t: '', m: null }, g: true, id: p.id, dup: true, fuera: !R[k], nueva: false });
+        else { vistos.add(k); if (!R[k]) extra.push({ k, r, n: { t: '', m: null }, g: true, id: p.id, fuera: true, nueva: false }); } });
+      const todas = Object.keys(R).map(k => ({ k, r: R[k], n: nivel(R[k]), g: !!planGuardado(k), nueva: nv.has(k) })).concat(extra)
         .filter(x => (!q || (x.k + ' ' + x.r.nombre).toLowerCase().includes(q)) && (!PRE.bajo || (x.n.m !== null && x.n.m < 2.5)));
       const nPor = todas.filter(x => !x.g).length, nYa = todas.length - nPor;
       const lista = todas.filter(x => PRE.vista === 'ya' ? x.g : !x.g)
         .sort((a, b) => (b.nueva - a.nueva) || ((a.n.m == null ? 99 : a.n.m) - (b.n.m == null ? 99 : b.n.m)));
-      const tarjeta = x => { const g = planGuardado(x.k), cit = x.r.citas || [], tot = cit.reduce((s, c) => s + N(c[1]), 0), rec = cit.some(c => /RECIBID/i.test(c[3] || ''));
+      const nDup = k => activos().filter(p => String(p.sku) === String(k)).length;
+      const tarjeta = x => { const g = (x.id && PRE.planes.find(p => p.id === x.id)) || planGuardado(x.k), cit = x.r.citas || [], tot = cit.reduce((s, c) => s + N(c[1]), 0), rec = cit.some(c => /RECIBID/i.test(c[3] || ''));
         const pre = g ? g.lineas.reduce((s, l) => s + N(l.q), 0) : 0, ok = g ? g.lineas.filter(l => l.estado === 'ASIGNADA').length : 0;
-        return `<div class="pre-card${PRE.sel === x.k ? ' on' : ''}" data-pre-sku="${E(x.k)}"><b>${E(x.r.nombre)}</b>${x.n.t ? ` <span class="m-tag m-tag-${x.n.c}">${x.n.t}</span>` : ''}${x.nueva && !x.g ? ' <span class="m-tag pre-nueva" title="Cita que apareció en las últimas 24 horas">Nueva</span>' : ''}<br>
+        const dup = g && nDup(x.k) > 1 ? ` <span class="m-tag m-tag-warn" title="Este renglón tiene ${nDup(x.k)} preasignaciones vigentes guardadas. Revise cuál vale y anule la sobrante.">Duplicada</span>` : '';
+        const on = PRE.sel === x.k && (!g || !PRE.bor || PRE.bor.id === g.id || !PRE.bor.id);
+        if (x.fuera) return `<div class="pre-card${on ? ' on' : ''}" data-pre-sku="${E(x.k)}" data-pre-id="${E(g.id)}"><b>${E(g.nombre || x.r.nombre)}</b> <span class="m-tag m-tag-info" title="El tránsito ya no figura en el calendario de tránsitos (se publica solo la última semana). La preasignación sigue vigente.">Tránsito ya recibido</span>${dup}<br>
+          <span class="m-mono">${E(x.k)}</span> · ${E(g.transito || 'sin cita')}<br>
+          Venía ${F(g.cantTransito)} · vigente hasta ${E(g.hasta || '')}<br>
+          ${F(pre)} preasignados · ${ok} de ${g.lineas.length} asignadas</div>`;
+        return `<div class="pre-card${on ? ' on' : ''}" data-pre-sku="${E(x.k)}"${x.id ? ` data-pre-id="${E(x.id)}"` : ''}><b>${E(x.r.nombre)}</b>${x.n.t ? ` <span class="m-tag m-tag-${x.n.c}">${x.n.t}</span>` : ''}${x.nueva && !x.g ? ' <span class="m-tag pre-nueva" title="Cita que apareció en las últimas 24 horas">Nueva</span>' : ''}${dup}<br>
           <span class="m-mono">${E(x.k)}</span> · ${cit.length} cita${cit.length === 1 ? '' : 's'} · ${rec ? 'recibido' : 'llega ' + E((cit[0] || [])[0] || '')}<br>
           Viene ${F(tot)} · CEDIS ${x.r.stock ? F(x.r.stock[1]) : 's/d'}${x.n.m != null ? ' (' + F(x.n.m) + ' meses)' : ''}<br>
           ${g ? `${F(pre)} preasignados · ${ok} de ${g.lineas.length} asignadas` : '<span class="m-dim">Sin preasignar · clic para repartir</span>'}${planActual() && planActual().sku === x.k && PRE.bor.sucio ? ' · <b class="pre-sucio">sin guardar</b>' : ''}</div>`; };
@@ -5459,9 +5476,12 @@ document.addEventListener('keydown', e => {
     function editor() {
       const p = planActual(); if (!p) return '<div class="m-vacio">Elija un tránsito de la lista para repartirlo.</div>';
       const r = PRE.T.renglones[p.sku] || { citas: [], ues: {} }, tot = p.lineas.reduce((s, l) => s + N(l.q), 0), libres = N(p.cantTransito) - tot;
-      const citas = (r.citas || []).map((c, i) => `<option value="${i}"${(c[0] + (c[3] ? ' · ' + c[3] : '')) === p.transito ? ' selected' : ''}>${E(c[0] || 'sin fecha')} · ${F(c[1])} · ${E(c[2] || '')}${c[3] ? ' · ' + E(c[3]) : ''}</option>`).join('');
+      let citas = (r.citas || []).map((c, i) => `<option value="${i}"${(c[0] + (c[3] ? ' · ' + c[3] : '')) === p.transito ? ' selected' : ''}>${E(c[0] || 'sin fecha')} · ${F(c[1])} · ${E(c[2] || '')}${c[3] ? ' · ' + E(c[3]) : ''}</option>`).join('');
+      const fuera = !PRE.T.renglones[p.sku];
+      if (p.transito && !(r.citas || []).some(c => (c[0] + (c[3] ? ' · ' + c[3] : '')) === p.transito)) citas = `<option value="k" selected>${E(p.transito)} · ${F(p.cantTransito)}</option>` + citas;
       return `<div class="m-f-row"><div class="m-f m-f-q m-filtros"><label>Tránsito (cita del calendario)</label><select id="preCita">${citas}</select></div>
           <div class="m-f m-filtros" style="flex:0 0 160px"><label>Vigente hasta</label><input type="date" id="preHasta" value="${E(p.hasta || '')}"></div></div>
+        ${fuera ? '<div class="m-nota pre-fuera">Este tránsito ya no figura en el calendario de tránsitos (se publica solo la última semana), pero la preasignación sigue vigente hasta la fecha indicada. El consumo y el inventario por unidad no están disponibles para este renglón.</div>' : ''}
         <div class="pre-kpis"><div class="pre-k pre-k-a"><span>Viene en el tránsito</span><b>${F(p.cantTransito)}</b></div><div class="pre-k pre-k-v"><span>Preasignado</span><b>${F(tot)}</b></div>
           <div class="pre-k ${libres < 0 ? 'pre-k-r' : 'pre-k-g'}"><span>Sin preasignar</span><b>${F(libres)}</b></div><div class="pre-k pre-k-w"><span>Existencia en el CEDIS</span><b>${r.stock ? F(r.stock[1]) : 's/d'}</b></div></div>
         ${(() => { const em = window.__emp ? window.__emp(p.sku, 0) : null; return em && (em.p || em.t) ? `<div class="aj-emp pre-emp">${window.__empChips(em)}${em.cuadra === false ? ' <span class="aj-emp-mal">el maestro no cuadra: ' + F(em.p) + ' × ' + F(em.s) + ' ≠ ' + F(em.t) + '</span>' : ''}</div>` : '<div class="aj-emp pre-emp m-dim">Sin empaques en MAESTROS_DINALOG para este renglón: el reparto va en unidades sueltas.</div>'; })()}
@@ -5594,7 +5614,7 @@ document.addEventListener('keydown', e => {
     });
     document.addEventListener('mousedown', ev => { const it = ev.target.closest('[data-pre-ac]'); if (it) { ev.preventDefault(); acElegir(Number(it.dataset.preAc)); return; } if (!ev.target.closest('.pre-combo')) acCerrar(); });
     document.addEventListener('click', ev => {
-      const c = ev.target.closest('[data-pre-sku]'); if (c) return abrir(c.dataset.preSku);
+      const c = ev.target.closest('[data-pre-sku]'); if (c) return abrir(c.dataset.preSku, c.dataset.preId);
       const b = ev.target.closest('button'); if (!b || !document.getElementById('view_pre') || !document.getElementById('view_pre').contains(b)) return;
       const p = planActual();
       if (b.dataset.preRep) repartir(b.dataset.preRep);
@@ -5619,7 +5639,7 @@ document.addEventListener('keydown', e => {
       if (t.dataset.preQ !== undefined) { p.lineas[Number(t.dataset.preQ)].q = Math.max(0, Math.round(Number(t.value) || 0)); sucio(); pintar(); }
       else if (t.id === 'preHasta') { p.hasta = t.value; sucio(); }
       else if (t.id === 'preApartar') { p.apartar = t.checked; sucio(); }
-      else if (t.id === 'preCita') { const c = (PRE.T.renglones[p.sku].citas || [])[Number(t.value)] || []; p.transito = (c[0] || '') + (c[3] ? ' · ' + c[3] : ''); p.cantTransito = N(c[1]); if (!p.id) p.hasta = masDias(c[0], 30); sucio(); pintar(); }
+      else if (t.id === 'preCita') { if (t.value === 'k' || !PRE.T.renglones[p.sku]) return; const c = (PRE.T.renglones[p.sku].citas || [])[Number(t.value)] || []; p.transito = (c[0] || '') + (c[3] ? ' · ' + c[3] : ''); p.cantTransito = N(c[1]); if (!p.id) p.hasta = masDias(c[0], 30); sucio(); pintar(); }
       else if (t.id === 'preBajo') { PRE.bajo = t.checked; pintar(); }
     });
 
