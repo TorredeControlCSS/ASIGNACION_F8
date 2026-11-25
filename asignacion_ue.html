@@ -135,7 +135,7 @@
 </div>
 
 <script>
-const GAS = 'https://script.google.com/macros/s/AKfycbyVHDQ8IuVHibz259AiEvZ-jUfVC7fxvSSqC-wfaiiq1_13C9_TK4dVtPK0SMW4sZoJ/exec';
+// 25-nov-2026 · la página lee allocation.json e historial.json publicados en este sitio.
 
 // ── Leer parámetros de URL ────────────────────────────────────────────────────
 const params  = new URLSearchParams(window.location.search);
@@ -199,21 +199,19 @@ async function cargar() {
   };
 
   try {
-    // 1) Intento LIVE (corte actual)
+    // 25-nov-2026 · lee los JSON publicados en este mismo sitio (no el GAS en vivo, que ya no responde aquí):
+    // 1) allocation.json = corte actual (con los ajustes del analista); 2) historial.json = cortes archivados.
+    const leer = async n => { const r = await fetch(n + '?t=' + Date.now(), { cache: 'no-store' }); if (!r.ok) throw new Error(n + ' respondió ' + r.status); return r.json(); };
     let filas = [];
-    try {
-      const live = await loadJsonp(`${GAS}?file=allocation`);
-      filas = filtrar(live);
-    } catch (e1) {
-      // Si falla la red en live, seguimos al histórico igual
-      filas = [];
-    }
+    try { const live = await leer('allocation.json'); filas = filtrar(live && (live.filas || live.data || live)); } catch (e1) { filas = []; }
 
-    // 2) FALLBACK a HISTÓRICO si live no tuvo resultados (ya se sobreescribió la corrida)
     if (!filas.length) {
-      const qF8 = F8S_PARAM.length ? `&f8=${encodeURIComponent(F8S_PARAM.join(','))}` : '';
-      const hist = await loadJsonp(`${GAS}?file=history${qF8}`);
-      filas = filtrar(hist);
+      const m = document.querySelector('#pantallaLoading p, #pantallaLoading div'); if (m) m.textContent = 'Buscando en el histórico de asignaciones…';
+      const h = await leer('historial.json');
+      const cols = h.cols || [], rows = (h.rows || []).map(x => { const o = {}; cols.forEach((c, i) => { o[c] = x[i]; }); o.Lotes_Usados = o.Lotes_Usados || ''; return o; });
+      // el mismo F8 y renglón puede estar archivado más de una vez: se queda la última
+      const ult = new Map(); filtrar(rows).forEach(r => { const k = r.N_Doc + '|' + r.Codigo; const p = ult.get(k); if (!p || String(r.Fecha_Proceso || '') >= String(p.Fecha_Proceso || '')) ult.set(k, r); });
+      filas = [...ult.values()];
     }
 
     if (!filas.length) {
