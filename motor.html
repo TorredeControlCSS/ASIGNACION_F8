@@ -315,6 +315,18 @@ body.m tbody tr:hover td{background:#f7faff}
 .m-leyenda{display:inline-flex;gap:10px;align-items:center;font-size:11.5px;color:#5a6878;margin-left:12px}
 .m-leyenda span{display:inline-flex;align-items:center;gap:4px}
 
+/* 25-nov-2026 · paso 0: dos listas, pedir F8, consumo anterior */
+.pre-tabs{display:flex;gap:6px;margin:8px 0 2px}.pre-tabs button{flex:1;border:1px solid #cdd6e2;background:#fff;border-radius:999px;padding:5px 8px;font:inherit;font-size:12.5px;cursor:pointer;color:inherit}
+.pre-tabs button.on{background:#0b1f3a;color:#fff;border-color:#0b1f3a}.pre-tabs b{font-weight:700;margin-left:3px}
+.m-tag.pre-nueva{background:#0f7b3f;color:#fff}
+.pre-ant{display:inline-block;background:#fff4d6;color:#7a5200;border-radius:6px;padding:0 5px;font-size:11px;font-weight:600;cursor:help}
+.pre-pedir{display:inline-flex;gap:6px;margin-right:6px}.pre-pedir .pre-wa{color:#128c4a}.pre-pedir button[disabled]{opacity:.45;cursor:not-allowed}
+.pre-pedida{font-size:11px;color:#5a6878;margin-top:2px}
+.pre-cr-xl{font-size:12px;margin:0 0 6px}
+.m-cr{display:inline-block;background:#fff4d6;color:#7a5200;border-radius:6px;padding:0 4px;font-size:10.5px;font-weight:600;cursor:help}
+[data-theme="dark"] .pre-tabs button{background:#111a2e;border-color:#24324d;color:#e2e8f0}[data-theme="dark"] .pre-tabs button.on{background:#3b82f6;border-color:#3b82f6}
+[data-theme="dark"] .pre-ant,[data-theme="dark"] .m-cr{background:#3a2e0a;color:#f5d27a}
+
 /* 20-nov-2026 · Revisión antes de imprimir */
 .m-rev{background:#fff;border:1px solid #e1e6ee;border-radius:12px;padding:10px 12px;margin-top:10px}
 .m-rev:empty{display:none}
@@ -972,6 +984,7 @@ body.m tbody tr:hover td{background:#f7faff}
           leer('ajustes_corte.json', true, t).catch(() => null),   // 18-nov-2026 · ajustes del analista (si el servidor ya los activó)
           leer('empaques.json', false, t).catch(() => null)        // 18-nov-2026 · empaques de MAESTROS_DINALOG
         ]);
+        leer('consumo_respaldo.json', false, t).then(j => { window.__crCargar && window.__crCargar(j); }).catch(() => {});   // 25-nov-2026 · en segundo plano
         const gen = Date.parse(a && a.generado || '');
         const inv = Date.parse(e && e.invalidado || '') || 0;
         if (!a || !Array.isArray(a.filas) || !isFinite(gen)) throw new Error('allocation.json sin filas');
@@ -1694,6 +1707,8 @@ body.m tbody tr:hover td{background:#f7faff}
     try { const fl = window.__revFaltan ? window.__revFaltan() : []; if (fl.length && window.__ajToast) window.__ajToast('<b>Imprimiendo.</b> Quedó sin marcar como revisado: ' + fl.join(', ') + '.', 7000); } catch (e) {}
     const rows = _pickingRows();
     if (!rows.length) { (window.__ajToast || alert)("No hay datos visibles para exportar."); return; }
+    // 25-nov-2026 · al descargar la Hoja del corte diario, cada unidad de la Hoja recibe su constancia por correo (una vez por corte)
+    try { if (window._MODO_ACTUAL === 'live' && window.__notifAuto) window.__notifAuto(rows); } catch (eN) { console.warn('constancia automática', eN); }
 
     const fechaGen = new Date().toLocaleString("en-US");
     const groups = new Map();
@@ -3680,7 +3695,10 @@ document.addEventListener('keydown', e => {
     { k: 'estado', t: 'Estado', cls: r => 'm-cel m-cel-' + mEstado(r).c, f: r => { const e = mEstado(r); return `<span title="Motor: ${mEsc(r.Estado)}">${e.t}</span>${e.d ? `<div class="m-est-d">${e.d}</div>` : ''}`; } },
     { k: 'alerta', t: 'Alerta', cls: r => { const a = mAlertaNivel(r); return a ? 'm-cel m-cel-' + a : ''; }, f: r => mAlerta(r) },
     { k: 'riesgo', t: 'Riesgo', c: 'center', tit: 'Factor de riesgo (tendencia de abastecimiento 90 días)', f: r => r.Factor_Riesgo ? mEsc(r.Factor_Riesgo) + 'x' : '-' },
-    { k: 'cuota', t: 'Cuota', c: 'right', f: r => fmt(r.Cuota_Max) },
+    // 25-nov-2026 · video del analista: el consumo base de la unidad (el que usa la cuota), con la marca cuando es el último reportado
+    { k: 'cbase', t: 'Consumo base', c: 'right', tit: 'Consumo mensual de la unidad para este renglón (Registro de Consumos). Si registró 0, el último consumo que reportó.', f: r => { const x = window.__crDe ? window.__crDe(r.Punto, r.Codigo) : null;
+        return fmt(r.Consumo_Base) + (x && x[2] ? ` <span class="m-cr" title="La unidad registró 0 (${mEsc(x[3] || '')} ${mEsc(x[4] || '')}); se usa su último consumo reportado: ${fmt(x[0])} (${mEsc(window.__crPer(x[1]))})">${mEsc(window.__crPer(x[1]))}</span>` : ''); } },
+    { k: 'cuota', t: 'Cuota máx.', c: 'right', tit: 'Tope del mes: consumo base × factor (o el tope que pidió el analista)', f: r => fmt(r.Cuota_Max) },
     { k: 'previo', t: 'Previo', c: 'right', f: r => fmt(r.Ejecucion_Previa) },
     { k: 'saldo', t: 'Saldo', c: 'right', f: r => mNum(r.Saldo_Disponible) < 0 ? `<b class="m-neg">${fmt(r.Saldo_Disponible)}</b>` : fmt(r.Saldo_Disponible) }
   ];
@@ -5373,6 +5391,20 @@ document.addEventListener('keydown', e => {
     });
 
     // ---------- Paso 0 ----------
+    try { PRE.vista = localStorage.getItem('motor_pre_vista') === 'ya' ? 'ya' : 'por'; } catch (e) { PRE.vista = 'por'; }
+    const perTxt = p => { const M = ['', 'ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'], m = String(p || '').match(/^(\d{4})-(\d{2})$/), z = String(p || '').match(/^(\d{4})-S([12])$/);
+      return m ? M[+m[2]] + ' ' + m[1].slice(2) : z ? (z[2] === '1' ? 'I' : 'II') + ' sem ' + z[1].slice(2) : String(p || ''); };
+    // «Nueva»: renglón/cita que este equipo vio por primera vez en las últimas 24 h (la primera visita no marca nada)
+    function nuevas() {
+      const out = new Set(); if (!PRE.T) return out;
+      let v = null; try { v = JSON.parse(localStorage.getItem('motor_pre_vistos') || 'null'); } catch (e) {}
+      const ahora = Date.now(), primera = !v; v = v || {};
+      Object.keys(PRE.T.renglones).forEach(k => { const cl = k + '|' + (PRE.T.renglones[k].citas || []).map(c => c[0]).join(',');
+        if (!v[cl]) v[cl] = primera ? 1 : ahora; if (v[cl] > 1 && ahora - v[cl] < 24 * 3600e3) out.add(k); });
+      Object.keys(v).forEach(cl => { if (!PRE.T.renglones[cl.split('|')[0]]) delete v[cl]; });
+      try { localStorage.setItem('motor_pre_vistos', JSON.stringify(v)); } catch (e) {}
+      return out;
+    }
     function nivel(r) { const c = N(r.consumo), u = r.stock ? N(r.stock[1]) : 0; if (!c) return { t: '', m: null }; const m = u / c;
       return m <= 0 ? { t: 'Agotado', c: 'bad', m } : m < 1 ? { t: 'Crítico', c: 'bad', m } : m < 2.5 ? { t: 'Bajo', c: 'warn', m } : { t: '', m }; }
     function planActual() { return PRE.bor && PRE.bor.sku === PRE.sel ? PRE.bor : null; }
@@ -5396,13 +5428,16 @@ document.addEventListener('keydown', e => {
     function pintar() {
       const v = document.getElementById('view_pre'); if (!v) return;
       if (!PRE.T) { v.innerHTML = `<div class="pre-wrap"><div class="m-vacio">${PRE.cargando ? 'Cargando los tránsitos…' : 'Todavía no hay tránsitos publicados por el Motor (transitos.json).'}</div></div>`; return; }
-      const R = PRE.T.renglones, q = PRE.q.toLowerCase();
-      const lista = Object.keys(R).map(k => ({ k, r: R[k], n: nivel(R[k]) }))
-        .filter(x => (!q || (x.k + ' ' + x.r.nombre).toLowerCase().includes(q)) && (!PRE.bajo || (x.n.m !== null && x.n.m < 2.5)))
-        .sort((a, b) => (a.n.m == null ? 99 : a.n.m) - (b.n.m == null ? 99 : b.n.m));
+      const R = PRE.T.renglones, q = PRE.q.toLowerCase(), nv = nuevas();
+      // 25-nov-2026 · nota 35: dos listas, lo que falta preasignar y lo ya preasignado
+      const todas = Object.keys(R).map(k => ({ k, r: R[k], n: nivel(R[k]), g: !!planGuardado(k), nueva: nv.has(k) }))
+        .filter(x => (!q || (x.k + ' ' + x.r.nombre).toLowerCase().includes(q)) && (!PRE.bajo || (x.n.m !== null && x.n.m < 2.5)));
+      const nPor = todas.filter(x => !x.g).length, nYa = todas.length - nPor;
+      const lista = todas.filter(x => PRE.vista === 'ya' ? x.g : !x.g)
+        .sort((a, b) => (b.nueva - a.nueva) || ((a.n.m == null ? 99 : a.n.m) - (b.n.m == null ? 99 : b.n.m)));
       const tarjeta = x => { const g = planGuardado(x.k), cit = x.r.citas || [], tot = cit.reduce((s, c) => s + N(c[1]), 0), rec = cit.some(c => /RECIBID/i.test(c[3] || ''));
         const pre = g ? g.lineas.reduce((s, l) => s + N(l.q), 0) : 0, ok = g ? g.lineas.filter(l => l.estado === 'ASIGNADA').length : 0;
-        return `<div class="pre-card${PRE.sel === x.k ? ' on' : ''}" data-pre-sku="${E(x.k)}"><b>${E(x.r.nombre)}</b>${x.n.t ? ` <span class="m-tag m-tag-${x.n.c}">${x.n.t}</span>` : ''}<br>
+        return `<div class="pre-card${PRE.sel === x.k ? ' on' : ''}" data-pre-sku="${E(x.k)}"><b>${E(x.r.nombre)}</b>${x.n.t ? ` <span class="m-tag m-tag-${x.n.c}">${x.n.t}</span>` : ''}${x.nueva && !x.g ? ' <span class="m-tag pre-nueva" title="Cita que apareció en las últimas 24 horas">Nueva</span>' : ''}<br>
           <span class="m-mono">${E(x.k)}</span> · ${cit.length} cita${cit.length === 1 ? '' : 's'} · ${rec ? 'recibido' : 'llega ' + E((cit[0] || [])[0] || '')}<br>
           Viene ${F(tot)} · CEDIS ${x.r.stock ? F(x.r.stock[1]) : 's/d'}${x.n.m != null ? ' (' + F(x.n.m) + ' meses)' : ''}<br>
           ${g ? `${F(pre)} preasignados · ${ok} de ${g.lineas.length} asignadas` : '<span class="m-dim">Sin preasignar · clic para repartir</span>'}${planActual() && planActual().sku === x.k && PRE.bor.sucio ? ' · <b class="pre-sucio">sin guardar</b>' : ''}</div>`; };
@@ -5410,8 +5445,10 @@ document.addEventListener('keydown', e => {
           <div class="m-nota" style="margin:2px 0 0">Reparta un tránsito antes de que llegue y pida a cada unidad su Forma 8 por esa cantidad. Cuando la F8 llega, sale marcada en el paso 1 y en el corte (paso 3) con el botón «Usar». Fuente: ${E(PRE.T.fuente || '')} · ${E(String(PRE.T.generado || '').slice(0, 16).replace('T', ' '))} UTC.</div></div></div>
         <div class="pre-grid"><div class="pre-l">
           <div class="m-filtros"><input id="preQ" placeholder="Buscar código o renglón" value="${E(PRE.q)}" style="width:100%"></div>
+          <div class="pre-tabs" role="tablist"><button type="button" role="tab" data-pre-vista="por" class="${PRE.vista === 'ya' ? '' : 'on'}" aria-selected="${PRE.vista !== 'ya'}">Por preasignar <b>${nPor}</b></button><button type="button" role="tab" data-pre-vista="ya" class="${PRE.vista === 'ya' ? 'on' : ''}" aria-selected="${PRE.vista === 'ya'}">Ya preasignadas <b>${nYa}</b></button></div>
           <label class="m-chk" style="margin:6px 0 8px!important"><input type="checkbox" id="preBajo"${PRE.bajo ? ' checked' : ''}> Solo agotados, críticos o bajos</label>
-          <div class="pre-lista">${lista.map(tarjeta).join('') || '<div class="m-vacio">Ningún tránsito con este filtro.</div>'}</div></div>
+          <button type="button" class="m-btn-link pre-cr-xl" data-cr-excel="1" title="Unidades que registraron consumo 0 y su último consumo reportado (Registro de Consumos)">Cuadro de consumos en cero (Excel)</button>
+          <div class="pre-lista">${lista.map(tarjeta).join('') || `<div class="m-vacio">${PRE.vista === 'ya' ? 'Ninguna preasignación guardada con este filtro.' : 'Nada pendiente de preasignar con este filtro.'}</div>`}</div></div>
           <div class="pre-r" id="preEd">${editor()}</div></div></div>`;
     }
     function editor() {
@@ -5430,10 +5467,10 @@ document.addEventListener('keydown', e => {
           <button type="button" class="m-btn m-btn-out m-btn-sm" id="preSug" title="Las unidades que reportan consumo de este renglón">Agregar las que consumen este renglón</button></div>
         <div class="scroll" style="max-height:none"><table class="m-tbl"><thead><tr><th>Unidad</th><th class="right">Consumo mes</th><th class="right">Inventario en la UE</th><th class="right">Cobertura (meses)</th><th>Preasignado</th><th class="right">Cobertura después</th><th>Estado</th><th>Acción</th></tr></thead><tbody>
         ${p.lineas.map((l, i) => { const d = (r.ues || {})[l.ue] || [0, null], es = estadoLinea(p, l), c = N(d[0]);
-          return `<tr><td class="m-ue">${E(l.ue)}</td><td class="right">${c ? F(c) : '<span class="m-dim">s/d</span>'}</td><td class="right">${d[1] == null ? '<span class="m-dim">s/d</span>' : F(d[1])}</td>
+          return `<tr><td class="m-ue">${E(l.ue)}</td><td class="right">${c ? F(c) + (d[2] ? ` <span class="pre-ant" title="La unidad registró 0 en el Registro de Consumos; se usa su último consumo reportado (${E(perTxt(d[2]))})">${E(perTxt(d[2]))}</span>` : '') : '<span class="m-dim">s/d</span>'}</td><td class="right">${d[1] == null ? '<span class="m-dim">s/d</span>' : F(d[1])}</td>
             <td class="right">${c ? F(N(d[1]) / c) : '—'}</td><td><input type="number" min="0" class="pre-in" value="${N(l.q)}" data-pre-q="${i}"${l.estado === 'ASIGNADA' ? ' disabled' : ''}>${(() => { const em = window.__emp ? window.__emp(p.sku, 0) : null; return em && (em.p || em.t > 1) && N(l.q) ? '<div class="pre-bul">' + window.__empBultos(N(l.q), em) + '</div>' : ''; })()}</td>
             <td class="right m-b">${c ? F((N(d[1]) + N(l.q)) / c) : '—'}</td><td><span class="m-est m-est-${es.c}">${E(es.t)}</span></td>
-            <td class="m-nw">${es.t === 'Esperando F8' ? `<button type="button" class="m-lnk" data-pre-f8="${i}">Pedir F8</button> ` : ''}${l.estado !== 'ASIGNADA' ? `<button type="button" class="m-lnk" data-pre-del="${i}">Quitar</button>` : ''}</td></tr>`; }).join('')
+            <td class="m-nw pre-acc-l">${es.t === 'Esperando F8' ? `<span class="pre-pedir"><button type="button" class="m-lnk pre-wa" data-pre-wa="${i}" title="Abre WhatsApp de la unidad con el mensaje escrito">WhatsApp</button><button type="button" class="m-lnk" data-pre-mail="${i}" title="${p.id && !p.sucio ? 'Envía el correo de solicitud de F8 a la unidad' : 'Guarde la preasignación para enviar el correo'}"${p.id && !p.sucio ? '' : ' disabled'}>Correo</button><button type="button" class="m-lnk" data-pre-f8="${i}" title="Copia el mensaje">Copiar</button></span>${l.pedida ? `<div class="pre-pedida">Pedida por correo ${E(l.pedida)}</div>` : ''}` : ''}${l.estado !== 'ASIGNADA' ? `<button type="button" class="m-lnk" data-pre-del="${i}">Quitar</button>` : ''}</td></tr>`; }).join('')
           || '<tr><td colspan="8" class="m-vacio">Agregue unidades con el buscador o con «Agregar las que consumen este renglón».</td></tr>'}
         </tbody></table></div>
         <label class="m-chk" style="margin-top:10px!important"><input type="checkbox" id="preApartar"${p.apartar ? ' checked' : ''}> Apartar en el Motor: mientras esté vigente, el Motor no le entrega estas cantidades a otras unidades cuando el tránsito ingrese.</label>
@@ -5441,6 +5478,7 @@ document.addEventListener('keydown', e => {
         <div class="pre-acc" style="justify-content:flex-end">
           <span class="pre-est ${p.sucio || !p.id ? 'pre-est-p' : 'pre-est-ok'}">${PRE.guardando ? 'Guardando en el servidor…' : p.sucio || !p.id ? 'Cambios sin guardar · quedan en este equipo hasta que guarde' : 'Guardada en el servidor · ' + E(p.actualizado || '') + ' (hora de Panamá) · ' + E(p.por || '')}</span>
           ${p.id ? '<button type="button" class="m-btn m-btn-out" id="preAnular">Anular preasignación</button>' : ''}
+          ${(() => { const f = p.id && !p.sucio ? p.lineas.filter(l => estadoLinea(p, l).t === 'Esperando F8' && N(l.q) > 0 && !l.pedida).length : 0; return f ? `<button type="button" class="m-btn m-btn-out" id="prePedirTodas" title="Correo de solicitud de F8 a las unidades que aún no se les pidió">Pedir F8 a las que faltan (${f})</button>` : ''; })()}
           <button type="button" class="m-btn m-btn-pri" id="preGuardar"${libres < 0 || PRE.guardando ? ' disabled' : ''}>Guardar preasignación</button></div>`;
     }
     const sucio = () => { if (PRE.bor) { PRE.bor.sucio = true; guardarBorrador(); } };
@@ -5471,7 +5509,7 @@ document.addEventListener('keydown', e => {
         if (!r || !r.success) throw new Error(r && r.error || 'Sin respuesta');
         PRE.planes = r.planes || PRE.planes;
         const g = PRE.planes.find(x => x.id === r.id); PRE.bor = g ? JSON.parse(JSON.stringify(g)) : PRE.bor; if (PRE.bor) PRE.bor.sucio = false; guardarBorrador();
-        toast('<b>Preasignación guardada</b> (' + E(r.id) + '). Ya la ven los demás analistas; las F8 que lleguen saldrán marcadas en el paso 1 y en el corte.', 7000);
+        toast('<b>Preasignación guardada</b> (' + E(r.id) + '). Ya la ven los demás analistas; las F8 que lleguen saldrán marcadas en el paso 1 y en el corte.' + pedidasTxt(r.pedidas), 9000);
         refrescarFuera();
       } catch (e) { toast('<b>No se guardó.</b> ' + E(e.message || e) + ' El borrador sigue en este equipo.', 10000); }
       finally { PRE.guardando = false; pintar(); }
@@ -5482,9 +5520,38 @@ document.addEventListener('keydown', e => {
       try { const r = await window.__mPostSeguro('motorPreAnular', { id: p.id }); if (!r.success) throw new Error(r.error); PRE.planes = r.planes || PRE.planes; PRE.bor = null; guardarBorrador(); toast('Preasignación anulada.'); refrescarFuera(); pintar(); }
       catch (e) { toast('<b>No se anuló.</b> ' + E(e.message || e)); }
     }
+    // 25-nov-2026 · nota 36: pedir la F8 por WhatsApp (directorio de unidades), por correo (servidor, Resend) o copiar
+    const msgF8 = (p, l) => `Buen día. Para el renglón ${p.sku} ${p.nombre} tenemos preasignadas ${F(l.q)} unidades del tránsito (${p.transito}) para ${l.ue}. Favor enviar la Forma 8 por esa cantidad para asignarla en cuanto ingrese. Dirección Nacional de Logística · CEDIS Panamá.`;
+    function pedidasTxt(pe) {
+      if (!pe) return '';
+      if (pe.retenidas) return '<br>Los correos están en pausa: no se pidió la F8 por correo.';
+      const t = [];
+      if (pe.enviadas) t.push('Se pidió la F8 por correo a <b>' + pe.enviadas + '</b> unidad' + (pe.enviadas === 1 ? '' : 'es') + '.');
+      if (pe.sinContacto && pe.sinContacto.length) t.push('Sin correo en el directorio: ' + E(pe.sinContacto.join(', ')) + ' (use WhatsApp o Copiar).');
+      if (pe.errores && pe.errores.length) t.push('No salió: ' + E(pe.errores.join('; ')));
+      return t.length ? '<br>' + t.join(' ') : '';
+    }
+    async function pedirWA(i) {
+      const p = planActual(), l = p && p.lineas[i]; if (!l) return;
+      try { if (typeof _waDirectorio === 'undefined' || !_waDirectorio) _waDirectorio = await loadJsonp(`${WEBAPP_BASE}?file=directorio_ue`); } catch (e) { toast('No se pudo leer el directorio de unidades. Use «Copiar».'); return; }
+      const d = (_waDirectorio || []).find(x => _waNorm(x.ue_std) === _waNorm(l.ue));
+      const num = d && String(d.wa || '').replace(/[^0-9]/g, '');
+      if (!num) { toast('<b>' + E(l.ue) + '</b> no tiene número de WhatsApp en el directorio. Use «Correo» o «Copiar».'); return; }
+      window.open('https://web.whatsapp.com/send/?phone=' + num + '&text=' + encodeURIComponent(msgF8(p, l)), '_blank', 'noopener');
+    }
+    async function pedirCorreo(i, todas) {
+      const p = planActual(), l = i == null ? null : p && p.lineas[i]; if (!p || !p.id || (i != null && !l)) return;
+      try {
+        const r = await window.__mPostSeguro('motorPrePedir', { id: p.id, ue: l ? l.ue : '', forzar: !!l });
+        if (!r || !r.success) throw new Error(r && r.error || 'Sin respuesta');
+        PRE.planes = r.planes || PRE.planes;
+        const g = PRE.planes.find(x => x.id === p.id); if (g) { p.lineas.forEach(x => { const y = g.lineas.find(z => U(z.ue) === U(x.ue)); if (y) x.pedida = y.pedida; }); guardarBorrador(); }
+        toast((r.enviadas ? '<b>Correo enviado.</b>' : '<b>No se envió ningún correo.</b>') + pedidasTxt(r), 8000); pintar(); refrescarFuera();
+      } catch (e) { toast('<b>No se envió el correo.</b> ' + E(e.message || e), 9000); }
+    }
     function pedirF8(i) {
       const p = planActual(), l = p && p.lineas[i]; if (!l) return;
-      const msg = `Buen día. Para el renglón ${p.sku} ${p.nombre} tenemos preasignadas ${F(l.q)} unidades del tránsito (${p.transito}) para ${l.ue}. Favor enviar la Forma 8 por esa cantidad para asignarla en cuanto ingrese. Dirección Nacional de Logística · CEDIS Panamá.`;
+      const msg = msgF8(p, l);
       const ok = () => toast('Mensaje copiado. Péguelo en WhatsApp o en el correo de la unidad:<br><i>' + E(msg) + '</i>', 9000);
       try { navigator.clipboard.writeText(msg).then(ok, () => toast(E(msg), 12000)); } catch (e) { toast(E(msg), 12000); }
     }
@@ -5528,6 +5595,10 @@ document.addEventListener('keydown', e => {
       if (b.dataset.preRep) repartir(b.dataset.preRep);
       else if (b.dataset.preDel !== undefined && p) { p.lineas.splice(Number(b.dataset.preDel), 1); sucio(); pintar(); }
       else if (b.dataset.preF8 !== undefined) pedirF8(Number(b.dataset.preF8));
+      else if (b.dataset.preWa !== undefined) pedirWA(Number(b.dataset.preWa));
+      else if (b.dataset.preMail !== undefined) pedirCorreo(Number(b.dataset.preMail));
+      else if (b.id === 'prePedirTodas') pedirCorreo(null);
+      else if (b.dataset.preVista) { PRE.vista = b.dataset.preVista; try { localStorage.setItem('motor_pre_vista', PRE.vista); } catch (e) {} pintar(); }
       else if (b.id === 'preSug' && p) { const r = PRE.T.renglones[p.sku] || { ues: {} }; let n = 0;
         const cons = Object.keys(r.ues || {}).filter(u => N(r.ues[u][0]) > 0 && U(u).indexOf('CEDIS PANAMA') !== 0), fuera = cons.filter(u => !deAqui(u));
         cons.filter(deAqui).sort((a, z) => N(r.ues[z][0]) - N(r.ues[a][0]))
@@ -5904,6 +5975,69 @@ document.addEventListener('keydown', e => {
     programar();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', montar); else montar();
+})();
+</script>
+<script>
+/* 25-nov-2026 · Consumo de respaldo (nota 34) y constancia automática (nota 36) */
+(function () {
+  const CR = { j: null, m: null };
+  const norm = v => String(v || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, ' ').trim();
+  window.__crPer = p => { const M = ['', 'ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'], m = String(p || '').match(/^(\d{4})-(\d{2})$/), z = String(p || '').match(/^(\d{4})-S([12])$/);
+    return m ? M[+m[2]] + ' ' + m[1].slice(2) : z ? (z[2] === '1' ? 'I' : 'II') + ' sem ' + z[1].slice(2) : String(p || ''); };
+  window.__crCargar = j => { if (!j || !j.r) return; CR.j = j; CR.m = new Map(); Object.keys(j.r).forEach(k => { const i = k.lastIndexOf('|'); CR.m.set(norm(k.slice(0, i)) + '|' + k.slice(i + 1), j.r[k]); });
+    // solo si el paso 3 está a la vista; si no, la marca sale en el próximo dibujo de la tabla
+    setTimeout(() => { try { const v = document.getElementById('view_asignacion'); if (typeof applyFilters === 'function' && Array.isArray(DATA) && DATA.length && v && v.offsetParent) applyFilters(); } catch (e) {} }, 0); };
+  window.__crDe = (ue, sku) => CR.m ? CR.m.get(norm(ue) + '|' + String(sku || '').trim()) || null : null;
+  const toast = (h, ms) => window.__ajToast ? window.__ajToast(h, ms) : console.log(h);
+  const E = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  async function cargar() {
+    if (CR.j) return CR.j;
+    const r = await fetch('consumo_respaldo.json?t=' + Date.now(), { cache: 'no-store' });
+    if (!r.ok) throw new Error('consumo_respaldo.json no está publicado todavía');
+    const j = await r.json(); window.__crCargar(j); return j;
+  }
+  async function excel() {
+    if (typeof ExcelJS === 'undefined') return toast('La librería de Excel no cargó; revise la conexión e intente de nuevo.');
+    let j; try { j = await cargar(); } catch (e) { return toast('<b>Todavía no está el cuadro.</b> El Motor lo arma en su próxima vuelta (unos minutos). ' + E(e.message)); }
+    const L = Object.keys(j.r).map(k => { const i = k.lastIndexOf('|'), x = j.r[k]; return [k.slice(0, i), k.slice(i + 1), x[5] || '', 0, x[3] || '', x[4] || '', x[0] || '', x[1] ? window.__crPer(x[1]) : '', x[2] ? 'SÍ' : (x[0] ? 'NO (anterior a ' + window.__crPer(j.desde) + ')' : 'NO (sin consumo anterior)')]; })
+      .sort((a, b) => a[0].localeCompare(b[0]) || a[1].localeCompare(b[1]));
+    const wb = new ExcelJS.Workbook(), ws = wb.addWorksheet('Consumos en cero', { views: [{ state: 'frozen', ySplit: 4 }] });
+    const fill = a => ({ type: 'pattern', pattern: 'solid', fgColor: { argb: a } });
+    ws.mergeCells('A1:I1'); ws.getCell('A1').value = 'CAJA DE SEGURO SOCIAL · Dirección Nacional de Logística · CEDIS Panamá';
+    ws.getCell('A1').font = { name: 'Arial', size: 12, bold: true, color: { argb: 'FF0B1F3A' } };
+    const usa = L.filter(x => x[8] === 'SÍ').length;
+    ws.mergeCells('A2:I2'); ws.getCell('A2').value = 'Unidades que registraron consumo 0 en MAESTRO_CONSUMOS_UE y su último consumo positivo en el Registro de Consumos · ' + L.length + ' unidad-renglón · ' + usa + ' usan el consumo anterior · datos ' + new Date(j.generado).toLocaleString('es-PA');
+    ws.getCell('A2').font = { name: 'Arial', size: 10, color: { argb: 'FF5A6878' } };
+    ws.mergeCells('A3:I3'); ws.getCell('A3').value = 'Regla del Motor: si la unidad registró 0 y antes reportó consumo (desde ' + window.__crPer(j.desde) + '), la cuota y el paso 0 usan ese último consumo. El maestro no se modifica.';
+    ws.getCell('A3').font = { name: 'Arial', size: 9, italic: true, color: { argb: 'FF7A5200' } };
+    const h = ws.addRow(['UNIDAD EJECUTORA', 'CÓDIGO', 'SUMINISTRO', 'CONSUMO EN EL MAESTRO', 'ORIGEN', 'FECHA', 'ÚLTIMO CONSUMO POSITIVO', 'PERIODO', '¿LO USA EL MOTOR?']);
+    h.eachCell(c => { c.fill = fill('FF0B1F3A'); c.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFFFF' } }; c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }; });
+    L.forEach(x => { const row = ws.addRow(x); row.font = { name: 'Arial', size: 9 }; if (x[8] === 'SÍ') row.getCell(9).fill = fill('FFE7F6EC'); });
+    ws.columns.forEach((c, i) => { c.width = [40, 12, 46, 13, 14, 12, 15, 12, 26][i]; });
+    [4, 7].forEach(n => { ws.getColumn(n).numFmt = '#,##0'; });
+    ws.autoFilter = { from: 'A4', to: 'I4' };
+    const buf = await wb.xlsx.writeBuffer(), a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+    a.download = 'Consumos_en_cero_' + new Date().toISOString().slice(0, 10) + '.xlsx'; document.body.appendChild(a); a.click(); a.remove();
+  }
+  document.addEventListener('click', ev => { if (ev.target.closest('[data-cr-excel]')) { ev.preventDefault(); excel(); } });
+
+  // Constancia automática: la llama exportPdfAsignacion con las filas de la Hoja (corte diario)
+  window.__notifAuto = function (rows) {
+    if (!window.__mPostSeguro || typeof PARAMS === 'undefined' || !PARAMS || !PARAMS.generated_at) return;
+    const ues = [...new Set(rows.map(r => r.Punto).filter(Boolean))]; if (!ues.length) return;
+    toast('Enviando por correo la constancia de asignación a <b>' + ues.length + '</b> unidad' + (ues.length === 1 ? '' : 'es') + ' de la Hoja…', 5000);
+    window.__mPostSeguro('motorNotificarAuto', { ues, corte: PARAMS.generated_at }).then(r => {
+      if (!r || !r.success) throw new Error(r && r.error || 'Sin respuesta');
+      if (r.retenido) return toast('<b>Constancias no enviadas:</b> los correos están en pausa.', 8000);
+      const t = [];
+      t.push(r.enviados ? '<b>' + r.enviados + '</b> constancia' + (r.enviados === 1 ? '' : 's') + ' enviada' + (r.enviados === 1 ? '' : 's') + ' por correo.' : 'Ninguna constancia nueva por enviar (ya se enviaron en este corte).');
+      if (r.sinCorreo && r.sinCorreo.length) t.push('Sin correo en el directorio: ' + E(r.sinCorreo.join(', ')) + '.');
+      if (r.enCola) t.push(r.enCola + ' quedan en cola y salen en los próximos minutos.');
+      if (r.errores && r.errores.length) t.push('No salió: ' + E(r.errores.join('; ')));
+      toast(t.join(' '), 10000);
+    }).catch(e => toast('<b>No se enviaron las constancias.</b> ' + E(e.message || e) + ' Puede enviarlas con el botón «Correo» del paso 4.', 10000));
+  };
 })();
 </script>
 </body>
