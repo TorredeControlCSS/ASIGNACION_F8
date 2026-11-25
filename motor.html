@@ -5166,9 +5166,14 @@ document.addEventListener('keydown', e => {
           if (r.estado) window.__ajCargar(r.estado); else await window.__ajRecargar();
           if (cambios.some(c => c.preId) && window.__preRecargar) setTimeout(window.__preRecargar, 2500);
           if (typeof applyFilters === 'function') applyFilters();
-          toast(`<b>Guardado.</b> ${E(r.resumen || (cambios.length + ' ajustes'))}. La Hoja de asignación ya sale con estas cantidades; el historial y el correo a la unidad también.`, 7000);
+          toast(r.guardados === 0 && r.yaEstaban ? '<b>Ya estaba guardado.</b> Estas cantidades se habían guardado en el intento anterior; la Hoja de asignación ya sale con ellas.'
+            : `<b>Guardado.</b> ${E(r.resumen || (cambios.length + ' ajustes'))}. La Hoja de asignación ya sale con estas cantidades; el historial y el correo a la unidad también.`, 7000);
         } else {
           if (r && r.estado) window.__ajCargar(r.estado);
+          // 25-nov-2026 · un cambio cuya cantidad ya quedó guardada (reintento) deja de estar pendiente
+          let ya = 0;
+          if (r && r.conflicto) { for (const [k, p] of [...AJ.pend]) { const a = AJ.ajustes && AJ.ajustes[k]; if (a && Math.round(N(a.final)) === Math.round(N(p.nueva))) { AJ.pend.delete(k); ya++; } } }
+          if (ya && !AJ.pend.size) { if (typeof applyFilters === 'function') applyFilters(); toast('<b>Ya estaba guardado.</b> Estas cantidades se habían guardado en el intento anterior; la Hoja de asignación ya sale con ellas.', 8000); return; }
           if (r && r.cambioCorte) { AJ.pend.clear(); if (window.__motorCargar) await window.__motorCargar({ fresco: true }); }
           if (typeof applyFilters === 'function') applyFilters();
           toast('<b>No se guardó.</b> ' + E(r && r.error || 'Error desconocido'), 12000);
