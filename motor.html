@@ -458,6 +458,14 @@ body.m tbody tr:hover td{background:#f7faff}
 [data-theme="dark"] .m-pant-txt p{color:#cbd5e1}
 [data-theme="dark"] .m-subtabs{border-bottom-color:#24324d}
 [data-theme="dark"] .m-lt-rec{background:#123323;color:#9fe0b8}
+/* 26-nov-2026 · despacho inmediato (la unidad espera en ventanilla) */
+.lt-inm{display:flex;gap:12px;align-items:center;background:#fff4e6;border:2px solid #d9480f;border-radius:10px;padding:10px 14px;margin:8px 0;font-size:13px;color:#7a2e00}
+.lt-inm b{color:#a33a00}.lt-inm .lt-inm-ic{font-size:20px;line-height:1}.lt-inm .lt-inm-tx{flex:1}.lt-inm .lt-inm-min{font-weight:700;color:#a33a00}
+.lt-inm button{border:1px solid #d9480f;color:#a33a00;background:#fff;border-radius:7px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+.m-lt-inm{display:inline-block;font-size:11px;font-weight:800;border-radius:6px;padding:1px 7px;background:#d9480f;color:#fff;white-space:nowrap;margin-left:4px}
+tr.m-lt-g-inm td{background:#fff1e6!important}
+[data-theme="dark"] .lt-inm{background:#3a1c08;border-color:#f08c4a;color:#ffd8b8}[data-theme="dark"] .lt-inm b,[data-theme="dark"] .lt-inm .lt-inm-min{color:#ffb27a}
+[data-theme="dark"] .lt-inm button{background:#2a1406;color:#ffb27a;border-color:#f08c4a}[data-theme="dark"] tr.m-lt-g-inm td{background:#3a1c08!important}
 .m-gate-e.m-gate-info{color:#5a6878;font-weight:500}
 .m-ent-fil{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px}
 .m-ent-fil .m-chip-f{display:inline-flex;gap:6px;align-items:center;background:#e1ecfb;color:#1e4f9a;border-radius:999px;padding:3px 4px 3px 10px;font-size:12px;font-weight:600}
@@ -787,6 +795,7 @@ body.m tbody tr:hover td{background:#f7faff}
       <div id="view_pre" class="view" style="display:none"></div>
       <div id="view_lista" class="view" style="display:none">
         <div class="pre-ban" id="preBanP1" hidden></div>
+        <div class="lt-inm" id="ltInmBan" role="status" aria-live="polite" hidden></div>
         <div class="lt-vent" id="ltVentBan" hidden></div>
         <div class="m-lt-bar">
           <div class="m-f m-f-dias lt-per"><label title="Por fecha de la Forma 8 o por la fecha en que ventanilla confirmó que llegó">Período</label>
@@ -4465,6 +4474,7 @@ document.addEventListener('keydown', e => {
       ltMarcarEnLista(); ltAplicarPeriodo(); ltPintarActual(); ltPintarManVent();
       // La lista actual se confirma en segundo plano (puede haber cambiado en el Excel); no detiene la pantalla.
       ltRefrescarActual();
+      ltVentHoy();   // 26-nov-2026 · lo confirmado hoy en ventanilla, sin esperar a pendientes.json
     } catch (e) { ltEstado(e.message || String(e), 'bad'); }
     finally { LT.ocupado = false; ltEl('ltTraer').disabled = false; }
   }
@@ -4492,7 +4502,7 @@ document.addEventListener('keydown', e => {
     const q = ltEl('ltQ').value.trim().toLowerCase(), oc = ltEl('ltOcultarAsig').checked, soloSel = ltEl('ltSoloSel').checked;
     const soloPre = !!(ltEl('ltSoloPre') && ltEl('ltSoloPre').checked) && !!window.__preDe;
     return LT.filas.filter(f => (!ue || f.ue === ue) && (!ce || f.cedis === ce) && (!ca || f.cat === ca) && (!ti || f.tipo === ti)
-      && (!rc || (rc === 'si' ? !!f.rec : !f.rec))
+      && (!rc || (rc === 'si' ? !!f.rec : !f.rec)) && (!LT.soloInm || !!f.inm)
       && (!oc || !f.asig || LT.sel.has(f.k)) && (!soloSel || LT.sel.has(f.k)) && (!soloPre || !!window.__preDe(f.sku, f.ue))
       && (!q || String(f.f8).toLowerCase().includes(q) || String(f.sku).includes(q) || String(f.sum).toLowerCase().includes(q)));
   }
@@ -4506,15 +4516,16 @@ document.addEventListener('keydown', e => {
     if (window.__preBannerP1) setTimeout(window.__preBannerP1, 0);   // 18-nov-2026 · aviso de preasignaciones
     try { ltVentBanner(); } catch (e) {}   // 18-nov-2026 · aviso de recepción en ventanilla
     // 9-nov · se dibujan pocas filas (400, y más con un botón): dibujar 2.500 tardaba ~1,3 s por clic.
-    const rows = ltFiltradas(), LIM = LT.lim || 400, tb = ltEl('ltTabla').querySelector('tbody');
+    try { ltInmBanner(); } catch (e) {}   // 26-nov-2026 · despacho inmediato
+    const rows = ltFiltradas().sort((a, b) => (b.inm ? 1 : 0) - (a.inm ? 1 : 0)), LIM = LT.lim || 400, tb = ltEl('ltTabla').querySelector('tbody');
     const porF8 = new Map();
     rows.slice(0, LIM).forEach(f => { if (!porF8.has(f.f8)) porF8.set(f.f8, []); porF8.get(f.f8).push(f); });
     const partes = [];
     porF8.forEach((ls, f8) => {
       let h = '';
       const a = ls[0], nSel = ls.filter(x => LT.sel.has(x.k)).length;
-      h += `<tr class="m-lt-g"><td><input type="checkbox" data-f8="${mEsc(f8)}" ${nSel === ls.length ? 'checked' : ''} ${nSel && nSel < ls.length ? 'data-medio="1"' : ''}></td>
-        <td colspan="16"><b>${mEsc(f8)}</b> · ${ltFmtF(a.fecha)} · ${mEsc(a.tipo)} · <b>${mEsc(a.ue)}</b>${a.cat ? ' · ' + mEsc(a.cat) : ''}${a.cedis ? ' · suple ' + mEsc(a.cedis) : ''}${a.rec ? ' <span class="m-lt-rec">Recibida en ventanilla ' + ltFmtF(a.rec).slice(0, 5) + '</span>' : ''}${a.manual ? '<span class="m-lt-man-tag">Manual</span>' : ''}
+      h += `<tr class="m-lt-g${a.inm ? ' m-lt-g-inm' : ''}"><td><input type="checkbox" data-f8="${mEsc(f8)}" ${nSel === ls.length ? 'checked' : ''} ${nSel && nSel < ls.length ? 'data-medio="1"' : ''}></td>
+        <td colspan="16"><b>${mEsc(f8)}</b> · ${ltFmtF(a.fecha)} · ${mEsc(a.tipo)} · <b>${mEsc(a.ue)}</b>${a.cat ? ' · ' + mEsc(a.cat) : ''}${a.cedis ? ' · suple ' + mEsc(a.cedis) : ''}${a.inm ? ' <span class="m-lt-inm" title="La persona de la unidad espera en ventanilla">⚡ Despacho inmediato' + (ltInmMin(a) != null ? ' · ' + ltInmMin(a) + ' min' : '') + '</span>' : ''}${a.rec ? ' <span class="m-lt-rec">Recibida en ventanilla ' + ltFmtF(a.rec).slice(0, 5) + (a.recHora ? ' ' + a.recHora : '') + '</span>' : ''}${a.manual ? '<span class="m-lt-man-tag">Manual</span>' : ''}
         <span class="m-dim m-lt-gn" data-gn="${mEsc(f8)}"> · ${ls.length} líneas${nSel ? ' · ' + nSel + ' seleccionadas' : ''}</span></td></tr>`;
       ls.forEach(f => {
         const sk = LT.skus[f.sku], s = LT.sel.get(f.k), net = sk ? sk[0] : null, util = sk ? sk[1] : null;
@@ -4581,6 +4592,42 @@ document.addEventListener('keydown', e => {
     });
     ltResumen();
   }
+  // 26-nov-2026 · notas 40-44: ventanilla_hoy.json lo publica el servidor al confirmar en ventanilla (segundos).
+  // pendientes.json tarda de 25 a 60 min en republicarse: con esto lo recibido hoy se marca en 1 minuto, y el
+  // «Despacho inmediato» (la unidad espera en ventanilla) sale primero, con aviso y minutos de espera.
+  const LT_VH = { f8: {}, vistos: null, ts: 0 };
+  const ltHoraPty = () => { const d = new Date(Date.now() - 5 * 3600e3); return d.getUTCHours() * 60 + d.getUTCMinutes(); };
+  function ltInmMin(a) { const h = String(a.recHora || '').match(/^(\d{2}):(\d{2})$/); if (!h) return null; return Math.max(0, ltHoraPty() - (+h[1] * 60 + +h[2])); }
+  async function ltVentHoy() {
+    if (!LT.cargado) return;
+    let j; try { j = await fetch('ventanilla_hoy.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.ok ? r.json() : null); } catch (e) { return; }
+    if (!j || !j.f8) return;
+    const hoy = new Date(Date.now() - 5 * 3600e3).toISOString().slice(0, 10); if (j.hoy !== hoy) return;
+    LT_VH.f8 = j.f8; LT_VH.ts = Date.now();
+    let cambio = false; const nuevasInm = [];
+    LT_TODAS.forEach(f => { const v = j.f8[f.f8]; if (!v) return;
+      if (!f.rec) { f.rec = v[0]; cambio = true; }
+      if (f.recHora !== v[1]) { f.recHora = v[1]; cambio = true; }
+      if (!!v[2] !== !!f.inm) { f.inm = !!v[2]; cambio = true; } });
+    const inmIds = Object.keys(j.f8).filter(k => j.f8[k][2]);
+    if (LT_VH.vistos) inmIds.forEach(k => { if (!LT_VH.vistos.has(k)) nuevasInm.push(k); });
+    LT_VH.vistos = new Set(inmIds);
+    if (cambio) { try { ltAplicarPeriodo(); } catch (e) { ltPintar(); } } else { try { ltInmBanner(); } catch (e) {} }
+    if (nuevasInm.length) toast('<b>⚡ Despacho inmediato:</b> ' + nuevasInm.map(k => mEsc(k) + ' · ' + mEsc(j.f8[k][3])).join('; ') + '. La unidad espera en ventanilla.', 10000);
+  }
+  setInterval(() => { if (document.visibilityState === 'visible') ltVentHoy(); }, 60000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && Date.now() - LT_VH.ts > 50000) ltVentHoy(); });
+  function ltInmBanner() {
+    const el = ltEl('ltInmBan'); if (!el) return;
+    const g = new Map(); (LT.cargado ? LT_TODAS : []).forEach(f => { if (!f.inm) return; const o = g.get(f.f8) || { a: f, n: 0, pend: 0 }; o.n++; if (!f.asig) o.pend++; g.set(f.f8, o); });
+    const v = [...g.values()].filter(o => o.pend > 0).sort((x, y) => String(x.a.recHora).localeCompare(String(y.a.recHora)));
+    if (!v.length) { el.hidden = true; if (LT.soloInm) { LT.soloInm = false; } return; }
+    el.hidden = false;
+    const lin = v.slice(0, 4).map(o => `<b>${mEsc(o.a.f8)}</b> · ${mEsc(o.a.ue)} · ${o.pend} ${o.pend === 1 ? 'renglón' : 'renglones'} sin asignar · confirmada ${mEsc(o.a.recHora || '')}${ltInmMin(o.a) != null ? ' · <span class="lt-inm-min">esperando ' + ltInmMin(o.a) + ' min</span>' : ''}`).join('<br>');
+    el.innerHTML = `<span class="lt-inm-ic" aria-hidden="true">⚡</span><div class="lt-inm-tx"><b>${v.length} ${v.length === 1 ? 'F8 de despacho inmediato esperando' : 'F8 de despacho inmediato esperando'} en ventanilla</b><br>${lin}${v.length > 4 ? '<br>y ' + (v.length - 4) + ' más' : ''}</div>`
+      + `<button type="button" id="ltInmSolo">${LT.soloInm ? 'Ver todas' : 'Ver solo las inmediatas'}</button>`;
+  }
+  document.addEventListener('click', ev => { if (!ev.target.closest('#ltInmSolo')) return; LT.soloInm = !LT.soloInm; ltPintar(); });
   // 18-nov-2026 · Lo que el equipo registra en la ventanilla (panel de confirmación de recepción) se ve aquí.
   function ltVentBanner() {
     const el = ltEl('ltVentBan'); if (!el) return;

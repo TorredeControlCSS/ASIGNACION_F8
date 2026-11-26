@@ -117,6 +117,16 @@
   .actionbar .btn-conf{padding:9px 22px;background:var(--verde);color:#fff;border:none;
     font-weight:700;cursor:pointer;font-size:14px;}
   .actionbar .btn-conf:disabled{opacity:.4;cursor:not-allowed;}
+  /* 26-nov-2026 · despacho inmediato: la persona de la unidad espera en ventanilla */
+  .inm-sw{display:flex;align-items:center;gap:10px;border:2px solid #c9ced6;background:#fff;border-radius:10px;padding:6px 12px;font-size:12.5px;color:#4a5563;cursor:pointer;user-select:none}
+  .inm-sw input{position:absolute;opacity:0;width:1px;height:1px}
+  .inm-sw .sw{width:38px;height:21px;border-radius:12px;background:#c9ced6;position:relative;flex:0 0 38px;transition:background .15s}
+  .inm-sw .sw:after{content:'';position:absolute;left:3px;top:3px;width:15px;height:15px;border-radius:50%;background:#fff;transition:left .15s}
+  .inm-sw input:checked + .sw{background:#d9480f}.inm-sw input:checked + .sw:after{left:20px}
+  .inm-sw:has(input:checked){border-color:#d9480f;background:#fff4e6;color:#7a2e00}
+  .inm-sw input:focus-visible + .sw{outline:2px solid #1e5a9e;outline-offset:2px}
+  .inm-sw b{display:block}
+  .entry-inm{margin:8px 0 0}
 
   .toast{position:fixed;top:66px;right:16px;background:var(--verde);color:#fff;padding:11px 16px;
     box-shadow:0 3px 10px rgba(0,0,0,.25);font-size:13px;z-index:99999;max-width:340px;}
@@ -358,6 +368,7 @@
       <input type="text" id="mSol" placeholder="0" inputmode="numeric" class="r"/>
       <button id="btnManualSave" title="Registrar en buffer">✔ Registrar</button>
     </div>
+    <label class="inm-sw entry-inm" title="Márquelo solo cuando la persona de la unidad espera en ventanilla para llevarse lo asignado."><input type="checkbox" id="mInm"><span class="sw" aria-hidden="true"></span><span><b>⚡ Despacho inmediato</b>La persona de la unidad espera en ventanilla</span></label>
     <div class="entry-warn" id="mWarn"></div>
 
     <div class="entry-log-head">Registradas en esta sesión</div>
@@ -368,11 +379,13 @@
 
 <div class="actionbar" id="actionbar">
   <div class="info">Seleccionados: <b id="selCount">0</b> Forma(s) 8</div>
+  <label class="inm-sw" title="Márquelo solo cuando la persona de la unidad espera en ventanilla para llevarse lo asignado. El Motor la muestra primero, con aviso."><input type="checkbox" id="chkInm"><span class="sw" aria-hidden="true"></span><span><b>⚡ Despacho inmediato</b>La persona de la unidad espera en ventanilla</span></label>
   <button class="btn-conf" id="btnConfirmar" disabled>✔ Confirmar recepción en ventanilla</button>
 </div>
 
 <script>
-const WEBAPP_BASE = "https://script.google.com/macros/s/AKfycbyVHDQ8IuVHibz259AiEvZ-jUfVC7fxvSSqC-wfaiiq1_13C9_TK4dVtPK0SMW4sZoJ/exec";
+// 26-nov-2026 · implementación principal del Motor (la de «Correos por Resend», 06-nov, quedó congelada)
+const WEBAPP_BASE = "https://script.google.com/macros/s/AKfycbzEjZwgX8yiA3tewhG-uoM-Ldkg9y2hs4dhlxD9X8Kgnlnv8XMNya_MG8MvGqI-G5mb/exec";
 
 let PANEL = null;          // respuesta completa de buffer_panel
 let DOCS = [];             // docs pendientes a listar
@@ -688,6 +701,7 @@ document.getElementById('btnConfirmar').onclick=async ()=>{
   // de la vista lo que el servidor confirmo. Reintentar es seguro: el servidor omite lo que
   // ya esta en el buffer (no duplica).
   const TANDA=15, btn=document.getElementById('btnConfirmar');
+  const inm=document.getElementById('chkInm').checked;   // 26-nov-2026 · despacho inmediato
   btn.disabled=true;
   const ok=[], yaEstaban=[], fallidas=[];
   let ultimoError='';
@@ -697,7 +711,7 @@ document.getElementById('btnConfirmar').onclick=async ()=>{
     let res=null;
     for(let intento=1;intento<=2 && !(res&&res.ok);intento++){
       try{
-        const url=`${WEBAPP_BASE}?file=buffer_confirmar&payload=${encodeURIComponent(JSON.stringify(lote))}&quien=VENTANILLA`;
+        const url=`${WEBAPP_BASE}?file=buffer_confirmar&payload=${encodeURIComponent(JSON.stringify(lote))}&quien=VENTANILLA${inm?'&inmediato=1':''}`;
         res=await loadJsonp(url, 60000);
         if(!(res&&res.ok)) ultimoError=(res&&res.msg)||'respuesta inválida';
       }catch(err){ res=null; ultimoError=err.message==='Timeout'?'la conexión no respondió':'no se pudo contactar al servidor'; }
@@ -721,7 +735,8 @@ document.getElementById('btnConfirmar').onclick=async ()=>{
   render();
   btn.textContent='✔ Confirmar recepción en ventanilla';
   if(!fallidas.length){
-    let msg=`✔ ${ok.length} F8 confirmadas en ventanilla.`;
+    let msg=`✔ ${ok.length} F8 confirmadas en ventanilla${inm&&ok.length?' como despacho inmediato: el Motor las verá en 1 a 2 minutos, primero en la lista':''}.`;
+    document.getElementById('chkInm').checked=false;
     if(yaEstaban.length) msg+=` ${yaEstaban.length} ya estaban confirmadas.`;
     toast(msg);
   }else{
@@ -829,7 +844,7 @@ async function registrarManual(){
   btn.disabled=true; btn.textContent='…';
   const url=`${WEBAPP_BASE}?file=buffer_manual&ndoc=${encodeURIComponent(ndoc)}&tipo=${encodeURIComponent(tipo)}`
     +`&fecha=${encodeURIComponent(fecha)}&ue=${encodeURIComponent(ue)}&grupos=${encodeURIComponent(grupo)}`
-    +`&solicitado=${encodeURIComponent(sol)}&quien=${encodeURIComponent(quien)}`;
+    +`&solicitado=${encodeURIComponent(sol)}&quien=${encodeURIComponent(quien)}${document.getElementById('mInm').checked?'&inmediato=1':''}`;
   try{
     const res=await loadJsonp(url, 30000);
     if(res&&res.ok){
@@ -840,6 +855,7 @@ async function registrarManual(){
       document.getElementById('mGrupo').value='';
       document.getElementById('mSol').value='';
       document.getElementById('mWarn').textContent='';
+      if(document.getElementById('mInm').checked){ toast('✔ '+ndoc+' registrada como despacho inmediato: el Motor la verá en 1 a 2 minutos.'); document.getElementById('mInm').checked=false; }
       document.getElementById('mNdoc').focus();
     }else{
       toast('No se registró: '+((res&&res.msg)||'error'),true);
