@@ -5459,7 +5459,7 @@ document.addEventListener('keydown', e => {
           <span class="m-mono">${E(x.k)}</span> · ${E(g.transito || 'sin cita')}<br>
           Venía ${F(g.cantTransito)} · vigente hasta ${E(g.hasta || '')}<br>
           ${F(pre)} preasignados · ${ok} de ${g.lineas.length} asignadas</div>`;
-        return `<div class="pre-card${on ? ' on' : ''}" data-pre-sku="${E(x.k)}"${x.id ? ` data-pre-id="${E(x.id)}"` : ''}><b>${E(x.r.nombre)}</b>${x.n.t ? ` <span class="m-tag m-tag-${x.n.c}">${x.n.t}</span>` : ''}${x.nueva && !x.g ? ' <span class="m-tag pre-nueva" title="Cita que apareció en las últimas 24 horas">Nueva</span>' : ''}${dup}<br>
+        return `<div class="pre-card${on ? ' on' : ''}" data-pre-sku="${E(x.k)}"${x.id ? ` data-pre-id="${E(x.id)}"` : ''}><b>${E(x.r.nombre)}</b>${x.n.t ? ` <span class="m-tag m-tag-${x.n.c}">${x.n.t}</span>` : ''}${x.nueva && !x.g ? ' <span class="m-tag pre-nueva" title="Cita que apareció en las últimas 24 horas">Nueva</span>' : ''}${x.r.pre ? ' <span class="m-tag m-tag-info" title="El tránsito ya se recibió; el renglón se sigue publicando mientras la preasignación esté vigente">Tránsito ya recibido</span>' : ''}${dup}<br>
           <span class="m-mono">${E(x.k)}</span> · ${cit.length} cita${cit.length === 1 ? '' : 's'} · ${rec ? 'recibido' : 'llega ' + E((cit[0] || [])[0] || '')}<br>
           Viene ${F(tot)} · CEDIS ${x.r.stock ? F(x.r.stock[1]) : 's/d'}${x.n.m != null ? ' (' + F(x.n.m) + ' meses)' : ''}<br>
           ${g ? `${F(pre)} preasignados · ${ok} de ${g.lineas.length} asignadas` : '<span class="m-dim">Sin preasignar · clic para repartir</span>'}${planActual() && planActual().sku === x.k && PRE.bor.sucio ? ' · <b class="pre-sucio">sin guardar</b>' : ''}</div>`; };
