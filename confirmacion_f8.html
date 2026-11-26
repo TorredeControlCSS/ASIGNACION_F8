@@ -267,6 +267,16 @@
   .d-estado.run{background:#e1ecf8;color:#24589a;} .d-estado.ok{background:#e0f2e6;color:#23703b;}
   .d-estado.err{background:#fbe4e4;color:#9b2c2c;}
   .d-estado .x{margin-left:auto;cursor:pointer;font-weight:700;padding:0 6px;}
+  /* 26-nov-2026 · video tutorial */
+  .topbar .vid-btn{margin-left:auto;background:transparent;color:#fff;border:1px solid rgba(255,255,255,.55);border-radius:8px;padding:7px 14px;font-weight:700;font-size:13px;cursor:pointer}
+  .topbar .vid-btn:hover{background:rgba(255,255,255,.12)}
+  .topbar .vid-btn:focus-visible{outline:2px solid #fff;outline-offset:2px}
+  .vid-modal{position:fixed;inset:0;background:rgba(8,18,35,.72);display:flex;align-items:center;justify-content:center;z-index:3000;padding:20px}
+  .vid-modal[hidden]{display:none}
+  .vid-box{background:#fff;border-radius:12px;width:min(1100px,100%);overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.4)}
+  .vid-h{display:flex;align-items:center;justify-content:space-between;background:linear-gradient(90deg,var(--deg1),var(--deg2));color:#fff;padding:10px 14px;font-weight:700;font-size:14px}
+  .vid-x{background:transparent;border:none;color:#fff;font-size:24px;line-height:1;cursor:pointer;padding:0 6px}
+  .vid-box video{display:block;width:100%;max-height:75vh;background:#000}
 </style>
 </head>
 <body>
@@ -276,6 +286,15 @@
   <div>
     <h1>Panel de Confirmación de Recepción de Formas 8</h1>
     <div class="sub">Torre de Control · DINALOG / CEDIS · Ventanilla</div>
+  </div>
+  <button type="button" class="vid-btn" id="btnVideo" title="Cómo usar este panel (video narrado)">▶ Video tutorial</button>
+</div>
+
+<!-- 26-nov-2026 · video tutorial del panel -->
+<div class="vid-modal" id="vidModal" role="dialog" aria-modal="true" aria-labelledby="vidTit" hidden>
+  <div class="vid-box">
+    <div class="vid-h"><span id="vidTit">Video tutorial · Panel de confirmación de recepción (narrado)</span><button type="button" class="vid-x" id="vidX" aria-label="Cerrar">&times;</button></div>
+    <video id="vidPlayer" controls preload="none" playsinline src="videos/Tutorial_Ventanilla_F8.mp4?v=20261126"></video>
   </div>
 </div>
 
@@ -411,6 +430,16 @@ function loadJsonp(url, timeoutMs){
     document.body.appendChild(s);
   });
 }
+// 26-nov-2026 · video tutorial
+(function(){
+  const m=document.getElementById('vidModal'), v=document.getElementById('vidPlayer');
+  const abrir=()=>{ m.hidden=false; try{ v.play(); }catch(e){} document.getElementById('vidX').focus(); };
+  const cerrar=()=>{ try{ v.pause(); }catch(e){} m.hidden=true; document.getElementById('btnVideo').focus(); };
+  document.getElementById('btnVideo').addEventListener('click',abrir);
+  document.getElementById('vidX').addEventListener('click',cerrar);
+  m.addEventListener('click',e=>{ if(e.target===m) cerrar(); });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape' && !m.hidden) cerrar(); });
+})();
 function toast(msg,isErr){const t=document.createElement('div');t.className='toast'+(isErr?' err':'');t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),4500);}
 function tipoTag(tipo){const tl=(tipo||'').toLowerCase();
   if(tl.includes('urgen'))return '<span class="tag tag-urg">Urgencia</span>';
@@ -920,12 +949,14 @@ async function dCargar(lote){
   }
 }
 
+const DIA_LOTES = new Set();
 let _poblandoLotes = false;   // guardia: evita que el onchange programático redispare dCargar
 function dPoblarLotes(r){
   _poblandoLotes = true;
   const sel=document.getElementById('dLote');
-  const lotes=(r.lotes&&r.lotes.length)?r.lotes.slice():[r.lote];
-  if(lotes.indexOf(r.lote)<0) lotes.unshift(r.lote);
+  // 26-nov-2026 · el JSON de cada día trae los días hasta él: se suman los ya vistos para poder volver a los más recientes (►)
+  (r.lotes&&r.lotes.length?r.lotes:[]).concat([r.lote]).forEach(l=>{ if(l) DIA_LOTES.add(l); });
+  const lotes=[...DIA_LOTES].sort().reverse();
   sel.innerHTML=lotes.map(l=>`<option value="${l}"${l===r.lote?' selected':''}>${l}</option>`).join('');
   const i=lotes.indexOf(r.lote);
   document.getElementById('dPrev').disabled=(i>=lotes.length-1);   // lotes vienen desc
