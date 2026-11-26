@@ -2854,7 +2854,7 @@ function _construirListaWA() {
         f8s      : [],       // todos los docs de esta UE
         totalSol : 0, totalAsig: 0,
         itemsPorF8: new Map(), // f8 → [{nombre, codigo, sol, asig, estado}]
-        contacto : dirMap.get(_waNorm(ue)) || null
+        contacto : dirMap.get(_waNorm(ue)) || _waBuscarDir(_waDirectorio, ue) || null
       });
     }
     const g = grupos.get(ue);
@@ -2905,6 +2905,16 @@ function _construirListaWA() {
 function _waNorm(v) {
   return String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
     .replace(/[().\-_\/]/g,' ').toUpperCase().replace(/\s+/g,' ').trim();
+}
+// 26-nov-2026 · nota 45: el directorio usa otros nombres («COMPLEJO HOSP. DR. ARNULFO…», «POL. DR. BLAS D. GOMEZ CHETRO»).
+// Mismo criterio que el servidor (ueBuscarEnMapa_): nombre exacto; si no, palabras propias y una sola coincidencia.
+const _WA_COMUNES = ['POL', 'POLICLINICA', 'HOSP', 'HOSPITAL', 'COMPLEJO', 'ULAPS', 'CAPPS', 'DR', 'DRA', 'PROF', 'DE', 'LA', 'EL', 'LOS', 'LAS', 'DEL'];
+function _waTokens(s) { return _waNorm(s).split(' ').filter(w => w.length > 1 && !_WA_COMUNES.includes(w)); }
+function _waBuscarDir(lista, ue) {
+  const k = _waNorm(ue), ex = (lista || []).find(x => _waNorm(x.ue_std) === k); if (ex) return ex;
+  const t = _waTokens(ue); if (!t.length) return null;
+  const hits = (lista || []).filter(x => { const u = _waTokens(x.ue_std); return u.length && (t.every(w => u.includes(w)) || u.every(w => t.includes(w))); });
+  return hits.length === 1 ? hits[0] : null;
 }
 
 function _waFilaHTML(g, idx, tieneWA) {
@@ -5606,7 +5616,7 @@ document.addEventListener('keydown', e => {
     async function pedirWA(i) {
       const p = planActual(), l = p && p.lineas[i]; if (!l) return;
       try { if (typeof _waDirectorio === 'undefined' || !_waDirectorio) _waDirectorio = await loadJsonp(`${WEBAPP_BASE}?file=directorio_ue`); } catch (e) { toast('No se pudo leer el directorio de unidades. Use «Copiar».'); return; }
-      const d = (_waDirectorio || []).find(x => _waNorm(x.ue_std) === _waNorm(l.ue));
+      const d = _waBuscarDir(_waDirectorio, l.ue);
       const num = d && String(d.wa || '').replace(/[^0-9]/g, '');
       if (!num) { toast('<b>' + E(l.ue) + '</b> no tiene número de WhatsApp en el directorio. Use «Correo» o «Copiar».'); return; }
       window.open('https://web.whatsapp.com/send/?phone=' + num + '&text=' + encodeURIComponent(msgF8(p, l)), '_blank', 'noopener');
