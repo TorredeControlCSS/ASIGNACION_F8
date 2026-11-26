@@ -458,6 +458,9 @@ body.m tbody tr:hover td{background:#f7faff}
 [data-theme="dark"] .m-pant-txt p{color:#cbd5e1}
 [data-theme="dark"] .m-subtabs{border-bottom-color:#24324d}
 [data-theme="dark"] .m-lt-rec{background:#123323;color:#9fe0b8}
+/* 26-nov-2026 · respuesta Sí/No de la unidad a la preasignación (botones del correo) */
+.pre-resp{font-size:11px;color:#667085;margin-top:2px}.pre-resp-si{color:#1b5e20;font-weight:700}.pre-resp-no{color:#b71c1c;font-weight:700}
+[data-theme="dark"] .pre-resp-si{color:#9fe0b8}[data-theme="dark"] .pre-resp-no{color:#ff9a9a}
 /* 26-nov-2026 · despacho inmediato (la unidad espera en ventanilla) */
 .lt-inm{display:flex;gap:12px;align-items:center;background:#fff4e6;border:2px solid #d9480f;border-radius:10px;padding:10px 14px;margin:8px 0;font-size:13px;color:#7a2e00}
 .lt-inm b{color:#a33a00}.lt-inm .lt-inm-ic{font-size:20px;line-height:1}.lt-inm .lt-inm-tx{flex:1}.lt-inm .lt-inm-min{font-weight:700;color:#a33a00}
@@ -5508,6 +5511,8 @@ document.addEventListener('keydown', e => {
       const lista = todas.filter(x => PRE.vista === 'ya' ? x.g : !x.g)
         .sort((a, b) => (b.nueva - a.nueva) || ((a.n.m == null ? 99 : a.n.m) - (b.n.m == null ? 99 : b.n.m)));
       const nDup = k => activos().filter(p => String(p.sku) === String(k)).length;
+      // 26-nov-2026 · respuestas de las unidades (botones Sí/No del correo)
+      const respTxt = g => { const si = g.lineas.filter(l => l.resp === 'SI').length, no = g.lineas.filter(l => l.resp === 'NO').length; return (si ? ` · <span class="pre-resp-si">${si} Sí</span>` : '') + (no ? ` · <span class="pre-resp-no">${no} No</span>` : ''); };
       const tarjeta = x => { const g = (x.id && PRE.planes.find(p => p.id === x.id)) || planGuardado(x.k), cit = x.r.citas || [], tot = cit.reduce((s, c) => s + N(c[1]), 0), rec = cit.some(c => /RECIBID/i.test(c[3] || ''));
         const pre = g ? g.lineas.reduce((s, l) => s + N(l.q), 0) : 0, ok = g ? g.lineas.filter(l => l.estado === 'ASIGNADA').length : 0;
         const dup = g && nDup(x.k) > 1 ? ` <span class="m-tag m-tag-warn" title="Este renglón tiene ${nDup(x.k)} preasignaciones vigentes guardadas. Revise cuál vale y anule la sobrante.">Duplicada</span>` : '';
@@ -5515,11 +5520,11 @@ document.addEventListener('keydown', e => {
         if (x.fuera) return `<div class="pre-card${on ? ' on' : ''}" data-pre-sku="${E(x.k)}" data-pre-id="${E(g.id)}"><b>${E(g.nombre || x.r.nombre)}</b> <span class="m-tag m-tag-info" title="El tránsito ya no figura en el calendario de tránsitos (se publica solo la última semana). La preasignación sigue vigente.">Tránsito ya recibido</span>${dup}<br>
           <span class="m-mono">${E(x.k)}</span> · ${E(g.transito || 'sin cita')}<br>
           Venía ${F(g.cantTransito)} · vigente hasta ${E(g.hasta || '')}<br>
-          ${F(pre)} preasignados · ${ok} de ${g.lineas.length} asignadas</div>`;
+          ${F(pre)} preasignados · ${ok} de ${g.lineas.length} asignadas${respTxt(g)}</div>`;
         return `<div class="pre-card${on ? ' on' : ''}" data-pre-sku="${E(x.k)}"${x.id ? ` data-pre-id="${E(x.id)}"` : ''}><b>${E(x.r.nombre)}</b>${x.n.t ? ` <span class="m-tag m-tag-${x.n.c}">${x.n.t}</span>` : ''}${x.nueva && !x.g ? ' <span class="m-tag pre-nueva" title="Cita que apareció en las últimas 24 horas">Nueva</span>' : ''}${x.r.pre ? ' <span class="m-tag m-tag-info" title="El tránsito ya se recibió; el renglón se sigue publicando mientras la preasignación esté vigente">Tránsito ya recibido</span>' : ''}${dup}<br>
           <span class="m-mono">${E(x.k)}</span> · ${cit.length} cita${cit.length === 1 ? '' : 's'} · ${rec ? 'recibido' : 'llega ' + E((cit[0] || [])[0] || '')}<br>
           Viene ${F(tot)} · CEDIS ${x.r.stock ? F(x.r.stock[1]) : 's/d'}${x.n.m != null ? ' (' + F(x.n.m) + ' meses)' : ''}<br>
-          ${g ? `${F(pre)} preasignados · ${ok} de ${g.lineas.length} asignadas` : '<span class="m-dim">Sin preasignar · clic para repartir</span>'}${planActual() && planActual().sku === x.k && PRE.bor.sucio ? ' · <b class="pre-sucio">sin guardar</b>' : ''}</div>`; };
+          ${g ? `${F(pre)} preasignados · ${ok} de ${g.lineas.length} asignadas${respTxt(g)}` : '<span class="m-dim">Sin preasignar · clic para repartir</span>'}${planActual() && planActual().sku === x.k && PRE.bor.sucio ? ' · <b class="pre-sucio">sin guardar</b>' : ''}</div>`; };
       v.innerHTML = `<div class="pre-wrap"><div class="pre-cab"><div><div class="m-sec-t" style="font-size:15px;font-weight:700;color:#0b1f3a">Preasignar tránsito</div>
           <div class="m-nota" style="margin:2px 0 0">Reparta un tránsito antes de que llegue y pida a cada unidad su Forma 8 por esa cantidad. Cuando la F8 llega, sale marcada en el paso 1 y en el corte (paso 3) con el botón «Usar». Fuente: ${E(PRE.T.fuente || '')} · ${E(String(PRE.T.generado || '').slice(0, 16).replace('T', ' '))} UTC.</div></div></div>
         <div class="pre-grid"><div class="pre-l">
@@ -5552,7 +5557,7 @@ document.addEventListener('keydown', e => {
           return `<tr><td class="m-ue">${E(l.ue)}</td><td class="right">${c ? F(c) + (d[2] ? ` <span class="pre-ant" title="La unidad registró 0 en el Registro de Consumos; se usa su último consumo reportado (${E(perTxt(d[2]))})">${E(perTxt(d[2]))}</span>` : '') : '<span class="m-dim">s/d</span>'}</td><td class="right">${d[1] == null ? '<span class="m-dim">s/d</span>' : F(d[1])}</td>
             <td class="right">${c ? F(N(d[1]) / c) : '—'}</td><td><input type="number" min="0" class="pre-in" value="${N(l.q)}" data-pre-q="${i}"${l.estado === 'ASIGNADA' ? ' disabled' : ''}>${(() => { const em = window.__emp ? window.__emp(p.sku, 0) : null; return em && (em.p || em.t > 1) && N(l.q) ? '<div class="pre-bul">' + window.__empBultos(N(l.q), em) + '</div>' : ''; })()}</td>
             <td class="right m-b">${c ? F((N(d[1]) + N(l.q)) / c) : '—'}</td><td><span class="m-est m-est-${es.c}">${E(es.t)}</span></td>
-            <td class="m-nw pre-acc-l">${es.t === 'Esperando F8' ? `<span class="pre-pedir"><button type="button" class="m-lnk pre-wa" data-pre-wa="${i}" title="Abre WhatsApp de la unidad con el mensaje escrito">WhatsApp</button><button type="button" class="m-lnk" data-pre-mail="${i}" title="${p.id && !p.sucio ? 'Envía el correo de solicitud de F8 a la unidad' : 'Guarde la preasignación para enviar el correo'}"${p.id && !p.sucio ? '' : ' disabled'}>Correo</button><button type="button" class="m-lnk" data-pre-f8="${i}" title="Copia el mensaje">Copiar</button></span>${l.pedida ? `<div class="pre-pedida">Pedida por correo ${E(l.pedida)}</div>` : ''}` : ''}${l.estado !== 'ASIGNADA' ? `<button type="button" class="m-lnk" data-pre-del="${i}">Quitar</button>` : ''}</td></tr>`; }).join('')
+            <td class="m-nw pre-acc-l">${es.t === 'Esperando F8' ? `<span class="pre-pedir"><button type="button" class="m-lnk pre-wa" data-pre-wa="${i}" title="Abre WhatsApp de la unidad con el mensaje escrito">WhatsApp</button><button type="button" class="m-lnk" data-pre-mail="${i}" title="${p.id && !p.sucio ? 'Envía el correo de solicitud de F8 a la unidad' : 'Guarde la preasignación para enviar el correo'}"${p.id && !p.sucio ? '' : ' disabled'}>Correo</button><button type="button" class="m-lnk" data-pre-f8="${i}" title="Copia el mensaje">Copiar</button></span>${l.pedida ? `<div class="pre-pedida">Pedida por correo ${E(l.pedida)}</div>` : ''}` : ''}${l.resp === 'SI' ? `<div class="pre-resp pre-resp-si" title="La unidad respondió con el botón del correo">✔ Sí la quiere${l.respFecha ? ' · ' + E(l.respFecha) : ''}</div>` : l.resp === 'NO' ? `<div class="pre-resp pre-resp-no" title="La unidad respondió con el botón del correo: puede repartir esta cantidad a otra unidad">✖ No la necesita${l.respFecha ? ' · ' + E(l.respFecha) : ''}</div>` : (l.pedida ? '<div class="pre-resp">Sin respuesta</div>' : '')}${l.estado !== 'ASIGNADA' ? `<button type="button" class="m-lnk" data-pre-del="${i}">Quitar</button>` : ''}</td></tr>`; }).join('')
           || '<tr><td colspan="8" class="m-vacio">Agregue unidades con el buscador o con «Agregar las que consumen este renglón».</td></tr>'}
         </tbody></table></div>
         <label class="m-chk" style="margin-top:10px!important"><input type="checkbox" id="preApartar"${p.apartar ? ' checked' : ''}> Apartar en el Motor: mientras esté vigente, el Motor no le entrega estas cantidades a otras unidades cuando el tránsito ingrese.</label>
@@ -5627,7 +5632,7 @@ document.addEventListener('keydown', e => {
         const r = await window.__mPostSeguro('motorPrePedir', { id: p.id, ue: l ? l.ue : '', forzar: !!l });
         if (!r || !r.success) throw new Error(r && r.error || 'Sin respuesta');
         PRE.planes = r.planes || PRE.planes;
-        const g = PRE.planes.find(x => x.id === p.id); if (g) { p.lineas.forEach(x => { const y = g.lineas.find(z => U(z.ue) === U(x.ue)); if (y) x.pedida = y.pedida; }); guardarBorrador(); }
+        const g = PRE.planes.find(x => x.id === p.id); if (g) { p.lineas.forEach(x => { const y = g.lineas.find(z => U(z.ue) === U(x.ue)); if (y) { x.pedida = y.pedida; x.resp = y.resp; x.respFecha = y.respFecha; } }); guardarBorrador(); }
         toast((r.enviadas ? '<b>Correo enviado.</b>' : '<b>No se envió ningún correo.</b>') + pedidasTxt(r), 8000); pintar(); refrescarFuera();
       } catch (e) { toast('<b>No se envió el correo.</b> ' + E(e.message || e), 9000); }
     }
